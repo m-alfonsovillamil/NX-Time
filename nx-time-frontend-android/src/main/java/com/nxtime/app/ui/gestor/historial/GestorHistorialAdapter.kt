@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nxtime.app.data.dto.RegistroEquipoDTO
 import com.nxtime.app.databinding.ItemGestorHistorialBinding
 import java.time.Duration
-import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -20,11 +20,16 @@ class GestorHistorialAdapter(
 ) : RecyclerView.Adapter<GestorHistorialAdapter.HistorialViewHolder>() {
 
     /*
-     * Formateadores de fecha/hora para convertir el texto de la API en un formato legible
+     * Formateadores de fecha/hora para convertir el texto de la API en un formato legible.
+     *
+     * horaEntrada/horaSalida pasaron de "HH:mm:ss" (texto plano) a fechas
+     * ISO-8601 tipadas (LocalDateTime completo) en la Fase 2 del backend
+     * -- ver auditoría, defectos de diseño. Por eso se parsean ahora con
+     * ISO_LOCAL_DATE_TIME en vez de ISO_LOCAL_TIME.
      */
 
     private val fechaParser = DateTimeFormatter.ISO_LOCAL_DATE
-    private val horaParser = DateTimeFormatter.ISO_LOCAL_TIME
+    private val horaParser = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val fechaFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", Locale("es", "ES"))
     private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm 'h'", Locale("es", "ES"))
 
@@ -96,8 +101,8 @@ class GestorHistorialAdapter(
     private fun formatarHora(rawHora: String?): String {
         if (rawHora == null) return "---"
         return try {
-            val hora = LocalTime.parse(rawHora, horaParser)
-            hora.format(horaFormatter)
+            val hora = LocalDateTime.parse(rawHora, horaParser)
+            hora.toLocalTime().format(horaFormatter)
         } catch (e: DateTimeParseException) { rawHora }
     }
 
@@ -108,8 +113,8 @@ class GestorHistorialAdapter(
         if (entrada == null || salida == null) return "---"
 
         return try {
-            val entradaTime = LocalTime.parse(entrada, horaParser)
-            val salidaTime = LocalTime.parse(salida, horaParser)
+            val entradaTime = LocalDateTime.parse(entrada, horaParser)
+            val salidaTime = LocalDateTime.parse(salida, horaParser)
 
 
             val duracionBruta = Duration.between(entradaTime, salidaTime)
