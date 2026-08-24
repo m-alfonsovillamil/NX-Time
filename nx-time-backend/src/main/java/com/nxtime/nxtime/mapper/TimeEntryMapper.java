@@ -4,32 +4,45 @@ import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
-import java.time.format.DateTimeFormatter;
+import com.nxtime.nxtime.dto.TimeEntryResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 /**
  * Sustituye a la función de extensión Kotlin
- * {@code Registros.toRegistroEquipoDTO()} que vivía en
- * ServicioFichajeImpl.kt.
+ * {@code Registros.toRegistroEquipoDTO()} y, desde esta fase, también
+ * sustituye la exposición directa de la entidad TimeEntry en los
+ * endpoints de fichaje (ver auditoría, defecto #1).
  *
- * El formato "HH:mm:ss" / "yyyy-MM-dd" como String plano (en vez de
- * ISO-8601 tipado) se mantiene sin cambios en esta fase: es parte del
- * contrato HTTP actual, y la Fase 2 lo rediseña.
+ * minutosPausaAcumulados se DERIVA de segundosPausaAcumulados en un
+ * único cálculo sobre el total real acumulado, en vez de sumar minutos
+ * truncados por cada pausa individual (ver TimeEntry, y auditoría).
+ *
+ * segundosAMinutos() va marcado con @Named y se referencia con
+ * qualifiedByName (no con expression="java(...)"): con expression,
+ * MapStruct trataba el método como conversor implícito genérico
+ * "long -> long" y lo aplicaba también a "id" (que también es long),
+ * truncando id=1 a id=1/60=0 -- bug real, detectado por los tests de
+ * contrato. @Named + qualifiedByName lo restringe a donde se pide
+ * explícitamente.
  */
 @Mapper(componentModel = "spring")
 public interface TimeEntryMapper {
 
-    DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
+    TimeEntryResponse toResponse(TimeEntry entry);
 
-    @Mapping(target = "horaEntrada", expression = "java(entry.getHoraEntrada().format(TIME_FORMATTER))")
-    @Mapping(target = "horaSalida",
-            expression = "java(entry.getHoraSalida() != null ? entry.getHoraSalida().format(TIME_FORMATTER) : null)")
-    @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().toLocalDate().format(DATE_FORMATTER))")
+    @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().toLocalDate())")
+    @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
         return new SimpleUserDTO(user.getNombre());
+    }
+
+    @Named("segundosAMinutos")
+    default long segundosAMinutos(long segundosPausaAcumulados) {
+        return segundosPausaAcumulados / 60;
     }
 }

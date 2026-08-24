@@ -1,12 +1,13 @@
 package com.nxtime.nxtime.controller;
 
-import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
+import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.AuthService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controlador exclusivo para operaciones administrativas.
+ *
+ * @AuthenticationPrincipal ahora resuelve a SecurityUser (adaptador de
+ * Spring Security), no directamente a la entidad User: desde esta fase
+ * User ya no implementa UserDetails (ver auditoría, defectos de
+ * diseño). SecurityUser.getUser() da acceso a la entidad de dominio
+ * que necesitan los servicios.
  */
 @RestController
 @RequestMapping("/api/v1/gestor")
@@ -35,22 +42,24 @@ public class ManagerController {
 
     @PostMapping("/empleados")
     @PreAuthorize("hasRole('GESTOR')")
-    public ResponseEntity<Void> createEmployee(@RequestBody CreateEmployeeRequest request, @AuthenticationPrincipal User manager) {
-        authService.createEmployee(request, manager);
+    public ResponseEntity<Void> createEmployee(
+            @Valid @RequestBody CreateEmployeeRequest request, @AuthenticationPrincipal SecurityUser manager) {
+        authService.createEmployee(request, manager.getUser());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/gestores")
     @PreAuthorize("hasRole('GESTOR')")
-    public ResponseEntity<Void> createManager(@RequestBody CreateManagerRequest request, @AuthenticationPrincipal User manager) {
-        authService.createManager(request, manager);
+    public ResponseEntity<Void> createManager(
+            @Valid @RequestBody CreateManagerRequest request, @AuthenticationPrincipal SecurityUser manager) {
+        authService.createManager(request, manager.getUser());
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/mis-empleados")
     @PreAuthorize("hasRole('GESTOR')")
-    public ResponseEntity<List<SimpleEmployeeDTO>> getMyEmployees(@AuthenticationPrincipal User manager) {
-        return ResponseEntity.ok(authService.getMyEmployees(manager));
+    public ResponseEntity<List<SimpleEmployeeDTO>> getMyEmployees(@AuthenticationPrincipal SecurityUser manager) {
+        return ResponseEntity.ok(authService.getMyEmployees(manager.getUser()));
     }
 
     @PreAuthorize("hasRole('GESTOR')")

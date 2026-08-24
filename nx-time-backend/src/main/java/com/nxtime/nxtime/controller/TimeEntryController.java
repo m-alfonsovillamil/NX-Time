@@ -1,9 +1,11 @@
 package com.nxtime.nxtime.controller;
 
-import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
+import com.nxtime.nxtime.dto.TimeEntryResponse;
+import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.service.TimeEntryService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,39 +19,45 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Controlador REST para gestionar el registro horario.
  *
- * Sigue devolviendo la entidad JPA TimeEntry directamente (con el
- * usuario -- y su hash de contraseña -- anidado dentro). Es el defecto
- * #1 de la auditoría; se corrige en la Fase 2, no aquí.
+ * Desde esta fase ya NO devuelve la entidad TimeEntry directamente
+ * (ver auditoría, defecto #1: la entidad arrastraba al Usuario, y con
+ * él, su contraseña cifrada). Cada endpoint mapea a un DTO explícito.
  */
 @RestController
 @RequestMapping("/api/v1/fichaje")
 public class TimeEntryController {
 
     private final TimeEntryService timeEntryService;
+    private final TimeEntryMapper timeEntryMapper;
 
-    public TimeEntryController(TimeEntryService timeEntryService) {
+    public TimeEntryController(TimeEntryService timeEntryService, TimeEntryMapper timeEntryMapper) {
         this.timeEntryService = timeEntryService;
+        this.timeEntryMapper = timeEntryMapper;
     }
 
     @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
     @PostMapping
-    public ResponseEntity<TimeEntry> registerTimeEntry(@RequestBody TimeEntryRequest request, Authentication authentication) {
-        TimeEntry entry = timeEntryService.registerTimeEntry(authentication.getName(), request);
-        return ResponseEntity.ok(entry);
+    public ResponseEntity<TimeEntryResponse> registerTimeEntry(
+            @Valid @RequestBody TimeEntryRequest request, Authentication authentication) {
+        var entry = timeEntryService.registerTimeEntry(authentication.getName(), request);
+        return ResponseEntity.ok(timeEntryMapper.toResponse(entry));
     }
 
     @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
     @GetMapping("/activo")
-    public ResponseEntity<TimeEntry> getActiveTimeEntry(Authentication authentication) {
+    public ResponseEntity<TimeEntryResponse> getActiveTimeEntry(Authentication authentication) {
         return timeEntryService.getActiveTimeEntry(authentication.getName())
+                .map(timeEntryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
     @GetMapping("/historial")
-    public ResponseEntity<List<TimeEntry>> getHistory(Authentication authentication) {
-        return ResponseEntity.ok(timeEntryService.getHistory(authentication.getName()));
+    public ResponseEntity<List<TimeEntryResponse>> getHistory(Authentication authentication) {
+        List<TimeEntryResponse> history = timeEntryService.getHistory(authentication.getName())
+                .stream().map(timeEntryMapper::toResponse).toList();
+        return ResponseEntity.ok(history);
     }
 
     @PreAuthorize("hasRole('GESTOR')")

@@ -61,7 +61,9 @@ class ApiContractTest {
     static void datasourceProperties(DynamicPropertyRegistry registry) {
         String dbFile = "build/test-dbs/contract-" + System.nanoTime() + ".db";
         new File(dbFile).getParentFile().mkdirs();
-        registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dbFile);
+        // busy_timeout: ver el comentario homólogo en application.yml sobre
+        // GenerationType.TABLE + pool de Hikari + SQLite.
+        registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dbFile + "?busy_timeout=5000");
     }
 
     @Value("${local.server.port}")
@@ -144,22 +146,15 @@ class ApiContractTest {
 
     @Test
     @Order(2)
-    void registrarGestor_empresaDuplicada_devuelve403EnVezDe409_bugActual() throws Exception {
-        // BUG ACTUAL, más grave de lo que parece (verificado empíricamente,
-        // no es una suposición): el servicio SÍ lanza correctamente
-        // ResponseStatusException(HttpStatus.CONFLICT, ...), y Spring MVC
-        // SÍ lo resuelve a 409 (se ve en el log: "Resolved
-        // [...ResponseStatusException: 409 CONFLICT...]"). Pero
-        // ResponseStatusException usa response.sendError(), que dispara un
-        // dispatch interno a "/error". Como Spring Security aplica su
-        // cadena de filtros también a los dispatch ERROR (comportamiento
-        // por defecto) y "/error" no coincide con "/auth/**" ni
-        // "/api/v1/**", cae en el `.anyRequest().denyAll()` de
-        // ConfiguracionSeguridad -> el cliente recibe 403, no 409.
-        // Es decir: HOY, absolutamente NINGÚN error de la API llega tal
-        // cual al cliente; todos acaban como 403. Se corrige en la Fase 2
-        // (junto con el resto del manejo de errores) o antes, en la Fase 0
-        // si se decide que es lo bastante grave como para no esperar.
+    void registrarGestor_empresaDuplicada_devuelve409ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 2: hasta ahora este caso devolvía 403 en vez
+        // de 409 (ver commit de la Fase 0): ResponseStatusException usa
+        // response.sendError(), que dispara un dispatch interno a
+        // "/error", y ese dispatch volvía a pasar por el filtro de
+        // seguridad y caía en el denyAll(). GlobalExceptionHandler ya no
+        // usa sendError() -- construye la respuesta directamente dentro
+        // del propio ciclo de DispatcherServlet -- así que el 409 llega
+        // tal cual, con un cuerpo ProblemDetail real.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA, // misma empresa que en el test anterior
                 "nombreGestor", "Otro Gestor",
@@ -173,7 +168,10 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("status").asInt()).isEqualTo(409);
+        assertThat(body.get("detail").asText()).contains("La empresa ya existe");
     }
 
     @Test
@@ -234,6 +232,30 @@ class ApiContractTest {
         // ruta que exige authenticated(). Documentado como comportamiento
         // actual; revisar en la Fase 4 (seguridad reforzada).
         assertThat(response.getStatusCode().value()).isIn(401, 403);
+    }
+
+    @Test
+    @Order(6)
+    void registrarGestor_datosInvalidos_devuelve400ConValidacion() throws Exception {
+        // NUEVO EN FASE 2: Bean Validation en los DTOs de entrada (ver
+        // plan, defecto #6 "Cero validación de entrada"). Antes de esta
+        // fase, un email vacío y una contraseña vacía se aceptaban sin
+        // más -- passwordEncoder.encode("") funcionaba y persistía el
+        // usuario tal cual.
+        Map<String, Object> peticion = mapOf(
+                "nombreEmpresa", "",
+                "nombreGestor", "",
+                "email", "esto-no-es-un-email",
+                "password", "123" // menos de 6 caracteres
+        );
+
+        ResponseEntity<String> response = rest.postForEntity(
+                url("/auth/register-manager"),
+                new HttpEntity<>(toJson(peticion), jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // ------------------------------------------------------------------
@@ -342,7 +364,7 @@ class ApiContractTest {
 
     @Test
     @Order(20)
-    void ficharInicio_devuelve200_yHOY_filtraElHashDeLaContrasena_bugActual() throws Exception {
+    void ficharInicio_devuelve200_yYaNoFiltraElHashDeLaContrasena() throws Exception {
         Map<String, Object> peticion = mapOf("tipo", "INICIO");
 
         ResponseEntity<String> response = rest.exchange(
@@ -356,17 +378,17 @@ class ApiContractTest {
         JsonNode body = bodyOf(response);
         assertThat(body.get("id").asLong()).isPositive();
         assertThat(body.get("horaEntrada").asText()).isNotBlank();
+        assertThat(body.get("enPausa").asBoolean()).isFalse();
+        assertThat(body.get("minutosPausaAcumulados").asLong()).isZero();
         registroActivoId = body.get("id").asLong();
 
-        // BUG ACTUAL (ver plan, defecto #1 "Fuga del hash BCrypt por la
-        // API"): el controlador devuelve la entidad JPA completa, que
-        // arrastra al usuario y su contraseña cifrada. Esta aserción
-        // documenta la fuga; en la Fase 2 el endpoint debe pasar a un DTO
-        // y este bloque debe invertirse (comprobar que NO aparece).
-        assertThat(body.has("usuario")).as("hoy la entidad Usuario viaja anidada").isTrue();
-        assertThat(body.get("usuario").has("contrasena"))
-                .as("BUG: el hash de la contraseña se filtra por la API")
-                .isTrue();
+        // CORREGIDO EN FASE 2 (ver plan, defecto #1 "Fuga del hash BCrypt
+        // por la API"): el controlador ya no devuelve la entidad JPA
+        // completa -- mapea a TimeEntryResponse, que ni siquiera tiene un
+        // campo "usuario". El hash de la contraseña ya no puede viajar
+        // por aquí.
+        assertThat(body.has("usuario")).as("ya no debe viajar la entidad Usuario anidada").isFalse();
+        assertThat(body.has("contrasena")).isFalse();
     }
 
     @Test
@@ -386,15 +408,12 @@ class ApiContractTest {
 
     @Test
     @Order(22)
-    void ficharInicioDosVeces_devuelve403EnVezDe409_bugActual() throws Exception {
-        // BUG ACTUAL: el IllegalStateException de "Ya hay una jornada
-        // activa" no está mapeado por ningún @ExceptionHandler, así que
-        // Spring Boot lo traduce internamente a un dispatch a "/error" ->
-        // que vuelve a pasar por el filtro de seguridad -> denyAll() -> el
-        // cliente recibe 403 (mismo mecanismo que en
-        // registrarGestor_empresaDuplicada_devuelve403EnVezDe409_bugActual,
-        // verificado empíricamente). En la Fase 2 debe pasar a un 409 real
-        // con ProblemDetail.
+    void ficharInicioDosVeces_devuelve409ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 2: el IllegalStateException de "Ya hay una
+        // jornada activa" del Kotlin original se sustituyó por
+        // BusinessException, que GlobalExceptionHandler resuelve a 409
+        // directamente (sin pasar por response.sendError()). Antes de
+        // este cambio devolvía 403 (ver historial de commits, Fase 0).
         Map<String, Object> peticion = mapOf("tipo", "INICIO");
 
         ResponseEntity<String> response = rest.exchange(
@@ -404,7 +423,8 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("Ya hay una jornada activa");
     }
 
     @Test
@@ -474,7 +494,7 @@ class ApiContractTest {
 
     @Test
     @Order(27)
-    void historialDelEquipo_paraElGestor_devuelveFechaYHoraComoTextoPreformateado() throws Exception {
+    void historialDelEquipo_paraElGestor_devuelveFechasIsoTipadas() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/fichaje/gestor/historial"),
                 HttpMethod.GET,
@@ -488,12 +508,13 @@ class ApiContractTest {
         assertThat(body.size()).isGreaterThanOrEqualTo(1);
 
         JsonNode primero = body.get(0);
-        // Formato actual: "HH:mm:ss" / "yyyy-MM-dd" como String plano, no
-        // ISO-8601 tipado (ver plan, defectos de diseño). Se corrige en
-        // Fase 2.
-        assertThat(primero.get("horaEntrada").asText()).matches("\\d{2}:\\d{2}:\\d{2}");
+        // CORREGIDO EN FASE 2: antes horaEntrada/fecha viajaban como
+        // String preformateado ("HH:mm:ss" / "yyyy-MM-dd"), no ISO-8601
+        // tipado (ver plan, defectos de diseño).
+        assertThat(primero.get("horaEntrada").asText()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?");
         assertThat(primero.get("fecha").asText()).matches("\\d{4}-\\d{2}-\\d{2}");
         assertThat(primero.get("usuario").get("nombre").asText()).isNotBlank();
+        assertThat(primero.get("minutosPausaAcumulados").asLong()).isGreaterThanOrEqualTo(0);
     }
 
     // ------------------------------------------------------------------
@@ -578,10 +599,9 @@ class ApiContractTest {
 
     @Test
     @Order(34)
-    void aprobarUnaPeticionYaResuelta_devuelve403EnVezDe409_bugActual() throws Exception {
-        // BUG ACTUAL: IllegalStateException("Solo se puede modificar una
-        // petición PENDIENTE.") tampoco está mapeado -> mismo mecanismo de
-        // /error + denyAll() -> 403 en vez del 409 que correspondería.
+    void aprobarUnaPeticionYaResuelta_devuelve409ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 2: "Solo se puede modificar una petición
+        // PENDIENTE." ahora es BusinessException -> 409 real.
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/ausencias/gestor/aprobar/" + peticionAusenciaId),
                 HttpMethod.POST,
@@ -589,7 +609,8 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("PENDIENTE");
     }
 
     @Test
@@ -647,10 +668,10 @@ class ApiContractTest {
 
     @Test
     @Order(40)
-    void cambiarContrasena_conContrasenaAntiguaIncorrecta_devuelve403EnVezDe400_bugActual() throws Exception {
-        // BUG ACTUAL: mismo mecanismo que los anteriores. El servicio lanza
-        // ResponseStatusException(BAD_REQUEST, ...) correctamente, pero el
-        // cliente recibe 403 por el dispatch a "/error" + denyAll().
+    void cambiarContrasena_conContrasenaAntiguaIncorrecta_devuelve400ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 2: el servicio lanza BusinessException con
+        // status BAD_REQUEST explícito, y ahora sí llega tal cual (400),
+        // en vez del 403 de antes.
         Map<String, Object> peticion = mapOf(
                 "contrasenaAntigua", "no-es-la-contrasena",
                 "contrasenaNueva", "nuevaPassword123"
@@ -663,7 +684,8 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(response).get("detail").asText()).contains("contraseña antigua");
     }
 
     @Test

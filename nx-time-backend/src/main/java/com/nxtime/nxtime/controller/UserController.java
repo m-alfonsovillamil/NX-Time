@@ -1,8 +1,9 @@
 package com.nxtime.nxtime.controller;
 
-import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.ChangePasswordRequest;
+import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,8 +27,9 @@ public class UserController {
 
     @PostMapping("/cambiar-contrasena")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request, @AuthenticationPrincipal User user) {
-        authService.changePassword(request, user);
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request, @AuthenticationPrincipal SecurityUser user) {
+        authService.changePassword(request, user.getUser());
         return ResponseEntity.ok().build();
     }
 }

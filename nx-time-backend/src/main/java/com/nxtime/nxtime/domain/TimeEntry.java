@@ -17,10 +17,21 @@ import lombok.Setter;
 /**
  * Fichaje (jornada de trabajo, con sus pausas). Tabla "registros".
  *
- * El campo "pausas" no se usa en ningún sitio (vestigio de un diseño
- * anterior, ver auditoría) -- se mantiene en esta fase por fidelidad de
- * migración; se elimina en la Fase 2 junto con el resto de la limpieza
- * de contrato.
+ * Cambios de esta fase respecto a la migración de la Fase 1:
+ *  - Se elimina el campo "pausas" (vestigio muerto, ver auditoría): no
+ *    se leía ni escribía en ningún sitio. Con ddl-auto=update la
+ *    columna huérfana se queda en la tabla física sin hacer daño; la
+ *    Fase 3 la limpia de verdad vía Flyway.
+ *  - El acumulador de pausas pasa de "minutosPausaAcumulados" a
+ *    "segundosPausaAcumulados": el original sumaba
+ *    Duration.toMinutes() por cada pausa individual, truncando hacia
+ *    cero -- varias pausas cortas de menos de un minuto se contaban
+ *    como 0 en total aunque sumadas superaran el minuto (ver
+ *    auditoría). Ahora se acumula en segundos sin truncar por evento,
+ *    y el minutaje que ve el cliente se deriva UNA sola vez sobre el
+ *    total real (ver TimeEntryMapper). Como la entidad ya no se
+ *    serializa directamente (ver defecto #1, corregido en esta fase),
+ *    este cambio de nombre no rompe el contrato JSON.
  */
 @Entity(name = "registros")
 @Getter
@@ -45,14 +56,12 @@ public class TimeEntry {
 
     private LocalDateTime horaSalida;
 
-    private String pausas;
-
     private boolean enPausa;
 
     private LocalDateTime inicioPausaActual;
 
     @Builder.Default
-    private long minutosPausaAcumulados = 0;
+    private long segundosPausaAcumulados = 0;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")

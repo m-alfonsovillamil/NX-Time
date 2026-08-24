@@ -6,22 +6,34 @@ import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
+import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.mapper.AbsenceMapper;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.AbsenceService;
 import java.util.List;
-import java.util.NoSuchElementException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Migración 1:1 de ServicioAusenciaImpl.kt, incluida la comprobación de
- * rol duplicada respecto al @PreAuthorize del controlador (ver
- * auditoría, defectos de diseño) -- no se limpia en esta fase.
+ * Migración 1:1 (Fase 1) mantenida aquí con la comprobación de rol
+ * duplicada respecto al @PreAuthorize del controlador (ver auditoría,
+ * defectos de diseño): sigue siendo redundante, pero no se toca en
+ * esta fase -- el objetivo aquí es el manejo de errores, no eliminar
+ * duplicación de lógica de autorización.
  */
 @Service
+@Transactional(readOnly = true)
 public class AbsenceServiceImpl implements AbsenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(AbsenceServiceImpl.class);
 
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
@@ -39,15 +51,19 @@ public class AbsenceServiceImpl implements AbsenceService {
 
     private User getUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado con email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
     }
 
+    // Sin transacción: inserta un AbsenceRequest nuevo con
+    // GenerationType.TABLE (mismo problema de SQLite documentado en
+    // AuthServiceImpl.registerManager).
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AbsenceResponse createRequest(String email, AbsenceRequestDTO requestDTO) {
         User user = getUser(email);
 
         if (requestDTO.fechaInicio().isAfter(requestDTO.fechaFin())) {
-            throw new IllegalArgumentException("La fecha de inicio no puede ser posterior a la fecha de fin.");
+            throw new BusinessException("La fecha de inicio no puede ser posterior a la fecha de fin.", HttpStatus.BAD_REQUEST);
         }
 
         AbsenceRequest newRequest = AbsenceRequest.builder()
@@ -58,7 +74,9 @@ public class AbsenceServiceImpl implements AbsenceService {
                 .motivo(requestDTO.motivo())
                 .build();
 
-        return absenceMapper.toResponse(absenceRequestRepository.save(newRequest));
+        AbsenceRequest saved = absenceRequestRepository.save(newRequest);
+        log.info("Nueva petición de ausencia de {} ({} - {})", email, saved.getFechaInicio(), saved.getFechaFin());
+        return absenceMapper.toResponse(saved);
     }
 
     @Override
@@ -80,6 +98,7 @@ public class AbsenceServiceImpl implements AbsenceService {
     }
 
     @Override
+    @Transactional
     public AbsenceResponse changeRequestStatus(String managerEmail, long requestId, AbsenceStatus newStatus) {
         User manager = getUser(managerEmail);
         if (manager.getRol() != Role.GESTOR) {
@@ -87,18 +106,20 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
 
         AbsenceRequest request = absenceRequestRepository.findById(requestId)
-                .orElseThrow(() -> new NoSuchElementException("Petición no encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Petición no encontrada."));
 
         if (request.getUsuario().getEmpresa().getId() != manager.getEmpresa().getId()) {
-            throw new AccessDeniedException("No puedes modificar peticiones de otra empresa.");
+            throw new TenantAccessException("No puedes modificar peticiones de otra empresa.");
         }
 
         if (request.getEstado() != AbsenceStatus.PENDIENTE) {
-            throw new IllegalStateException("Solo se puede modificar una petición PENDIENTE.");
+            throw new BusinessException("Solo se puede modificar una petición PENDIENTE.");
         }
 
         request.setEstado(newStatus);
-        return absenceMapper.toResponse(absenceRequestRepository.save(request));
+        AbsenceRequest saved = absenceRequestRepository.save(request);
+        log.info("Petición de ausencia {} cambiada a {} por {}", requestId, newStatus, managerEmail);
+        return absenceMapper.toResponse(saved);
     }
 
     @Override

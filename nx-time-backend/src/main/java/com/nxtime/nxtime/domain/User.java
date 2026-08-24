@@ -10,24 +10,21 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.TableGenerator;
-import java.util.Collection;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 /**
  * Usuario (empleado o gestor). Tabla "usuarios".
  *
- * Sigue implementando {@link UserDetails} directamente, igual que en el
- * Kotlin original: acopla el dominio a Spring Security (ver auditoría,
- * defectos de diseño). Se corrige en la Fase 2 introduciendo un
- * adaptador SecurityUser -- no se toca en esta fase de migración pura.
+ * Ya NO implementa UserDetails (ver auditoría, defectos de diseño):
+ * ese acoplamiento a Spring Security se traslada al adaptador
+ * {@link com.nxtime.nxtime.security.SecurityUser}, que envuelve esta
+ * entidad. Esto es, entre otras cosas, lo que permite que ningún
+ * controlador pueda ya devolver por accidente la contraseña cifrada al
+ * serializar un User -- la propia clase ya no expone getPassword().
  */
 @Entity(name = "usuarios")
 @Getter
@@ -35,7 +32,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User implements UserDetails {
+public class User {
 
     @Id
     @TableGenerator(
@@ -61,41 +58,6 @@ public class User implements UserDetails {
     @ManyToOne
     @JoinColumn(name = "empresa_id")
     private Company empresa;
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + rol.name()));
-    }
-
-    @Override
-    public String getPassword() {
-        return contrasena;
-    }
-
-    @Override
-    public String getUsername() {
-        return email;
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
 
     @Override
     public boolean equals(Object o) {

@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.service.AbsenceService;
+import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,7 +31,8 @@ public class AbsenceController {
 
     @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
     @PostMapping
-    public ResponseEntity<AbsenceResponse> requestAbsence(@RequestBody AbsenceRequestDTO requestDTO, Authentication authentication) {
+    public ResponseEntity<AbsenceResponse> requestAbsence(
+            @Valid @RequestBody AbsenceRequestDTO requestDTO, Authentication authentication) {
         return ResponseEntity.ok(absenceService.createRequest(authentication.getName(), requestDTO));
     }
 

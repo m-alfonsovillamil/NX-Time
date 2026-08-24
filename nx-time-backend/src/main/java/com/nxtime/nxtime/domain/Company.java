@@ -15,6 +15,16 @@ import lombok.Setter;
  * Empresa (tenant). Tabla "empresas" -- nombre de tabla y estrategia de
  * generación de IDs sin tocar en esta fase: es persistencia, se rediseña
  * en la Fase 3 (PostgreSQL + Flyway + IDENTITY).
+ *
+ * Se probó adelantar el cambio a GenerationType.IDENTITY en esta misma
+ * fase (para poder combinar @Transactional con TABLE sin el
+ * interbloqueo descrito en AuthServiceImpl.registerManager), pero el
+ * driver sqlite-jdbc 3.43.0.0 no implementa getGeneratedKeys(), que es
+ * lo que Hibernate 6.6 usa por defecto para IDENTITY: revienta con
+ * "not implemented by SQLite JDBC driver" en cualquier insert. Es un
+ * callejón sin salida en esta combinación concreta de versiones, así
+ * que se mantiene TABLE (que sí funciona) y el caso concreto de
+ * registerManager se resuelve sin @Transactional (ver ese método).
  */
 @Entity(name = "empresas")
 @Getter

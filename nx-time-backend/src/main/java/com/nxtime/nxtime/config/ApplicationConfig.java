@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.config;
 
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.security.SecurityUser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,6 +33,7 @@ public class ApplicationConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
+                .map(SecurityUser::new)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 

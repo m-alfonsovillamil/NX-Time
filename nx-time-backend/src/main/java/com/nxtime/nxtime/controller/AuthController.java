@@ -4,6 +4,7 @@ import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
 import com.nxtime.nxtime.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,12 +25,12 @@ public class AuthController {
     }
 
     @PostMapping("/register-manager")
-    public ResponseEntity<AuthenticationResponse> registerManager(@RequestBody RegisterManagerRequest request) {
+    public ResponseEntity<AuthenticationResponse> registerManager(@Valid @RequestBody RegisterManagerRequest request) {
         return ResponseEntity.ok(authService.registerManager(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 }

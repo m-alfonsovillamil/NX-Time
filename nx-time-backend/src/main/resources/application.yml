@@ -3,8 +3,12 @@ spring:
   datasource:
 
     driver-class-name: org.sqlite.JDBC
-    # Esta es la ruta al fichero de nuestra base de datos.
-    url: jdbc:sqlite:nxtime.db
+    # Esta es la ruta al fichero de nuestra base de datos. busy_timeout
+    # hace que el driver espere (en vez de fallar al instante con
+    # SQLITE_BUSY) si el fichero está momentáneamente bloqueado por otra
+    # escritura -- SQLite solo admite un escritor a la vez (ver
+    # auditoría, y el comentario de AuthServiceImpl.registerManager).
+    url: jdbc:sqlite:nxtime.db?busy_timeout=5000
 
   # Configuración de JPA (Hibernate)
   jpa:
@@ -17,6 +21,28 @@ spring:
     properties:
       hibernate:
         format_sql: true
+    # Por defecto Spring Boot mantiene la conexión abierta durante TODA
+    # la petición (incluida la fase de renderizado), no solo durante la
+    # transacción -- lo que además esconde N+1 hasta que la vista fuerza
+    # la carga perezosa. Es la recomendación estándar de Spring Boot
+    # para producción, independientemente de SQLite.
+    open-in-view: false
+
+  # Convierte automáticamente las excepciones "estándar" de Spring MVC
+  # (validación con @Valid, JSON malformado, método HTTP no soportado...)
+  # en ProblemDetail (RFC 7807), sin pasar por response.sendError() ni
+  # por el dispatch a "/error" que hoy intercepta el filtro de
+  # seguridad (ver GlobalExceptionHandler y el commit de la Fase 0).
+  mvc:
+    problemdetails:
+      enabled: true
+
+# Cada línea de log lleva el requestId de CorrelationIdFilter, para
+# poder seguir todas las líneas de una misma petición aunque pasen por
+# varias clases.
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %msg%n"
 
 # Configuración personalizada de la aplicación
 application:
