@@ -1,0 +1,33 @@
+spring:
+  # Configuración de la Base de Datos (DataSource)
+  datasource:
+
+    driver-class-name: org.sqlite.JDBC
+    # Esta es la ruta al fichero de nuestra base de datos.
+    url: jdbc:sqlite:nxtime.db
+
+  # Configuración de JPA (Hibernate)
+  jpa:
+
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# Configuración personalizada de la aplicación
+application:
+  security:
+    jwt:
+      # Clave secreta HMAC. Se lee de la variable de entorno JWT_SECRET.
+      # El valor por defecto SOLO es válido para desarrollo local: es una
+      # clave nueva generada para este repo (la anterior quedó expuesta en
+      # git y se considera comprometida). En producción se sobreescribe
+      # siempre con una variable de entorno propia (ver Fase 3/11 del plan).
+      secret-key: "${JWT_SECRET:PXPGUXRppB7TpSN+W65Sl9qIKhKIOS6vxftZBZLCI4iIuCPt4CzTchUL4BFScNcgXWhlQess0tQaSOy8PABnRQ==}"
+
+      # 1 día de expiración en milisegundos
+      expiration: 86400000

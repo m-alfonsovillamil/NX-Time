@@ -1,0 +1,42 @@
+# --- Build outputs ---
+build/
+out/
+bin/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# --- Gradle ---
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# --- IDE ---
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.kotlin/
+
+# --- Android ---
+local.properties
+*.apk
+*.aab
+captures/
+.cxx/
+nx-time-frontend-android/release/
+
+# --- Datos locales / secretos ---
+*.db
+*.db-journal
+prueba.http
+.env
+.env.*
+
+# --- Assets fuente pesados (no forman parte del código) ---
+imagen icono/
+
+# --- SO ---
+.DS_Store
+Thumbs.db
+.claude/

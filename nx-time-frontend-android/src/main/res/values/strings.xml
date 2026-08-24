@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NX Time</string>
+    <string name="home_panel_gestor">Panel de Gestor</string>
+    <string name="home_solicitar_ausencia">Solicitar Ausencia</string>
+    <string name="home_ver_ausencias">Ver Mis Ausencias</string>
+    <string name="home_ver_historial">Ver Historial de Fichajes</string>
+    <string name="home_cambiar_contrasena">Cambiar Contraseña</string>
+    <string name="home_iniciar_jornada">Iniciar Jornada</string>
+    <string name="home_iniciar_pausa">Iniciar Pausa</string>
+    <string name="gestor_ver_ausencias_aprobadas">Ver Ausencias Aprobadas</string>
+
+
+</resources>
