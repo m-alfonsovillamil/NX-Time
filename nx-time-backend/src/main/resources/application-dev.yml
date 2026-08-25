@@ -1,0 +1,16 @@
+# Perfil de desarrollo local: PostgreSQL en Docker (ver docker-compose.yml
+# en la raíz del monorepo -- puerto 5433, no 5432, para no chocar con
+# instalaciones nativas de Postgres que pueda tener la máquina).
+#
+# Uso: ./gradlew bootRun --args='--spring.profiles.active=dev'
+# (añade ",demo" para arrancar además con datos de ejemplo: ver
+# demo/DemoDataSeeder.java)
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/nxtime
+    username: nxtime
+    password: nxtime
+
+  jpa:
+    show-sql: true

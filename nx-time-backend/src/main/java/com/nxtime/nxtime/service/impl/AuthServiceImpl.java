@@ -25,7 +25,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -57,23 +56,16 @@ public class AuthServiceImpl implements AuthService {
         this.authenticationManager = authenticationManager;
     }
 
-    // NOTA: a diferencia del resto de métodos de escritura, este va con
-    // Propagation.NOT_SUPPORTED (explícitamente SIN transacción),
-    // pisando el @Transactional(readOnly = true) de la clase. Hace dos
-    // save() (Company y User) con GenerationType.TABLE cada uno: el
-    // generador de IDs necesita, para cada entidad, su propia conexión
-    // "aislada" para confirmar el siguiente id de inmediato. Envolver
-    // ambos save() en una única transacción hace que esa conexión
-    // aislada del segundo generador choque con el lock de escritura que
-    // la transacción exterior ya mantiene abierto sobre el mismo
-    // fichero SQLite (solo admite un escritor a la vez) -- un
-    // interbloqueo real, verificado empíricamente, no una suposición.
-    // Por eso este método concreto mantiene el comportamiento no
-    // atómico de la Fase 1 (si el segundo save fallara, quedaría una
-    // empresa huérfana) hasta la Fase 3, que migra a PostgreSQL +
-    // IDENTITY y elimina el problema de raíz.
+    // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
+    // normal: los dos save() (Company y User) son ahora atómicos de
+    // verdad. Antes, sobre SQLite + GenerationType.TABLE, envolver
+    // ambos save() en una transacción provocaba un interbloqueo real
+    // (ver el historial de commits de la Fase 2) y este método se
+    // dejaba deliberadamente sin @Transactional -- si el segundo save
+    // fallaba, quedaba una empresa huérfana. ID PostgreSQL no tiene
+    // ese problema: ya no hace falta el workaround.
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public AuthenticationResponse registerManager(RegisterManagerRequest request) {
         if (companyRepository.findByNombre(request.nombreEmpresa()).isPresent()) {
             throw new BusinessException("La empresa ya existe. Solicita acceso al administrador.");
@@ -110,16 +102,8 @@ public class AuthServiceImpl implements AuthService {
         return new AuthenticationResponse(jwtToken, user.getNombre(), user.getRol());
     }
 
-    // Sin transacción, igual que registerManager (ver el comentario
-    // detallado ahí): crea un User nuevo con GenerationType.TABLE, y
-    // CUALQUIER @Transactional alrededor de un insert con TABLE se
-    // bloquea contra la conexión aislada del propio generador de IDs en
-    // SQLite -- no hace falta que haya un segundo save() para que pase,
-    // basta con uno solo (verificado empíricamente: al principio se
-    // pensó que el problema era solo con dos saves, pero un único
-    // insert transaccional ya lo reproduce).
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public void createEmployee(CreateEmployeeRequest request, User manager) {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException("El email ya está registrado.");
@@ -139,9 +123,8 @@ public class AuthServiceImpl implements AuthService {
         log.info("Gestor {} ha creado al empleado {}", manager.getEmail(), newEmployee.getEmail());
     }
 
-    // Sin transacción -- mismo motivo que createEmployee.
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public void createManager(CreateManagerRequest request, User admin) {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException("El email ya está registrado.");

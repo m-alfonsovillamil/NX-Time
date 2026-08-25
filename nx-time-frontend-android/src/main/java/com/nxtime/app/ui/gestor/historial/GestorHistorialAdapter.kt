@@ -6,8 +6,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nxtime.app.data.dto.RegistroEquipoDTO
 import com.nxtime.app.databinding.ItemGestorHistorialBinding
 import java.time.Duration
-import java.time.LocalDateTime
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
@@ -22,14 +23,16 @@ class GestorHistorialAdapter(
     /*
      * Formateadores de fecha/hora para convertir el texto de la API en un formato legible.
      *
-     * horaEntrada/horaSalida pasaron de "HH:mm:ss" (texto plano) a fechas
-     * ISO-8601 tipadas (LocalDateTime completo) en la Fase 2 del backend
-     * -- ver auditoría, defectos de diseño. Por eso se parsean ahora con
-     * ISO_LOCAL_DATE_TIME en vez de ISO_LOCAL_TIME.
+     * horaEntrada/horaSalida: "HH:mm:ss" texto plano -> LocalDateTime ISO
+     * (Fase 2) -> Instant real con sufijo "Z" (Fase 3, columnas
+     * TIMESTAMPTZ del backend). Se parsean como Instant y se proyectan a
+     * la zona española para mostrarlos -- ver auditoría, "lo que falta"
+     * sobre zonas horarias. "fecha" ya venía como LocalDate del backend
+     * (derivada en zona española del lado servidor) y no cambia aquí.
      */
 
     private val fechaParser = DateTimeFormatter.ISO_LOCAL_DATE
-    private val horaParser = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val zonaEspaña = ZoneId.of("Europe/Madrid")
     private val fechaFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", Locale("es", "ES"))
     private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm 'h'", Locale("es", "ES"))
 
@@ -98,12 +101,12 @@ class GestorHistorialAdapter(
             fecha.format(fechaFormatter)
         } catch (e: DateTimeParseException) { rawFecha }
     }
-    private fun formatarHora(rawHora: String?): String {
-        if (rawHora == null) return "---"
+    private fun formatarHora(rawInstant: String?): String {
+        if (rawInstant == null) return "---"
         return try {
-            val hora = LocalDateTime.parse(rawHora, horaParser)
-            hora.toLocalTime().format(horaFormatter)
-        } catch (e: DateTimeParseException) { rawHora }
+            val hora = Instant.parse(rawInstant).atZone(zonaEspaña)
+            hora.format(horaFormatter)
+        } catch (e: DateTimeParseException) { rawInstant }
     }
 
         /*
@@ -113,8 +116,8 @@ class GestorHistorialAdapter(
         if (entrada == null || salida == null) return "---"
 
         return try {
-            val entradaTime = LocalDateTime.parse(entrada, horaParser)
-            val salidaTime = LocalDateTime.parse(salida, horaParser)
+            val entradaTime = Instant.parse(entrada)
+            val salidaTime = Instant.parse(salida)
 
 
             val duracionBruta = Duration.between(entradaTime, salidaTime)

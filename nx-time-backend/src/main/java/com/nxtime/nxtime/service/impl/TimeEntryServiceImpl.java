@@ -12,7 +12,7 @@ import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -30,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
  * TimeEntryAction (desde la Fase 1), así que la rama "acción no
  * válida" del `when` original ya no puede darse aquí: un valor
  * inválido lo rechaza Jackson al deserializar.
+ *
+ * horaEntrada/horaSalida/inicioPausaActual son Instant desde la
+ * Fase 3 (antes LocalDateTime): un fichaje es un instante concreto,
+ * no una fecha-hora sin zona (ver TimeEntry).
  */
 @Service
 @Transactional(readOnly = true)
@@ -54,16 +57,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         this.timeEntryMapper = timeEntryMapper;
     }
 
-    // Sin transacción: la rama INICIO inserta un TimeEntry nuevo con
-    // GenerationType.TABLE, y eso se bloquea contra la conexión aislada
-    // del propio generador de IDs si el método entero va envuelto en
-    // una transacción de Spring (ver el comentario detallado en
-    // AuthServiceImpl.registerManager -- mismo problema de SQLite).
-    // Las otras 3 ramas (FIN/PAUSA_INICIO/PAUSA_FIN) solo actualizan un
-    // TimeEntry ya existente y no les afectaría, pero el método es una
-    // sola unidad y comparte propagación.
+    // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
+    // normal (ver el comentario homólogo en AuthServiceImpl.registerManager
+    // sobre por qué antes no lo era).
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
@@ -77,7 +75,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 }
                 TimeEntry newEntry = TimeEntry.builder()
                         .usuario(user)
-                        .horaEntrada(LocalDateTime.now())
+                        .empresa(user.getEmpresa())
+                        .horaEntrada(Instant.now())
                         .build();
                 yield timeEntryRepository.save(newEntry);
             }
@@ -88,7 +87,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 if (activeEntry.isEnPausa()) {
                     throw new BusinessException("No se puede finalizar la jornada mientras está en pausa.");
                 }
-                activeEntry.setHoraSalida(LocalDateTime.now());
+                activeEntry.setHoraSalida(Instant.now());
                 yield timeEntryRepository.save(activeEntry);
             }
             case PAUSA_INICIO -> {
@@ -99,7 +98,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new BusinessException("La jornada ya está en pausa.");
                 }
                 activeEntry.setEnPausa(true);
-                activeEntry.setInicioPausaActual(LocalDateTime.now());
+                activeEntry.setInicioPausaActual(Instant.now());
                 yield timeEntryRepository.save(activeEntry);
             }
             case PAUSA_FIN -> {
@@ -110,13 +109,13 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new BusinessException("La jornada no está en pausa.");
                 }
 
-                LocalDateTime inicioPausa = activeEntry.getInicioPausaActual();
+                Instant inicioPausa = activeEntry.getInicioPausaActual();
                 if (inicioPausa == null) {
                     // Invariante interna rota (no es un caso de negocio esperable): 500 genérico.
                     throw new IllegalStateException("No se encontró el inicio de la pausa para el fichaje " + activeEntry.getId());
                 }
 
-                LocalDateTime ahora = LocalDateTime.now();
+                Instant ahora = Instant.now();
                 Duration duracionPausa = Duration.between(inicioPausa, ahora);
 
                 activeEntry.setSegundosPausaAcumulados(activeEntry.getSegundosPausaAcumulados() + duracionPausa.getSeconds());

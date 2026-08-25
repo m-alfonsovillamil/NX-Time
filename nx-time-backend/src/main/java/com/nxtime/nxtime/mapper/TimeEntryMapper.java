@@ -5,6 +5,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
+import java.time.ZoneId;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -26,14 +27,21 @@ import org.mapstruct.Named;
  * truncando id=1 a id=1/60=0 -- bug real, detectado por los tests de
  * contrato. @Named + qualifiedByName lo restringe a donde se pide
  * explícitamente.
+ *
+ * "fecha" (TeamTimeEntryDTO) se deriva del Instant horaEntrada
+ * proyectado a MADRID_ZONE (Fase 3: horaEntrada dejó de ser
+ * LocalDateTime "ingenuo" para ser un Instant real -- necesita zona
+ * explícita para saber a qué día de calendario pertenece).
  */
 @Mapper(componentModel = "spring")
 public interface TimeEntryMapper {
 
+    ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
+
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     TimeEntryResponse toResponse(TimeEntry entry);
 
-    @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().toLocalDate())")
+    @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().atZone(MADRID_ZONE).toLocalDate())")
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 

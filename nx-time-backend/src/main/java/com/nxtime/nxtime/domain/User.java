@@ -9,7 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.TableGenerator;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +25,8 @@ import lombok.Setter;
  * entidad. Esto es, entre otras cosas, lo que permite que ningún
  * controlador pueda ya devolver por accidente la contraseña cifrada al
  * serializar un User -- la propia clase ya no expone getPassword().
+ *
+ * IDs con GenerationType.IDENTITY desde la Fase 3 (ver Company.java).
  */
 @Entity(name = "usuarios")
 @Getter
@@ -35,14 +37,7 @@ import lombok.Setter;
 public class User {
 
     @Id
-    @TableGenerator(
-            name = "usuario_gen",
-            table = "id_generator",
-            pkColumnName = "gen_name",
-            valueColumnName = "gen_val",
-            allocationSize = 1
-    )
-    @GeneratedValue(strategy = GenerationType.TABLE, generator = "usuario_gen")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @Column(unique = true)
@@ -58,6 +53,9 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "empresa_id")
     private Company empresa;
+
+    @Version
+    private long version;
 
     @Override
     public boolean equals(Object o) {

@@ -19,7 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,42 +30,72 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests de CONTRATO (Fase 0 del plan de profesionalización).
  *
- * Objetivo: fijar en un test ejecutable la forma real de los 16 endpoints
- * HTTP que hoy consume la app Android, TAL COMO SE COMPORTAN AHORA MISMO
- * -- incluyendo sus defectos conocidos (ver auditoría del plan).
+ * Objetivo: fijar en un test ejecutable la forma real de los endpoints
+ * HTTP que consume la app Android. Ha ido evolucionando junto con el
+ * backend en cada fase:
  *
- * Este test es la red de seguridad para dos cosas muy distintas:
+ *   - Fase 1 (migración Kotlin -> Java): el criterio de aceptación fue
+ *     que este fichero pasara SIN MODIFICARLO -- de ahí que use JSON
+ *     crudo (Map/JsonNode) en vez de las clases del proyecto, y no
+ *     dependiera de nada que la migración fuese a borrar.
  *
- *   - Fase 1 (migración Kotlin -> Java): el criterio de aceptación es que
- *     este fichero pase SIN MODIFICARLO. Por eso está escrito en Java,
- *     usando JSON crudo (Map/JsonNode) en vez de las clases Kotlin del
- *     proyecto -- así no depende de nada que la migración vaya a borrar.
+ *   - Fase 2 (manejo de errores, DTOs...): el contrato cambió a
+ *     propósito. Los tests que documentaban un "BUG ACTUAL" (ver el
+ *     historial de commits) se actualizaron para esperar el
+ *     comportamiento correcto.
  *
- *   - Fase 2 (manejo de errores, DTOs, etc.): ahí el contrato SÍ cambia a
- *     propósito. Los tests marcados "BUG ACTUAL" documentan el
- *     comportamiento defectuoso de hoy (ver plan, sección "Defectos
- *     críticos") y hay que actualizarlos deliberadamente en esa fase.
+ *   - Fase 3 (PostgreSQL): la base de datos de test pasa de un fichero
+ *     SQLite desechable a una base de datos PostgreSQL real, creada de
+ *     cero en cada ejecución (ver freshTestDatabase abajo) sobre el
+ *     Postgres de docker-compose.yml. Flyway aplica el esquema real
+ *     (V1__initial_schema.sql) al arrancar el contexto. Los campos de
+ *     instante (horaEntrada/horaSalida) pasan de LocalDateTime a
+ *     Instant: en JSON llevan sufijo "Z" (UTC).
  *
- * Cada base de datos SQLite de test es nueva y aislada (ver
- * datasourceProperties): se puede ejecutar el conjunto de tests
- * repetidamente sin colisiones de datos entre ejecuciones.
+ *     Se intentó primero con Testcontainers (un PostgreSQL en su propio
+ *     contenedor Docker, autogestionado): en este equipo, con Docker
+ *     Desktop 4.87 en Windows, ninguno de los tres transportes
+ *     disponibles (pipes con nombre ni el daemon expuesto por TCP)
+ *     funciona con la librería docker-java que usa Testcontainers
+ *     1.21.3 -- verificado con un cliente docker-java aislado, no es un
+ *     problema de configuración. Es plausible que sea específico de
+ *     esta combinación concreta y no se reproduzca en Linux (CI de la
+ *     Fase 11). Mientras tanto, requiere tener
+ *     `docker compose up -d postgres` corriendo antes de lanzar los tests.
+ *
+ * Requisito para ejecutar esta clase: `docker compose up -d postgres`
+ * (ver docker-compose.yml en la raíz del monorepo) con el puerto 5433.
  *
  * Los tests están ordenados porque construyen un flujo de negocio
  * encadenado (registrar empresa -> crear empleado -> fichar -> pedir
- * ausencia -> aprobarla...), igual que lo haría la app real.
+ * ausencia -> aprobarla...), igual que lo haría la app real. Se
+ * ejecuta una única instancia de la clase (PER_CLASS) contra una única
+ * base de datos, creada una vez para toda la clase.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class ApiContractTest {
 
+    private static final String ADMIN_URL = "jdbc:postgresql://localhost:5433/nxtime";
+    private static final String DB_USER = "nxtime";
+    private static final String DB_PASSWORD = "nxtime";
+
     @DynamicPropertySource
-    static void datasourceProperties(DynamicPropertyRegistry registry) {
-        String dbFile = "build/test-dbs/contract-" + System.nanoTime() + ".db";
-        new File(dbFile).getParentFile().mkdirs();
-        // busy_timeout: ver el comentario homólogo en application.yml sobre
-        // GenerationType.TABLE + pool de Hikari + SQLite.
-        registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + dbFile + "?busy_timeout=5000");
+    static void datasourceProperties(DynamicPropertyRegistry registry) throws Exception {
+        String testDb = "contract_test_" + System.nanoTime();
+        try (Connection admin = DriverManager.getConnection(ADMIN_URL, DB_USER, DB_PASSWORD);
+             Statement statement = admin.createStatement()) {
+            // CREATE DATABASE no puede ir dentro de una transacción; la
+            // conexión JDBC por defecto va en autocommit, así que esto
+            // se ejecuta y confirma de inmediato.
+            statement.execute("CREATE DATABASE " + testDb);
+        }
+
+        String testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
+        registry.add("spring.datasource.url", () -> testUrl);
+        registry.add("spring.datasource.username", () -> DB_USER);
+        registry.add("spring.datasource.password", () -> DB_PASSWORD);
     }
 
     @Value("${local.server.port}")
@@ -77,8 +109,11 @@ class ApiContractTest {
     private static final String EMAIL_GESTOR = "gestor.contract@nxtime.test";
     private static final String EMAIL_EMPLEADO = "empleado.contract@nxtime.test";
     private static final String EMAIL_GESTOR2 = "gestor2.contract@nxtime.test";
+    private static final String EMPRESA_OTRA = "Otra Empresa Contract SL";
+    private static final String EMAIL_GESTOR_OTRA_EMPRESA = "gestor.otraempresa@nxtime.test";
     private String gestorToken;
     private String empleadoToken;
+    private String gestorOtraEmpresaToken;
     private long empleadoId;
     private long registroActivoId;
     private long peticionAusenciaId;
@@ -256,6 +291,29 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @Order(7)
+    void registrarSegundaEmpresa_creaTenantIndependiente() throws Exception {
+        // Prepara el test de aislamiento multi-tenant (sección 4): un
+        // tenant completamente aparte, con su propio gestor, que no
+        // debe poder ver ni tocar nada de EMPRESA.
+        Map<String, Object> peticion = mapOf(
+                "nombreEmpresa", EMPRESA_OTRA,
+                "nombreGestor", "Gestor Otra Empresa",
+                "email", EMAIL_GESTOR_OTRA_EMPRESA,
+                "password", "password123"
+        );
+
+        ResponseEntity<String> response = rest.postForEntity(
+                url("/auth/register-manager"),
+                new HttpEntity<>(toJson(peticion), jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        gestorOtraEmpresaToken = bodyOf(response).get("token").asText();
     }
 
     // ------------------------------------------------------------------
@@ -510,8 +568,10 @@ class ApiContractTest {
         JsonNode primero = body.get(0);
         // CORREGIDO EN FASE 2: antes horaEntrada/fecha viajaban como
         // String preformateado ("HH:mm:ss" / "yyyy-MM-dd"), no ISO-8601
-        // tipado (ver plan, defectos de diseño).
-        assertThat(primero.get("horaEntrada").asText()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?");
+        // tipado (ver plan, defectos de diseño). Desde la Fase 3,
+        // horaEntrada es un Instant real (sufijo "Z" = UTC explícito),
+        // no un LocalDateTime "ingenuo".
+        assertThat(primero.get("horaEntrada").asText()).matches("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z");
         assertThat(primero.get("fecha").asText()).matches("\\d{4}-\\d{2}-\\d{2}");
         assertThat(primero.get("usuario").get("nombre").asText()).isNotBlank();
         assertThat(primero.get("minutosPausaAcumulados").asLong()).isGreaterThanOrEqualTo(0);
@@ -581,6 +641,36 @@ class ApiContractTest {
             }
         }
         assertThat(encontrada).isTrue();
+    }
+
+    @Test
+    @Order(325)
+    void gestorDeOtraEmpresaNoVeNiPuedeAprobarPeticionAjena_aislamientoMultiTenant() throws Exception {
+        // Test de aislamiento multi-tenant (Fase 3, Paso 5 del plan): un
+        // gestor de una empresa completamente distinta ni ve la
+        // petición pendiente de EMPRESA en su lista de "pendientes", ni
+        // puede aprobarla si intenta forzar el id directamente -- la
+        // base de datos (empresa_id denormalizado) y TenantAccessException
+        // se lo impiden, no solo el hecho de no tener el id a mano.
+        ResponseEntity<String> pendientes = rest.exchange(
+                url("/api/v1/ausencias/gestor/pendientes"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+        assertThat(pendientes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        for (JsonNode n : bodyOf(pendientes)) {
+            assertThat(n.get("id").asLong()).isNotEqualTo(peticionAusenciaId);
+        }
+
+        ResponseEntity<String> aprobar = rest.exchange(
+                url("/api/v1/ausencias/gestor/aprobar/" + peticionAusenciaId),
+                HttpMethod.POST,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+        assertThat(aprobar.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(bodyOf(aprobar).get("detail").asText()).contains("otra empresa");
     }
 
     @Test

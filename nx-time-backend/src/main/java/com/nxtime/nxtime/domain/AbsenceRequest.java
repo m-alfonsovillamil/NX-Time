@@ -8,7 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.TableGenerator;
+import jakarta.persistence.Version;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +19,15 @@ import lombok.Setter;
 /**
  * Solicitud de ausencia (vacaciones, baja médica...). Tabla
  * "peticiones_ausencia".
+ *
+ * fechaInicio/fechaFin se quedan como LocalDate a propósito, y no pasan
+ * a Instant como TimeEntry: un día de vacaciones es una fecha de
+ * calendario (sin hora ni zona), no un instante concreto -- "el 24 de
+ * diciembre" significa lo mismo en cualquier zona horaria.
+ *
+ * IDs con GenerationType.IDENTITY desde la Fase 3 (ver Company.java).
+ * Se añade "empresa" (denormalizado desde usuario.empresa) y "version"
+ * (bloqueo optimista) -- ver el esquema V1__initial_schema.sql.
  */
 @Entity(name = "peticiones_ausencia")
 @Getter
@@ -29,19 +38,16 @@ import lombok.Setter;
 public class AbsenceRequest {
 
     @Id
-    @TableGenerator(
-            name = "peticion_gen",
-            table = "id_generator",
-            pkColumnName = "gen_name",
-            valueColumnName = "gen_val",
-            allocationSize = 1
-    )
-    @GeneratedValue(strategy = GenerationType.TABLE, generator = "peticion_gen")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private User usuario;
+
+    @ManyToOne
+    @JoinColumn(name = "empresa_id")
+    private Company empresa;
 
     private LocalDate fechaInicio;
 
@@ -55,6 +61,9 @@ public class AbsenceRequest {
     private AbsenceStatus estado = AbsenceStatus.PENDIENTE;
 
     private String motivo;
+
+    @Version
+    private long version;
 
     @Override
     public boolean equals(Object o) {

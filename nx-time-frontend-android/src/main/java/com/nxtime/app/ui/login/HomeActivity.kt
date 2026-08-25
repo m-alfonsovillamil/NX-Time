@@ -21,7 +21,8 @@ import com.nxtime.app.ui.solicitud.SolicitudActivity
 import com.nxtime.app.ui.usuario.CambiarContrasenaActivity
 import com.nxtime.app.MainActivity
 
-import java.time.LocalDateTime
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
@@ -128,18 +129,22 @@ class HomeActivity : AppCompatActivity() {
     }
 
     /*
-     * Función de ayuda para convertir la fecha ISO en un texto legible
+     * Función de ayuda para convertir la fecha ISO en un texto legible.
+     *
+     * horaEntrada es un Instant real desde la Fase 3 del backend (antes
+     * LocalDateTime "ingenuo"): en JSON lleva sufijo "Z" (UTC), se
+     * parsea como Instant y se proyecta a la zona española para
+     * mostrarla.
      */
 
-    private fun formatearHoraInicio(rawDateTime: String?): String {
-        if (rawDateTime == null) return ""
+    private fun formatearHoraInicio(rawInstant: String?): String {
+        if (rawInstant == null) return ""
         return try {
-            val parser = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-            val dateTime = LocalDateTime.parse(rawDateTime, parser)
+            val dateTime = Instant.parse(rawInstant).atZone(ZoneId.of("Europe/Madrid"))
             val formatter = DateTimeFormatter.ofPattern("HH:mm 'h'")
             "Jornada iniciada a las: ${dateTime.format(formatter)}"
         } catch (e: DateTimeParseException) {
-            Log.e("HomeActivity", "Error al parsear fecha: $rawDateTime", e)
+            Log.e("HomeActivity", "Error al parsear fecha: $rawInstant", e)
             "Jornada iniciada"
         }
     }

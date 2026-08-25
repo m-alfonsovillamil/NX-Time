@@ -4,7 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.TableGenerator;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,19 +12,17 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Empresa (tenant). Tabla "empresas" -- nombre de tabla y estrategia de
- * generación de IDs sin tocar en esta fase: es persistencia, se rediseña
- * en la Fase 3 (PostgreSQL + Flyway + IDENTITY).
+ * Empresa (tenant). Tabla "empresas".
  *
- * Se probó adelantar el cambio a GenerationType.IDENTITY en esta misma
- * fase (para poder combinar @Transactional con TABLE sin el
- * interbloqueo descrito en AuthServiceImpl.registerManager), pero el
- * driver sqlite-jdbc 3.43.0.0 no implementa getGeneratedKeys(), que es
- * lo que Hibernate 6.6 usa por defecto para IDENTITY: revienta con
- * "not implemented by SQLite JDBC driver" en cualquier insert. Es un
- * callejón sin salida en esta combinación concreta de versiones, así
- * que se mantiene TABLE (que sí funciona) y el caso concreto de
- * registerManager se resuelve sin @Transactional (ver ese método).
+ * IDs con GenerationType.IDENTITY (BIGSERIAL de PostgreSQL) desde la
+ * Fase 3. En SQLite esto no funcionaba (sqlite-jdbc no implementa
+ * getGeneratedKeys()) y el workaround con GenerationType.TABLE
+ * obligaba a quitar @Transactional de varios métodos de escritura
+ * (ver AuthServiceImpl.registerManager antes de esta fase); con
+ * PostgreSQL el problema desaparece de raíz.
+ *
+ * @Version añade bloqueo optimista: dos escrituras concurrentes sobre
+ * la misma fila ya no pueden pisarse en silencio.
  */
 @Entity(name = "empresas")
 @Getter
@@ -35,17 +33,13 @@ import lombok.Setter;
 public class Company {
 
     @Id
-    @TableGenerator(
-            name = "empresa_gen",
-            table = "id_generator",
-            pkColumnName = "gen_name",
-            valueColumnName = "gen_val",
-            allocationSize = 1
-    )
-    @GeneratedValue(strategy = GenerationType.TABLE, generator = "empresa_gen")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     private String nombre;
+
+    @Version
+    private long version;
 
     @Override
     public boolean equals(Object o) {

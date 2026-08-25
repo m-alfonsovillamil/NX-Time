@@ -1,21 +1,22 @@
 package com.nxtime.nxtime.dto;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * DTO para la respuesta del historial de fichajes del equipo.
  *
- * Antes, horaEntrada/horaSalida/fecha viajaban como String
- * preformateado ("HH:mm:ss" / "yyyy-MM-dd"), en vez de fechas
- * ISO-8601 tipadas (ver auditoría, defectos de diseño). Cambio de
- * contrato deliberado de esta fase: requiere actualizar el parseo en
- * la app Android (GestorHistorialAdapter).
+ * horaEntrada/horaSalida son Instant desde la Fase 3 (antes
+ * LocalDateTime; y antes de eso, String preformateado -- ver
+ * auditoría, defectos de diseño). "fecha" se deriva del Instant en la
+ * zona Europe/Madrid (ver TimeEntryMapper), no en UTC: el día de
+ * calendario en que empezó la jornada es el que importa para agrupar
+ * el historial, no el día UTC.
  */
 public record TeamTimeEntryDTO(
         long id,
-        LocalDateTime horaEntrada,
-        LocalDateTime horaSalida,
+        Instant horaEntrada,
+        Instant horaSalida,
         LocalDate fecha,
         SimpleUserDTO usuario,
         long minutosPausaAcumulados

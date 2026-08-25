@@ -6,7 +6,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.databinding.ItemHistorialBinding
 import java.time.Duration
-import java.time.LocalDateTime
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
@@ -21,10 +22,16 @@ class HistorialAdapter(
 ) : RecyclerView.Adapter<HistorialAdapter.HistorialViewHolder>() {
 
     /*
-     * Formateadores para convertir el texto de la API en formatos legibles
+     * Formateadores para convertir el texto de la API en formatos legibles.
+     *
+     * horaEntrada/horaSalida pasaron de LocalDateTime "ingenuo" a Instant
+     * real en la Fase 3 del backend (columnas TIMESTAMPTZ): en JSON
+     * llevan sufijo "Z" (UTC), así que se parsean como Instant y se
+     * proyectan a la zona española para mostrarlos -- ver auditoría,
+     * "lo que falta" sobre zonas horarias.
      */
 
-    private val isoParser = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    private val zonaEspaña = ZoneId.of("Europe/Madrid")
     private val fechaFormatter = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", Locale("es", "ES"))
     private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm 'h'", Locale("es", "ES"))
 
@@ -86,17 +93,17 @@ class HistorialAdapter(
         /*
          * Funciones privadas de ayuda para formatear las fechas y horas.
          */
-    private fun formatarFecha(rawDateTime: String?): String {
-        if (rawDateTime == null) return "Sin fecha"
+    private fun formatarFecha(rawInstant: String?): String {
+        if (rawInstant == null) return "Sin fecha"
         return try {
-            val dateTime = LocalDateTime.parse(rawDateTime, isoParser)
+            val dateTime = Instant.parse(rawInstant).atZone(zonaEspaña)
             dateTime.format(fechaFormatter)
         } catch (e: DateTimeParseException) { "Fecha inválida" }
     }
-    private fun formatarHora(rawDateTime: String?): String {
-        if (rawDateTime == null) return "---"
+    private fun formatarHora(rawInstant: String?): String {
+        if (rawInstant == null) return "---"
         return try {
-            val dateTime = LocalDateTime.parse(rawDateTime, isoParser)
+            val dateTime = Instant.parse(rawInstant).atZone(zonaEspaña)
             dateTime.format(horaFormatter)
         } catch (e: DateTimeParseException) { "Hora inválida" }
     }
@@ -108,8 +115,8 @@ class HistorialAdapter(
         if (entrada == null || salida == null) return "---"
 
         return try {
-            val entradaTime = LocalDateTime.parse(entrada, isoParser)
-            val salidaTime = LocalDateTime.parse(salida, isoParser)
+            val entradaTime = Instant.parse(entrada)
+            val salidaTime = Instant.parse(salida)
 
 
             val duracionBruta = Duration.between(entradaTime, salidaTime)

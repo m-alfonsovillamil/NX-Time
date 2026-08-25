@@ -1,31 +1,24 @@
+# Configuración común a todos los perfiles. Lo específico de cada
+# entorno (dónde está la base de datos, sobre todo) vive en
+# application-dev.yml / application-prod.yml.
+
 spring:
-  # Configuración de la Base de Datos (DataSource)
-  datasource:
-
-    driver-class-name: org.sqlite.JDBC
-    # Esta es la ruta al fichero de nuestra base de datos. busy_timeout
-    # hace que el driver espere (en vez de fallar al instante con
-    # SQLITE_BUSY) si el fichero está momentáneamente bloqueado por otra
-    # escritura -- SQLite solo admite un escritor a la vez (ver
-    # auditoría, y el comentario de AuthServiceImpl.registerManager).
-    url: jdbc:sqlite:nxtime.db?busy_timeout=5000
-
-  # Configuración de JPA (Hibernate)
   jpa:
-
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    # El esquema lo crea y versiona Flyway (ver
+    # resources/db/migration/), no Hibernate: "validate" comprueba que
+    # las entidades coinciden con lo que Flyway ya aplicó, pero nunca
+    # modifica el esquema él solo. Antes, con SQLite, era "update": sin
+    # control de versiones, sin claves foráneas, sin índices (ver
+    # auditoría).
     hibernate:
-
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
     # Por defecto Spring Boot mantiene la conexión abierta durante TODA
     # la petición (incluida la fase de renderizado), no solo durante la
     # transacción -- lo que además esconde N+1 hasta que la vista fuerza
-    # la carga perezosa. Es la recomendación estándar de Spring Boot
-    # para producción, independientemente de SQLite.
+    # la carga perezosa. Es la recomendación estándar de Spring Boot.
     open-in-view: false
 
   # Convierte automáticamente las excepciones "estándar" de Spring MVC
@@ -52,7 +45,7 @@ application:
       # El valor por defecto SOLO es válido para desarrollo local: es una
       # clave nueva generada para este repo (la anterior quedó expuesta en
       # git y se considera comprometida). En producción se sobreescribe
-      # siempre con una variable de entorno propia (ver Fase 3/11 del plan).
+      # siempre con una variable de entorno propia (ver application-prod.yml).
       secret-key: "${JWT_SECRET:PXPGUXRppB7TpSN+W65Sl9qIKhKIOS6vxftZBZLCI4iIuCPt4CzTchUL4BFScNcgXWhlQess0tQaSOy8PABnRQ==}"
 
       # 1 día de expiración en milisegundos

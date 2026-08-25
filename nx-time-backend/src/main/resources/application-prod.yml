@@ -1,0 +1,18 @@
+# Perfil de producción: PostgreSQL en Neon (ver Fase 11 del plan --
+# despliegue en Render). Todo por variables de entorno, nada
+# hardcodeado: DATABASE_URL/DATABASE_USERNAME/DATABASE_PASSWORD los
+# da el panel de Neon (usa el connection string en formato JDBC que
+# ofrece, o compón la URL a partir de host/base/usuario/contraseña).
+#
+# El tuning de HikariCP para el cold start del plan gratuito de Neon
+# (la Fase 11 lo detalla) se añade cuando se despliegue de verdad, no
+# antes.
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+  jpa:
+    show-sql: false

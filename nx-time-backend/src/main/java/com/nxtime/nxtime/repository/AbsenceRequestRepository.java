@@ -10,7 +10,10 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     List<AbsenceRequest> findByUsuario(User usuario);
 
-    List<AbsenceRequest> findByUsuario_Empresa_IdAndEstado(long empresaId, AbsenceStatus estado);
+    // Filtra por AbsenceRequest.empresa directamente (denormalizado
+    // desde la Fase 3) en vez de navegar usuario.empresa.id: más
+    // simple y aprovecha el índice (empresa_id, estado) del esquema.
+    List<AbsenceRequest> findByEmpresa_IdAndEstado(long empresaId, AbsenceStatus estado);
 
-    List<AbsenceRequest> findByUsuario_Empresa_IdAndEstadoIsNot(long empresaId, AbsenceStatus estado);
+    List<AbsenceRequest> findByEmpresa_IdAndEstadoIsNot(long empresaId, AbsenceStatus estado);
 }

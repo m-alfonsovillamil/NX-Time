@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -54,11 +53,10 @@ public class AbsenceServiceImpl implements AbsenceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
     }
 
-    // Sin transacción: inserta un AbsenceRequest nuevo con
-    // GenerationType.TABLE (mismo problema de SQLite documentado en
-    // AuthServiceImpl.registerManager).
+    // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
+    // normal (ver el comentario homólogo en AuthServiceImpl.registerManager).
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public AbsenceResponse createRequest(String email, AbsenceRequestDTO requestDTO) {
         User user = getUser(email);
 
@@ -68,6 +66,7 @@ public class AbsenceServiceImpl implements AbsenceService {
 
         AbsenceRequest newRequest = AbsenceRequest.builder()
                 .usuario(user)
+                .empresa(user.getEmpresa())
                 .fechaInicio(requestDTO.fechaInicio())
                 .fechaFin(requestDTO.fechaFin())
                 .tipo(requestDTO.tipo())
@@ -93,7 +92,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
 
         long companyId = manager.getEmpresa().getId();
-        return absenceRequestRepository.findByUsuario_Empresa_IdAndEstado(companyId, AbsenceStatus.PENDIENTE)
+        return absenceRequestRepository.findByEmpresa_IdAndEstado(companyId, AbsenceStatus.PENDIENTE)
                 .stream().map(absenceMapper::toResponse).toList();
     }
 
@@ -108,7 +107,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         AbsenceRequest request = absenceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Petición no encontrada."));
 
-        if (request.getUsuario().getEmpresa().getId() != manager.getEmpresa().getId()) {
+        if (request.getEmpresa().getId() != manager.getEmpresa().getId()) {
             throw new TenantAccessException("No puedes modificar peticiones de otra empresa.");
         }
 
@@ -130,7 +129,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
 
         long companyId = manager.getEmpresa().getId();
-        return absenceRequestRepository.findByUsuario_Empresa_IdAndEstadoIsNot(companyId, AbsenceStatus.PENDIENTE)
+        return absenceRequestRepository.findByEmpresa_IdAndEstadoIsNot(companyId, AbsenceStatus.PENDIENTE)
                 .stream().map(absenceMapper::toResponse).toList();
     }
 }

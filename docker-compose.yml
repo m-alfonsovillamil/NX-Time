@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nxtime-postgres
+    environment:
+      POSTGRES_DB: nxtime
+      POSTGRES_USER: nxtime
+      POSTGRES_PASSWORD: nxtime
+    ports:
+      # Host 5433 -> contenedor 5432. No usamos el 5432 del host a
+      # propósito: así "docker compose up" funciona igual en cualquier
+      # máquina, tenga o no un PostgreSQL nativo ya escuchando en el
+      # 5432 (como en esta, con un PostgreSQL 18 instalado aparte).
+      - "5433:5432"
+    volumes:
+      - nxtime-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nxtime -d nxtime"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:4
+    container_name: nxtime-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  nxtime-postgres-data:

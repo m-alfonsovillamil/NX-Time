@@ -40,6 +40,12 @@ dependencies {
     implementation("org.mapstruct:mapstruct:1.6.3")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 
+    // Migraciones de esquema versionadas (ver src/main/resources/db/migration).
+    // Sustituye a ddl-auto=update, que generaba el esquema sin control de
+    // versiones y sin claves foráneas ni índices (ver auditoría).
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
     // Librerías para Tests
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -47,11 +53,29 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
+    // Testcontainers: PROBADO en la Fase 3 y aparcado por ahora (ver
+    // ApiContractTest). Con Docker Desktop 4.87 en Windows, los tres
+    // transportes disponibles (los pipes con nombre docker_engine /
+    // dockerDesktopLinuxEngine / docker_cli, y el daemon expuesto por
+    // TCP en localhost:2375) devuelven una respuesta que la librería
+    // docker-java de Testcontainers 1.21.3 no interpreta correctamente
+    // -- verificado con un cliente docker-java aislado, no es un
+    // problema de configuración de DOCKER_HOST ni de propagación de
+    // entorno. Es plausible que sea específico de esta combinación
+    // Windows + Docker Desktop y que no se reproduzca en Linux (CI).
+    // Los tests usan en su lugar el propio Postgres de
+    // docker-compose.yml, creando una base de datos nueva por
+    // ejecución -- mismo principio de aislamiento que antes con
+    // SQLite, sin la complicación de Testcontainers en este entorno.
+    // Se dejan las dependencias listas por si se retoma en la Fase 5.
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
+
     /*
-     * Dependencias específicas de la Base de Datos (SQLite)
+     * Base de datos: PostgreSQL (antes SQLite, ver Fase 3 del plan).
      */
-    implementation("org.xerial:sqlite-jdbc:3.43.0.0")
-    implementation("org.hibernate.orm:hibernate-community-dialects:6.2.7.Final")
+    runtimeOnly("org.postgresql:postgresql")
 
     /*
      * Dependencias para JSON Web Tokens (JWT)
