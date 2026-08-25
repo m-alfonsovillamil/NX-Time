@@ -63,6 +63,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *     Fase 11). Mientras tanto, requiere tener
  *     `docker compose up -d postgres` corriendo antes de lanzar los tests.
  *
+ *   - Fase 4 (seguridad reforzada): registerManager pasa a crear un
+ *     ADMIN (no un GESTOR) -- quien funda el tenant lo administra, ver
+ *     RoleAuthorities. Login y registro devuelven además un
+ *     refreshToken (access token corto, 15 min). Los 401 ahora sí son
+ *     401 con ProblemDetail (antes 403, o directamente un error no
+ *     controlado -- ver RestAuthenticationEntryPoint,
+ *     RestAccessDeniedHandler y el try/catch de JwtAuthenticationFilter).
+ *
  * Requisito para ejecutar esta clase: `docker compose up -d postgres`
  * (ver docker-compose.yml en la raíz del monorepo) con el puerto 5433.
  *
@@ -113,6 +121,7 @@ class ApiContractTest {
     private static final String EMAIL_GESTOR_OTRA_EMPRESA = "gestor.otraempresa@nxtime.test";
     private String gestorToken;
     private String empleadoToken;
+    private String empleadoRefreshToken;
     private String gestorOtraEmpresaToken;
     private long empleadoId;
     private long registroActivoId;
@@ -173,8 +182,15 @@ class ApiContractTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         JsonNode body = bodyOf(response);
         assertThat(body.get("token").asText()).isNotBlank();
+        // CORREGIDO EN FASE 4: quien registra la empresa es ADMIN, no
+        // GESTOR -- es quien administra el tenant, y es el único rol con
+        // "gestor:crear" (ver RoleAuthorities). Antes cualquier GESTOR
+        // podía crear otro GESTOR sin límite (ver auditoría).
         assertThat(body.get("nombre").asText()).isEqualTo("Gestor Contract");
-        assertThat(body.get("rol").asText()).isEqualTo("GESTOR");
+        assertThat(body.get("rol").asText()).isEqualTo("ADMIN");
+        // NUEVO EN FASE 4: refresh token de larga duración, para pedir
+        // un access token nuevo sin volver a pedir contraseña.
+        assertThat(body.get("refreshToken").asText()).isNotBlank();
 
         gestorToken = body.get("token").asText();
     }
@@ -226,19 +242,20 @@ class ApiContractTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         JsonNode body = bodyOf(response);
         assertThat(body.get("token").asText()).isNotBlank();
-        assertThat(body.get("rol").asText()).isEqualTo("GESTOR");
+        assertThat(body.get("refreshToken").asText()).isNotBlank();
+        assertThat(body.get("rol").asText()).isEqualTo("ADMIN");
 
         gestorToken = body.get("token").asText();
     }
 
     @Test
     @Order(4)
-    void login_contrasenaIncorrecta_esUnErrorDeServidor_bugActual() {
-        // BUG ACTUAL (ver plan, defecto #2 "Cero manejo de errores"): al no
-        // haber un @ExceptionHandler para BadCredentialsException, una
-        // contraseña incorrecta en /auth/login no produce un 401 sino un
-        // error no controlado. Este test documenta el estado real de hoy;
-        // en la Fase 2 debe pasar a esperar 401 con ProblemDetail.
+    void login_contrasenaIncorrecta_devuelve401ConProblemDetail() throws Exception {
+        // GlobalExceptionHandler mapea AuthenticationException (la que
+        // lanza el AuthenticationManager para una contraseña incorrecta)
+        // a 401 desde la Fase 2 -- este test se quedó sin actualizar en
+        // su momento, documentando el "bug" con una aserción laxa
+        // (4xx-o-5xx). Se corrige aquí, en la Fase 4, de paso.
         Map<String, Object> peticion = Map.of(
                 "email", EMAIL_GESTOR,
                 "contrasena", "contrasena-incorrecta"
@@ -251,22 +268,25 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode().is4xxClientError()
-                || response.getStatusCode().is5xxServerError()).isTrue();
-        assertThat(response.getStatusCode()).isNotEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(bodyOf(response).get("status").asInt()).isEqualTo(401);
     }
 
     @Test
     @Order(5)
-    void endpointProtegido_sinToken_esRechazado() {
+    void endpointProtegido_sinToken_devuelve401ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 4: antes Spring Security devolvía 403 (con
+        // el HTML de error de Tomcat) para una petición no autenticada
+        // contra una ruta protegida, al no haber un
+        // AuthenticationEntryPoint personalizado. Ahora RestAuthenticationEntryPoint
+        // responde 401 con ProblemDetail -- "no sé quién eres", que es
+        // semánticamente distinto de 403 ("sí sé quién eres, pero no
+        // puedes").
         ResponseEntity<String> response = rest.getForEntity(
                 url("/api/v1/fichaje/activo"), String.class);
 
-        // Sin @AuthenticationEntryPoint personalizado, Spring Security 6
-        // devuelve 403 (no 401) para una petición no autenticada contra una
-        // ruta que exige authenticated(). Documentado como comportamiento
-        // actual; revisar en la Fase 4 (seguridad reforzada).
-        assertThat(response.getStatusCode().value()).isIn(401, 403);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(bodyOf(response).get("status").asInt()).isEqualTo(401);
     }
 
     @Test
@@ -812,16 +832,17 @@ class ApiContractTest {
 
     @Test
     @Order(50)
-    void tokenMalformado_devuelve403EnVezDe401_bugActual() {
-        // BUG ACTUAL (ver plan, defecto #3): FiltroAutenticacionJwt no
-        // envuelve en try/catch la lectura del token, así que un token
-        // corrupto o caducado revienta el filtro con una excepción no
-        // controlada. Aquí la excepción salta ANTES de que el filtro llame
-        // a filterChain.doFilter(), así que nunca pasa por
-        // ExceptionTranslationFilter -- pero el resultado final es el mismo
-        // 403 (vía el dispatch a "/error" + denyAll(), verificado
-        // empíricamente), en vez del 401 que debería devolver. Se corrige
-        // en la Fase 4.
+    void tokenMalformado_devuelve401ConProblemDetail() throws Exception {
+        // CORREGIDO EN FASE 4: antes JwtAuthenticationFilter no
+        // envolvía en try/catch la lectura del token, así que uno
+        // corrupto o caducado reventaba el filtro con una excepción no
+        // controlada -- la excepción saltaba ANTES de que el filtro
+        // llamara a filterChain.doFilter(), así que nunca pasaba por
+        // ExceptionTranslationFilter, y el resultado final era 403 (vía
+        // el dispatch a "/error" + denyAll(), verificado empíricamente
+        // en la Fase 0), no el 401 que debería devolver. Ahora el token
+        // inválido simplemente no autentica la petición, y
+        // RestAuthenticationEntryPoint responde 401 con ProblemDetail.
         HttpHeaders headers = jsonHeaders();
         headers.setBearerAuth("esto-no-es-un-jwt-valido");
 
@@ -832,6 +853,118 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(bodyOf(response).get("status").asInt()).isEqualTo(401);
+    }
+
+    // ------------------------------------------------------------------
+    // 7. REFRESH TOKENS Y LOGOUT (Fase 4)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(51)
+    void refresh_conTokenValido_devuelveAccessTokenNuevoQueFunciona() throws Exception {
+        // Login fresco para tener un refresh token que nadie más haya
+        // tocado (el de loginEmpleado, orden 12, sigue siendo válido,
+        // pero cambiar la contraseña en el orden 41 no lo afecta --
+        // aquí se hace uno nuevo para que el test sea autocontenido).
+        ResponseEntity<String> login = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_EMPLEADO, "contrasena", "nuevaPassword123")), jsonHeaders()),
+                String.class
+        );
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        empleadoRefreshToken = bodyOf(login).get("refreshToken").asText();
+
+        ResponseEntity<String> refresh = rest.postForEntity(
+                url("/auth/refresh"),
+                new HttpEntity<>(toJson(mapOf("refreshToken", empleadoRefreshToken)), jsonHeaders()),
+                String.class
+        );
+
+        assertThat(refresh.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(refresh);
+        String nuevoAccessToken = body.get("token").asText();
+        assertThat(nuevoAccessToken).isNotBlank();
+        // El refresh token no rota en esta implementación: sigue siendo el mismo.
+        assertThat(body.get("refreshToken").asText()).isEqualTo(empleadoRefreshToken);
+
+        // El access token nuevo funciona de verdad contra un endpoint protegido.
+        ResponseEntity<String> activo = rest.exchange(
+                url("/api/v1/fichaje/activo"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(nuevoAccessToken)),
+                String.class
+        );
+        assertThat(activo.getStatusCode()).isIn(HttpStatus.OK, HttpStatus.NO_CONTENT);
+    }
+
+    @Test
+    @Order(52)
+    void logout_revocaElRefreshToken_yUnRefreshPosteriorFalla() throws Exception {
+        ResponseEntity<String> logout = rest.postForEntity(
+                url("/auth/logout"),
+                new HttpEntity<>(toJson(mapOf("refreshToken", empleadoRefreshToken)), jsonHeaders()),
+                String.class
+        );
+        assertThat(logout.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> refreshTrasLogout = rest.postForEntity(
+                url("/auth/refresh"),
+                new HttpEntity<>(toJson(mapOf("refreshToken", empleadoRefreshToken)), jsonHeaders()),
+                String.class
+        );
+        assertThat(refreshTrasLogout.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @Order(53)
+    void login_conDemasiadosIntentos_devuelve429() throws Exception {
+        // Aislado del resto del flujo con una IP falsa propia (vía
+        // X-Forwarded-For), para no consumir ni verse afectado por el
+        // cupo de /auth/login y /auth/register-manager que ya han usado
+        // el resto de tests de esta clase (comparten IP real). 10
+        // peticiones por minuto (ver LoginRateLimitFilter): la 11ª
+        // debe rechazarse.
+        HttpHeaders headers = jsonHeaders();
+        headers.set("X-Forwarded-For", "203.0.113.55");
+        Map<String, Object> credencialesFalsas = mapOf("email", "nadie@nxtime.test", "contrasena", "loquesea");
+        HttpEntity<String> peticion = new HttpEntity<>(toJson(credencialesFalsas), headers);
+
+        ResponseEntity<String> ultima = null;
+        for (int i = 0; i < 11; i++) {
+            ultima = rest.postForEntity(url("/auth/login"), peticion, String.class);
+        }
+
+        assertThat(ultima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    // ------------------------------------------------------------------
+    // 8. BAJA DE EMPLEADOS (Fase 4)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(60)
+    void gestorDaDeBajaAUnEmpleado_yYaNoPuedeIniciarSesion() throws Exception {
+        // Colocado al final a propósito: da de baja al empleado
+        // definitivamente, así que no puede ir antes de ningún otro
+        // test que necesite volver a iniciar sesión como empleado.
+        ResponseEntity<String> baja = rest.exchange(
+                url("/api/v1/gestor/empleados/" + empleadoId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("activo", false)), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(baja.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> loginTrasBaja = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_EMPLEADO, "contrasena", "nuevaPassword123")), jsonHeaders()),
+                String.class
+        );
+
+        // DisabledException (Spring Security, por isEnabled()=false) es
+        // una AuthenticationException más -> 401 vía GlobalExceptionHandler.
+        assertThat(loginTrasBaja.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

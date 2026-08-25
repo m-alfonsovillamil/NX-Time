@@ -78,11 +78,16 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     /*
-     * Dependencias para JSON Web Tokens (JWT)
+     * Dependencias para JSON Web Tokens (JWT). 0.12.x desde la Fase 4
+     * (antes 0.11.5, con la API setClaims/parserBuilder ya deprecada).
      */
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+    // Rate limiting en /auth/login y /auth/register-manager (ver
+    // LoginRateLimitFilter) -- antes la fuerza bruta era libre.
+    implementation("com.bucket4j:bucket4j-core:8.10.1")
 }
 
 /*

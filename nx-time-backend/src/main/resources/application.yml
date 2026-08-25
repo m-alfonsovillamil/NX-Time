@@ -48,5 +48,21 @@ application:
       # siempre con una variable de entorno propia (ver application-prod.yml).
       secret-key: "${JWT_SECRET:PXPGUXRppB7TpSN+W65Sl9qIKhKIOS6vxftZBZLCI4iIuCPt4CzTchUL4BFScNcgXWhlQess0tQaSOy8PABnRQ==}"
 
-      # 1 día de expiración en milisegundos
-      expiration: 86400000
+      # Access token: 15 minutos (antes 1 día -- ver plan, Fase 4: un
+      # token robado ahora vale poco tiempo). Corto a propósito porque
+      # existe refresh-expiration para renovarlo sin pedir contraseña.
+      expiration: 900000
+
+      # Refresh token: 30 días. Se guarda en BD (ver RefreshToken) y es
+      # revocable de verdad -- a diferencia del access token, que es un
+      # JWT firmado sin estado y no se puede invalidar antes de que
+      # caduque por su cuenta.
+      refresh-expiration: 2592000000
+    cors:
+      # Lista de orígenes permitidos, separados por coma. Antes era "*"
+      # fijo en el código (ver auditoría, defectos de diseño). Por
+      # defecto vacío (ningún origen de navegador permitido): la app
+      # Android no manda cabecera Origin, así que CORS no le afecta;
+      # esto solo importa si algún día hay un cliente web. Cada perfil
+      # sobreescribe este valor -- ver application-dev.yml / application-prod.yml.
+      allowed-origins: ""

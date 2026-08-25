@@ -37,12 +37,13 @@ public class ApplicationConfig {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 
+    // Desde la Fase 4: constructor que recibe el PasswordEncoder
+    // directamente (Spring Security 6.3+), en vez del constructor sin
+    // argumentos + setPasswordEncoder() ya deprecado.
     @Bean
-    @SuppressWarnings("deprecation") // el constructor sin args está deprecado; se corrige en la Fase 4
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(passwordEncoder());
         authProvider.setUserDetailsService(userDetailsService());
-        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 

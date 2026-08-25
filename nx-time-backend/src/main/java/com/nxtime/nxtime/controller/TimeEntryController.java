@@ -35,7 +35,7 @@ public class TimeEntryController {
         this.timeEntryMapper = timeEntryMapper;
     }
 
-    @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
     @PostMapping
     public ResponseEntity<TimeEntryResponse> registerTimeEntry(
             @Valid @RequestBody TimeEntryRequest request, Authentication authentication) {
@@ -43,7 +43,7 @@ public class TimeEntryController {
         return ResponseEntity.ok(timeEntryMapper.toResponse(entry));
     }
 
-    @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
+    @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/activo")
     public ResponseEntity<TimeEntryResponse> getActiveTimeEntry(Authentication authentication) {
         return timeEntryService.getActiveTimeEntry(authentication.getName())
@@ -52,7 +52,7 @@ public class TimeEntryController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
+    @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/historial")
     public ResponseEntity<List<TimeEntryResponse>> getHistory(Authentication authentication) {
         List<TimeEntryResponse> history = timeEntryService.getHistory(authentication.getName())
@@ -60,7 +60,7 @@ public class TimeEntryController {
         return ResponseEntity.ok(history);
     }
 
-    @PreAuthorize("hasRole('GESTOR')")
+    @PreAuthorize("hasAuthority('fichaje:leer:equipo')")
     @GetMapping("/gestor/historial")
     public ResponseEntity<List<TeamTimeEntryDTO>> getTeamHistory(Authentication authentication) {
         return ResponseEntity.ok(timeEntryService.getTeamHistory(authentication.getName()));

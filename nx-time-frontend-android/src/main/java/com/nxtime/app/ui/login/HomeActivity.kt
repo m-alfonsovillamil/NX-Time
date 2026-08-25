@@ -110,7 +110,12 @@ class HomeActivity : AppCompatActivity() {
     }
 
     /*
-     * Lee el nombre/rol de la sesión para poner el mensaje de "Hola, [Nombre]" y mostrar u ocultar el "Panel de Gestor" si el usuario es GESTOR.
+     * Lee el nombre/rol de la sesión para poner el mensaje de "Hola, [Nombre]" y mostrar u ocultar el "Panel de Gestor".
+     *
+     * Desde la Fase 4 del backend hay 4 roles (EMPLEADO/GESTOR/RRHH/ADMIN,
+     * antes solo EMPLEADO/GESTOR): quien registra la empresa ahora es
+     * ADMIN, no GESTOR, así que el panel se muestra para cualquier rol
+     * de gestión, no solo "GESTOR" exacto.
      */
 
     private fun configurarBienvenidaYRoles() {
@@ -121,11 +126,8 @@ class HomeActivity : AppCompatActivity() {
             binding.tvBienvenida.text = "Hola, $nombreUsuario"
         }
 
-        if (rolUsuario == "GESTOR") {
-            binding.btnPanelGestor.visibility = View.VISIBLE
-        } else {
-            binding.btnPanelGestor.visibility = View.GONE
-        }
+        val esRolDeGestion = rolUsuario in setOf("GESTOR", "RRHH", "ADMIN")
+        binding.btnPanelGestor.visibility = if (esRolDeGestion) View.VISIBLE else View.GONE
     }
 
     /*

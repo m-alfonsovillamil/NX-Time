@@ -27,6 +27,16 @@ interface ApiService {
         @Body peticion: RegistroGestorRequest
     ): Response<RespuestaAutenticacion>
 
+    @POST("auth/refresh")
+    suspend fun refrescarToken(
+        @Body peticion: RefreshTokenRequest
+    ): Response<RespuestaAutenticacion>
+
+    @POST("auth/logout")
+    suspend fun cerrarSesionRemota(
+        @Body peticion: RefreshTokenRequest
+    ): Response<Unit>
+
 
     /*  Endpoints de Fichaje (Empleado)  */
 

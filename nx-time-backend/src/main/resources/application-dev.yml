@@ -14,3 +14,12 @@ spring:
 
   jpa:
     show-sql: true
+
+application:
+  security:
+    cors:
+      # Permisivo a propósito en desarrollo local: no hay frontend web
+      # real todavía (la app Android no manda cabecera Origin), y esto
+      # solo se usaría para probar la API desde el navegador. En
+      # producción NO es "*" -- ver application-prod.yml.
+      allowed-origins: "*"

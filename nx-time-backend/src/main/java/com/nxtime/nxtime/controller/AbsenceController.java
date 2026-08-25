@@ -29,32 +29,32 @@ public class AbsenceController {
         this.absenceService = absenceService;
     }
 
-    @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
+    @PreAuthorize("hasAuthority('ausencia:escribir')")
     @PostMapping
     public ResponseEntity<AbsenceResponse> requestAbsence(
             @Valid @RequestBody AbsenceRequestDTO requestDTO, Authentication authentication) {
         return ResponseEntity.ok(absenceService.createRequest(authentication.getName(), requestDTO));
     }
 
-    @PreAuthorize("hasAnyRole('EMPLEADO', 'GESTOR')")
+    @PreAuthorize("hasAuthority('ausencia:leer')")
     @GetMapping("/mis-peticiones")
     public ResponseEntity<List<AbsenceResponse>> getMyRequests(Authentication authentication) {
         return ResponseEntity.ok(absenceService.getMyRequests(authentication.getName()));
     }
 
-    @PreAuthorize("hasRole('GESTOR')")
+    @PreAuthorize("hasAuthority('ausencia:aprobar')")
     @GetMapping("/gestor/pendientes")
     public ResponseEntity<List<AbsenceResponse>> getPendingRequests(Authentication authentication) {
         return ResponseEntity.ok(absenceService.getPendingRequests(authentication.getName()));
     }
 
-    @PreAuthorize("hasRole('GESTOR')")
+    @PreAuthorize("hasAuthority('ausencia:aprobar')")
     @PostMapping("/gestor/aprobar/{id}")
     public ResponseEntity<AbsenceResponse> approveRequest(@PathVariable long id, Authentication authentication) {
         return ResponseEntity.ok(absenceService.changeRequestStatus(authentication.getName(), id, AbsenceStatus.APROBADA));
     }
 
-    @PreAuthorize("hasRole('GESTOR')")
+    @PreAuthorize("hasAuthority('ausencia:aprobar')")
     @PostMapping("/gestor/rechazar/{id}")
     public ResponseEntity<AbsenceResponse> rejectRequest(@PathVariable long id, Authentication authentication) {
         return ResponseEntity.ok(absenceService.changeRequestStatus(authentication.getName(), id, AbsenceStatus.RECHAZADA));

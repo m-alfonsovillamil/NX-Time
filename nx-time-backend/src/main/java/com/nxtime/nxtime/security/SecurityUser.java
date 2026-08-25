@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.security;
 
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import java.util.Collection;
 import java.util.List;
@@ -15,8 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
  * acoplaba el dominio a Spring Security y era la entidad que se
  * filtraba entera -- contraseña incluida -- cuando un controlador
  * devolvía otra entidad que la arrastraba anidada (ver defecto #1,
- * corregido en esta misma fase al dejar de exponer entidades JPA en
- * las respuestas).
+ * corregido en la Fase 2).
  */
 public class SecurityUser implements UserDetails {
 
@@ -32,7 +32,9 @@ public class SecurityUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRol().name()));
+        return RoleAuthorities.forRole(user.getRol()).stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList();
     }
 
     @Override
@@ -60,8 +62,11 @@ public class SecurityUser implements UserDetails {
         return true;
     }
 
+    // Desde la Fase 4: un usuario dado de baja (activo = false) ya no
+    // puede autenticarse. Antes esto estaba cableado a "true" sin
+    // excepción (ver auditoría, defectos de diseño).
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.isActivo();
     }
 }

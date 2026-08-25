@@ -2,7 +2,6 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
-import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
@@ -17,16 +16,17 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Migración 1:1 (Fase 1) mantenida aquí con la comprobación de rol
- * duplicada respecto al @PreAuthorize del controlador (ver auditoría,
- * defectos de diseño): sigue siendo redundante, pero no se toca en
- * esta fase -- el objetivo aquí es el manejo de errores, no eliminar
- * duplicación de lógica de autorización.
+ * Desde la Fase 4 ya no duplica la comprobación de rol que hacía el
+ * @PreAuthorize del controlador (ver auditoría, defectos de diseño,
+ * y ManagerController/AbsenceController -- ahora comprueban authorities
+ * granulares como "ausencia:aprobar", que GESTOR, RRHH y ADMIN tienen
+ * los tres). Repetirla aquí con "!= Role.GESTOR" habría rechazado
+ * incorrectamente a RRHH/ADMIN aunque su @PreAuthorize ya los hubiera
+ * dejado pasar.
  */
 @Service
 @Transactional(readOnly = true)
@@ -87,10 +87,6 @@ public class AbsenceServiceImpl implements AbsenceService {
     @Override
     public List<AbsenceResponse> getPendingRequests(String managerEmail) {
         User manager = getUser(managerEmail);
-        if (manager.getRol() != Role.GESTOR) {
-            throw new AccessDeniedException("Acción solo permitida para GESTORES.");
-        }
-
         long companyId = manager.getEmpresa().getId();
         return absenceRequestRepository.findByEmpresa_IdAndEstado(companyId, AbsenceStatus.PENDIENTE)
                 .stream().map(absenceMapper::toResponse).toList();
@@ -100,9 +96,6 @@ public class AbsenceServiceImpl implements AbsenceService {
     @Transactional
     public AbsenceResponse changeRequestStatus(String managerEmail, long requestId, AbsenceStatus newStatus) {
         User manager = getUser(managerEmail);
-        if (manager.getRol() != Role.GESTOR) {
-            throw new AccessDeniedException("Acción solo permitida para GESTORES.");
-        }
 
         AbsenceRequest request = absenceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Petición no encontrada."));
@@ -124,10 +117,6 @@ public class AbsenceServiceImpl implements AbsenceService {
     @Override
     public List<AbsenceResponse> getHistory(String managerEmail) {
         User manager = getUser(managerEmail);
-        if (manager.getRol() != Role.GESTOR) {
-            throw new AccessDeniedException("Acción solo permitida para GESTORES.");
-        }
-
         long companyId = manager.getEmpresa().getId();
         return absenceRequestRepository.findByEmpresa_IdAndEstadoIsNot(companyId, AbsenceStatus.PENDIENTE)
                 .stream().map(absenceMapper::toResponse).toList();

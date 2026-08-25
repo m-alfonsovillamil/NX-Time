@@ -16,6 +16,12 @@ public interface AuthService {
 
     AuthenticationResponse login(LoginRequest request);
 
+    /** Cambia el access token expirado por uno nuevo, sin pedir contraseña otra vez. */
+    AuthenticationResponse refreshAccessToken(String refreshToken);
+
+    /** Revoca un refresh token concreto (cierra esa sesión, no las demás del usuario). */
+    void logout(String refreshToken);
+
     void createEmployee(CreateEmployeeRequest request, User manager);
 
     void createManager(CreateManagerRequest request, User admin);
@@ -23,4 +29,7 @@ public interface AuthService {
     void changePassword(ChangePasswordRequest request, User user);
 
     List<SimpleEmployeeDTO> getMyEmployees(User manager);
+
+    /** Da de alta o de baja a un empleado de la misma empresa que quien gestiona. */
+    void setEmployeeActive(long employeeId, boolean activo, User actingManager);
 }

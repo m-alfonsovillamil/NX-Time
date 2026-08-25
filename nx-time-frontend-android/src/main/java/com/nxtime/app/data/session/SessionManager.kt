@@ -14,26 +14,43 @@ class SessionManager(context: Context) {
 
     companion object {
         private const val KEY_AUTH_TOKEN = "auth_token"
+        private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_USER_ROLE = "user_role"
     }
 
     /**
-     * Guarda el token, nombre y rol de forma síncrona.
+     * Guarda el token de acceso, el refresh token, nombre y rol de forma síncrona.
      */
-    fun saveAuthData(token: String, nombre: String, rol: String) {
+    fun saveAuthData(token: String, refreshToken: String, nombre: String, rol: String) {
         val editor = prefs.edit()
         editor.putString(KEY_AUTH_TOKEN, token)
+        editor.putString(KEY_REFRESH_TOKEN, refreshToken)
         editor.putString(KEY_USER_NAME, nombre)
         editor.putString(KEY_USER_ROLE, rol)
         editor.commit()
     }
 
     /**
-     * Obtiene el token JWT guardado.
+     * Obtiene el token JWT de acceso guardado.
      */
     fun fetchAuthToken(): String? {
         return prefs.getString(KEY_AUTH_TOKEN, null)
+    }
+
+    /**
+     * Obtiene el refresh token guardado.
+     */
+    fun fetchRefreshToken(): String? {
+        return prefs.getString(KEY_REFRESH_TOKEN, null)
+    }
+
+    /**
+     * Reemplaza solo el token de acceso, tras renovarlo con /auth/refresh
+     * (el refresh token no cambia).
+     */
+    fun updateAccessToken(token: String) {
+        prefs.edit().putString(KEY_AUTH_TOKEN, token).commit()
     }
 
     /**
@@ -56,6 +73,7 @@ class SessionManager(context: Context) {
     fun clearAuthData() {
         val editor = prefs.edit()
         editor.remove(KEY_AUTH_TOKEN)
+        editor.remove(KEY_REFRESH_TOKEN)
         editor.remove(KEY_USER_NAME)
         editor.remove(KEY_USER_ROLE)
         editor.commit()

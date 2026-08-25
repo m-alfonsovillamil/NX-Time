@@ -3,24 +3,25 @@ package com.nxtime.nxtime.security.impl;
 import com.nxtime.nxtime.security.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 /**
- * Se encarga de CREAR y VALIDAR los tokens JWT.
+ * Se encarga de CREAR y VALIDAR los tokens JWT (de acceso -- los
+ * refresh tokens son cadenas opacas gestionadas aparte, ver
+ * {@link com.nxtime.nxtime.domain.RefreshToken}, no JWT).
  *
- * Sigue usando la API antigua de jjwt (setClaims/parserBuilder, ya
- * deprecada) tal cual estaba en Kotlin: la migración a jjwt 0.12.x es
- * una tarea de la Fase 4, no de esta migración de lenguaje.
+ * Desde la Fase 4 usa la API "moderna" de jjwt 0.12.x
+ * (Jwts.parser().verifyWith(...)), no la antigua setClaims/parserBuilder
+ * (ya deprecada) que traía la migración de la Fase 1.
  */
 @Service
 public class JwtServiceImpl implements JwtService {
@@ -48,12 +49,13 @@ public class JwtServiceImpl implements JwtService {
     }
 
     private String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        Date now = new Date();
         return Jwts.builder()
-                .setClaims(extraClaims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .claims(extraClaims)
+                .subject(userDetails.getUsername())
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + jwtExpiration))
+                .signWith(getSignInKey())
                 .compact();
     }
 
@@ -71,14 +73,14 @@ public class JwtServiceImpl implements JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSignInKey())
+        return Jwts.parser()
+                .verifyWith(getSignInKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    private Key getSignInKey() {
+    private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }

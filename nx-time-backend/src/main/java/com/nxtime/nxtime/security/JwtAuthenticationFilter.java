@@ -19,9 +19,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Intercepta cada petición HTTP entrante para verificar si trae un Token válido.
  *
- * OJO: no envuelve en try/catch la lectura del token (ver auditoría,
- * defecto #3). Se mantiene tal cual en esta fase de migración pura; se
- * corrige en la Fase 4.
+ * Desde la Fase 4 envuelve la lectura/validación del token en
+ * try/catch (ver auditoría, defecto #3): un token corrupto o caducado
+ * antes reventaba el filtro con una excepción no controlada, que
+ * acababa en 500/403 según el caso. Ahora, si el token no es válido,
+ * simplemente no se autentica la petición (como si no hubiera token) y
+ * se deja que Spring Security decida más abajo -- lo que para una ruta
+ * protegida significa que {@link RestAuthenticationEntryPoint} responde
+ * 401 con ProblemDetail.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -60,23 +65,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // PASO 4: Quitamos la palabra "Bearer " (7 caracteres) para obtener el token puro.
         String jwtToken = authHeader.substring(7);
-        String userEmail = jwtService.extractUsername(jwtToken);
 
-        // PASO 5: Verificación de usuario.
-        if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+        try {
+            String userEmail = jwtService.extractUsername(jwtToken);
 
-            // PASO 6: Validación del Token.
-            if (jwtService.isTokenValid(jwtToken, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            // PASO 5: Verificación de usuario.
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
-                // PASO 7: Guardamos la autenticación en la memoria de Spring para esta petición.
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            } else {
-                log.warn("Token JWT inválido o caducado para {}", userEmail);
+                // PASO 6: Validación del Token.
+                if (jwtService.isTokenValid(jwtToken, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    // PASO 7: Guardamos la autenticación en la memoria de Spring para esta petición.
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    log.warn("Token JWT inválido o caducado para {}", userEmail);
+                }
             }
+        } catch (RuntimeException e) {
+            // Token corrupto, mal formado, con firma inválida o caducado
+            // (jjwt lanza ExpiredJwtException, MalformedJwtException,
+            // SignatureException... todas JwtException); o un usuario que
+            // ya no existe (UsernameNotFoundException). En cualquier
+            // caso, no se autentica la petición; para una ruta
+            // protegida, Spring Security responderá 401 más abajo.
+            log.warn("Token JWT no se pudo procesar: {}", e.getMessage());
         }
 
         // PASO 8: Pasamos la petición al siguiente filtro o al controlador correspondiente.

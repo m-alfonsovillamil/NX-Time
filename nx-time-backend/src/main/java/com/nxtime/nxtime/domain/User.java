@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +28,14 @@ import lombok.Setter;
  * serializar un User -- la propia clase ya no expone getPassword().
  *
  * IDs con GenerationType.IDENTITY desde la Fase 3 (ver Company.java).
+ *
+ * "activo"/"fechaBaja" desde la Fase 4: antes los flags de cuenta de
+ * UserDetails estaban cableados a true sin excepción (ver auditoría,
+ * defectos de diseño) -- no se podía dar de baja a nadie. Un usuario
+ * dado de baja no puede autenticarse ({@link
+ * com.nxtime.nxtime.security.SecurityUser#isEnabled()}), pero sus
+ * fichajes y ausencias pasadas se conservan tal cual (requisito legal
+ * de trazabilidad, no se borran ni se anonimizan).
  */
 @Entity(name = "usuarios")
 @Getter
@@ -53,6 +62,11 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "empresa_id")
     private Company empresa;
+
+    @Builder.Default
+    private boolean activo = true;
+
+    private Instant fechaBaja;
 
     @Version
     private long version;

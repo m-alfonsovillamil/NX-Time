@@ -16,3 +16,12 @@ spring:
 
   jpa:
     show-sql: false
+
+application:
+  security:
+    cors:
+      # Sin frontend web todavía: la app Android no manda cabecera
+      # Origin, así que CORS no le afecta. En cuanto haya un dominio
+      # real que consuma la API desde el navegador, se añade aquí
+      # (nunca "*" en producción -- ver auditoría, defectos de diseño).
+      allowed-origins: "${CORS_ALLOWED_ORIGINS:}"

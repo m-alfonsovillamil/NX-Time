@@ -32,6 +32,7 @@ class AuthRepositoryImpl(
     override fun procesarLoginExitoso(authResponse: RespuestaAutenticacion) {
         sessionManager.saveAuthData(
             token = authResponse.token,
+            refreshToken = authResponse.refreshToken,
             nombre = authResponse.nombre,
             rol = authResponse.rol
         )
