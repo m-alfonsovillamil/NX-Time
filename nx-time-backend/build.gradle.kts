@@ -1,6 +1,7 @@
 
 plugins {
     java
+    jacoco
     id("org.springframework.boot")
     id("io.spring.dependency-management")
 }
@@ -95,4 +96,50 @@ dependencies {
  */
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+/*
+ * Cobertura de tests (JaCoCo). El umbral de la Fase 5 del plan de
+ * profesionalización: que el build falle si la cobertura de "service"
+ * o "controller" (las capas con lógica de negocio y autorización real)
+ * cae por debajo del 60%. No se mide el resto del código (domain,
+ * dto, mapper, config...) a propósito: son en su mayoría getters,
+ * records y cableado de Spring sin ramas que testear, y forzar un
+ * umbral ahí solo empujaría a escribir tests inútiles para subir un
+ * número.
+ */
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    violationRules {
+        rule {
+            element = "PACKAGE"
+            // JaCoCo no cruza el "." con un único "*": los paquetes concretos
+            // se listan a mano en vez de "service.*" (no incluiría service.impl).
+            includes = listOf(
+                    "com.nxtime.nxtime.service",
+                    "com.nxtime.nxtime.service.impl",
+                    "com.nxtime.nxtime.controller")
+            limit {
+                counter = "LINE"
+                minimum = "0.60".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }
