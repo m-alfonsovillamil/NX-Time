@@ -1,16 +1,15 @@
 package com.nxtime.nxtime.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.nxtime.nxtime.domain.Company;
-import com.nxtime.nxtime.domain.Holiday;
-import com.nxtime.nxtime.repository.HolidayRepository;
+import com.nxtime.nxtime.service.HolidayCalendar;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,16 +29,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class WorkingDayServiceImplTest {
 
     @Mock
-    private HolidayRepository holidayRepository;
+    private HolidayCalendar holidayCalendar;
 
     private WorkingDayServiceImpl service;
     private Company empresa;
 
     @BeforeEach
     void setUp() {
-        service = new WorkingDayServiceImpl(holidayRepository);
+        service = new WorkingDayServiceImpl(holidayCalendar);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
-        lenient().when(holidayRepository.findAplicables(anyLong(), any(), any())).thenReturn(List.of());
+        // Desde la Fase 10 los festivos vienen del calendario cacheado,
+        // ya como Set<LocalDate> y por AÑO, no por rango de fechas.
+        lenient().when(holidayCalendar.festivosDelAnio(anyLong(), anyInt())).thenReturn(Set.of());
+    }
+
+    private void conFestivos(LocalDate... fechas) {
+        when(holidayCalendar.festivosDelAnio(anyLong(), anyInt())).thenReturn(Set.of(fechas));
     }
 
     @Test
@@ -71,8 +76,7 @@ class WorkingDayServiceImplTest {
     @DisplayName("Un festivo entre semana se descuenta de los días hábiles")
     void contarDiasHabiles_conFestivoEntreSemana_loDescuenta() {
         // Miércoles 3 de junio de 2026, festivo inventado de empresa.
-        when(holidayRepository.findAplicables(anyLong(), any(), any())).thenReturn(List.of(
-                Holiday.builder().fecha(LocalDate.of(2026, 6, 3)).descripcion("Festivo de prueba").build()));
+        conFestivos(LocalDate.of(2026, 6, 3));
 
         int habiles = service.contarDiasHabiles(empresa, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 7));
 
@@ -82,8 +86,7 @@ class WorkingDayServiceImplTest {
     @Test
     @DisplayName("Un festivo que cae en sábado no descuenta dos veces")
     void contarDiasHabiles_festivoEnFinDeSemana_noDescuentaDosVeces() {
-        when(holidayRepository.findAplicables(anyLong(), any(), any())).thenReturn(List.of(
-                Holiday.builder().fecha(LocalDate.of(2026, 6, 6)).descripcion("Festivo en sábado").build()));
+        conFestivos(LocalDate.of(2026, 6, 6));
 
         int habiles = service.contarDiasHabiles(empresa, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 7));
 

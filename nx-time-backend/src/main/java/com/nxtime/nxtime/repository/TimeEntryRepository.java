@@ -51,4 +51,103 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
             + "WHERE t.horaSalida IS NULL AND t.anulado = false AND t.horaEntrada < :limite")
     List<TimeEntry> findJornadasAbiertasAnterioresA(@Param("limite") Instant limite);
+
+    // ------------------------------------------------------------------
+    // Agregados del dashboard (Fase 10)
+    //
+    // Se calculan con GROUP BY en la base de datos, NO cargando las
+    // entidades y sumando en Java: el histórico de un empleado son
+    // cientos de filas y el de una empresa, miles. Traerlas todas a
+    // memoria para reducirlas a un número es justo lo que no hay que
+    // hacer (ver auditoría del plan).
+    //
+    // Son consultas NATIVAS porque JPQL no tiene forma de restar dos
+    // instantes: EXTRACT(EPOCH FROM (hora_salida - hora_entrada)) es
+    // específico de PostgreSQL. Es una decisión consciente -- el
+    // proyecto está casado con PostgreSQL desde la Fase 3 (índices
+    // parciales, JSONB, GRANTs), así que fingir portabilidad aquí sería
+    // teatro.
+    //
+    // Solo cuentan jornadas CERRADAS (hora_salida IS NOT NULL) y no
+    // anuladas: una jornada en curso todavía no ha producido horas, y
+    // una anulada fue sustituida por su corrección (Fase 8).
+    // ------------------------------------------------------------------
+
+    /** Segundos netos (descontando pausas) trabajados por un usuario en un rango. */
+    @Query(value = """
+            SELECT COALESCE(SUM(
+                       EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
+                       - r.segundos_pausa_acumulados), 0)
+            FROM registros r
+            WHERE r.usuario_id = :usuarioId
+              AND r.anulado = false
+              AND r.hora_salida IS NOT NULL
+              AND r.hora_entrada >= :desde
+              AND r.hora_entrada < :hasta
+            """, nativeQuery = true)
+    long sumarSegundosTrabajados(
+            @Param("usuarioId") long usuarioId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
+    /** Lo mismo, agregado para toda la empresa. */
+    @Query(value = """
+            SELECT COALESCE(SUM(
+                       EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
+                       - r.segundos_pausa_acumulados), 0)
+            FROM registros r
+            WHERE r.empresa_id = :empresaId
+              AND r.anulado = false
+              AND r.hora_salida IS NOT NULL
+              AND r.hora_entrada >= :desde
+              AND r.hora_entrada < :hasta
+            """, nativeQuery = true)
+    long sumarSegundosTrabajadosEmpresa(
+            @Param("empresaId") long empresaId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
+    /**
+     * Horas por empleado en un rango, de mayor a menor. Una sola
+     * consulta con GROUP BY + JOIN, en vez de recorrer los empleados y
+     * preguntar por cada uno.
+     */
+    @Query(value = """
+            SELECT u.id                AS usuarioId,
+                   u.nombre            AS nombre,
+                   COALESCE(SUM(
+                       EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
+                       - r.segundos_pausa_acumulados), 0) AS segundos
+            FROM registros r
+            JOIN usuarios u ON u.id = r.usuario_id
+            WHERE r.empresa_id = :empresaId
+              AND r.anulado = false
+              AND r.hora_salida IS NOT NULL
+              AND r.hora_entrada >= :desde
+              AND r.hora_entrada < :hasta
+            GROUP BY u.id, u.nombre
+            ORDER BY segundos DESC
+            """, nativeQuery = true)
+    List<EmployeeHoursProjection> sumarSegundosPorEmpleado(
+            @Param("empresaId") long empresaId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
+    /**
+     * Jornadas que cerró el proceso nocturno por no tener fichaje de
+     * salida (Fase 9) y que siguen sin corregir: son las incidencias
+     * abiertas que RRHH tiene pendientes.
+     */
+    @Query("SELECT COUNT(t) FROM registros t "
+            + "WHERE t.empresa = :empresa AND t.jornadaIncompleta = true AND t.anulado = false")
+    long contarIncidenciasAbiertas(@Param("empresa") Company empresa);
+
+    /** Proyección de {@link #sumarSegundosPorEmpleado}: Spring Data la implementa sola. */
+    interface EmployeeHoursProjection {
+        long getUsuarioId();
+
+        String getNombre();
+
+        long getSegundos();
+    }
 }

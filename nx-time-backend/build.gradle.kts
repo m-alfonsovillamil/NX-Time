@@ -27,6 +27,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // Caché (Fase 10): Caffeine como implementación. Se usa para el
+    // calendario laboral (ver HolidayCalendar) -- los festivos cambian
+    // una vez al año y se consultaban una vez por cada ausencia de un
+    // listado (N+1 anotado en la Fase 9), y para los agregados del
+    // dashboard, que son consultas GROUP BY sobre todo el histórico.
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
     // Actuator (Fase 7): /actuator/health es el health check que usa el
     // HEALTHCHECK del Dockerfile y el que usará Render en el despliegue
     // (Fase 11). Solo se expone "health" -- ver application.yml -- no

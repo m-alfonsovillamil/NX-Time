@@ -51,4 +51,10 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("usuario") User usuario,
             @Param("inicioDeAnio") LocalDate inicioDeAnio,
             @Param("finDeAnio") LocalDate finDeAnio);
+
+    // Agregados del dashboard (Fase 10): contar en la base de datos, no
+    // traerse las filas para hacer size() sobre la lista.
+    long countByUsuarioAndEstado(User usuario, AbsenceStatus estado);
+
+    long countByEmpresa_IdAndEstado(long empresaId, AbsenceStatus estado);
 }
