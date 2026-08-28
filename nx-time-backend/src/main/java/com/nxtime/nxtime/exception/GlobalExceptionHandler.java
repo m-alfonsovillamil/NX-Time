@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.exception;
 
+import jakarta.validation.ConstraintViolationException;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -58,6 +60,34 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
         log.warn("Acceso denegado: {}", ex.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "No tienes permisos para realizar esta acción.");
+    }
+
+    /**
+     * Validación de parámetros sueltos (@RequestParam, @PathVariable) en
+     * clases anotadas con @Validated -- por ejemplo el mes y el año de
+     * los informes (Fase 10).
+     *
+     * Hace falta declararla a mano: spring.mvc.problemdetails.enabled
+     * cubre MethodArgumentNotValidException (la de @Valid @RequestBody)
+     * pero NO ConstraintViolationException, que es la que se lanza aquí.
+     * Sin este manejador, pedir el mes 13 devolvía un 500 genérico en
+     * vez de decir que el parámetro está mal.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
+        String detalle = ex.getConstraintViolations().stream()
+                .map(violacion -> {
+                    // El propertyPath incluye el nombre del método
+                    // ("exportarHorasEnExcel.mes"); al cliente solo le
+                    // interesa el parámetro.
+                    String ruta = violacion.getPropertyPath().toString();
+                    String parametro = ruta.contains(".") ? ruta.substring(ruta.lastIndexOf('.') + 1) : ruta;
+                    return parametro + ": " + violacion.getMessage();
+                })
+                .collect(Collectors.joining("; "));
+
+        log.warn("Parámetros inválidos: {}", detalle);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detalle);
     }
 
     @ExceptionHandler(AuthenticationException.class)

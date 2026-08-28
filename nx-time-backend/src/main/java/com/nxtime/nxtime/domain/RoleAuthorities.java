@@ -26,6 +26,10 @@ import java.util.Set;
  * ADMIN: corregir un fichaje pasado y ver su línea temporal de cambios
  * es una operación de cumplimiento normativo (RD-ley 8/2019), no algo
  * que un GESTOR normal deba poder hacer sobre sus propios empleados.
+ * "informe:exportar" (Fase 10) va en el mismo grupo y por la misma
+ * razón: el informe mensual es el documento que se entrega ante una
+ * inspección, y abarca a toda la empresa, no solo al equipo de un
+ * gestor.
  */
 public final class RoleAuthorities {
 
@@ -50,7 +54,8 @@ public final class RoleAuthorities {
     private static final Set<String> RRHH = union(GESTOR, Set.of(
             "empleado:gestionar",
             "fichaje:corregir",
-            "fichaje:auditoria"
+            "fichaje:auditoria",
+            "informe:exportar"
     ));
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(

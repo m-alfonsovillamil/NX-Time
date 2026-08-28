@@ -27,6 +27,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // Informes exportables (Fase 10). Apache POI para el Excel de horas
+    // y OpenPDF para el informe mensual en PDF -- OpenPDF (LGPL/MPL) en
+    // vez de iText 7 (AGPL, que obligaría a liberar el proyecto entero
+    // o comprar licencia) y en vez de JasperReports, mucho más pesado y
+    // con plantillas .jrxml que no aportan nada para un informe tabular.
+    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("com.github.librepdf:openpdf:3.0.5")
+
     // Notificaciones por email (Fase 10). Thymeleaf solo se usa para
     // renderizar las plantillas de correo, no para servir vistas web:
     // esta aplicación no tiene interfaz propia, es una API que consume

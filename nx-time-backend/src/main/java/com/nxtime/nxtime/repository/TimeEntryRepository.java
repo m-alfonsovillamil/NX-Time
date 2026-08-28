@@ -142,6 +142,32 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             + "WHERE t.empresa = :empresa AND t.jornadaIncompleta = true AND t.anulado = false")
     long contarIncidenciasAbiertas(@Param("empresa") Company empresa);
 
+    /**
+     * Fichajes cerrados de una empresa en un rango, con su usuario, para
+     * los informes (Fase 10). Aquí SÍ se cargan las entidades -- a
+     * diferencia de los agregados de arriba -- porque un informe es
+     * precisamente el detalle línea a línea, no un total. El rango es un
+     * mes, así que el volumen está acotado por construcción.
+     */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario u "
+            + "WHERE t.empresa = :empresa AND t.anulado = false AND t.horaSalida IS NOT NULL "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta "
+            + "ORDER BY u.nombre ASC, t.horaEntrada ASC")
+    List<TimeEntry> findParaInforme(
+            @Param("empresa") Company empresa,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
+    /** Lo mismo para un único empleado: el informe mensual individual. */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.usuario = :usuario AND t.anulado = false AND t.horaSalida IS NOT NULL "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta "
+            + "ORDER BY t.horaEntrada ASC")
+    List<TimeEntry> findParaInformeDeEmpleado(
+            @Param("usuario") User usuario,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
     /** Proyección de {@link #sumarSegundosPorEmpleado}: Spring Data la implementa sola. */
     interface EmployeeHoursProjection {
         long getUsuarioId();
