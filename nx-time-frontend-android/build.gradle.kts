@@ -26,8 +26,43 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Se activa la minificación (Fase 11): hasta ahora estaba a
+            // false y proguard-rules.pro ni siquiera existía, aunque se
+            // referenciaba aquí. Reduce el APK y ofusca el código.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    /*
+     * Sabores de compilación (Fase 11): la URL del backend deja de estar
+     * escrita a fuego en RetrofitClient.kt y pasa a BuildConfig.
+     *
+     *  - dev:  el emulador contra el backend local. 10.0.2.2 es la
+     *          dirección con la que el emulador de Android ve el
+     *          "localhost" del ordenador anfitrión; "localhost" a secas
+     *          sería el propio emulador.
+     *  - prod: el backend desplegado, por HTTPS.
+     *
+     * La URL de producción se lee de una propiedad de Gradle para no
+     * fijarla en el repositorio; si no está, se usa un marcador evidente
+     * en vez de una URL falsa que parezca buena.
+     */
+    flavorDimensions += "entorno"
+
+    productFlavors {
+        create("dev") {
+            dimension = "entorno"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+        }
+        create("prod") {
+            dimension = "entorno"
+            val urlProduccion = (project.findProperty("nxtime.prod.url") as String?)
+                ?: "https://CONFIGURA-nxtime.prod.url.invalid/"
+            buildConfigField("String", "BASE_URL", "\"$urlProduccion\"")
         }
     }
 
@@ -53,6 +88,9 @@ android {
 
     buildFeatures {
         viewBinding = true
+        // Necesario para los buildConfigField de los flavors: desde el
+        // plugin de Android 8 hay que pedirlo explícitamente.
+        buildConfig = true
     }
 }
 

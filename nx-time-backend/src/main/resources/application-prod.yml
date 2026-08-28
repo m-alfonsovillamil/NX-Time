@@ -1,37 +1,88 @@
-# Perfil de producción: PostgreSQL en Neon (ver Fase 11 del plan --
-# despliegue en Render). Todo por variables de entorno, nada
-# hardcodeado: DATABASE_URL/DATABASE_USERNAME/DATABASE_PASSWORD los
-# da el panel de Neon (usa el connection string en formato JDBC que
-# ofrece, o compón la URL a partir de host/base/usuario/contraseña).
+# Perfil de producción: PostgreSQL en Neon, backend en Render (Fase 11).
+# Todo por variables de entorno, nada hardcodeado:
+# DATABASE_URL/DATABASE_USERNAME/DATABASE_PASSWORD los da el panel de
+# Neon (usa el connection string en formato JDBC que ofrece, o compón la
+# URL a partir de host/base/usuario/contraseña).
 #
-# El tuning de HikariCP para el cold start del plan gratuito de Neon
-# (la Fase 11 lo detalla) se añade cuando se despliegue de verdad, no
-# antes.
-#
-# TODO (Fase 11): en dev, "spring.datasource" (runtime, sin DDL) y
-# "spring.flyway" (migraciones) usan roles de Postgres DISTINTOS -- ver
-# application-dev.yml y docker/postgres/init-app-role.sql -- porque es
-# lo único que hace real la restricción de UPDATE/DELETE sobre
-# auditoria_fichaje (Fase 8, ver V3__audit_trail.sql): contra un
+# TODO (al desplegar de verdad): en dev, "spring.datasource" (runtime,
+# sin DDL) y "spring.flyway" (migraciones) usan roles de Postgres
+# DISTINTOS -- ver application-dev.yml y docker/postgres/init-app-role.sql
+# -- porque es lo único que hace real la restricción de UPDATE/DELETE
+# sobre auditoria_fichaje (Fase 8, ver V3__audit_trail.sql): contra un
 # superusuario o el propio dueño de la tabla, cualquier REVOKE es papel
-# mojado. Aquí, de momento, las dos cosas comparten un único rol de
-# Neon (DATABASE_USERNAME) -- pendiente de crear un segundo rol de
-# Neon de mínimo privilegio (solo SELECT/INSERT en auditoria_fichaje,
-# sin CREATE) cuando se despliegue de verdad, igual que en local.
+# mojado. Aquí, de momento, las dos cosas comparten un único rol de Neon
+# (DATABASE_USERNAME) -- pendiente crear un segundo rol de mínimo
+# privilegio (solo SELECT/INSERT en auditoria_fichaje, sin CREATE),
+# igual que en local.
 spring:
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
 
+    # Tuning para el plan gratuito de Neon, que SUSPENDE la base de
+    # datos tras unos minutos sin actividad: la primera conexión después
+    # de una pausa tarda varios segundos en lo que Neon la despierta.
+    hikari:
+      # Por defecto son 30 s; ese margen no cubre un despertar lento y
+      # la petición fallaría con "connection is not available".
+      connection-timeout: 45000
+      # Un pool pequeño basta para una instancia y evita abrir de golpe
+      # muchas conexiones contra una base que está despertando (el plan
+      # gratuito de Neon además limita el número de conexiones).
+      maximum-pool-size: 5
+      # Sin conexiones ociosas retenidas: Neon va a suspender la base de
+      # todas formas, y mantenerlas vivas solo produce errores al
+      # reutilizar una conexión que el servidor ya cerró por su cuenta.
+      minimum-idle: 0
+      idle-timeout: 60000
+      max-lifetime: 300000
+
   jpa:
     show-sql: false
 
+  # En producción sí se cachean las plantillas de correo: son ficheros
+  # que no cambian sin un despliegue nuevo (en dev está a false para
+  # poder editarlas en caliente, ver application-dev.yml).
+  thymeleaf:
+    cache: true
+
+# Actuator: en producción, /actuator/health lo consulta el health check
+# de Render, así que tiene que responder antes de que la base de datos
+# esté lista. Con "readiness" incluido, Render puede distinguir
+# "arrancando" de "roto" y no reiniciar el servicio en bucle durante un
+# cold start de Neon.
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 application:
+  mail:
+    # En producción tiene que ser un dominio verificado en el proveedor
+    # SMTP (Brevo, Resend...) o los correos acabarán en spam.
+    from: ${MAIL_FROM}
+
   security:
+    jwt:
+      # SIN valor por defecto, a propósito: si falta JWT_SECRET, la
+      # aplicación NO ARRANCA.
+      #
+      # application.yml sí trae un valor por defecto para desarrollo, y
+      # ese valor es público (está en el repositorio). Si producción lo
+      # heredara por olvidar la variable de entorno, cualquiera que
+      # leyera el repositorio podría firmar tokens válidos y suplantar a
+      # cualquier usuario. Fallar al arrancar es incómodo; arrancar en
+      # silencio con una clave que todo el mundo conoce es mucho peor.
+      #
+      # Generar una nueva:
+      #   openssl rand -base64 64
+      secret-key: ${JWT_SECRET}
+
     cors:
       # Sin frontend web todavía: la app Android no manda cabecera
       # Origin, así que CORS no le afecta. En cuanto haya un dominio
       # real que consuma la API desde el navegador, se añade aquí
       # (nunca "*" en producción -- ver auditoría, defectos de diseño).
-      allowed-origins: "${CORS_ALLOWED_ORIGINS:}"
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}

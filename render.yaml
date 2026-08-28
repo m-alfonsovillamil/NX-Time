@@ -1,0 +1,94 @@
+# Despliegue en Render (Fase 11 del plan de profesionalización).
+#
+# "Blueprint" de Render: en vez de configurar el servicio a mano por el
+# panel, queda declarado aquí y versionado con el código. Render lo lee
+# al conectar el repositorio.
+#
+# La base de datos NO se declara aquí: se usa Neon (PostgreSQL
+# gestionado, con plan gratuito más generoso que el de Render) y su
+# cadena de conexión entra por variables de entorno.
+services:
+  - type: web
+    name: nxtime-backend
+    runtime: docker
+    # El mismo Dockerfile multi-stage de la Fase 7 que ya se usa en
+    # local: la imagen que se despliega es la que se prueba.
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt   # el más cercano a España de los disponibles
+    branch: main
+
+    # Render reinicia el servicio si esto deja de responder. Es el
+    # endpoint de Actuator de la Fase 7, público y sin detalles
+    # (show-details: never), así que no filtra el estado de la base de
+    # datos a internet.
+    healthCheckPath: /actuator/health
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      # ---------------------------------------------------------------
+      # Secretos: sync=false significa que NO van en este fichero. Render
+      # los pide al crear el servicio y quedan guardados en su panel.
+      # Ninguno tiene valor por defecto a propósito.
+      # ---------------------------------------------------------------
+
+      # De Neon. Formato JDBC, p. ej.:
+      # jdbc:postgresql://ep-xxx.eu-central-1.aws.neon.tech/nxtime?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+
+      # Clave de firma de los JWT. Sin ella la aplicación NO ARRANCA, y
+      # es deliberado: application.yml trae una clave por defecto para
+      # desarrollo que es PÚBLICA (está en el repositorio), así que
+      # heredarla en producción permitiría a cualquiera firmar tokens
+      # válidos. Ver application-prod.yml.
+      # Generar con: openssl rand -base64 64
+      - key: JWT_SECRET
+        sync: false
+
+      # SMTP real (Brevo, Resend... en su plan gratuito). MailHog solo
+      # existe en local.
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_SMTP_AUTH
+        value: "true"
+      - key: MAIL_SMTP_STARTTLS
+        value: "true"
+      # Debe ser un dominio verificado en el proveedor SMTP o los
+      # correos acabarán en spam.
+      - key: MAIL_FROM
+        sync: false
+
+      # Orígenes permitidos para CORS. Vacío mientras no haya un cliente
+      # web: la app Android no manda cabecera Origin y CORS no le afecta.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+# ---------------------------------------------------------------------
+# Dos avisos del plan gratuito, que conviene saber ANTES de enseñar
+# esto en una entrevista:
+#
+#  1. Render DUERME el servicio tras 15 minutos sin tráfico. La primera
+#     petición después tarda ~50 s en despertarlo. No es un fallo del
+#     proyecto, pero da mala impresión si se descubre en directo.
+#
+#  2. Neon SUSPENDE la base de datos por inactividad. El primer acceso
+#     tras la pausa tarda varios segundos; por eso application-prod.yml
+#     sube el connection-timeout de HikariCP a 45 s.
+#
+# Si molesta, un cron gratuito (cron-job.org, UptimeRobot) que llame a
+# /actuator/health cada 10 minutos mantiene ambos despiertos.
+# ---------------------------------------------------------------------

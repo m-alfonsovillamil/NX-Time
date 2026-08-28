@@ -1,5 +1,6 @@
 package com.nxtime.app.data.network
 
+import com.nxtime.app.BuildConfig
 import com.nxtime.app.data.dto.RefreshTokenRequest
 import com.nxtime.app.data.session.SessionManager
 import kotlinx.coroutines.runBlocking
@@ -19,15 +20,29 @@ class RetrofitClient(
 ) {
 
     /*
-     * Esta es la dirección IP del backend.
+     * La dirección del backend ya no está escrita a fuego aquí: viene
+     * del sabor de compilación (Fase 11, ver build.gradle.kts).
+     *   - dev  -> http://10.0.2.2:8080/ (el localhost del PC visto
+     *            desde el emulador)
+     *   - prod -> la URL del despliegue, por HTTPS
      */
-    private val BASE_URL = "http://10.0.2.2:8080/"
+    private val BASE_URL = BuildConfig.BASE_URL
 
     /*
-     * Esto crea un interceptor de "logging"
+     * Interceptor de "logging".
+     *
+     * En release NO registra nada (Level.NONE): con Level.BODY se
+     * vuelcan a logcat las peticiones y respuestas ENTERAS, incluidos
+     * el token JWT y la contraseña que viaja en el login. En un APK
+     * distribuido eso es una fuga de credenciales que cualquier app con
+     * acceso a los logs podría aprovechar.
      */
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BODY
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
     }
 
     /*

@@ -1,0 +1,139 @@
+# Integración continua (Fase 11 del plan de profesionalización).
+#
+# Ejecuta la misma verificación que en local -- `./gradlew check`, que
+# incluye los 220 tests y el umbral de cobertura de JaCoCo -- en cada
+# push y cada pull request.
+#
+# Solo construye el BACKEND (`-c settings-docker.gradle.kts`, el settings
+# alternativo de la Fase 7 que declara únicamente :nx-time-backend). El
+# módulo Android necesita el SDK de Android y su propio workflow; aquí
+# solo alargaría el build sin aportar.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build y tests
+    runs-on: ubuntu-latest
+
+    # Los tests necesitan un PostgreSQL real: no usan H2 (miente sobre
+    # el dialecto) ni Testcontainers (ver más abajo). En local lo pone
+    # docker-compose; aquí, un service container de Actions.
+    #
+    # El puerto se publica en el 5433 del host para que la configuración
+    # sea EXACTAMENTE la misma que en local y los tests no necesiten
+    # saber si corren en CI o en el portátil.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nxtime
+          POSTGRES_USER: nxtime
+          POSTGRES_PASSWORD: nxtime
+        ports:
+          - 5433:5432
+        # Sin esto, los tests podrían arrancar antes de que Postgres
+        # acepte conexiones.
+        options: >-
+          --health-cmd "pg_isready -U nxtime -d nxtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          # Cachea ~/.gradle entre ejecuciones: sin esto cada build se
+          # vuelve a descargar todas las dependencias.
+          cache: gradle
+
+      # El rol de aplicación de la Fase 8. En local lo crea el script de
+      # docker-entrypoint-initdb.d al crear el volumen; el service
+      # container de Actions no admite scripts de inicio, así que se crea
+      # aquí. Es lo que hace que el REVOKE de UPDATE/DELETE sobre
+      # auditoria_fichaje sea real y no decorativo: "nxtime" es
+      # superusuario y se salta cualquier permiso.
+      - name: Crear el rol de aplicación (nxtime_app)
+        env:
+          PGPASSWORD: nxtime
+        run: |
+          psql -h localhost -p 5433 -U nxtime -d nxtime \
+            -c "CREATE ROLE nxtime_app WITH LOGIN PASSWORD 'nxtime_app';"
+          psql -h localhost -p 5433 -U nxtime -d nxtime \
+            -c "GRANT CONNECT ON DATABASE nxtime TO nxtime_app;"
+
+      - name: Permisos de ejecución del wrapper
+        run: chmod +x gradlew
+
+      # check = compilar + los 220 tests + jacocoTestCoverageVerification
+      # (falla si la cobertura de service/controller/audit baja del 60%).
+      - name: Build y tests
+        run: ./gradlew -c settings-docker.gradle.kts :nx-time-backend:check --no-daemon
+
+      # Se suben SIEMPRE (if: always()), también cuando los tests fallan:
+      # es justo entonces cuando hacen falta para saber qué se rompió.
+      - name: Publicar informes de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-test
+          path: |
+            nx-time-backend/build/reports/tests/
+            nx-time-backend/build/reports/jacoco/
+          retention-days: 7
+
+      # Reintento de Testcontainers, aparcado desde la Fase 3.
+      #
+      # En la máquina de desarrollo (Windows + Docker Desktop 4.87) hay
+      # una incompatibilidad reproducible con la librería docker-java, y
+      # por eso los tests crean su base de datos con JDBC plano contra un
+      # Postgres externo. Este runner es Linux con Docker nativo, que es
+      # justo el entorno donde cabía esperar que sí funcionase.
+      #
+      # continue-on-error: no bloquea el build. Es una comprobación
+      # informativa: si algún día pasa en verde, sabremos que se puede
+      # migrar la infraestructura de test y quitar la dependencia de
+      # tener un Postgres levantado aparte.
+      - name: (Informativo) ¿Funciona Docker aquí, para retomar Testcontainers?
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "Versión de Docker en el runner:"
+          docker version --format '{{.Server.Version}}'
+          docker run --rm hello-world > /dev/null && \
+            echo "Docker OK en CI: merece la pena reintentar Testcontainers aquí (ver Fase 3)."
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Permisos de ejecución del wrapper
+        run: chmod +x gradlew
+
+      # Solo se compila: la app no tiene tests todavía (el esfuerzo de
+      # esta fase se ha ido al backend, que es lo que sostiene la
+      # entrevista). Compilar ya detecta lo que más falla en la
+      # práctica: que un cambio de contrato del backend rompa la app.
+      - name: Compilar la app (debug)
+        run: ./gradlew :nx-time-frontend-android:assembleDevDebug --no-daemon
