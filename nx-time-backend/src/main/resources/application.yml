@@ -37,6 +37,23 @@ logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %msg%n"
 
+# Actuator (Fase 7): solo se expone "health" -- ni "info" ni el resto
+# (env, beans, threaddump...), que exponen detalles internos y no
+# tienen por qué ser públicos. Es el endpoint que usa el HEALTHCHECK
+# del Dockerfile y el que usará Render como health check (Fase 11);
+# SecurityConfig lo deja pasar sin autenticar (ver ese fichero).
+# show-details en "never": ni conectado el propio backend queremos que
+# /actuator/health, público en internet, revele si Postgres está caído
+# o el nombre del datasource -- solo el UP/DOWN agregado.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 # Configuración personalizada de la aplicación
 application:
   security:

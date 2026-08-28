@@ -29,5 +29,56 @@ services:
       postgres:
         condition: service_healthy
 
+  # Servidor SMTP de mentira para desarrollo (Fase 7, preparando la
+  # Fase 10 -- notificaciones por email): captura cualquier correo que
+  # el backend envíe sin reenviarlo a ningún sitio real. De momento el
+  # backend no manda ningún email (no hay spring-boot-starter-mail
+  # todavía), así que este servicio no tiene consumidor hasta la Fase
+  # 10 -- se deja preparado ahora para no volver a tocar este fichero
+  # entonces. UI en http://localhost:8025.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: nxtime-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # El backend en sí, construido con el Dockerfile de la raíz. Opcional
+  # para el día a día de desarrollo (seguir usando
+  # "./gradlew bootRun --args=--spring.profiles.active=dev" desde el
+  # IDE es más cómodo: recarga en caliente con devtools, breakpoints...)
+  # pero necesario para "docker compose up" como demo end-to-end
+  # reproducible sin tener instalado ni Java ni Gradle.
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nxtime-backend
+    environment:
+      # "dev,demo": arranca ya con datos de ejemplo (ver
+      # demo/DemoDataSeeder.java) para que quien levante esto por
+      # primera vez vea algo con contenido en 30 segundos.
+      SPRING_PROFILES_ACTIVE: dev,demo
+      # Sobreescriben lo que trae application-dev.yml (localhost:5433,
+      # el puerto PUBLICADO en el host): dentro de la red de Docker
+      # Compose, "postgres" es el nombre del servicio y 5432 su puerto
+      # interno, no el publicado. Las variables de entorno tienen
+      # prioridad sobre application-{perfil}.yml en Spring Boot, así
+      # que no hace falta un perfil nuevo solo para esto.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nxtime
+      SPRING_DATASOURCE_USERNAME: nxtime
+      SPRING_DATASOURCE_PASSWORD: nxtime
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
 volumes:
   nxtime-postgres-data:

@@ -27,6 +27,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // Actuator (Fase 7): /actuator/health es el health check que usa el
+    // HEALTHCHECK del Dockerfile y el que usará Render en el despliegue
+    // (Fase 11). Solo se expone "health" -- ver application.yml -- no
+    // el resto de endpoints de Actuator (env, beans, threaddump...),
+    // que sí importan datos internos y no deben quedar públicos.
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
     // Documentación de la API (Swagger UI / OpenAPI), Fase 6. 2.8.17 (no
     // la 2.6.0 fijada desde la Fase 0): esa version es anterior al
     // soporte de Spring Boot 3.4+/Spring Framework 6.2 y el arranque
@@ -95,6 +102,16 @@ dependencies {
     // Rate limiting en /auth/login y /auth/register-manager (ver
     // LoginRateLimitFilter) -- antes la fuerza bruta era libre.
     implementation("com.bucket4j:bucket4j-core:8.10.1")
+}
+
+// El plugin de Spring Boot genera dos jars: el "boot jar" ejecutable
+// (con dependencias embebidas) y un jar "plano" con solo las clases del
+// proyecto. Nada en este monorepo consume el jar plano (ni otro módulo
+// ni una publicación Maven) -- desactivarlo evita que el Dockerfile
+// (Fase 7) tenga que distinguir entre los dos al extraer capas con
+// layertools.
+tasks.named<Jar>("jar") {
+    enabled = false
 }
 
 /*

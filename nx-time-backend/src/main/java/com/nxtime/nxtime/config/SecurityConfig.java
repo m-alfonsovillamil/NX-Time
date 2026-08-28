@@ -65,6 +65,9 @@ public class SecurityConfig {
                         // Documentación (Fase 6): Swagger UI y la spec cruda no son parte
                         // de la API en sí, no tiene sentido exigir un token para leerlas.
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // Health check (Fase 7): lo usan Docker/Render para saber si el
+                        // contenedor está vivo, antes de que exista ningún token posible.
+                        .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
