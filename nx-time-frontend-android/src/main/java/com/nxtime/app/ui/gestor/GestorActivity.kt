@@ -2,10 +2,13 @@ package com.nxtime.app.ui.gestor
 
 
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.View
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -61,7 +64,7 @@ class GestorActivity : AppCompatActivity() {
             },
             onRechazarClicked = { peticion ->
                 Log.d("GestorActivity", "Rechazando petición ID: ${peticion.id}")
-                viewModel.rechazarPeticion(peticion.id)
+                pedirMotivoYRechazar(peticion.id)
             }
         )
 
@@ -69,6 +72,34 @@ class GestorActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@GestorActivity)
             adapter = gestorAdapter
         }
+    }
+
+    /*
+     * Desde la Fase 9 del backend, rechazar una ausencia EXIGE un
+     * motivo (responde 400 si no llega). Se pide aquí en vez de dejar
+     * que la petición falle: el gestor tiene que justificar la negativa,
+     * y el empleado la ve luego en 'comentarioResolucion'.
+     */
+    private fun pedirMotivoYRechazar(peticionId: Long) {
+        val input = EditText(this).apply {
+            hint = "Motivo del rechazo"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Rechazar petición")
+            .setMessage("Indica por qué se rechaza. El empleado verá este mensaje.")
+            .setView(input)
+            .setPositiveButton("Rechazar") { _, _ ->
+                val motivo = input.text.toString().trim()
+                if (motivo.isEmpty()) {
+                    Toast.makeText(this, "El motivo es obligatorio", Toast.LENGTH_SHORT).show()
+                } else {
+                    viewModel.rechazarPeticion(peticionId, motivo)
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     /*

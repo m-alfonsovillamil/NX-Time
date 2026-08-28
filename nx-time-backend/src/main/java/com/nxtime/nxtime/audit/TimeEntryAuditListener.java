@@ -68,8 +68,12 @@ public class TimeEntryAuditListener {
         row.setHash(computeHash(row, hashAnterior));
 
         auditRepository.save(row);
+        // modificadoPor == null significa "acción automática del
+        // sistema" (ver IncompleteTimeEntryScheduler), no "autor
+        // desconocido": es un valor esperado, no un caso a la defensiva.
+        String autor = (row.getModificadoPor() != null) ? row.getModificadoPor().getEmail() : "sistema";
         log.info("Auditoría registrada: fichaje={}, acción={}, por={}",
-                row.getRegistro().getId(), row.getAccion(), row.getModificadoPor().getEmail());
+                row.getRegistro().getId(), row.getAccion(), autor);
     }
 
     // Solo hay petición HTTP real cuando esto se dispara desde un
@@ -88,7 +92,8 @@ public class TimeEntryAuditListener {
         String payload = String.join("|",
                 String.valueOf(row.getRegistro().getId()),
                 String.valueOf(row.getUsuario().getId()),
-                String.valueOf(row.getModificadoPor().getId()),
+                // "sistema" para las acciones automáticas sin autor humano.
+                (row.getModificadoPor() != null) ? String.valueOf(row.getModificadoPor().getId()) : "sistema",
                 row.getAccion().name(),
                 Objects.toString(row.getValorAnterior(), ""),
                 Objects.toString(row.getValorNuevo(), ""),

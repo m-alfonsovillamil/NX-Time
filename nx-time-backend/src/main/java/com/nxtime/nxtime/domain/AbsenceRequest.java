@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
+import java.time.Instant;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -61,6 +62,20 @@ public class AbsenceRequest {
     private AbsenceStatus estado = AbsenceStatus.PENDIENTE;
 
     private String motivo;
+
+    // Trazabilidad de la resolución (Fase 9): antes no quedaba
+    // constancia de quién aprobó/rechazó ni cuándo -- la petición
+    // simplemente cambiaba de estado (ver auditoría del plan). Los tres
+    // campos van juntos: o los tres con valor (petición resuelta) o los
+    // tres vacíos (PENDIENTE), y la BD lo comprueba
+    // (ck_peticiones_resolucion_coherente).
+    @ManyToOne
+    @JoinColumn(name = "aprobado_por_id")
+    private User aprobadoPor;
+
+    private Instant fechaResolucion;
+
+    private String comentarioResolucion;
 
     @Version
     private long version;

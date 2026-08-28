@@ -7,6 +7,7 @@ import com.nxtime.app.data.dto.CrearGestorRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -66,15 +67,19 @@ interface ApiService {
     @GET("api/v1/ausencias/gestor/pendientes")
     suspend fun getPeticionesPendientes(): Response<List<RespuestaAusencia>>
 
-    @POST("api/v1/ausencias/gestor/aprobar/{id}")
-    suspend fun aprobarPeticion(
-        @Path("id") peticionId: Long
+    /*
+     * Fase 9 del backend: un único PATCH sustituye a los dos POST
+     * anteriores (.../gestor/aprobar/{id} y .../gestor/rechazar/{id}).
+     * Cambiar el estado de un recurso que ya existe es un PATCH.
+     */
+    @PATCH("api/v1/ausencias/{id}/estado")
+    suspend fun cambiarEstadoPeticion(
+        @Path("id") peticionId: Long,
+        @Body cambio: CambioEstadoAusenciaRequest
     ): Response<RespuestaAusencia>
 
-    @POST("api/v1/ausencias/gestor/rechazar/{id}")
-    suspend fun rechazarPeticion(
-        @Path("id") peticionId: Long
-    ): Response<RespuestaAusencia>
+    @GET("api/v1/ausencias/saldo-vacaciones")
+    suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
 
     /*  Endpoints de GESTOR (Varios) */
 

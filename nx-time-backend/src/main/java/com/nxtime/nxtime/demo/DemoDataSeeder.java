@@ -4,11 +4,13 @@ import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import java.time.Instant;
@@ -55,6 +57,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
+    private final HolidayRepository holidayRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
@@ -62,12 +65,14 @@ public class DemoDataSeeder implements CommandLineRunner {
             UserRepository userRepository,
             TimeEntryRepository timeEntryRepository,
             AbsenceRequestRepository absenceRequestRepository,
+            HolidayRepository holidayRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRequestRepository = absenceRequestRepository;
+        this.holidayRepository = holidayRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -105,8 +110,15 @@ public class DemoDataSeeder implements CommandLineRunner {
             sembrarFichajes(empleado, consultoraIberica);
         }
 
-        sembrarAusencias(empleadosTech);
-        sembrarAusencias(empleadosIberica);
+        sembrarFestivos(techCorp);
+        sembrarFestivos(consultoraIberica);
+
+        // El gestor de cada empresa es quien resuelve las peticiones de
+        // sus empleados: desde la Fase 9 una petición resuelta SIEMPRE
+        // tiene resolutor y fecha (lo comprueba la propia base de datos,
+        // ck_peticiones_resolucion_coherente).
+        sembrarAusencias(empleadosTech, gestorTech);
+        sembrarAusencias(empleadosIberica, gestorIberica);
 
         log.info(
                 "Datos de demo listos: 2 empresas, {} usuarios, credenciales de gestor {} / {} (contraseña '{}').",
@@ -180,11 +192,46 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     /**
+     * Festivos de ejemplo (Fase 9): unos cuantos nacionales fijos, que
+     * caen igual todos los años, y uno propio de la empresa. Sirven para
+     * que el cálculo de días hábiles de las vacaciones (ver
+     * WorkingDayService) tenga algo real que descontar en la demo,
+     * además de los fines de semana.
+     */
+    private void sembrarFestivos(Company empresa) {
+        int anio = LocalDate.now(MADRID_ZONE).getYear();
+
+        // Nacionales: se guardan SIN empresa (empresa == null), así
+        // aplican a todas -- ver Holiday. Solo los siembra la primera
+        // empresa; para la segunda ya existen (uq_festivos_nacional_fecha).
+        if (holidayRepository.count() == 0) {
+            crearFestivoNacional(LocalDate.of(anio, 1, 1), "Año Nuevo");
+            crearFestivoNacional(LocalDate.of(anio, 5, 1), "Día del Trabajador");
+            crearFestivoNacional(LocalDate.of(anio, 8, 15), "Asunción de la Virgen");
+            crearFestivoNacional(LocalDate.of(anio, 10, 12), "Fiesta Nacional de España");
+            crearFestivoNacional(LocalDate.of(anio, 11, 1), "Todos los Santos");
+            crearFestivoNacional(LocalDate.of(anio, 12, 6), "Día de la Constitución");
+            crearFestivoNacional(LocalDate.of(anio, 12, 25), "Navidad");
+        }
+
+        // Propio de esta empresa (día de convenio, puente...).
+        holidayRepository.save(Holiday.builder()
+                .empresa(empresa)
+                .fecha(LocalDate.of(anio, 7, 25))
+                .descripcion("Día de convenio de " + empresa.getNombre())
+                .build());
+    }
+
+    private void crearFestivoNacional(LocalDate fecha, String descripcion) {
+        holidayRepository.save(Holiday.builder().fecha(fecha).descripcion(descripcion).build());
+    }
+
+    /**
      * Dos peticiones de ausencia por empleado: una ya resuelta (mitad
      * aprobadas, mitad rechazadas) y una pendiente, para que los tres
      * estados tengan ejemplos en la demo.
      */
-    private void sembrarAusencias(List<User> empleados) {
+    private void sembrarAusencias(List<User> empleados, User gestor) {
         LocalDate hoy = LocalDate.now(MADRID_ZONE);
 
         for (int i = 0; i < empleados.size(); i++) {
@@ -199,6 +246,11 @@ public class DemoDataSeeder implements CommandLineRunner {
                     .tipo(AbsenceType.VACACIONES)
                     .motivo("Vacaciones de ejemplo")
                     .estado(estadoResuelto)
+                    .aprobadoPor(gestor)
+                    .fechaResolucion(Instant.now())
+                    .comentarioResolucion(estadoResuelto == AbsenceStatus.APROBADA
+                            ? "Aprobada, que las disfrutes."
+                            : "Rechazada: esas fechas coinciden con el cierre trimestral.")
                     .build());
 
             absenceRequestRepository.save(AbsenceRequest.builder()

@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.data.repository.AuthRepository
 import kotlinx.coroutines.launch
@@ -49,39 +50,36 @@ class GestorViewModel(
     }
 
     /**
-     * Llama al repositorio para aprobar una petición.
+     * Aprueba una petición. El comentario es opcional al aprobar.
      */
-
-    fun aprobarPeticion(peticionId: Long) {
-        viewModelScope.launch {
-            try {
-                val response = authRepository.aprobarPeticion(peticionId)
-                if (response.isSuccessful) {
-                    Log.d("GestorViewModel", "Petición $peticionId APROBADA")
-
-                    cargarPeticionesPendientes()
-                } else {
-                    _gestorState.value = GestorState.Error("Error al aprobar: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                _gestorState.value = GestorState.Error("Error de red: ${e.message}")
-            }
-        }
+    fun aprobarPeticion(peticionId: Long, comentario: String? = null) {
+        cambiarEstado(peticionId, EstadoAusencia.APROBADA, comentario)
     }
 
     /**
-     * Llama al repositorio para rechazar una petición.
+     * Rechaza una petición. El motivo es OBLIGATORIO: el backend
+     * responde 400 si se rechaza sin explicar por qué (Fase 9).
      */
-    fun rechazarPeticion(peticionId: Long) {
+    fun rechazarPeticion(peticionId: Long, motivo: String) {
+        cambiarEstado(peticionId, EstadoAusencia.RECHAZADA, motivo)
+    }
+
+    /*
+     * Fase 9 del backend: los dos POST (aprobar/rechazar) se unificaron
+     * en un PATCH con el estado en el cuerpo, así que aquí también hay
+     * un único método en vez de dos casi idénticos.
+     */
+    private fun cambiarEstado(peticionId: Long, estado: EstadoAusencia, comentario: String?) {
         viewModelScope.launch {
             try {
-                val response = authRepository.rechazarPeticion(peticionId)
+                val response = authRepository.cambiarEstadoPeticion(peticionId, estado, comentario)
                 if (response.isSuccessful) {
-                    Log.d("GestorViewModel", "Petición $peticionId RECHAZADA")
+                    Log.d("GestorViewModel", "Petición $peticionId -> $estado")
 
                     cargarPeticionesPendientes()
                 } else {
-                    _gestorState.value = GestorState.Error("Error al rechazar: ${response.code()}")
+                    _gestorState.value =
+                        GestorState.Error("Error al cambiar el estado: ${response.code()}")
                 }
             } catch (e: Exception) {
                 _gestorState.value = GestorState.Error("Error de red: ${e.message}")

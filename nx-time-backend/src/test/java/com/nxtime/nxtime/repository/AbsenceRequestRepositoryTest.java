@@ -8,6 +8,7 @@ import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ class AbsenceRequestRepositoryTest extends AbstractRepositoryTest {
     private Company empresa;
     private Company otraEmpresa;
     private User empleado;
+    private User gestor;
 
     @BeforeEach
     void setUp() {
@@ -42,13 +44,28 @@ class AbsenceRequestRepositoryTest extends AbstractRepositoryTest {
         empleado = userRepository.save(User.builder()
                 .email("empleado@nxtime.test").nombre("Empleado").contrasena("hash")
                 .rol(Role.EMPLEADO).empresa(empresa).build());
+        gestor = userRepository.save(User.builder()
+                .email("gestor@nxtime.test").nombre("Gestor").contrasena("hash")
+                .rol(Role.GESTOR).empresa(empresa).build());
     }
 
+    /**
+     * Desde la Fase 9, una petición resuelta SIEMPRE lleva resolutor y
+     * fecha, y lo comprueba la propia base de datos
+     * (ck_peticiones_resolucion_coherente): construir una APROBADA sin
+     * ellos aquí haría fallar el INSERT, no el assert -- que es
+     * exactamente lo que se quiere de esa restricción.
+     */
     private AbsenceRequest peticion(Company company, AbsenceStatus estado) {
-        return absenceRequestRepository.save(AbsenceRequest.builder()
+        AbsenceRequest.AbsenceRequestBuilder builder = AbsenceRequest.builder()
                 .usuario(empleado).empresa(company)
                 .fechaInicio(LocalDate.of(2026, 6, 1)).fechaFin(LocalDate.of(2026, 6, 5))
-                .tipo(AbsenceType.VACACIONES).estado(estado).build());
+                .tipo(AbsenceType.VACACIONES).estado(estado);
+
+        if (estado != AbsenceStatus.PENDIENTE) {
+            builder.aprobadoPor(gestor).fechaResolucion(Instant.now());
+        }
+        return absenceRequestRepository.save(builder.build());
     }
 
     @Test

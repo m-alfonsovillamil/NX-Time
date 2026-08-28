@@ -1,8 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
+import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
@@ -65,7 +64,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private final UserRepository userRepository;
     private final TimeEntryMapper timeEntryMapper;
     private final ApplicationEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper;
+    private final TimeEntrySnapshotSerializer snapshotSerializer;
 
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
@@ -73,14 +72,14 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             UserRepository userRepository,
             TimeEntryMapper timeEntryMapper,
             ApplicationEventPublisher eventPublisher,
-            ObjectMapper objectMapper
+            TimeEntrySnapshotSerializer snapshotSerializer
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.timeEntryAuditRepository = timeEntryAuditRepository;
         this.userRepository = userRepository;
         this.timeEntryMapper = timeEntryMapper;
         this.eventPublisher = eventPublisher;
-        this.objectMapper = objectMapper;
+        this.snapshotSerializer = snapshotSerializer;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -272,27 +271,10 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         return timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(timeEntryId);
     }
 
+    // Delegado en TimeEntrySnapshotSerializer desde la Fase 9: el
+    // cierre automático de jornadas olvidadas necesita generar
+    // instantáneas con exactamente la misma forma que estas.
     private String toJson(TimeEntry entry) {
-        try {
-            return objectMapper.writeValueAsString(new TimeEntrySnapshot(
-                    entry.getId(), entry.getHoraEntrada(), entry.getHoraSalida(), entry.isEnPausa(),
-                    entry.getInicioPausaActual(), entry.getSegundosPausaAcumulados(), entry.isAnulado()));
-        } catch (JsonProcessingException e) {
-            // TimeEntrySnapshot es un record de tipos simples (long,
-            // Instant, boolean): no hay forma realista de que esto
-            // falle en la práctica.
-            throw new IllegalStateException("No se pudo serializar el fichaje para la auditoría", e);
-        }
-    }
-
-    private record TimeEntrySnapshot(
-            long id,
-            Instant horaEntrada,
-            Instant horaSalida,
-            boolean enPausa,
-            Instant inicioPausaActual,
-            long segundosPausaAcumulados,
-            boolean anulado
-    ) {
+        return snapshotSerializer.toJson(entry);
     }
 }

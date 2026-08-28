@@ -68,12 +68,21 @@ class AuthRepositoryImpl(
         return apiService.getPeticionesPendientes()
     }
 
-    override suspend fun aprobarPeticion(peticionId: Long): Response<RespuestaAusencia> {
-        return apiService.aprobarPeticion(peticionId)
+    // Fase 9 del backend: un único PATCH con el estado en el cuerpo,
+    // en vez de dos POST distintos con la acción en la URL.
+    override suspend fun cambiarEstadoPeticion(
+        peticionId: Long,
+        estado: EstadoAusencia,
+        comentario: String?
+    ): Response<RespuestaAusencia> {
+        return apiService.cambiarEstadoPeticion(
+            peticionId,
+            CambioEstadoAusenciaRequest(estado, comentario)
+        )
     }
 
-    override suspend fun rechazarPeticion(peticionId: Long): Response<RespuestaAusencia> {
-        return apiService.rechazarPeticion(peticionId)
+    override suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO> {
+        return apiService.getSaldoVacaciones()
     }
 
     override suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>> {

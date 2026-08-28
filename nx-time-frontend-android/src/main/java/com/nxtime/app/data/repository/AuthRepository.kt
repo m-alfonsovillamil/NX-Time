@@ -26,8 +26,13 @@ interface AuthRepository {
 
     /* Funciones de Ausencias (Gestor) */
     suspend fun getPeticionesPendientes(): Response<List<RespuestaAusencia>>
-    suspend fun aprobarPeticion(peticionId: Long): Response<RespuestaAusencia>
-    suspend fun rechazarPeticion(peticionId: Long): Response<RespuestaAusencia>
+    suspend fun cambiarEstadoPeticion(
+        peticionId: Long,
+        estado: EstadoAusencia,
+        comentario: String? = null
+    ): Response<RespuestaAusencia>
+
+    suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
     suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>>
 
     /* Funciones de Historial (Gestor) */

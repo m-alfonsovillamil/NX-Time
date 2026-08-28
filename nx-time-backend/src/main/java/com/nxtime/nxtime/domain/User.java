@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
+import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -67,6 +68,14 @@ public class User {
     private boolean activo = true;
 
     private Instant fechaBaja;
+
+    /**
+     * Jornada esperada, en horas por semana (Fase 9). 40 h es la
+     * jornada máxima ordinaria en España (art. 34 ET); por eso es el
+     * valor por defecto. Base para detectar incidencias.
+     */
+    @Builder.Default
+    private BigDecimal horasSemanales = new BigDecimal("40.0");
 
     @Version
     private long version;

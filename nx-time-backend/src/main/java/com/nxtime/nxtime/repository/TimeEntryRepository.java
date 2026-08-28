@@ -3,6 +3,7 @@ package com.nxtime.nxtime.repository;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -41,4 +42,13 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             + "WHERE t.empresa = :empresa AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
             + "AND t.anulado = false ORDER BY t.horaEntrada DESC")
     List<TimeEntry> findTeamHistory(@Param("empresa") Company empresa, Pageable pageable);
+
+    /**
+     * Jornadas todavía abiertas cuya entrada es anterior al límite dado:
+     * las que nadie cerró (Fase 9, ver IncompleteTimeEntryScheduler).
+     * Excluye las ya anuladas por una corrección, que no hay que tocar.
+     */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.horaSalida IS NULL AND t.anulado = false AND t.horaEntrada < :limite")
+    List<TimeEntry> findJornadasAbiertasAnterioresA(@Param("limite") Instant limite);
 }

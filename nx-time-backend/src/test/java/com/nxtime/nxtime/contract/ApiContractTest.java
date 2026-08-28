@@ -820,10 +820,12 @@ class ApiContractTest {
             assertThat(n.get("id").asLong()).isNotEqualTo(peticionAusenciaId);
         }
 
+        // Fase 9: PATCH /{id}/estado sustituye a los dos POST
+        // (/gestor/aprobar/{id} y /gestor/rechazar/{id}).
         ResponseEntity<String> aprobar = rest.exchange(
-                url("/api/v1/ausencias/gestor/aprobar/" + peticionAusenciaId),
-                HttpMethod.POST,
-                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                url("/api/v1/ausencias/" + peticionAusenciaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "APROBADA")), authHeaders(gestorOtraEmpresaToken)),
                 String.class
         );
         assertThat(aprobar.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -832,16 +834,26 @@ class ApiContractTest {
 
     @Test
     @Order(33)
-    void gestorApruebaLaPeticion_devuelve200ConEstadoAprobada() throws Exception {
+    void gestorApruebaLaPeticion_devuelve200ConEstadoAprobadaYTrazabilidad() throws Exception {
         ResponseEntity<String> response = rest.exchange(
-                url("/api/v1/ausencias/gestor/aprobar/" + peticionAusenciaId),
-                HttpMethod.POST,
-                new HttpEntity<>(authHeaders(gestorToken)),
+                url("/api/v1/ausencias/" + peticionAusenciaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(
+                        toJson(mapOf("estado", "APROBADA", "comentario", "Aprobada, que las disfrutes.")),
+                        authHeaders(gestorToken)),
                 String.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(bodyOf(response).get("estado").asText()).isEqualTo("APROBADA");
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("estado").asText()).isEqualTo("APROBADA");
+        // Fase 9: ahora queda constancia de QUIÉN resolvió y CUÁNDO
+        // (antes la petición solo cambiaba de estado, ver auditoría).
+        assertThat(body.get("aprobadoPor").get("nombre").asText()).isNotBlank();
+        assertThat(body.get("fechaResolucion").asText()).isNotBlank();
+        assertThat(body.get("comentarioResolucion").asText()).contains("disfrutes");
+        // Y los días hábiles reales, sin contar sábados ni domingos.
+        assertThat(body.get("diasHabiles").asInt()).isPositive();
     }
 
     @Test
@@ -850,9 +862,9 @@ class ApiContractTest {
         // CORREGIDO EN FASE 2: "Solo se puede modificar una petición
         // PENDIENTE." ahora es BusinessException -> 409 real.
         ResponseEntity<String> response = rest.exchange(
-                url("/api/v1/ausencias/gestor/aprobar/" + peticionAusenciaId),
-                HttpMethod.POST,
-                new HttpEntity<>(authHeaders(gestorToken)),
+                url("/api/v1/ausencias/" + peticionAusenciaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "APROBADA")), authHeaders(gestorToken)),
                 String.class
         );
 
@@ -898,15 +910,78 @@ class ApiContractTest {
         );
         long id = bodyOf(creada).get("id").asLong();
 
+        // Fase 9: rechazar SIN comentario se rechaza con 400 -- negar
+        // una ausencia sin explicar por qué no es aceptable.
+        ResponseEntity<String> rechazoSinMotivo = rest.exchange(
+                url("/api/v1/ausencias/" + id + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "RECHAZADA")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(rechazoSinMotivo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(rechazoSinMotivo).get("detail").asText()).contains("motivo");
+
         ResponseEntity<String> rechazo = rest.exchange(
-                url("/api/v1/ausencias/gestor/rechazar/" + id),
-                HttpMethod.POST,
-                new HttpEntity<>(authHeaders(gestorToken)),
+                url("/api/v1/ausencias/" + id + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(
+                        toJson(mapOf("estado", "RECHAZADA", "comentario", "Coincide con el cierre trimestral.")),
+                        authHeaders(gestorToken)),
                 String.class
         );
 
         assertThat(rechazo.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(bodyOf(rechazo).get("estado").asText()).isEqualTo("RECHAZADA");
+        JsonNode body = bodyOf(rechazo);
+        assertThat(body.get("estado").asText()).isEqualTo("RECHAZADA");
+        assertThat(body.get("comentarioResolucion").asText()).contains("cierre trimestral");
+    }
+
+    @Test
+    @Order(37)
+    void solicitarUnaAusenciaQueSeSolapaConOtraViva_devuelve409() throws Exception {
+        // Fase 9: antes no se comprobaba el solapamiento en absoluto
+        // (ver auditoría) -- se podían pedir dos veces las mismas fechas.
+        // La petición del test 30 (2027-01-10 a 2027-01-12) sigue viva
+        // (quedó APROBADA en el test 33); esta la pisa parcialmente.
+        Map<String, Object> solapada = mapOf(
+                "fechaInicio", "2027-01-12",
+                "fechaFin", "2027-01-14",
+                "tipo", "VACACIONES",
+                "motivo", "Se solapa con la anterior"
+        );
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ausencias"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(solapada), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("se solapa");
+    }
+
+    @Test
+    @Order(38)
+    void empleadoConsultaSuSaldoDeVacaciones() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ausencias/saldo-vacaciones?anio=2027"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("anio").asInt()).isEqualTo(2027);
+        assertThat(body.get("diasTotales").asInt()).isEqualTo(22); // derecho por defecto
+        // La petición del test 30 quedó APROBADA: del domingo 10 al
+        // martes 12 de enero de 2027 son 3 días naturales pero solo 2
+        // HÁBILES (el domingo no cuenta) -- justo lo que esta fase
+        // arregla: antes se habrían contado los 3.
+        assertThat(body.get("diasConsumidos").asInt()).isEqualTo(2);
+        assertThat(body.get("diasDisponibles").asInt())
+                .isEqualTo(body.get("diasTotales").asInt() - body.get("diasConsumidos").asInt());
     }
 
     // ------------------------------------------------------------------

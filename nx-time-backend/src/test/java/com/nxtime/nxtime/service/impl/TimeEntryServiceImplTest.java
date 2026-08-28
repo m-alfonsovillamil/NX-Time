@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
+import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
@@ -75,10 +76,11 @@ class TimeEntryServiceImplTest {
         // a diferencia del ObjectMapper que autoconfigura Spring Boot en
         // la app real, uno construido con "new" en un test no lo trae
         // registrado por defecto -- y los snapshots serializan Instant.
-        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        var snapshotSerializer = new TimeEntrySnapshotSerializer(
+                new ObjectMapper().registerModule(new JavaTimeModule()));
         service = new TimeEntryServiceImpl(
                 timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
-                eventPublisher, objectMapper);
+                eventPublisher, snapshotSerializer);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado").empresa(empresa).build();
         // lenient: no todos los tests llegan a guardar (varios cortan antes con una excepción de negocio).

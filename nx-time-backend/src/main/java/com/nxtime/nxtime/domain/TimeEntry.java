@@ -78,6 +78,16 @@ public class TimeEntry {
     @Builder.Default
     private boolean anulado = false;
 
+    /**
+     * Jornada que nunca se cerró y que cerró automáticamente el proceso
+     * nocturno (Fase 9, ver IncompleteTimeEntryScheduler), no el
+     * empleado. Marca la incidencia para que RRHH la corrija con
+     * PATCH /api/v1/fichaje/{id}: las horas de salida que puso el
+     * sistema son una convención, no un fichaje real.
+     */
+    @Builder.Default
+    private boolean jornadaIncompleta = false;
+
     @ManyToOne
     @JoinColumn(name = "registro_original_id")
     private TimeEntry registroOriginal;
