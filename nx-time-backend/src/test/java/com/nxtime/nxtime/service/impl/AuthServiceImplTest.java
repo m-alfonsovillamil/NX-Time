@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,6 +61,8 @@ class AuthServiceImplTest {
     private JwtService jwtService;
     @Mock
     private AuthenticationManager authenticationManager;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private AuthServiceImpl service;
 
@@ -67,7 +70,7 @@ class AuthServiceImplTest {
     void setUp() {
         service = new AuthServiceImpl(
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
-                authenticationManager);
+                authenticationManager, eventPublisher);
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");

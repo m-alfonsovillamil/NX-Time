@@ -5,6 +5,11 @@
 # Uso: ./gradlew bootRun --args='--spring.profiles.active=dev'
 # (añade ",demo" para arrancar además con datos de ejemplo: ver
 # demo/DemoDataSeeder.java)
+#
+# Los correos (Fase 10) van a MailHog, el servidor SMTP de mentira que
+# levanta docker-compose: no sale nada a internet y se leen todos en
+# http://localhost:8025. Los valores por defecto de application.yml
+# (localhost:1025, sin auth) ya apuntan ahí, no hace falta repetirlos.
 
 spring:
   # Fase 8: "nxtime_app" es un rol SIN privilegios de superusuario ni
@@ -27,6 +32,11 @@ spring:
 
   jpa:
     show-sql: true
+
+  # Sin caché de plantillas en desarrollo: así se puede tocar un correo
+  # de templates/email/ y ver el cambio sin reiniciar.
+  thymeleaf:
+    cache: false
 
 application:
   security:

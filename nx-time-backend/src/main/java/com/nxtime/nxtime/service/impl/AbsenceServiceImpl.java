@@ -3,7 +3,9 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
@@ -21,6 +23,7 @@ import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,24 +48,30 @@ public class AbsenceServiceImpl implements AbsenceService {
 
     private static final Logger log = LoggerFactory.getLogger(AbsenceServiceImpl.class);
 
+    /** La authority que decide a quién se avisa de una petición nueva (ver createRequest). */
+    private static final String AUTHORITY_APROBAR = "ausencia:aprobar";
+
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
     private final AbsenceMapper absenceMapper;
     private final WorkingDayService workingDayService;
     private final VacationBalanceService vacationBalanceService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AbsenceServiceImpl(
             AbsenceRequestRepository absenceRequestRepository,
             UserRepository userRepository,
             AbsenceMapper absenceMapper,
             WorkingDayService workingDayService,
-            VacationBalanceService vacationBalanceService
+            VacationBalanceService vacationBalanceService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.absenceRequestRepository = absenceRequestRepository;
         this.userRepository = userRepository;
         this.absenceMapper = absenceMapper;
         this.workingDayService = workingDayService;
         this.vacationBalanceService = vacationBalanceService;
+        this.eventPublisher = eventPublisher;
     }
 
     private User getUser(String email) {
@@ -97,6 +106,23 @@ public class AbsenceServiceImpl implements AbsenceService {
                 .build();
 
         AbsenceRequest saved = absenceRequestRepository.save(newRequest);
+
+        // Aviso a quien pueda aprobarla (Fase 10). Se pregunta a
+        // RoleAuthorities quién tiene "ausencia:aprobar" en vez de
+        // listar roles a mano: esa authority la tienen GESTOR, RRHH y
+        // ADMIN, y cablear Role.GESTOR aquí dejaría sin avisar a una
+        // empresa cuyo único responsable sea el ADMIN que la fundó
+        // (registerManager crea un ADMIN). Es el mismo error que la
+        // Fase 4 quitó de este servicio -- ver el Javadoc de la clase --
+        // y no conviene volver a colarlo por aquí.
+        // Si no hay nadie con esa authority, no se manda nada: no es un
+        // error, simplemente no hay a quién avisar.
+        userRepository.findByEmpresa(user.getEmpresa()).stream()
+                .filter(User::isActivo)
+                .filter(posible -> RoleAuthorities.forRole(posible.getRol()).contains(AUTHORITY_APROBAR))
+                .forEach(aprobador -> eventPublisher.publishEvent(new NotificationEvents.AbsenceRequested(
+                        saved, aprobador.getEmail(), aprobador.getNombre())));
+
         log.info("Nueva petición de ausencia de {} ({} - {}, {} días hábiles)",
                 email, saved.getFechaInicio(), saved.getFechaFin(), diasHabiles);
         return toResponse(saved);
@@ -192,6 +218,12 @@ public class AbsenceServiceImpl implements AbsenceService {
         absenceRequest.setComentarioResolucion(request.comentario());
 
         AbsenceRequest saved = absenceRequestRepository.save(absenceRequest);
+        // El empleado se entera por correo (Fase 10). Se publica DENTRO
+        // de la transacción, pero el listener corre después del commit
+        // (ver NotificationListener): si esto acabara en rollback, no
+        // se habría avisado de una aprobación que no existe.
+        eventPublisher.publishEvent(new NotificationEvents.AbsenceResolved(saved));
+
         log.info("Petición de ausencia {} cambiada a {} por {}", requestId, request.estado(), managerEmail);
         return toResponse(saved);
     }

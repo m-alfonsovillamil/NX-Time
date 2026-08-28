@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--/* Aviso al empleado: su ausencia ha sido aprobada o rechazada (Fase 10). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Resolución de tu petición de ausencia', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreEmpleado}">Empleado</span>,</p>
+
+    <p>
+        Tu petición de <span th:text="${tipo}">VACACIONES</span>
+        del <strong th:text="${#temporals.format(fechaInicio, 'dd/MM/yyyy')}">01/01/2026</strong>
+        al <strong th:text="${#temporals.format(fechaFin, 'dd/MM/yyyy')}">05/01/2026</strong>
+        ha sido
+        <strong th:if="${aprobada}" style="color: #1a7f37;">APROBADA</strong>
+        <strong th:unless="${aprobada}" style="color: #cf222e;">RECHAZADA</strong>
+        por <span th:text="${resolutor}">Gestor</span>.
+    </p>
+
+    <!--/*
+      Al rechazar, el comentario es obligatorio (lo exige el backend
+      desde la Fase 9), así que aquí siempre habrá algo que mostrar en
+      ese caso; al aprobar es opcional.
+    */-->
+    <p th:if="${comentario != null and !comentario.isBlank()}"
+       style="background: #f6f8fa; border-left: 3px solid #d0d7de; padding: 10px 12px; margin-top: 16px;">
+        <span th:text="${comentario}">Comentario del gestor</span>
+    </p>
+</div>
+</body>
+</html>

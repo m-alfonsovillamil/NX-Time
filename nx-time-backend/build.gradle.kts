@@ -27,6 +27,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
+    // Notificaciones por email (Fase 10). Thymeleaf solo se usa para
+    // renderizar las plantillas de correo, no para servir vistas web:
+    // esta aplicación no tiene interfaz propia, es una API que consume
+    // la app Android.
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+
     // Caché (Fase 10): Caffeine como implementación. Se usa para el
     // calendario laboral (ver HolidayCalendar) -- los festivos cambian
     // una vez al año y se consultaban una vez por cada ausencia de un

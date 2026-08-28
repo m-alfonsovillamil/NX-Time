@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!--/*
+  Aviso al gestor: un empleado ha pedido una ausencia (Fase 10).
+
+  El <body> se sustituye entero por el marco común, pasándole este
+  bloque como contenido: "~{:: #contenido}" selecciona por id dentro de
+  esta misma plantilla. Es el patrón de composición de Thymeleaf 3 sin
+  necesidad del dialecto de layouts.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Nueva petición de ausencia', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreGestor}">Gestor</span>,</p>
+
+    <p>
+        <strong th:text="${nombreEmpleado}">Empleado</strong> ha solicitado una ausencia
+        del <strong th:text="${#temporals.format(fechaInicio, 'dd/MM/yyyy')}">01/01/2026</strong>
+        al <strong th:text="${#temporals.format(fechaFin, 'dd/MM/yyyy')}">05/01/2026</strong>.
+    </p>
+
+    <p style="margin: 0;">Tipo: <span th:text="${tipo}">VACACIONES</span></p>
+    <p th:if="${motivo != null and !motivo.isBlank()}" style="margin: 4px 0 0;">
+        Motivo: <span th:text="${motivo}">Motivo</span>
+    </p>
+
+    <p style="margin-top: 20px;">Tienes la petición pendiente de revisar en la aplicación.</p>
+</div>
+</body>
+</html>

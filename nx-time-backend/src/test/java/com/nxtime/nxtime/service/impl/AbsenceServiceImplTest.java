@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,7 +16,9 @@ import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
@@ -35,8 +38,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Unitarios (Mockito) de las reglas de negocio de ausencias: las
@@ -58,6 +63,8 @@ class AbsenceServiceImplTest {
     private WorkingDayService workingDayService;
     @Mock
     private VacationBalanceService vacationBalanceService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private AbsenceServiceImpl service;
 
@@ -72,11 +79,18 @@ class AbsenceServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new AbsenceServiceImpl(
-                absenceRequestRepository, userRepository, absenceMapper, workingDayService, vacationBalanceService);
+                absenceRequestRepository, userRepository, absenceMapper, workingDayService,
+                vacationBalanceService, eventPublisher);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
-        empleado = User.builder().id(10L).email("empleado@nxtime.test").empresa(empresa).build();
-        gestor = User.builder().id(20L).email("gestor@nxtime.test").empresa(empresa).build();
+        // Con rol explícito: en la base de datos "rol" es NOT NULL con
+        // CHECK (ver V1__initial_schema.sql), así que un usuario sin rol
+        // no existe -- y desde la Fase 10 hay código que consulta el rol
+        // para decidir a quién avisar.
+        empleado = User.builder().id(10L).email("empleado@nxtime.test")
+                .rol(Role.EMPLEADO).empresa(empresa).activo(true).build();
+        gestor = User.builder().id(20L).email("gestor@nxtime.test")
+                .rol(Role.GESTOR).empresa(empresa).activo(true).build();
 
         // lenient: varios tests cortan con una excepción antes de llegar
         // a mapear la respuesta o a contar días.
@@ -183,6 +197,65 @@ class AbsenceServiceImplTest {
                         empleado.getEmail(), vacaciones(LocalDate.of(2026, 6, 6), LocalDate.of(2026, 6, 7))))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("ningún día hábil");
+    }
+
+    // ---- Aviso a quien puede aprobar (Fase 10) ----
+
+    @Test
+    @DisplayName("Al crear una petición se avisa a TODO el que pueda aprobarla, no solo a los GESTOR")
+    void createRequest_avisaATodosLosQuePuedenAprobar() {
+        // Este test nace de un bug real detectado probando contra
+        // MailHog: el aviso estaba cableado a Role.GESTOR, así que una
+        // empresa cuyo único responsable era el ADMIN que la fundó
+        // (registerManager crea un ADMIN) no recibía nada. Quién puede
+        // aprobar lo decide la authority "ausencia:aprobar", que tienen
+        // GESTOR, RRHH y ADMIN.
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(absenceRequestRepository.findSolapadas(any(), any(), any())).thenReturn(List.of());
+        conSaldoDisponible(20);
+        when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        User admin = User.builder().id(30L).email("admin@nxtime.test").nombre("Admin")
+                .rol(Role.ADMIN).empresa(empresa).activo(true).build();
+        User rrhh = User.builder().id(40L).email("rrhh@nxtime.test").nombre("RRHH")
+                .rol(Role.RRHH).empresa(empresa).activo(true).build();
+        User gestorActivo = User.builder().id(50L).email("gestor2@nxtime.test").nombre("Gestor")
+                .rol(Role.GESTOR).empresa(empresa).activo(true).build();
+        User gestorDeBaja = User.builder().id(60L).email("baja@nxtime.test").nombre("De baja")
+                .rol(Role.GESTOR).empresa(empresa).activo(false).build();
+        User otroEmpleado = User.builder().id(70L).email("otro@nxtime.test").nombre("Otro")
+                .rol(Role.EMPLEADO).empresa(empresa).activo(true).build();
+        when(userRepository.findByEmpresa(empresa))
+                .thenReturn(List.of(admin, rrhh, gestorActivo, gestorDeBaja, otroEmpleado, empleado));
+
+        service.createRequest(empleado.getEmail(), vacaciones(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5)));
+
+        ArgumentCaptor<NotificationEvents.AbsenceRequested> captor =
+                ArgumentCaptor.forClass(NotificationEvents.AbsenceRequested.class);
+        verify(eventPublisher, times(3)).publishEvent(captor.capture());
+
+        assertThat(captor.getAllValues()).extracting(NotificationEvents.AbsenceRequested::emailDestino)
+                .containsExactlyInAnyOrder(admin.getEmail(), rrhh.getEmail(), gestorActivo.getEmail());
+        // Ni al empleado que la pidió, ni a otros empleados, ni a quien está de baja.
+        assertThat(captor.getAllValues()).extracting(NotificationEvents.AbsenceRequested::emailDestino)
+                .doesNotContain(empleado.getEmail(), otroEmpleado.getEmail(), gestorDeBaja.getEmail());
+    }
+
+    @Test
+    @DisplayName("Resolver una petición publica el evento que avisa al empleado")
+    void changeRequestStatus_publicaEventoDeResolucion() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        AbsenceRequest request = peticionPendiente(empresa);
+        when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(request));
+        when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.changeRequestStatus(gestor.getEmail(), 5L,
+                new UpdateAbsenceStatusRequest(AbsenceStatus.APROBADA, "Adelante."));
+
+        ArgumentCaptor<NotificationEvents.AbsenceResolved> captor =
+                ArgumentCaptor.forClass(NotificationEvents.AbsenceResolved.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue().peticion().getEstado()).isEqualTo(AbsenceStatus.APROBADA);
     }
 
     // ---- Consultas ----

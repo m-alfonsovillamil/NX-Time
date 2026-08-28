@@ -34,13 +34,11 @@ services:
       postgres:
         condition: service_healthy
 
-  # Servidor SMTP de mentira para desarrollo (Fase 7, preparando la
-  # Fase 10 -- notificaciones por email): captura cualquier correo que
-  # el backend envíe sin reenviarlo a ningún sitio real. De momento el
-  # backend no manda ningún email (no hay spring-boot-starter-mail
-  # todavía), así que este servicio no tiene consumidor hasta la Fase
-  # 10 -- se deja preparado ahora para no volver a tocar este fichero
-  # entonces. UI en http://localhost:8025.
+  # Servidor SMTP de mentira para desarrollo (Fase 7, en uso desde la
+  # Fase 10): captura cualquier correo que el backend envíe sin
+  # reenviarlo a ningún sitio real, así que se pueden probar las
+  # notificaciones sin mandar correos de verdad a nadie.
+  # Los correos se leen en http://localhost:8025.
   mailhog:
     image: mailhog/mailhog:v1.0.1
     container_name: nxtime-mailhog
@@ -82,6 +80,10 @@ services:
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/nxtime
       SPRING_FLYWAY_USER: nxtime
       SPRING_FLYWAY_PASSWORD: nxtime
+      # Igual que con Postgres: dentro de la red de Compose el host es
+      # el nombre del servicio, no localhost (Fase 10).
+      MAIL_HOST: mailhog
+      MAIL_PORT: 1025
     ports:
       - "8080:8080"
     depends_on:

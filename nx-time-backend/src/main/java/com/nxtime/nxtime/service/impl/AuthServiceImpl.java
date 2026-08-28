@@ -14,6 +14,7 @@ import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -56,6 +58,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -66,7 +69,8 @@ public class AuthServiceImpl implements AuthService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -74,6 +78,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.eventPublisher = eventPublisher;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -163,7 +168,12 @@ public class AuthServiceImpl implements AuthService {
                 .empresa(managerCompany)
                 .build();
 
-        userRepository.save(newEmployee);
+        User savedEmployee = userRepository.save(newEmployee);
+        // Correo de bienvenida (Fase 10). Sin la contraseña dentro: la
+        // comunica quien da el alta por otro canal (ver la plantilla).
+        eventPublisher.publishEvent(
+                new NotificationEvents.EmployeeCreated(savedEmployee, managerCompany.getNombre()));
+
         log.info("Gestor {} ha creado al empleado {}", manager.getEmail(), newEmployee.getEmail());
     }
 
