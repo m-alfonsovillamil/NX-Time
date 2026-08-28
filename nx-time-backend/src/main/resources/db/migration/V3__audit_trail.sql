@@ -67,7 +67,13 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nxtime_app;
 -- PRIVILEGES -- solo aplica a objetos creados DESPUÉS de declararlo --
 -- de ahí el GRANT explícito y más restringido, sin UPDATE/DELETE, que
 -- ya se le dio unas líneas más arriba.)
-ALTER DEFAULT PRIVILEGES FOR ROLE nxtime IN SCHEMA public
+-- Sin "FOR ROLE": así aplica al rol que esté ejecutando la migración,
+-- sea cual sea. Antes decía "FOR ROLE nxtime", el nombre del rol de
+-- docker-compose, y eso hacía la migración NO PORTABLE: al desplegar en
+-- Neon fallaba con 'role "nxtime" does not exist', porque allí el dueño
+-- se llama "neondb_owner". Un fichero de migración no debe conocer el
+-- nombre del rol de un entorno concreto.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO nxtime_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE nxtime IN SCHEMA public
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT USAGE, SELECT ON SEQUENCES TO nxtime_app;

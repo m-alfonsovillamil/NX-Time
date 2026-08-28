@@ -40,3 +40,13 @@ imagen icono/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Neon (Fase 11). El repositorio es PÚBLICO, así que nada de esto se sube:
+#  - .neon: enlace al proyecto/rama de Neon (ids de la cuenta del usuario)
+#  - .agents/skills: herramientas locales del agente, reinstalables con
+#    `npx skills add neondatabase/agent-skills`
+# Los ficheros .env ya estaban cubiertos arriba, y son los que llevan de
+# verdad las credenciales (DATABASE_URL con usuario y contraseña).
+.neon
+.agents/
+skills-lock.json
