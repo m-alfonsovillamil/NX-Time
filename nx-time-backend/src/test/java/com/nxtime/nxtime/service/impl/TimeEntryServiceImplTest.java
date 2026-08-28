@@ -9,15 +9,22 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
+import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAction;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
+import com.nxtime.nxtime.dto.TimeEntryCorrectionRequest;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
+import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import java.time.Instant;
@@ -31,6 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 
 /**
@@ -46,9 +54,13 @@ class TimeEntryServiceImplTest {
     @Mock
     private TimeEntryRepository timeEntryRepository;
     @Mock
+    private TimeEntryAuditRepository timeEntryAuditRepository;
+    @Mock
     private UserRepository userRepository;
     @Mock
     private TimeEntryMapper timeEntryMapper;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private TimeEntryServiceImpl service;
 
@@ -57,7 +69,16 @@ class TimeEntryServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new TimeEntryServiceImpl(timeEntryRepository, userRepository, timeEntryMapper);
+        // ObjectMapper real (no mockeado): construir a mano el JSON
+        // esperado para cada snapshot sería tan frágil como el propio
+        // código a probar. JavaTimeModule hace falta a mano aquí porque,
+        // a diferencia del ObjectMapper que autoconfigura Spring Boot en
+        // la app real, uno construido con "new" en un test no lo trae
+        // registrado por defecto -- y los snapshots serializan Instant.
+        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        service = new TimeEntryServiceImpl(
+                timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
+                eventPublisher, objectMapper);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado").empresa(empresa).build();
         // lenient: no todos los tests llegan a guardar (varios cortan antes con una excepción de negocio).
@@ -284,5 +305,179 @@ class TimeEntryServiceImplTest {
         List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail());
 
         assertThat(result).containsExactly(dto);
+    }
+
+    // ---- Auditoría (Fase 8): publicación de eventos ----
+
+    @Test
+    @DisplayName("INICIO publica un evento de auditoría CREACION sin valorAnterior")
+    void registerTimeEntry_inicio_publicaEventoDeCreacion() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+
+        service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+
+        ArgumentCaptor<TimeEntryAuditEvent> captor = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        var auditRow = captor.getValue().auditRow();
+        assertThat(auditRow.getAccion()).isEqualTo(AuditAction.CREACION);
+        assertThat(auditRow.getValorAnterior()).isNull();
+        assertThat(auditRow.getValorNuevo()).contains("\"horaEntrada\"");
+        assertThat(auditRow.getUsuario()).isEqualTo(empleado);
+        assertThat(auditRow.getModificadoPor()).isEqualTo(empleado);
+    }
+
+    @Test
+    @DisplayName("FIN publica un evento de auditoría MODIFICACION con valorAnterior y valorNuevo")
+    void registerTimeEntry_fin_publicaEventoDeModificacionConAmbosValores() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        TimeEntry activa = TimeEntry.builder().id(1L).usuario(empleado)
+                .horaEntrada(Instant.now().minusSeconds(3600)).build();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(activa));
+
+        service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.FIN));
+
+        ArgumentCaptor<TimeEntryAuditEvent> captor = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        var auditRow = captor.getValue().auditRow();
+        assertThat(auditRow.getAccion()).isEqualTo(AuditAction.MODIFICACION);
+        assertThat(auditRow.getValorAnterior()).contains("\"horaSalida\":null");
+        assertThat(auditRow.getValorNuevo()).doesNotContain("\"horaSalida\":null");
+    }
+
+    // ---- correctTimeEntry (Fase 8) ----
+
+    @Test
+    @DisplayName("correctTimeEntry anula el original, crea uno nuevo enlazado y publica un evento CORRECCION")
+    void correctTimeEntry_fichajeValido_creaCorreccionYPublicaEvento() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        Instant horaEntrada = Instant.now().minusSeconds(7200);
+        Instant horaSalida = Instant.now().minusSeconds(3600);
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(horaEntrada).horaSalida(horaSalida).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
+
+        Instant horaEntradaCorregida = horaEntrada.minusSeconds(600);
+        TimeEntryCorrectionRequest request =
+                new TimeEntryCorrectionRequest(horaEntradaCorregida, horaSalida, "Se le olvidó fichar la entrada a tiempo.");
+
+        TimeEntry result = service.correctTimeEntry(rrhh.getEmail(), 5L, request);
+
+        assertThat(result.getHoraEntrada()).isEqualTo(horaEntradaCorregida);
+        assertThat(result.getRegistroOriginal()).isEqualTo(original);
+        assertThat(original.isAnulado()).isTrue();
+
+        ArgumentCaptor<TimeEntryAuditEvent> captor = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        var auditRow = captor.getValue().auditRow();
+        assertThat(auditRow.getAccion()).isEqualTo(AuditAction.CORRECCION);
+        assertThat(auditRow.getModificadoPor()).isEqualTo(rrhh);
+        assertThat(auditRow.getMotivo()).isEqualTo(request.motivo());
+    }
+
+    @Test
+    @DisplayName("correctTimeEntry sobre un fichaje de OTRA empresa lanza TenantAccessException")
+    void correctTimeEntry_fichajeDeOtraEmpresa_lanzaTenantAccessException() {
+        Company otraEmpresa = Company.builder().id(2L).build();
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(otraEmpresa)
+                .horaEntrada(Instant.now().minusSeconds(7200)).horaSalida(Instant.now().minusSeconds(3600)).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
+
+        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
+
+        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
+                .isInstanceOf(TenantAccessException.class);
+    }
+
+    @Test
+    @DisplayName("correctTimeEntry sobre un fichaje ya corregido antes lanza BusinessException")
+    void correctTimeEntry_fichajeYaAnulado_lanzaBusinessException() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(Instant.now().minusSeconds(7200)).horaSalida(Instant.now().minusSeconds(3600))
+                .anulado(true).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
+
+        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
+
+        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ya fue corregido");
+    }
+
+    @Test
+    @DisplayName("correctTimeEntry sobre una jornada activa (sin horaSalida) lanza BusinessException")
+    void correctTimeEntry_jornadaActiva_lanzaBusinessException() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(Instant.now()).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
+
+        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
+
+        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("activa");
+    }
+
+    @Test
+    @DisplayName("correctTimeEntry con horaSalida no posterior a horaEntrada lanza BusinessException 400")
+    void correctTimeEntry_horaSalidaNoPosterior_lanzaBusinessException() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        Instant hora = Instant.now();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(hora.minusSeconds(7200)).horaSalida(hora.minusSeconds(3600)).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
+
+        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(hora, hora, "motivo");
+
+        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("posterior");
+    }
+
+    // ---- getAuditTrail (Fase 8) ----
+
+    @Test
+    @DisplayName("getAuditTrail devuelve la línea temporal de un fichaje de la propia empresa")
+    void getAuditTrail_fichajeDeLaPropiaEmpresa_devuelveLineaTemporal() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry entry = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa).build();
+        var auditRow = com.nxtime.nxtime.domain.TimeEntryAudit.builder().id(1L).registro(entry).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(entry));
+        when(timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(5L)).thenReturn(List.of(auditRow));
+
+        assertThat(service.getAuditTrail(rrhh.getEmail(), 5L)).containsExactly(auditRow);
+    }
+
+    @Test
+    @DisplayName("getAuditTrail de un fichaje de OTRA empresa lanza TenantAccessException")
+    void getAuditTrail_fichajeDeOtraEmpresa_lanzaTenantAccessException() {
+        Company otraEmpresa = Company.builder().id(2L).build();
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry entry = TimeEntry.builder().id(5L).usuario(empleado).empresa(otraEmpresa).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(entry));
+
+        assertThatThrownBy(() -> service.getAuditTrail(rrhh.getEmail(), 5L))
+                .isInstanceOf(TenantAccessException.class);
+    }
+
+    @Test
+    @DisplayName("getAuditTrail de un fichaje inexistente lanza ResourceNotFoundException")
+    void getAuditTrail_fichajeInexistente_lanzaResourceNotFoundException() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getAuditTrail(rrhh.getEmail(), 99L))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

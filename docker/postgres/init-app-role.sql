@@ -1,0 +1,23 @@
+-- Rol de aplicación en tiempo de ejecución, SIN privilegios de
+-- superusuario (a diferencia de "nxtime", el rol de bootstrap que crea
+-- la imagen oficial de postgres a partir de POSTGRES_USER -- ese SÍ es
+-- superusuario del clúster local, así que un REVOKE contra él no
+-- tendría ningún efecto real: un superusuario se salta todas las
+-- comprobaciones de permisos, siempre, sin excepción).
+--
+-- Flyway sigue migrando (creando/alterando tablas) como "nxtime"; la
+-- aplicación en tiempo de ejecución se conecta como "nxtime_app" --
+-- ver application-dev.yml (spring.datasource.* vs spring.flyway.*) y
+-- V3__audit_trail.sql (los GRANT que le dan privilegios tabla por
+-- tabla, sin UPDATE/DELETE en auditoria_fichaje a propósito).
+--
+-- Solo se ejecuta la primera vez que se crea el volumen de datos de
+-- Postgres (docker-entrypoint-initdb.d, convención de la imagen
+-- oficial). Si ya tenías el volumen "nxtime-postgres-data" de antes de
+-- la Fase 8, este script NO se ejecuta solo -- créalo a mano una vez:
+--   docker exec nxtime-postgres psql -U nxtime -d nxtime -c "CREATE ROLE nxtime_app WITH LOGIN PASSWORD 'nxtime_app';"
+--   docker exec nxtime-postgres psql -U nxtime -d nxtime -c "GRANT CONNECT ON DATABASE nxtime TO nxtime_app;"
+-- (Los GRANT de tabla en sí los aplica V3__audit_trail.sql al arrancar
+-- la aplicación, no hace falta repetirlos a mano.)
+CREATE ROLE nxtime_app WITH LOGIN PASSWORD 'nxtime_app';
+GRANT CONNECT ON DATABASE nxtime TO nxtime_app;

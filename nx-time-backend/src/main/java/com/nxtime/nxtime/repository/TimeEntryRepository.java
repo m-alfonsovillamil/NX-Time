@@ -17,9 +17,13 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     /**
      * JOIN FETCH evita el N+1 al cargar el usuario de cada fichaje (ver
      * auditoría). Pageable acota el resultado -- antes /historial
-     * devolvía la tabla entera sin límite.
+     * devolvía la tabla entera sin límite. "t.anulado = false" (Fase 8):
+     * una vez corregido un fichaje, la fila original deja de aparecer
+     * en el historial -- la fila nueva (correcta) sí, y la traza de
+     * ambas queda en TimeEntryAudit, no se pierde.
      */
-    @Query("SELECT t FROM registros t JOIN FETCH t.usuario WHERE t.usuario = :usuario ORDER BY t.horaEntrada DESC")
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.usuario = :usuario AND t.anulado = false ORDER BY t.horaEntrada DESC")
     List<TimeEntry> findHistoryByUsuario(@Param("usuario") User usuario, Pageable pageable);
 
     /**
@@ -30,10 +34,11 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      * sus empleados. Filtra por t.empresa directo (denormalizado desde
      * la Fase 3), no por u.empresa: aprovecha el índice
      * (empresa_id, hora_entrada) de "registros" en vez de forzar el
-     * join a "usuarios" para el filtro de tenant.
+     * join a "usuarios" para el filtro de tenant. "t.anulado = false"
+     * (Fase 8): ver findHistoryByUsuario.
      */
     @Query("SELECT t FROM registros t JOIN FETCH t.usuario u "
             + "WHERE t.empresa = :empresa AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
-            + "ORDER BY t.horaEntrada DESC")
+            + "AND t.anulado = false ORDER BY t.horaEntrada DESC")
     List<TimeEntry> findTeamHistory(@Param("empresa") Company empresa, Pageable pageable);
 }

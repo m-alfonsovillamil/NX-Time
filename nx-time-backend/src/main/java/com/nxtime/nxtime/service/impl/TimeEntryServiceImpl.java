@@ -1,13 +1,21 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
+import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
+import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
+import com.nxtime.nxtime.dto.TimeEntryCorrectionRequest;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
+import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
@@ -17,8 +25,10 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +43,13 @@ import org.springframework.transaction.annotation.Transactional;
  * horaEntrada/horaSalida/inicioPausaActual son Instant desde la
  * Fase 3 (antes LocalDateTime): un fichaje es un instante concreto,
  * no una fecha-hora sin zona (ver TimeEntry).
+ *
+ * Desde la Fase 8, cada cambio de estado (fichar o corregir) publica
+ * un {@link TimeEntryAuditEvent}: quien lo persiste de verdad,
+ * calculando el encadenamiento de hashes, es {@link
+ * com.nxtime.nxtime.audit.TimeEntryAuditListener}, no este servicio
+ * -- ver ese listener para el porqué (BEFORE_COMMIT, misma
+ * transacción que el fichaje).
  */
 @Service
 @Transactional(readOnly = true)
@@ -44,17 +61,26 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private static final int HISTORY_PAGE_SIZE = 200;
 
     private final TimeEntryRepository timeEntryRepository;
+    private final TimeEntryAuditRepository timeEntryAuditRepository;
     private final UserRepository userRepository;
     private final TimeEntryMapper timeEntryMapper;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
+            TimeEntryAuditRepository timeEntryAuditRepository,
             UserRepository userRepository,
-            TimeEntryMapper timeEntryMapper
+            TimeEntryMapper timeEntryMapper,
+            ApplicationEventPublisher eventPublisher,
+            ObjectMapper objectMapper
     ) {
         this.timeEntryRepository = timeEntryRepository;
+        this.timeEntryAuditRepository = timeEntryAuditRepository;
         this.userRepository = userRepository;
         this.timeEntryMapper = timeEntryMapper;
+        this.eventPublisher = eventPublisher;
+        this.objectMapper = objectMapper;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -67,7 +93,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
 
         TimeEntry activeEntry = timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null);
+        // Instantánea de "antes" para la auditoría: se toma ya, antes de
+        // que ninguna de las ramas de abajo mute activeEntry.
+        String beforeJson = (activeEntry != null) ? toJson(activeEntry) : null;
 
+        AuditAction accion;
         TimeEntry result = switch (request.tipo()) {
             case INICIO -> {
                 if (activeEntry != null) {
@@ -78,6 +108,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .empresa(user.getEmpresa())
                         .horaEntrada(Instant.now())
                         .build();
+                accion = AuditAction.CREACION;
                 yield timeEntryRepository.save(newEntry);
             }
             case FIN -> {
@@ -88,6 +119,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new BusinessException("No se puede finalizar la jornada mientras está en pausa.");
                 }
                 activeEntry.setHoraSalida(Instant.now());
+                accion = AuditAction.MODIFICACION;
                 yield timeEntryRepository.save(activeEntry);
             }
             case PAUSA_INICIO -> {
@@ -99,6 +131,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 }
                 activeEntry.setEnPausa(true);
                 activeEntry.setInicioPausaActual(Instant.now());
+                accion = AuditAction.MODIFICACION;
                 yield timeEntryRepository.save(activeEntry);
             }
             case PAUSA_FIN -> {
@@ -121,10 +154,21 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 activeEntry.setSegundosPausaAcumulados(activeEntry.getSegundosPausaAcumulados() + duracionPausa.getSeconds());
                 activeEntry.setEnPausa(false);
                 activeEntry.setInicioPausaActual(null);
+                accion = AuditAction.MODIFICACION;
 
                 yield timeEntryRepository.save(activeEntry);
             }
         };
+
+        TimeEntryAudit auditRow = TimeEntryAudit.builder()
+                .registro(result)
+                .usuario(user)
+                .modificadoPor(user)
+                .accion(accion)
+                .valorAnterior(beforeJson)
+                .valorNuevo(toJson(result))
+                .build();
+        eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
 
         log.info("Fichaje {} registrado para {} (fichaje id={})", request.tipo(), userEmail, result.getId());
         return result;
@@ -155,5 +199,100 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         List<TimeEntry> companyEntries = timeEntryRepository.findTeamHistory(company, pageable);
 
         return companyEntries.stream().map(timeEntryMapper::toTeamDTO).toList();
+    }
+
+    // Fase 8: una corrección NUNCA sobrescribe horaEntrada/horaSalida en
+    // la fila original -- eso destruiría el propio dato que la
+    // auditoría existe para conservar. En su lugar, la original se
+    // anula (registros.anulado = true) y se crea una fila nueva con los
+    // valores correctos, enlazada por registro_original_id.
+    @Override
+    @Transactional
+    public TimeEntry correctTimeEntry(String actorEmail, long timeEntryId, TimeEntryCorrectionRequest request) {
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + actorEmail));
+
+        TimeEntry original = timeEntryRepository.findById(timeEntryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fichaje no encontrado."));
+
+        if (original.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("No puedes corregir fichajes de otra empresa.");
+        }
+        if (original.isAnulado()) {
+            throw new BusinessException("Este fichaje ya fue corregido antes; corrige la nueva versión, no la original.");
+        }
+        if (original.getHoraSalida() == null) {
+            throw new BusinessException("No se puede corregir una jornada activa; ciérrala primero.");
+        }
+        if (!request.horaSalida().isAfter(request.horaEntrada())) {
+            throw new BusinessException(
+                    "La hora de salida corregida debe ser posterior a la de entrada.", HttpStatus.BAD_REQUEST);
+        }
+
+        String beforeJson = toJson(original);
+
+        TimeEntry correction = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(original.getUsuario())
+                .empresa(original.getEmpresa())
+                .horaEntrada(request.horaEntrada())
+                .horaSalida(request.horaSalida())
+                .registroOriginal(original)
+                .build());
+
+        original.setAnulado(true);
+        timeEntryRepository.save(original);
+
+        TimeEntryAudit auditRow = TimeEntryAudit.builder()
+                .registro(original)
+                .usuario(original.getUsuario())
+                .modificadoPor(actor)
+                .accion(AuditAction.CORRECCION)
+                .valorAnterior(beforeJson)
+                .valorNuevo(toJson(correction))
+                .motivo(request.motivo())
+                .build();
+        eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
+
+        log.info("Fichaje {} corregido por {} (fichaje corregido id={})", timeEntryId, actorEmail, correction.getId());
+        return correction;
+    }
+
+    @Override
+    public List<TimeEntryAudit> getAuditTrail(String actorEmail, long timeEntryId) {
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + actorEmail));
+
+        TimeEntry entry = timeEntryRepository.findById(timeEntryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fichaje no encontrado."));
+
+        if (entry.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("No puedes ver la auditoría de fichajes de otra empresa.");
+        }
+
+        return timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(timeEntryId);
+    }
+
+    private String toJson(TimeEntry entry) {
+        try {
+            return objectMapper.writeValueAsString(new TimeEntrySnapshot(
+                    entry.getId(), entry.getHoraEntrada(), entry.getHoraSalida(), entry.isEnPausa(),
+                    entry.getInicioPausaActual(), entry.getSegundosPausaAcumulados(), entry.isAnulado()));
+        } catch (JsonProcessingException e) {
+            // TimeEntrySnapshot es un record de tipos simples (long,
+            // Instant, boolean): no hay forma realista de que esto
+            // falle en la práctica.
+            throw new IllegalStateException("No se pudo serializar el fichaje para la auditoría", e);
+        }
+    }
+
+    private record TimeEntrySnapshot(
+            long id,
+            Instant horaEntrada,
+            Instant horaSalida,
+            boolean enPausa,
+            Instant inicioPausaActual,
+            long segundosPausaAcumulados,
+            boolean anulado
+    ) {
     }
 }

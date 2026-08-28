@@ -22,6 +22,10 @@ import java.util.Set;
  * "empleado:gestionar" (dar de baja/alta a un empleado) la tienen RRHH
  * y ADMIN: es la autoridad que usa el nuevo endpoint de desactivación
  * de usuarios.
+ * "fichaje:corregir" y "fichaje:auditoria" (Fase 8) las tienen RRHH y
+ * ADMIN: corregir un fichaje pasado y ver su línea temporal de cambios
+ * es una operación de cumplimiento normativo (RD-ley 8/2019), no algo
+ * que un GESTOR normal deba poder hacer sobre sus propios empleados.
  */
 public final class RoleAuthorities {
 
@@ -44,7 +48,9 @@ public final class RoleAuthorities {
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(
-            "empleado:gestionar"
+            "empleado:gestionar",
+            "fichaje:corregir",
+            "fichaje:auditoria"
     ));
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(

@@ -14,6 +14,11 @@ services:
       - "5433:5432"
     volumes:
       - nxtime-postgres-data:/var/lib/postgresql/data
+      # Solo se ejecuta la primera vez que se crea el volumen de datos
+      # (convención de la imagen oficial, docker-entrypoint-initdb.d) --
+      # ver ese fichero para cómo crear el rol a mano en un volumen ya
+      # existente de antes de la Fase 8.
+      - ./docker/postgres/init-app-role.sql:/docker-entrypoint-initdb.d/init-app-role.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nxtime -d nxtime"]
       interval: 5s
@@ -65,9 +70,18 @@ services:
       # interno, no el publicado. Las variables de entorno tienen
       # prioridad sobre application-{perfil}.yml en Spring Boot, así
       # que no hace falta un perfil nuevo solo para esto.
+      #
+      # Runtime como "nxtime_app" (sin privilegios de superusuario ni de
+      # DDL, ver docker/postgres/init-app-role.sql), Flyway como
+      # "nxtime" (necesita crear/alterar tablas) -- Fase 8: es lo que
+      # hace que el REVOKE de UPDATE/DELETE sobre auditoria_fichaje sea
+      # una restricción real, no papel mojado (ver V3__audit_trail.sql).
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nxtime
-      SPRING_DATASOURCE_USERNAME: nxtime
-      SPRING_DATASOURCE_PASSWORD: nxtime
+      SPRING_DATASOURCE_USERNAME: nxtime_app
+      SPRING_DATASOURCE_PASSWORD: nxtime_app
+      SPRING_FLYWAY_URL: jdbc:postgresql://postgres:5432/nxtime
+      SPRING_FLYWAY_USER: nxtime
+      SPRING_FLYWAY_PASSWORD: nxtime
     ports:
       - "8080:8080"
     depends_on:

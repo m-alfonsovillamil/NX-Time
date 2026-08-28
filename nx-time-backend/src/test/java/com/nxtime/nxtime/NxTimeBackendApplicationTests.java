@@ -32,9 +32,19 @@ class NxTimeBackendApplicationTests {
         }
 
         String testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
+        // Fase 8: Flyway migra como "nxtime" (necesita DDL); la app en
+        // runtime se conecta como "nxtime_app" (sin privilegios de
+        // superusuario -- ver application-dev.yml y
+        // docker/postgres/init-app-role.sql para el porqué). "nxtime_app"
+        // ya existe a nivel de clúster (los roles de Postgres no son
+        // por base de datos), y V3__audit_trail.sql le concede los
+        // privilegios que necesita sobre esta base nueva al migrar.
         registry.add("spring.datasource.url", () -> testUrl);
-        registry.add("spring.datasource.username", () -> "nxtime");
-        registry.add("spring.datasource.password", () -> "nxtime");
+        registry.add("spring.datasource.username", () -> "nxtime_app");
+        registry.add("spring.datasource.password", () -> "nxtime_app");
+        registry.add("spring.flyway.url", () -> testUrl);
+        registry.add("spring.flyway.user", () -> "nxtime");
+        registry.add("spring.flyway.password", () -> "nxtime");
     }
 
     @Test

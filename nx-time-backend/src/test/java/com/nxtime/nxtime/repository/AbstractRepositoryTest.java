@@ -40,8 +40,16 @@ public abstract class AbstractRepositoryTest {
         }
 
         String testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
+        // Fase 8: Flyway migra con el rol admin (DB_USER/DB_PASSWORD,
+        // "nxtime" -- necesita DDL); la app en runtime (incluido este
+        // @DataJpaTest) se conecta como "nxtime_app", sin privilegios
+        // de superusuario -- ver application-dev.yml y
+        // docker/postgres/init-app-role.sql.
         registry.add("spring.datasource.url", () -> testUrl);
-        registry.add("spring.datasource.username", () -> DB_USER);
-        registry.add("spring.datasource.password", () -> DB_PASSWORD);
+        registry.add("spring.datasource.username", () -> "nxtime_app");
+        registry.add("spring.datasource.password", () -> "nxtime_app");
+        registry.add("spring.flyway.url", () -> testUrl);
+        registry.add("spring.flyway.user", () -> DB_USER);
+        registry.add("spring.flyway.password", () -> DB_PASSWORD);
     }
 }

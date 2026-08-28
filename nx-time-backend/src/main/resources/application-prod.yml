@@ -7,7 +7,17 @@
 # El tuning de HikariCP para el cold start del plan gratuito de Neon
 # (la Fase 11 lo detalla) se añade cuando se despliegue de verdad, no
 # antes.
-
+#
+# TODO (Fase 11): en dev, "spring.datasource" (runtime, sin DDL) y
+# "spring.flyway" (migraciones) usan roles de Postgres DISTINTOS -- ver
+# application-dev.yml y docker/postgres/init-app-role.sql -- porque es
+# lo único que hace real la restricción de UPDATE/DELETE sobre
+# auditoria_fichaje (Fase 8, ver V3__audit_trail.sql): contra un
+# superusuario o el propio dueño de la tabla, cualquier REVOKE es papel
+# mojado. Aquí, de momento, las dos cosas comparten un único rol de
+# Neon (DATABASE_USERNAME) -- pendiente de crear un segundo rol de
+# Neon de mínimo privilegio (solo SELECT/INSERT en auditoria_fichaje,
+# sin CREATE) cuando se despliegue de verdad, igual que en local.
 spring:
   datasource:
     url: ${DATABASE_URL}

@@ -154,7 +154,10 @@ tasks.jacocoTestCoverageVerification {
             includes = listOf(
                     "com.nxtime.nxtime.service",
                     "com.nxtime.nxtime.service.impl",
-                    "com.nxtime.nxtime.controller")
+                    "com.nxtime.nxtime.controller",
+                    // Fase 8: el encadenamiento de hashes de TimeEntryAuditListener
+                    // es lógica real (no cableado de Spring), igual que las de arriba.
+                    "com.nxtime.nxtime.audit")
             limit {
                 counter = "LINE"
                 minimum = "0.60".toBigDecimal()

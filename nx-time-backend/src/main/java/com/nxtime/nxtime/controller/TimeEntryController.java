@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
+import com.nxtime.nxtime.dto.TimeEntryCorrectionRequest;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
@@ -20,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -119,5 +122,32 @@ public class TimeEntryController {
     @GetMapping("/gestor/historial")
     public ResponseEntity<List<TeamTimeEntryDTO>> getTeamHistory(Authentication authentication) {
         return ResponseEntity.ok(timeEntryService.getTeamHistory(authentication.getName()));
+    }
+
+    @Operation(summary = "Corregir un fichaje pasado (RRHH/ADMIN)",
+            description = "Nunca sobrescribe: anula el fichaje original y crea uno nuevo con los valores "
+                    + "corregidos, enlazado al original. Solo sobre fichajes ya cerrados (con horaSalida). "
+                    + "Queda una traza completa en /api/v1/auditoria/fichaje/{id} (ver AuditController).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Fichaje corregido (se devuelve el nuevo, no el original)",
+                    content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, o horaSalida no posterior a horaEntrada",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:corregir', "
+                    + "o fichaje de otra empresa (aislamiento multi-tenant)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "El fichaje está activo (sin cerrar) o ya fue corregido antes",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:corregir')")
+    @PatchMapping("/{id}")
+    public ResponseEntity<TimeEntryResponse> correctTimeEntry(
+            @PathVariable long id, @Valid @RequestBody TimeEntryCorrectionRequest request, Authentication authentication) {
+        var corrected = timeEntryService.correctTimeEntry(authentication.getName(), id, request);
+        return ResponseEntity.ok(timeEntryMapper.toResponse(corrected));
     }
 }

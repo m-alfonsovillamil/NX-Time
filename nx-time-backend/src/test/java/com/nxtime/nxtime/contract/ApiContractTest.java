@@ -101,9 +101,16 @@ class ApiContractTest {
         }
 
         String testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
+        // Fase 8: Flyway migra con el rol admin (DB_USER/DB_PASSWORD,
+        // "nxtime" -- necesita DDL); la app en runtime se conecta como
+        // "nxtime_app", sin privilegios de superusuario -- ver
+        // application-dev.yml y docker/postgres/init-app-role.sql.
         registry.add("spring.datasource.url", () -> testUrl);
-        registry.add("spring.datasource.username", () -> DB_USER);
-        registry.add("spring.datasource.password", () -> DB_PASSWORD);
+        registry.add("spring.datasource.username", () -> "nxtime_app");
+        registry.add("spring.datasource.password", () -> "nxtime_app");
+        registry.add("spring.flyway.url", () -> testUrl);
+        registry.add("spring.flyway.user", () -> DB_USER);
+        registry.add("spring.flyway.password", () -> DB_PASSWORD);
     }
 
     @Value("${local.server.port}")
@@ -120,6 +127,7 @@ class ApiContractTest {
     private static final String EMPRESA_OTRA = "Otra Empresa Contract SL";
     private static final String EMAIL_GESTOR_OTRA_EMPRESA = "gestor.otraempresa@nxtime.test";
     private String gestorToken;
+    private String gestor2Token;
     private String empleadoToken;
     private String empleadoRefreshToken;
     private String gestorOtraEmpresaToken;
@@ -595,6 +603,135 @@ class ApiContractTest {
         assertThat(primero.get("fecha").asText()).matches("\\d{4}-\\d{2}-\\d{2}");
         assertThat(primero.get("usuario").get("nombre").asText()).isNotBlank();
         assertThat(primero.get("minutosPausaAcumulados").asLong()).isGreaterThanOrEqualTo(0);
+    }
+
+    // ------------------------------------------------------------------
+    // 3b. AUDITORÍA Y CORRECCIÓN DE FICHAJES (Fase 8)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(28)
+    void gestorSinRolRRHH_noPuedeCorregirFichaje_devuelve403() throws Exception {
+        // X-Forwarded-For falsa (ver login_conDemasiadosIntentos_devuelve429,
+        // Order 53): un /auth/login más no debe consumir el cupo de la
+        // IP real, ya ajustado para el resto del flujo de esta clase.
+        HttpHeaders loginHeaders = jsonHeaders();
+        loginHeaders.set("X-Forwarded-For", "203.0.113.56");
+        ResponseEntity<String> login = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR2, "contrasena", "password123")), loginHeaders),
+                String.class
+        );
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        gestor2Token = bodyOf(login).get("token").asText();
+
+        Map<String, Object> correccion = mapOf(
+                "horaEntrada", "2026-01-01T08:00:00Z",
+                "horaSalida", "2026-01-01T17:00:00Z",
+                "motivo", "Un GESTOR normal no debería poder hacer esto."
+        );
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/fichaje/" + registroActivoId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(correccion), authHeaders(gestor2Token)),
+                String.class
+        );
+
+        // GESTOR tiene "fichaje:leer:equipo" pero no "fichaje:corregir"
+        // (solo RRHH/ADMIN, ver RoleAuthorities) -- corregir un fichaje
+        // pasado es una operación de cumplimiento normativo, no de
+        // gestión de equipo del día a día.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(29)
+    void adminCorrigeFichajeCerrado_devuelve200_yQuedaTrazaCompletaEnAuditoria() throws Exception {
+        Map<String, Object> correccion = mapOf(
+                "horaEntrada", "2026-01-01T08:00:00Z",
+                "horaSalida", "2026-01-01T17:00:00Z",
+                "motivo", "El empleado ficho la entrada con 15 minutos de retraso por error del reloj."
+        );
+
+        ResponseEntity<String> correctionResponse = rest.exchange(
+                url("/api/v1/fichaje/" + registroActivoId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(correccion), authHeaders(gestorToken)), // gestorToken es en realidad ADMIN, ver Fase 4
+                String.class
+        );
+
+        assertThat(correctionResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode correctionBody = bodyOf(correctionResponse);
+        long fichajeCorregidoId = correctionBody.get("id").asLong();
+        // Nunca sobrescribe: el id devuelto es el de una fila NUEVA, no
+        // el del fichaje original que se corrigió.
+        assertThat(fichajeCorregidoId).isNotEqualTo(registroActivoId);
+        assertThat(correctionBody.get("horaEntrada").asText()).startsWith("2026-01-01T08:00:00");
+
+        // El fichaje original queda anulado -> ya no aparece en el
+        // historial del empleado (ver TimeEntryRepository.findHistoryByUsuario).
+        ResponseEntity<String> historial = rest.exchange(
+                url("/api/v1/fichaje/historial"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        JsonNode historialBody = bodyOf(historial);
+        boolean apareceElOriginal = false;
+        for (JsonNode fichaje : historialBody) {
+            if (fichaje.get("id").asLong() == registroActivoId) {
+                apareceElOriginal = true;
+            }
+        }
+        assertThat(apareceElOriginal).as("el fichaje anulado no debe salir en el historial").isFalse();
+
+        // La línea temporal del fichaje ORIGINAL conserva toda la
+        // traza: su creación (INICIO), sus modificaciones (pausa, FIN)
+        // y, al final, la corrección -- con motivo, y con quién la hizo.
+        ResponseEntity<String> auditoria = rest.exchange(
+                url("/api/v1/auditoria/fichaje/" + registroActivoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(auditoria.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode trail = bodyOf(auditoria);
+        assertThat(trail.isArray()).isTrue();
+        assertThat(trail.size()).isGreaterThanOrEqualTo(4); // CREACION + PAUSA_INICIO + PAUSA_FIN + FIN + CORRECCION
+
+        JsonNode primeraEntrada = trail.get(0);
+        assertThat(primeraEntrada.get("accion").asText()).isEqualTo("CREACION");
+        assertThat(primeraEntrada.get("valorAnterior").isNull()).isTrue();
+
+        JsonNode ultimaEntrada = trail.get(trail.size() - 1);
+        assertThat(ultimaEntrada.get("accion").asText()).isEqualTo("CORRECCION");
+        assertThat(ultimaEntrada.get("motivo").asText()).contains("retraso por error del reloj");
+        assertThat(ultimaEntrada.get("modificadoPor").get("nombre").asText()).isNotBlank();
+    }
+
+    @Test
+    @Order(291)
+    void corregirElMismoFichajeOriginalOtraVez_devuelve409ConProblemDetail() throws Exception {
+        // Ya se corrigió en el test anterior (registroActivoId sigue
+        // apuntando al ORIGINAL, ahora anulado) -- corregir el mismo
+        // original dos veces no tiene sentido: hay que corregir la
+        // versión nueva, no la ya sustituida.
+        Map<String, Object> correccion = mapOf(
+                "horaEntrada", "2026-01-01T08:00:00Z",
+                "horaSalida", "2026-01-01T17:00:00Z",
+                "motivo", "Segundo intento sobre el mismo original."
+        );
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/fichaje/" + registroActivoId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(correccion), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("ya fue corregido");
     }
 
     // ------------------------------------------------------------------

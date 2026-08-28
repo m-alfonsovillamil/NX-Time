@@ -7,9 +7,22 @@
 # demo/DemoDataSeeder.java)
 
 spring:
+  # Fase 8: "nxtime_app" es un rol SIN privilegios de superusuario ni
+  # de DDL (ver docker/postgres/init-app-role.sql), a diferencia de
+  # "nxtime" (el rol de bootstrap de la imagen oficial de Postgres,
+  # superusuario del clúster local). Es lo que hace que el REVOKE de
+  # UPDATE/DELETE sobre auditoria_fichaje (ver V3__audit_trail.sql) sea
+  # una restricción real -- contra un superusuario, cualquier REVOKE es
+  # papel mojado. Flyway migra por separado como "nxtime": necesita
+  # crear/alterar tablas, algo que "nxtime_app" no puede ni debe hacer.
   datasource:
     url: jdbc:postgresql://localhost:5433/nxtime
-    username: nxtime
+    username: nxtime_app
+    password: nxtime_app
+
+  flyway:
+    url: jdbc:postgresql://localhost:5433/nxtime
+    user: nxtime
     password: nxtime
 
   jpa:

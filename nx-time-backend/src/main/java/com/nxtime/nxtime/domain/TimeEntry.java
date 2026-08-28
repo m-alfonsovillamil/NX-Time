@@ -34,6 +34,15 @@ import lombok.Setter;
  *  - segundosPausaAcumulados en vez de minutosPausaAcumulados: no
  *    trunca por pausa individual, acumula en segundos y deriva los
  *    minutos una sola vez sobre el total real (ver TimeEntryMapper).
+ *
+ * Cambios de la Fase 8 (auditoría inalterable de fichajes):
+ *  - "anulado"/"registroOriginal": una corrección (RRHH/ADMIN, ver
+ *    TimeEntryServiceImpl.correctTimeEntry) NUNCA sobrescribe
+ *    horaEntrada/horaSalida en la fila original -- crea una fila nueva
+ *    con los valores correctos y "registroOriginal" apuntando a la que
+ *    corrige, y marca la original "anulado = true". El historial
+ *    (findHistoryByUsuario/findTeamHistory) deja de mostrar las filas
+ *    anuladas; TimeEntryAudit conserva la traza completa de ambas.
  */
 @Entity(name = "registros")
 @Getter
@@ -65,6 +74,13 @@ public class TimeEntry {
     @ManyToOne
     @JoinColumn(name = "empresa_id")
     private Company empresa;
+
+    @Builder.Default
+    private boolean anulado = false;
+
+    @ManyToOne
+    @JoinColumn(name = "registro_original_id")
+    private TimeEntry registroOriginal;
 
     @Version
     private long version;

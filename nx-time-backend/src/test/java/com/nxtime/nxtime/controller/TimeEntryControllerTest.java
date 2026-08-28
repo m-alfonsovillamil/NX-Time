@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,5 +118,43 @@ class TimeEntryControllerTest {
 
         mockMvc.perform(get("/api/v1/fichaje/gestor/historial")).andExpect(status().isOk());
         verify(timeEntryService).getTeamHistory("gestor@nxtime.test");
+    }
+
+    @Test
+    @WithMockUser(username = "rrhh@nxtime.test", authorities = "fichaje:corregir")
+    @DisplayName("PATCH /fichaje/{id} con la authority correcta y cuerpo válido devuelve 200")
+    void correctTimeEntry_conAuthorityYCuerpoValido_devuelve200() throws Exception {
+        TimeEntry corrected = TimeEntry.builder().id(2L).build();
+        when(timeEntryService.correctTimeEntry(eq("rrhh@nxtime.test"), eq(5L), any())).thenReturn(corrected);
+        when(timeEntryMapper.toResponse(corrected))
+                .thenReturn(new TimeEntryResponse(2L, Instant.now(), Instant.now(), false, 0));
+
+        mockMvc.perform(patch("/api/v1/fichaje/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaEntrada\":\"2026-01-01T08:00:00Z\","
+                                + "\"horaSalida\":\"2026-01-01T17:00:00Z\",\"motivo\":\"Fichaje olvidado\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(2));
+    }
+
+    @Test
+    @WithMockUser(username = "gestor@nxtime.test", authorities = "fichaje:leer:equipo")
+    @DisplayName("PATCH /fichaje/{id} sin la authority 'fichaje:corregir' devuelve 403 (un GESTOR no corrige)")
+    void correctTimeEntry_sinAuthority_devuelve403() throws Exception {
+        mockMvc.perform(patch("/api/v1/fichaje/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaEntrada\":\"2026-01-01T08:00:00Z\","
+                                + "\"horaSalida\":\"2026-01-01T17:00:00Z\",\"motivo\":\"Fichaje olvidado\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "rrhh@nxtime.test", authorities = "fichaje:corregir")
+    @DisplayName("PATCH /fichaje/{id} sin motivo devuelve 400 (Bean Validation)")
+    void correctTimeEntry_sinMotivo_devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/v1/fichaje/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horaEntrada\":\"2026-01-01T08:00:00Z\",\"horaSalida\":\"2026-01-01T17:00:00Z\"}"))
+                .andExpect(status().isBadRequest());
     }
 }
