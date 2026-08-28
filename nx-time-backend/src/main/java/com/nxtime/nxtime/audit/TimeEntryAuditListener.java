@@ -43,6 +43,18 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * aplicación escribiendo a la vez podría haber una condición de
  * carrera al encadenar -- para una única instancia, como esta, no es
  * un problema real.
+ *
+ * AVISO para quien escriba algún día un verificador de la cadena: el
+ * hash se calcula sobre el JSON tal y como lo genera Jackson, ANTES de
+ * guardarlo. Las columnas valor_anterior/valor_nuevo son "jsonb", y
+ * jsonb NO conserva el texto original: lo normaliza al guardarlo
+ * (reordena las claves y añade un espacio tras los dos puntos). Es
+ * decir, releer esos campos de la base de datos y volver a pasarlos por
+ * computeHash NO reproduce el hash guardado, y parecería que la
+ * auditoría ha sido manipulada cuando no lo ha sido. Un verificador
+ * correcto tiene que comparar el JSON parseado (o guardar el texto
+ * canónico aparte), no las cadenas. Comprobado en
+ * IncompleteTimeEntrySchedulerIT.
  */
 @Component
 public class TimeEntryAuditListener {
