@@ -5,8 +5,17 @@ import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.service.TimeEntryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -25,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/fichaje")
+@Tag(name = "Fichaje", description = "Registro horario: iniciar/finalizar jornada, pausas e historial.")
+@SecurityRequirement(name = "bearerAuth")
 public class TimeEntryController {
 
     private final TimeEntryService timeEntryService;
@@ -35,6 +46,21 @@ public class TimeEntryController {
         this.timeEntryMapper = timeEntryMapper;
     }
 
+    @Operation(summary = "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
+            description = "Avanza la máquina de estados del fichaje del usuario autenticado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Fichaje registrado",
+                    content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
+            @ApiResponse(responseCode = "400", description = "'tipo' ausente o inválido",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:escribir'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Transición inválida "
+                    + "(ej. iniciar con una jornada ya activa, pausar sin jornada...)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @PreAuthorize("hasAuthority('fichaje:escribir')")
     @PostMapping
     public ResponseEntity<TimeEntryResponse> registerTimeEntry(
@@ -43,6 +69,16 @@ public class TimeEntryController {
         return ResponseEntity.ok(timeEntryMapper.toResponse(entry));
     }
 
+    @Operation(summary = "Consultar la jornada activa", description = "204 si no hay ninguna jornada abierta.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Jornada activa",
+                    content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
+            @ApiResponse(responseCode = "204", description = "No hay jornada activa"),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/activo")
     public ResponseEntity<TimeEntryResponse> getActiveTimeEntry(Authentication authentication) {
@@ -52,6 +88,15 @@ public class TimeEntryController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    @Operation(summary = "Historial de fichajes propio", description = "Los últimos 200, más recientes primero.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Historial",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TimeEntryResponse.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/historial")
     public ResponseEntity<List<TimeEntryResponse>> getHistory(Authentication authentication) {
@@ -60,6 +105,16 @@ public class TimeEntryController {
         return ResponseEntity.ok(history);
     }
 
+    @Operation(summary = "Historial de fichajes del equipo (gestor)",
+            description = "Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Historial del equipo",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TeamTimeEntryDTO.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer:equipo'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @PreAuthorize("hasAuthority('fichaje:leer:equipo')")
     @GetMapping("/gestor/historial")
     public ResponseEntity<List<TeamTimeEntryDTO>> getTeamHistory(Authentication authentication) {

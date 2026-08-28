@@ -27,8 +27,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
-    // Documentación de la API (Swagger UI / OpenAPI) - se usa a partir de la Fase 6
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    // Documentación de la API (Swagger UI / OpenAPI), Fase 6. 2.8.17 (no
+    // la 2.6.0 fijada desde la Fase 0): esa version es anterior al
+    // soporte de Spring Boot 3.4+/Spring Framework 6.2 y el arranque
+    // fallaba con NoSuchMethodError sobre ControllerAdviceBean -- una
+    // API interna de Spring que cambio de firma. 2.8.x sigue siendo la
+    // misma linea mayor (2.x, para Spring Boot 3.x); no se salta a la
+    // 3.x de springdoc, que apunta a Spring Boot 4/Framework 7.
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
 
     // Lombok: getters/setters/constructores en las entidades JPA. No genera
     // equals/hashCode (eso se escribe a mano, basado solo en el id: ver
