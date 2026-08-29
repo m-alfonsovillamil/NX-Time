@@ -19,7 +19,7 @@ pluginManagement {
     // emparejar a mano cada versión de Kotlin con la suya de Compose.
     // Subirlo es seguro: el backend no tiene ni un fichero .kt.
     plugins {
-        id("com.android.application") version "8.4.1"
+        id("com.android.application") version "8.12.0"
         id("org.jetbrains.kotlin.android") version "2.0.21"
         id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
         id("org.springframework.boot") version "3.5.6"
