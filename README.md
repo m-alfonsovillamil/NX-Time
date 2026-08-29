@@ -83,7 +83,7 @@ que hacer.
 | Caché | Caffeine |
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
 | Build | Gradle (Kotlin DSL), monorepo de dos módulos |
-| App móvil | Kotlin · MVVM · Retrofit · ViewBinding |
+| App móvil | Kotlin 2.0 · Jetpack Compose (Material 3) · MVVM con `StateFlow` · navigation-compose · Retrofit |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
 
 ---
@@ -277,6 +277,8 @@ reparte el poder de gestión.
 
 ## Tests
 
+### Backend
+
 **224 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
@@ -297,6 +299,26 @@ docker compose up -d postgres      # los tests necesitan la base de datos
 `check` falla si la cobertura de `service`, `controller` o `audit` baja del 60 %.
 No se mide el resto (DTOs, entidades, configuración): forzar cobertura ahí solo
 empuja a escribir tests de *getters*.
+
+### App Android
+
+**46 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+
+```bash
+./gradlew :nx-time-frontend-android:testDevDebugUnitTest
+./gradlew :nx-time-frontend-android:lintDevDebug   # abortOnError = true
+```
+
+| Qué cubre | Dónde |
+|---|---|
+| Transiciones de la jornada y las reglas que se resuelven sin ir al servidor | `FicharViewModelTest` |
+| Validaciones de formulario antes de salir a la red | `LoginViewModelTest`, `SolicitudViewModelTest` |
+| Motivo obligatorio al rechazar una ausencia | `AusenciasEquipoViewModelTest` |
+| Que el `detail` del ProblemDetail llegue a la pantalla, y no el código HTTP | `ApiErrorParserTest` |
+| Duración neta de la jornada y formatos de fecha | `DateFormatsTest` |
+
+Se prueba lo que es lógica de la app, no lo que ya prueba el backend. **La
+interfaz no está cubierta**: ver las limitaciones conocidas al final.
 
 ---
 
@@ -329,18 +351,31 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 
 Lo que está hecho y lo que no, sin adornos:
 
-**Funcionando:** la API completa, la app Android sincronizada con ella, el
-esquema desplegado en Neon, el CI en verde y los informes en Excel y PDF.
+**Funcionando:** la API completa, la app Android en Jetpack Compose y
+sincronizada con ella, el esquema desplegado en Neon, el CI en verde y los
+informes en Excel y PDF.
 
 **Pendiente:**
 
-- **Capturas de la app**: este README todavía no las tiene.
+- **Capturas de la app**: este README todavía no las tiene, y con la reescritura
+  en Compose hay que hacerlas de cero.
 - **Servicio en Render sin crear**: la configuración está lista
   (`render.yaml`), falta darle al botón.
-- **La app Android no tiene tests**: el CI la compila, lo que detecta el fallo
-  más probable —que un cambio de contrato del backend la rompa— pero no hay red
-  de seguridad sobre la lógica de los ViewModel. El esfuerzo se concentró en el
-  backend a propósito.
+- **La app no tiene tests de interfaz**: hay 46 tests de JVM sobre los
+  ViewModel, `ApiErrorParser` y el formateo de fechas, que el CI ejecuta junto
+  con lint. Lo que no cubre nadie es la interfaz: **ninguna pantalla se ha
+  ejecutado nunca**, ni en un emulador ni en un test. Con Robolectric podrían
+  correr en la JVM sin necesidad de dispositivo.
+- **Hay backend que la app no enseña**: el saldo de vacaciones, el panel de
+  indicadores, los informes descargables y la traza de auditoría existen en la
+  API y no tienen pantalla. La auditoría es justo lo que este README destaca
+  arriba como lo más interesante del proyecto.
+- **El cierre automático no se distingue en el historial**: la app no puede
+  marcarlo porque `TimeEntryResponse` no lo expone; solo consta en la tabla de
+  auditoría, con `modificado_por_id` a null.
+- **El filtro del historial de equipo compara por nombre**: `SimpleUserDTO` solo
+  envía `nombre`, así que dos empleados homónimos mezclarían sus jornadas al
+  filtrar. Se arregla añadiendo el `id` a ese DTO.
 - **El proceso nocturno cierra jornadas olvidadas de más de 16 h**, así que una
   abierta de madrugada puede seguir bloqueando al empleado hasta ~24 h. El fallo
   grave (quedar bloqueado *indefinidamente*) sí está resuelto y verificado.
