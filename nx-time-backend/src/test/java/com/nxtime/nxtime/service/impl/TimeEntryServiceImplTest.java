@@ -454,9 +454,59 @@ class TimeEntryServiceImplTest {
         var auditRow = com.nxtime.nxtime.domain.TimeEntryAudit.builder().id(1L).registro(entry).build();
         when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
         when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(entry));
-        when(timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(5L)).thenReturn(List.of(auditRow));
+        when(timeEntryRepository.findByRegistroOriginal_Id(5L)).thenReturn(Optional.empty());
+        when(timeEntryAuditRepository.findByRegistro_IdInOrderByFechaHoraAsc(List.of(5L)))
+                .thenReturn(List.of(auditRow));
 
         assertThat(service.getAuditTrail(rrhh.getEmail(), 5L)).containsExactly(auditRow);
+    }
+
+    @Test
+    @DisplayName("Pedir la auditoría del fichaje CORREGIDO devuelve también la del original que sustituye")
+    void getAuditTrail_fichajeCorregido_incluyeLaHistoriaDelOriginal() {
+        // Una corrección no sobrescribe: anula el original y crea uno
+        // nuevo. La traza se queda bajo el id ANULADO, que es el que el
+        // historial oculta -- así que preguntar por el fichaje válido,
+        // el único visible, devolvía una lista vacía.
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa).anulado(true).build();
+        TimeEntry correccion = TimeEntry.builder().id(6L).usuario(empleado).empresa(empresa)
+                .registroOriginal(original).build();
+        var filaCreacion = com.nxtime.nxtime.domain.TimeEntryAudit.builder().id(1L).registro(original).build();
+        var filaCorreccion = com.nxtime.nxtime.domain.TimeEntryAudit.builder().id(2L).registro(original).build();
+
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(6L)).thenReturn(Optional.of(correccion));
+        when(timeEntryRepository.findByRegistroOriginal_Id(5L)).thenReturn(Optional.of(correccion));
+        when(timeEntryRepository.findByRegistroOriginal_Id(6L)).thenReturn(Optional.empty());
+        when(timeEntryAuditRepository.findByRegistro_IdInOrderByFechaHoraAsc(List.of(5L, 6L)))
+                .thenReturn(List.of(filaCreacion, filaCorreccion));
+
+        assertThat(service.getAuditTrail(rrhh.getEmail(), 6L))
+                .containsExactly(filaCreacion, filaCorreccion);
+    }
+
+    @Test
+    @DisplayName("La cadena se recorre entera aunque se pregunte por el fichaje del medio")
+    void getAuditTrail_cadenaDeDosCorrecciones_seRecorreEntera() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa).anulado(true).build();
+        TimeEntry primera = TimeEntry.builder().id(6L).usuario(empleado).empresa(empresa)
+                .registroOriginal(original).anulado(true).build();
+        TimeEntry segunda = TimeEntry.builder().id(7L).usuario(empleado).empresa(empresa)
+                .registroOriginal(primera).build();
+
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(6L)).thenReturn(Optional.of(primera));
+        when(timeEntryRepository.findByRegistroOriginal_Id(5L)).thenReturn(Optional.of(primera));
+        when(timeEntryRepository.findByRegistroOriginal_Id(6L)).thenReturn(Optional.of(segunda));
+        when(timeEntryRepository.findByRegistroOriginal_Id(7L)).thenReturn(Optional.empty());
+        when(timeEntryAuditRepository.findByRegistro_IdInOrderByFechaHoraAsc(List.of(5L, 6L, 7L)))
+                .thenReturn(List.of());
+
+        service.getAuditTrail(rrhh.getEmail(), 6L);
+
+        verify(timeEntryAuditRepository).findByRegistro_IdInOrderByFechaHoraAsc(List.of(5L, 6L, 7L));
     }
 
     @Test

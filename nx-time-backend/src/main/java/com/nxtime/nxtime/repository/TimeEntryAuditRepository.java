@@ -18,4 +18,14 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
 
     /** Línea temporal completa de un fichaje, más antiguo primero. */
     List<TimeEntryAudit> findByRegistro_IdOrderByFechaHoraAsc(long registroId);
+
+    /**
+     * Línea temporal de VARIOS fichajes a la vez, más antiguo primero.
+     *
+     * Hace falta porque una corrección (Fase 8) no sobrescribe: anula el
+     * fichaje original y crea uno nuevo. Preguntar solo por un id
+     * devolvería media historia -- ver
+     * {@code TimeEntryServiceImpl#getAuditTrail}.
+     */
+    List<TimeEntryAudit> findByRegistro_IdInOrderByFechaHoraAsc(List<Long> registroIds);
 }

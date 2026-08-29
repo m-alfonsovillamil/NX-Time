@@ -20,6 +20,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -268,7 +269,34 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             throw new TenantAccessException("No puedes ver la auditoría de fichajes de otra empresa.");
         }
 
-        return timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(timeEntryId);
+        return timeEntryAuditRepository.findByRegistro_IdInOrderByFechaHoraAsc(cadenaDeCorrecciones(entry));
+    }
+
+    /**
+     * Los ids de TODOS los fichajes que cuentan la historia de esta
+     * jornada: el original, sus correcciones, y las correcciones de
+     * estas.
+     *
+     * Sin esto la auditoría se partía en dos justo en el caso para el
+     * que existe. Una corrección (Fase 8) no sobrescribe: anula el
+     * fichaje original y crea uno nuevo, así que la traza se queda bajo
+     * el id ANULADO -- que es precisamente el que el historial oculta.
+     * Preguntar por el fichaje válido, el único que se ve en el
+     * historial y en el informe, devolvía una lista VACÍA: el registro
+     * aparecía sin procedencia ante quien viniera a comprobarla.
+     */
+    private List<Long> cadenaDeCorrecciones(TimeEntry entry) {
+        TimeEntry raiz = entry;
+        while (raiz.getRegistroOriginal() != null) {
+            raiz = raiz.getRegistroOriginal();
+        }
+
+        List<Long> ids = new ArrayList<>();
+        for (TimeEntry actual = raiz; actual != null;
+                actual = timeEntryRepository.findByRegistroOriginal_Id(actual.getId()).orElse(null)) {
+            ids.add(actual.getId());
+        }
+        return ids;
     }
 
     // Delegado en TimeEntrySnapshotSerializer desde la Fase 9: el

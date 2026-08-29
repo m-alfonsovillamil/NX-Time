@@ -16,6 +16,13 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     Optional<TimeEntry> findByUsuarioAndHoraSalidaIsNull(User usuario);
 
     /**
+     * El fichaje que corrige a este, si alguien lo ha corregido. Sirve
+     * para recorrer hacia delante la cadena de correcciones al pedir la
+     * auditoría (ver {@code TimeEntryServiceImpl#getAuditTrail}).
+     */
+    Optional<TimeEntry> findByRegistroOriginal_Id(long registroOriginalId);
+
+    /**
      * JOIN FETCH evita el N+1 al cargar el usuario de cada fichaje (ver
      * auditoría). Pageable acota el resultado -- antes /historial
      * devolvía la tabla entera sin límite. "t.anulado = false" (Fase 8):
