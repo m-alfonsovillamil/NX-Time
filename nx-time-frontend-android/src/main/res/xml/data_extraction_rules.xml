@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+. Excluye explicitamente las preferencias que guardan la
+    sesion, tanto de la copia en la nube como de la transferencia
+    directa a un movil nuevo. Con allowBackup="false" ya no deberia
+    copiarse nada, pero dejarlo escrito evita que reactivar la copia en
+    el futuro vuelva a filtrar el refresh token sin que nadie se de
+    cuenta.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="NXTIME_PREFS.xml"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="NXTIME_PREFS.xml"/>
+    </device-transfer>
+</data-extraction-rules>

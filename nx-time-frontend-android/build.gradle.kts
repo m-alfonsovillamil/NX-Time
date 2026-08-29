@@ -5,6 +5,10 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    // El compilador de Compose. Desde Kotlin 2.0 va como plugin propio
+    // y toma la versión del propio Kotlin, así que ya no hay que
+    // emparejar a mano Kotlin <-> compilador de Compose.
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 /*
@@ -67,30 +71,38 @@ android {
     }
 
     compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
 
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-
-                /*
-                 * Habilita el "desugaring", permite usar APIs modernas de Java (como 'java.time.LocalDate') en versiones antiguas de Android.
-                 */
-
+        /*
+         * El "desugaring" permite usar java.time (Instant, LocalDate...)
+         * por debajo de Android 8. Con minSdk 24 NO es opcional: sin
+         * esto, cualquier pantalla que formatee una fecha reventaría en
+         * los móviles más antiguos que la app dice soportar.
+         */
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 
-    /*
-     * Activa 'ViewBinding'
-     */
-
     buildFeatures {
-        viewBinding = true
+        compose = true
         // Necesario para los buildConfigField de los flavors: desde el
         // plugin de Android 8 hay que pedirlo explícitamente.
         buildConfig = true
+    }
+
+    /*
+     * Lint no estaba configurado y el CI solo compilaba, así que nadie
+     * veía sus avisos. Ahora rompe la compilación: es la red que detecta
+     * textos sin traducir o contrastes malos sin tener que abrir la app.
+     */
+    lint {
+        warningsAsErrors = false
+        abortOnError = true
+        checkReleaseBuilds = false
     }
 }
 
@@ -113,22 +125,48 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
     /*
-     * Ayudan a que la app sobreviva a giros de pantalla y a separar la lógica.
+     * Jetpack Compose. El BOM fija de una vez las versiones de todas las
+     * librerías de Compose que sean compatibles entre sí, por eso las de
+     * abajo van sin número.
      */
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
-    implementation("androidx.activity:activity-ktx:1.8.1")
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.navigation:navigation-compose:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // collectAsStateWithLifecycle: deja de recolectar el StateFlow
+    // cuando la pantalla no está visible.
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     /*
-     * Dependencias Base de Android:
+     * Dependencias base de Android. AppCompat sigue haciendo falta
+     * porque MainActivity hereda de AppCompatActivity y el tema del
+     * manifiesto es de AppCompat mientras arranca la app.
      */
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
-    // Dependencias de Testing
+    /*
+     * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo
+     * que trae de serie el plugin de Android; JUnit 5 necesitaría un
+     * plugin de terceros para tan poca ganancia aquí.
+     */
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    // Turbine: para afirmar sobre lo que va emitiendo un StateFlow.
+    testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

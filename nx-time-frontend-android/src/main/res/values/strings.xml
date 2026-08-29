@@ -1,14 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Todos los textos visibles de la app.
+
+    Antes habia 51 textos escritos dentro de los layouts y unos 158
+    literales sueltos en Kotlin, frente a solo 9 entradas aqui. Ademas de
+    impedir cualquier traduccion, eso dejaba mensajes incoherentes entre
+    pantallas para la misma situacion.
+-->
 <resources>
     <string name="app_name">NX Time</string>
-    <string name="home_panel_gestor">Panel de Gestor</string>
-    <string name="home_solicitar_ausencia">Solicitar Ausencia</string>
-    <string name="home_ver_ausencias">Ver Mis Ausencias</string>
-    <string name="home_ver_historial">Ver Historial de Fichajes</string>
-    <string name="home_cambiar_contrasena">Cambiar Contraseña</string>
-    <string name="home_iniciar_jornada">Iniciar Jornada</string>
-    <string name="home_iniciar_pausa">Iniciar Pausa</string>
-    <string name="gestor_ver_ausencias_aprobadas">Ver Ausencias Aprobadas</string>
 
+    <!-- Comunes -->
+    <string name="volver">Volver</string>
+    <string name="reintentar">Reintentar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="guardar">Guardar</string>
+    <string name="cargando">Cargando…</string>
+    <string name="mas_opciones">Más opciones</string>
 
+    <!-- Acceso -->
+    <string name="login_titulo">NX Time</string>
+    <string name="login_subtitulo">Control horario para tu equipo</string>
+    <string name="login_email">Correo electrónico</string>
+    <string name="login_contrasena">Contraseña</string>
+    <string name="login_entrar">Entrar</string>
+    <string name="login_registrar_empresa">Registrar una empresa</string>
+    <string name="login_mostrar_contrasena">Mostrar contraseña</string>
+    <string name="login_ocultar_contrasena">Ocultar contraseña</string>
+    <string name="login_email_vacio">Escribe tu correo electrónico.</string>
+    <string name="login_contrasena_vacia">Escribe tu contraseña.</string>
+
+    <!-- Registro de empresa -->
+    <string name="registro_titulo">Registrar empresa</string>
+    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador.</string>
+    <string name="registro_empresa">Nombre de la empresa</string>
+    <string name="registro_nombre">Tu nombre completo</string>
+    <string name="registro_crear">Crear empresa</string>
+
+    <!-- Fichar -->
+    <string name="fichar_titulo">Mi jornada</string>
+    <string name="fichar_saludo">Hola, %1$s</string>
+    <string name="fichar_iniciar">Iniciar jornada</string>
+    <string name="fichar_finalizar">Finalizar jornada</string>
+    <string name="fichar_pausar">Iniciar pausa</string>
+    <string name="fichar_reanudar">Reanudar jornada</string>
+    <string name="fichar_sin_jornada">Toca para iniciar tu jornada</string>
+    <string name="fichar_desde">Trabajando desde las %1$s</string>
+    <string name="fichar_en_pausa">En pausa desde las %1$s</string>
+    <string name="fichar_estado_trabajando">Trabajando</string>
+    <string name="fichar_estado_pausa">En pausa</string>
+    <string name="fichar_estado_parado">Sin jornada activa</string>
+
+    <!-- Navegacion principal -->
+    <string name="nav_historial">Mi historial</string>
+    <string name="nav_ausencias">Mis ausencias</string>
+    <string name="nav_solicitar">Solicitar ausencia</string>
+    <string name="nav_contrasena">Cambiar contraseña</string>
+    <string name="nav_panel_gestion">Panel de gestión</string>
+    <string name="nav_cerrar_sesion">Cerrar sesión</string>
+
+    <!-- Historial -->
+    <string name="historial_titulo">Mi historial</string>
+    <string name="historial_vacio_titulo">Todavía no hay fichajes</string>
+    <string name="historial_vacio_texto">Cuando inicies y termines una jornada, aparecerá aquí.</string>
+    <string name="historial_entrada">Entrada</string>
+    <string name="historial_salida">Salida</string>
+    <string name="historial_total">Total</string>
+    <string name="historial_pausa">Pausa: %1$s</string>
+    <string name="historial_incidencia">Cierre automático</string>
+
+    <!-- Ausencias -->
+    <string name="ausencias_titulo">Mis ausencias</string>
+    <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
+    <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>
+    <string name="ausencias_estado_pendiente">Pendiente</string>
+    <string name="ausencias_estado_aprobada">Aprobada</string>
+    <string name="ausencias_estado_rechazada">Rechazada</string>
+    <string name="ausencias_rango">Del %1$s al %2$s</string>
+    <string name="ausencias_resuelta_por">Resuelta por %1$s</string>
+
+    <!-- Solicitar ausencia -->
+    <string name="solicitud_titulo">Solicitar ausencia</string>
+    <string name="solicitud_tipo">Tipo de ausencia</string>
+    <string name="solicitud_desde">Fecha de inicio</string>
+    <string name="solicitud_hasta">Fecha de fin</string>
+    <string name="solicitud_motivo">Motivo</string>
+    <string name="solicitud_enviar">Enviar solicitud</string>
+    <string name="solicitud_enviada">Solicitud enviada.</string>
+    <string name="solicitud_fechas_incompletas">Elige las dos fechas.</string>
+    <string name="solicitud_fecha_invertida">La fecha de fin no puede ser anterior a la de inicio.</string>
+
+    <!-- Cambiar contrasena -->
+    <string name="contrasena_titulo">Cambiar contraseña</string>
+    <string name="contrasena_actual">Contraseña actual</string>
+    <string name="contrasena_nueva">Nueva contraseña</string>
+    <string name="contrasena_repetir">Repetir nueva contraseña</string>
+    <string name="contrasena_actualizar">Actualizar contraseña</string>
+    <string name="contrasena_no_coinciden">Las dos contraseñas nuevas no coinciden.</string>
+    <string name="contrasena_corta">La contraseña debe tener al menos 8 caracteres.</string>
+    <string name="contrasena_cambiada">Contraseña actualizada.</string>
+
+    <!-- Gestion -->
+    <string name="gestion_titulo">Panel de gestión</string>
+    <string name="gestion_historial_equipo">Historial del equipo</string>
+    <string name="gestion_ausencias_pendientes">Ausencias pendientes</string>
+    <string name="gestion_ausencias_resueltas">Ausencias resueltas</string>
+    <string name="gestion_crear_empleado">Dar de alta a un empleado</string>
+    <string name="gestion_crear_gestor">Dar de alta a un gestor</string>
+
+    <string name="equipo_titulo">Historial del equipo</string>
+    <string name="equipo_vacio_titulo">Sin fichajes del equipo</string>
+    <string name="equipo_vacio_texto">Cuando tu equipo fiche, verás aquí sus jornadas.</string>
+
+    <string name="pendientes_titulo">Ausencias pendientes</string>
+    <string name="pendientes_vacio_titulo">Nada pendiente</string>
+    <string name="pendientes_vacio_texto">No hay solicitudes esperando tu respuesta.</string>
+    <string name="pendientes_aprobar">Aprobar</string>
+    <string name="pendientes_rechazar">Rechazar</string>
+    <string name="pendientes_comentario">Comentario</string>
+    <string name="pendientes_motivo_obligatorio">Para rechazar hay que indicar un motivo.</string>
+
+    <string name="resueltas_titulo">Ausencias resueltas</string>
+    <string name="resueltas_vacio_titulo">Todavía no hay resueltas</string>
+    <string name="resueltas_vacio_texto">Aquí quedarán las solicitudes que apruebes o rechaces.</string>
+
+    <string name="alta_empleado_titulo">Nuevo empleado</string>
+    <string name="alta_gestor_titulo">Nuevo gestor</string>
+    <string name="alta_nombre">Nombre completo</string>
+    <string name="alta_email">Correo electrónico</string>
+    <string name="alta_contrasena">Contraseña provisional</string>
+    <string name="alta_crear">Crear</string>
+    <string name="alta_creado">Cuenta creada.</string>
+
+    <!-- Estados compartidos -->
+    <string name="estado_vacio_generico">No hay nada que mostrar</string>
+    <string name="error_campos_obligatorios">Rellena todos los campos.</string>
+    <string name="error_email_invalido">El correo electrónico no es válido.</string>
 </resources>
