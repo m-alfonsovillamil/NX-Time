@@ -1,10 +1,12 @@
 package com.nxtime.app
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
 import com.nxtime.app.ui.theme.NxTimeTheme
+import com.nxtime.app.ui.util.enEspanol
 
 /**
  * La única Activity de la aplicación.
@@ -18,6 +20,16 @@ import com.nxtime.app.ui.theme.NxTimeTheme
  * AppCompat era peso.
  */
 class MainActivity : ComponentActivity() {
+
+    /**
+     * Se fija el idioma antes de que exista nada de interfaz: todo lo que
+     * pinta Compose -- los textos propios y los de los componentes de
+     * Material, como el calendario de "Solicitar ausencia" -- se resuelve
+     * contra la `Configuration` de este contexto. Ver [enEspanol].
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.enEspanol())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
