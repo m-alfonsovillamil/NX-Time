@@ -125,6 +125,17 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
     /*
+     * Gson, declarado a propósito aunque converter-gson ya lo arrastre.
+     *
+     * ApiErrorParser usa Gson directamente para leer el "detail" del
+     * ProblemDetail, y una dependencia que se usa en el código propio
+     * debe declararse: la versión transitiva de converter-gson 2.9.0 es
+     * la 2.8.5, anterior a `JsonParser.parseString` (2.8.6), así que
+     * heredarla en silencio hacía que ese fichero no compilara.
+     */
+    implementation("com.google.code.gson:gson:2.11.0")
+
+    /*
      * Jetpack Compose. El BOM fija de una vez las versiones de todas las
      * librerías de Compose que sean compatibles entre sí, por eso las de
      * abajo van sin número.
@@ -148,12 +159,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     /*
-     * Dependencias base de Android. AppCompat sigue haciendo falta
-     * porque MainActivity hereda de AppCompatActivity y el tema del
-     * manifiesto es de AppCompat mientras arranca la app.
+     * Dependencias base de Android.
+     *
+     * AppCompat ya no está: con la reescritura en Compose, MainActivity
+     * hereda de ComponentActivity y el tema de arranque cuelga del de la
+     * plataforma, así que nada del proyecto la usaba ya.
      */
     implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
 
     /*
      * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo

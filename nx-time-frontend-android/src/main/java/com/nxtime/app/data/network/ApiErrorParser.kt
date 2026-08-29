@@ -1,6 +1,8 @@
 package com.nxtime.app.data.network
 
 import com.google.gson.JsonParser
+import com.nxtime.app.R
+import com.nxtime.app.ui.util.MensajeUi
 import okhttp3.ResponseBody
 import retrofit2.Response
 
@@ -29,12 +31,12 @@ import retrofit2.Response
 object ApiErrorParser {
 
     /** Mensaje legible del error de una respuesta sin éxito. */
-    fun mensajeDe(response: Response<*>): String =
+    fun mensajeDe(response: Response<*>): MensajeUi =
         mensajeDe(response.errorBody(), response.code())
 
-    fun mensajeDe(errorBody: ResponseBody?, codigo: Int): String {
+    fun mensajeDe(errorBody: ResponseBody?, codigo: Int): MensajeUi {
         val detalle = detalleDelProblemDetail(errorBody)
-        return detalle ?: mensajeGenerico(codigo)
+        return if (detalle != null) MensajeUi.Texto(detalle) else mensajeGenerico(codigo)
     }
 
     /**
@@ -66,23 +68,30 @@ object ApiErrorParser {
     /**
      * Solo para cuando el backend no dice nada aprovechable. Explica qué
      * puede hacer el usuario, que es más útil que enseñarle el número.
+     *
+     * Devuelve el identificador del texto y no el texto: esta clase está
+     * en la capa de datos y no tiene `Context` con el que resolver
+     * recursos, así que lo hace la pantalla al pintarlo. De paso, estos
+     * mensajes pasan a ser traducibles como el resto.
      */
-    private fun mensajeGenerico(codigo: Int): String = when (codigo) {
-        400 -> "Los datos enviados no son válidos."
-        401 -> "Tu sesión ha caducado. Vuelve a iniciar sesión."
-        403 -> "No tienes permisos para realizar esta acción."
-        404 -> "No se ha encontrado lo que buscabas."
-        409 -> "La operación entra en conflicto con el estado actual."
-        429 -> "Demasiados intentos. Espera un momento y vuelve a probar."
-        in 500..599 -> "El servidor no está disponible. Inténtalo más tarde."
-        else -> "Se ha producido un error inesperado."
-    }
+    private fun mensajeGenerico(codigo: Int): MensajeUi = MensajeUi.Recurso(
+        when (codigo) {
+            400 -> R.string.error_datos_invalidos
+            401 -> R.string.error_sesion_caducada
+            403 -> R.string.error_sin_permisos
+            404 -> R.string.error_no_encontrado
+            409 -> R.string.error_conflicto
+            429 -> R.string.error_demasiados_intentos
+            in 500..599 -> R.string.error_servidor
+            else -> R.string.error_inesperado
+        }
+    )
 
     /**
      * Mensaje para un fallo de red (sin respuesta del servidor). Se
      * separa del anterior porque la causa y la solución son distintas:
      * aquí la petición no llegó a salir.
      */
-    fun mensajeDeRed(e: Throwable): String =
-        "No se ha podido conectar con el servidor. Comprueba tu conexión."
+    fun mensajeDeRed(e: Throwable): MensajeUi =
+        MensajeUi.Recurso(R.string.error_sin_conexion)
 }

@@ -60,19 +60,42 @@ object DateFormats {
      * llevó el arreglo del total de los informes en el backend, donde
      * truncar antes de agregar hacía perder hasta 21 minutos al mes.
      */
-    fun duracion(entradaIso: String?, salidaIso: String?): String = try {
+    fun duracion(entradaIso: String?, salidaIso: String?): String =
+        duracionNeta(entradaIso, salidaIso, minutosPausa = 0)
+
+    /**
+     * Igual que [duracion], pero descontando las pausas: es el tiempo de
+     * trabajo real de una jornada ya cerrada.
+     *
+     * Descontar aquí y no en la pantalla mantiene la misma cuenta que
+     * hacía el historial anterior, que restaba `minutosPausaAcumulados`
+     * de la duración bruta. Es una distinción con consecuencias: una
+     * jornada de 09:00 a 18:00 con una hora de comida son 8h de trabajo,
+     * no 9h, y es el número que acaba en el informe mensual.
+     *
+     * Si las pausas superaran a la jornada -- dato incoherente que solo
+     * puede venir de un fichaje corregido a mano -- se devuelve
+     * [SIN_DATO] en lugar de una duración negativa.
+     */
+    fun duracionNeta(entradaIso: String?, salidaIso: String?, minutosPausa: Long): String = try {
         if (entradaIso == null || salidaIso == null) {
             EN_CURSO
         } else {
             val segundos = Duration.between(
                 Instant.parse(entradaIso), Instant.parse(salidaIso)
             ).seconds
-            val minutos = segundos / 60
-            "${minutos / 60}h ${String.format(ES, "%02dm", minutos % 60)}"
+            val minutos = segundos / 60 - minutosPausa
+            if (minutos < 0) SIN_DATO else formatoHorasMinutos(minutos)
         }
     } catch (e: DateTimeParseException) {
         SIN_DATO
     }
+
+    /** Minutos sueltos como "1h 30m"; se usa también para las pausas. */
+    fun minutos(minutos: Long): String = formatoHorasMinutos(minutos)
+
+    private fun formatoHorasMinutos(minutos: Long): String =
+        "${minutos / 60}h ${String.format(ES, "%02dm", minutos % 60)}"
 
     private inline fun conInstante(
         instanteIso: String?,

@@ -6,8 +6,10 @@ import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.TipoFichaje
 import com.nxtime.app.data.network.ApiErrorParser
+import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +25,7 @@ data class FicharUiState(
     val registro: Registro? = null,
     val nombreUsuario: String = "",
     val esRolDeGestion: Boolean = false,
-    val error: String? = null
+    val error: MensajeUi? = null
 )
 
 /**
@@ -91,7 +93,7 @@ class FicharViewModel(
     fun pulsarBotonPrincipal() {
         val estado = _uiState.value.estado
         if (estado == EstadoJornada.EN_PAUSA) {
-            _uiState.update { it.copy(error = MENSAJE_REANUDAR_ANTES) }
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_reanuda_antes)) }
             return
         }
         val tipo = if (estado == EstadoJornada.SIN_JORNADA) TipoFichaje.INICIO else TipoFichaje.FIN
@@ -101,7 +103,7 @@ class FicharViewModel(
     fun pulsarBotonPausa() {
         val estado = _uiState.value.estado
         if (estado == EstadoJornada.SIN_JORNADA) {
-            _uiState.update { it.copy(error = MENSAJE_INICIAR_ANTES) }
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_inicia_antes)) }
             return
         }
         val tipo = if (estado == EstadoJornada.EN_PAUSA) {
@@ -170,8 +172,5 @@ class FicharViewModel(
          * funda, y dejarlo fuera lo cerraría fuera de su propio panel.
          */
         private val ROLES_DE_GESTION = setOf("GESTOR", "RRHH", "ADMIN")
-
-        const val MENSAJE_REANUDAR_ANTES = "Reanuda la jornada antes de finalizarla."
-        const val MENSAJE_INICIAR_ANTES = "Inicia la jornada antes de pausarla."
     }
 }

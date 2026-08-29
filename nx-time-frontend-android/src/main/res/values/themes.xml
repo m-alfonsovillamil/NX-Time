@@ -4,14 +4,18 @@
     Compose pinte la primera pantalla. El aspecto real lo define
     NxTimeTheme (ui/theme/Theme.kt).
 
-    "DayNight" hace que el fondo de arranque siga al tema del sistema,
-    tomando el color de values-night/colors.xml. Antes el tema base
+    El fondo de arranque sigue al tema del sistema porque el color sale
+    de values-night/colors.xml, no del padre del tema. Antes el tema base
     fijaba windowLightStatusBar a true para toda la app, asi que en modo
     oscuro los iconos de la barra de estado quedaban oscuros sobre fondo
     oscuro; ahora eso lo ajusta NxTimeTheme segun el tema activo.
+
+    El padre es el de la plataforma y ya no Theme.AppCompat: con
+    MainActivity heredando de ComponentActivity, ese padre era lo unico
+    que quedaba atando la libreria appcompat al proyecto.
 -->
 <resources>
-    <style name="Theme.NxTime" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Theme.NxTime" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor">@color/window_background</item>
         <item name="android:navigationBarColor">@color/window_background</item>

@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.util.resolver
 
 @Composable
 fun LoginScreen(
@@ -82,7 +83,7 @@ fun LoginScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
             )
 
-            estado.error?.let { BannerError(mensaje = it) }
+            estado.error?.let { BannerError(mensaje = it.resolver()) }
 
             OutlinedTextField(
                 value = estado.email,

@@ -46,6 +46,7 @@ import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.theme.LocalColoresJornada
 import com.nxtime.app.ui.util.DateFormats
+import com.nxtime.app.ui.util.resolver
 
 /**
  * Pantalla principal.
@@ -115,7 +116,10 @@ fun FicharScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             estado.error?.let { mensaje ->
-                BannerError(mensaje = mensaje, onReintentar = viewModel::descartarError)
+                BannerError(
+                    mensaje = mensaje.resolver(),
+                    onReintentar = viewModel::descartarError
+                )
             }
 
             Spacer(Modifier.height(8.dp))

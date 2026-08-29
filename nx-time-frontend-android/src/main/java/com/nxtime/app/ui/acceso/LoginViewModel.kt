@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.PeticionLogin
 import com.nxtime.app.data.network.ApiErrorParser
+import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +17,7 @@ data class LoginUiState(
     val email: String = "",
     val contrasena: String = "",
     val cargando: Boolean = false,
-    val error: String? = null,
+    val error: MensajeUi? = null,
     val accesoConcedido: Boolean = false
 )
 
@@ -34,8 +36,14 @@ class LoginViewModel(
         // Se valida antes de salir a la red: enviar una petición que ya
         // se sabe inválida solo añade espera y consume el límite de
         // intentos por IP que el backend aplica a /auth/login.
-        if (estado.email.isBlank() || estado.contrasena.isBlank()) {
-            _uiState.update { it.copy(error = MENSAJE_CAMPOS_VACIOS) }
+        // Se avisa del campo que falta y no de "los campos" en
+        // general: strings.xml ya traía un texto para cada uno.
+        if (estado.email.isBlank()) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.login_email_vacio)) }
+            return
+        }
+        if (estado.contrasena.isBlank()) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.login_contrasena_vacia)) }
             return
         }
 
@@ -62,7 +70,5 @@ class LoginViewModel(
         }
     }
 
-    companion object {
-        const val MENSAJE_CAMPOS_VACIOS = "Escribe tu correo y tu contraseña."
-    }
+
 }

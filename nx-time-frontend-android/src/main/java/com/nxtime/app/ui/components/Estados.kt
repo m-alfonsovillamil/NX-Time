@@ -40,11 +40,20 @@ import com.nxtime.app.R
 
 @Composable
 fun EstadoCargando(modifier: Modifier = Modifier) {
-    Box(
+    Column(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         CircularProgressIndicator()
+        Spacer(Modifier.height(16.dp))
+        // El texto acompaña al indicador para que un lector de pantalla
+        // anuncie que se está esperando: la rueda sola no dice nada.
+        Text(
+            text = stringResource(R.string.cargando),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

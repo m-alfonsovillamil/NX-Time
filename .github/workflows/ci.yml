@@ -134,9 +134,29 @@ jobs:
       - name: Permisos de ejecución del wrapper
         run: chmod +x gradlew
 
-      # Solo se compila: la app no tiene tests todavía (el esfuerzo de
-      # esta fase se ha ido al backend, que es lo que sostiene la
-      # entrevista). Compilar ya detecta lo que más falla en la
-      # práctica: que un cambio de contrato del backend rompa la app.
+      # Compilar detecta lo que más falla en la práctica: que un cambio
+      # de contrato del backend rompa la app.
       - name: Compilar la app (debug)
         run: ./gradlew :nx-time-frontend-android:assembleDevDebug --no-daemon
+
+      # Los tests de los ViewModel, que con la migración a Compose ya
+      # existen: corren en la JVM, sin emulador, y cubren lo que es
+      # lógica de la app (validaciones, transiciones de estado de la
+      # jornada, traducción de los errores del backend).
+      - name: Tests unitarios de la app
+        run: ./gradlew :nx-time-frontend-android:testDevDebugUnitTest --no-daemon
+
+      # Lint va con abortOnError=true en build.gradle.kts, así que un
+      # texto sin traducir o un contraste insuficiente rompe el build.
+      - name: Lint de Android
+        run: ./gradlew :nx-time-frontend-android:lintDevDebug --no-daemon
+
+      - name: Publicar informes de la app
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-android
+          path: |
+            nx-time-frontend-android/build/reports/tests/
+            nx-time-frontend-android/build/reports/lint-results-devDebug.html
+          retention-days: 7

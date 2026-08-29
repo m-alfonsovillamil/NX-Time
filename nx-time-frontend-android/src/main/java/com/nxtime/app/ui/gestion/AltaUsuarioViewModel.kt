@@ -1,49 +1,55 @@
-package com.nxtime.app.ui.acceso
+package com.nxtime.app.ui.gestion
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nxtime.app.data.dto.RegistroGestorRequest
+import com.nxtime.app.data.dto.CrearEmpleadoRequest
+import com.nxtime.app.data.dto.CrearGestorRequest
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
-import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.launch
 
-data class RegistroEmpresaUiState(
-    val empresa: String = "",
+data class AltaUsuarioUiState(
     val nombre: String = "",
     val email: String = "",
     val contrasena: String = "",
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
-    val registrado: Boolean = false
+    val creado: Boolean = false
 )
 
-class RegistroEmpresaViewModel(
+/**
+ * Alta de una cuenta nueva, sea de empleado o de gestor.
+ *
+ * `CrearEmpleadoActivity` y `CrearGestorActivity` eran el mismo
+ * formulario (nombre, correo y contraseña provisional) escrito dos
+ * veces, con sus dos ViewModel y sus dos Factory. Lo único que
+ * cambiaba de verdad era a qué endpoint se enviaba, y eso es el
+ * parámetro [esGestor].
+ */
+class AltaUsuarioViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(RegistroEmpresaUiState())
-    val uiState: StateFlow<RegistroEmpresaUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(AltaUsuarioUiState())
+    val uiState: StateFlow<AltaUsuarioUiState> = _uiState.asStateFlow()
 
-    fun onEmpresaCambia(v: String) = _uiState.update { it.copy(empresa = v, error = null) }
     fun onNombreCambia(v: String) = _uiState.update { it.copy(nombre = v, error = null) }
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
     fun onContrasenaCambia(v: String) = _uiState.update { it.copy(contrasena = v, error = null) }
 
-    fun registrar() {
+    fun crear(esGestor: Boolean) {
         val e = _uiState.value
-        if (e.empresa.isBlank() || e.nombre.isBlank() || e.email.isBlank() || e.contrasena.isBlank()) {
+
+        if (e.nombre.isBlank() || e.email.isBlank() || e.contrasena.isBlank()) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.error_campos_obligatorios)) }
             return
         }
-        // El backend exige 8 caracteres desde la Fase 2. Comprobarlo
-        // aquí evita un viaje de ida y vuelta para un error que se ve a
-        // simple vista.
         if (e.contrasena.length < MINIMO_CONTRASENA) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.contrasena_corta)) }
             return
@@ -52,18 +58,16 @@ class RegistroEmpresaViewModel(
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.registrarEmpresaGestor(
-                    RegistroGestorRequest(
-                        nombreEmpresa = e.empresa.trim(),
-                        nombreGestor = e.nombre.trim(),
-                        email = e.email.trim(),
-                        password = e.contrasena
-                    )
-                )
-                val cuerpo = respuesta.body()
-                if (respuesta.isSuccessful && cuerpo != null) {
-                    authRepository.procesarLoginExitoso(cuerpo)
-                    _uiState.update { it.copy(cargando = false, registrado = true) }
+                val nombre = e.nombre.trim()
+                val email = e.email.trim()
+                val respuesta = if (esGestor) {
+                    authRepository.crearGestor(CrearGestorRequest(nombre, email, e.contrasena))
+                } else {
+                    authRepository.crearEmpleado(CrearEmpleadoRequest(nombre, email, e.contrasena))
+                }
+
+                if (respuesta.isSuccessful) {
+                    _uiState.update { it.copy(cargando = false, creado = true) }
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
