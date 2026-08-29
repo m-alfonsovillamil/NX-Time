@@ -4,9 +4,19 @@ Guía para poner NX Time en producción. Los valores de base de datos ya están
 rellenados con el proyecto Neon **NX Time** (`raspy-sunset-60828363`, región
 `aws-eu-central-1`).
 
-> **Este fichero NO contiene contraseñas.** Donde ponga `<CONTRASEÑA…>`, cópiala
-> del panel de Neon o de tu `.env.local` (que está fuera del repositorio a
-> propósito: este repositorio es público).
+> **Este fichero no contiene ni contraseñas ni el endpoint real**, porque el
+> repositorio es público. Donde ponga `<TU-ENDPOINT>` o `<CONTRASEÑA…>`, saca el
+> valor de tu `.env.local` (que está fuera del repositorio a propósito) o del
+> panel de Neon:
+>
+> ```bash
+> npx neon@latest connection-string production
+> ```
+>
+> Publicar el host y los usuarios no es una brecha —la contraseña sigue siendo
+> secreta y la conexión exige TLS— pero es exposición innecesaria: le ahorra a
+> un atacante la mitad del trabajo, sobre todo si el proyecto no tiene lista
+> blanca de IPs configurada, que es lo que trae Neon por defecto.
 
 ## 1. Variables de entorno en Render
 
@@ -21,7 +31,7 @@ La conversión ya está hecha:
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | `jdbc:postgresql://ep-rapid-resonance-b2uy1dd4-pooler.c-6.eu-central-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
+| `DATABASE_URL` | `jdbc:postgresql://<TU-ENDPOINT>-pooler.<region>.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
 | `DATABASE_USERNAME` | `nxtime_app` |
 | `DATABASE_PASSWORD` | `<CONTRASEÑA DE nxtime_app>` |
 
@@ -39,7 +49,7 @@ las herramientas de migración necesitan.
 
 | Variable | Valor |
 |---|---|
-| `SPRING_FLYWAY_URL` | `jdbc:postgresql://ep-rapid-resonance-b2uy1dd4.c-6.eu-central-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
+| `SPRING_FLYWAY_URL` | `jdbc:postgresql://<TU-ENDPOINT>.<region>.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
 | `SPRING_FLYWAY_USER` | `neondb_owner` |
 | `SPRING_FLYWAY_PASSWORD` | `<CONTRASEÑA DE neondb_owner>` |
 
@@ -59,11 +69,13 @@ de auditoría signifique algo (ver Fase 8).
 tokens válidos y suplantar a cualquier usuario.
 
 ```bash
-openssl rand -base64 64 | tr -d '
+openssl rand -base64 64 | tr -d '
+
 '
 ```
 
-El `tr -d '
+El `tr -d '
+
 '` importa: en Windows `openssl` parte la salida en líneas y deja
 retornos de carro, que no son base64 válidos. La aplicación falla al arrancar con
 `Illegal base64 character`.
