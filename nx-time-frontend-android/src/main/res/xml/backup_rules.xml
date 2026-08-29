@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Equivalente para Android 11 y anteriores. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="NXTIME_PREFS.xml"/>
+</full-backup-content>

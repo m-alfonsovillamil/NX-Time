@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.nxtime.app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!--
+        allowBackup="false": la copia de seguridad automática de Android
+        se lleva el directorio de SharedPreferences a Google Drive, y ahí
+        vive NXTIME_PREFS con el access token y el refresh token, que
+        dura 30 dias. Con la copia activada, ese refresh token sale del
+        dispositivo y ademas se puede extraer con "adb backup". Para una
+        aplicacion de registro horario con valor legal, no compensa.
+
+        Las dos reglas de extraccion cubren lo mismo en las versiones
+        nuevas: dataExtractionRules es para Android 12+ y
+        fullBackupContent para las anteriores.
+    -->
     <application
             android:name=".NxTimeApplication"
-            android:allowBackup="true"
+            android:allowBackup="false"
+            android:dataExtractionRules="@xml/data_extraction_rules"
+            android:fullBackupContent="@xml/backup_rules"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -14,62 +27,22 @@
             android:theme="@style/Theme.NxTime"
             android:networkSecurityConfig="@xml/network_security_config">
 
+        <!--
+            Una sola Activity: desde la reescritura en Compose la
+            navegacion la lleva navigation-compose, asi que las doce
+            entradas que habia aqui (una por pantalla) ya no existen.
+        -->
         <activity
                 android:name=".MainActivity"
-                android:exported="true">
+                android:exported="true"
+                android:windowSoftInputMode="adjustResize"
+                android:theme="@style/Theme.NxTime">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity
-                android:name=".ui.login.HomeActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.historial.HistorialActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.solicitud.SolicitudActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.ausencias.AusenciasActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.GestorActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.historial.GestorHistorialActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.ManagerHomeActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.login.RegistroEmpresaActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.CrearEmpleadoActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.usuario.CambiarContrasenaActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.ausencias.GestorAusenciasAprobadasActivity"
-                android:exported="false" />
-
-        <activity
-                android:name=".ui.gestor.CrearGestorActivity"
-                android:exported="false" />
     </application>
 
 </manifest>

@@ -9,11 +9,19 @@ pluginManagement {
     // Define las versiones de los plugins para que los módulos las usen.
     // kotlin("jvm"/"plugin.spring"/"plugin.jpa") ya no hacen falta aquí:
     // el backend es 100% Java desde la Fase 1 del plan de
-    // profesionalización. Solo queda "org.jetbrains.kotlin.android" para
-    // el módulo :nx-time-frontend-android.
+    // profesionalización. Solo quedan los de Kotlin/Compose para el
+    // módulo :nx-time-frontend-android.
+    //
+    // Kotlin 2.x hace falta para Compose: desde esa versión el
+    // compilador de Compose es un plugin de Gradle propio
+    // ("plugin.compose") en vez del antiguo
+    // composeOptions.kotlinCompilerExtensionVersion, que obligaba a
+    // emparejar a mano cada versión de Kotlin con la suya de Compose.
+    // Subirlo es seguro: el backend no tiene ni un fichero .kt.
     plugins {
         id("com.android.application") version "8.4.1"
-        id("org.jetbrains.kotlin.android") version "1.9.25"
+        id("org.jetbrains.kotlin.android") version "2.0.21"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
         id("org.springframework.boot") version "3.5.6"
         id("io.spring.dependency-management") version "1.1.7"
         id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"

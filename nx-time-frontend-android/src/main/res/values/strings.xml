@@ -1,14 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<!--
+    Todos los textos visibles de la app.
+
+    Antes habia 51 textos escritos dentro de los layouts y unos 158
+    literales sueltos en Kotlin, frente a solo 9 entradas aqui. Ademas de
+    impedir cualquier traduccion, eso dejaba mensajes incoherentes entre
+    pantallas para la misma situacion.
+-->
+<!--
+    tools:locale="es" le dice a lint en qué idioma están estos textos.
+    Sin eso los corrige en inglés, y avisaba de que "momento" era una
+    errata de "memento".
+-->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="es">
     <string name="app_name">NX Time</string>
-    <string name="home_panel_gestor">Panel de Gestor</string>
-    <string name="home_solicitar_ausencia">Solicitar Ausencia</string>
-    <string name="home_ver_ausencias">Ver Mis Ausencias</string>
-    <string name="home_ver_historial">Ver Historial de Fichajes</string>
-    <string name="home_cambiar_contrasena">Cambiar Contraseña</string>
-    <string name="home_iniciar_jornada">Iniciar Jornada</string>
-    <string name="home_iniciar_pausa">Iniciar Pausa</string>
-    <string name="gestor_ver_ausencias_aprobadas">Ver Ausencias Aprobadas</string>
 
+    <!-- Comunes -->
+    <string name="volver">Volver</string>
+    <string name="reintentar">Reintentar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="guardar">Guardar</string>
+    <string name="cargando">Cargando…</string>
+    <string name="mas_opciones">Más opciones</string>
 
+    <!-- Acceso -->
+    <string name="login_titulo">NX Time</string>
+    <string name="login_subtitulo">Control horario para tu equipo</string>
+    <string name="login_email">Correo electrónico</string>
+    <string name="login_contrasena">Contraseña</string>
+    <string name="login_entrar">Entrar</string>
+    <string name="login_registrar_empresa">Registrar una empresa</string>
+    <string name="login_mostrar_contrasena">Mostrar contraseña</string>
+    <string name="login_ocultar_contrasena">Ocultar contraseña</string>
+    <string name="login_email_vacio">Escribe tu correo electrónico.</string>
+    <string name="login_contrasena_vacia">Escribe tu contraseña.</string>
+
+    <!-- Registro de empresa -->
+    <string name="registro_titulo">Registrar empresa</string>
+    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador.</string>
+    <string name="registro_empresa">Nombre de la empresa</string>
+    <string name="registro_nombre">Tu nombre completo</string>
+    <string name="registro_crear">Crear empresa</string>
+
+    <!-- Fichar -->
+    <string name="fichar_titulo">Mi jornada</string>
+    <string name="fichar_saludo">Hola, %1$s</string>
+    <string name="fichar_iniciar">Iniciar jornada</string>
+    <string name="fichar_finalizar">Finalizar jornada</string>
+    <string name="fichar_pausar">Iniciar pausa</string>
+    <string name="fichar_reanudar">Reanudar jornada</string>
+    <string name="fichar_sin_jornada">Toca para iniciar tu jornada</string>
+    <string name="fichar_desde">Trabajando desde las %1$s</string>
+    <string name="fichar_en_pausa">En pausa desde las %1$s</string>
+    <string name="fichar_reanuda_antes">Reanuda la jornada antes de finalizarla.</string>
+    <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
+
+    <!-- Navegacion principal -->
+    <string name="nav_historial">Mi historial</string>
+    <string name="nav_ausencias">Mis ausencias</string>
+    <string name="nav_solicitar">Solicitar ausencia</string>
+    <string name="nav_contrasena">Cambiar contraseña</string>
+    <string name="nav_panel_gestion">Panel de gestión</string>
+    <string name="nav_cerrar_sesion">Cerrar sesión</string>
+
+    <!-- Historial -->
+    <string name="historial_titulo">Mi historial</string>
+    <string name="historial_vacio_titulo">Todavía no hay fichajes</string>
+    <string name="historial_vacio_texto">Cuando inicies y termines una jornada, aparecerá aquí.</string>
+    <string name="historial_entrada">Entrada</string>
+    <string name="historial_salida">Salida</string>
+    <string name="historial_total">Total</string>
+    <string name="historial_pausa">Pausa: %1$s</string>
+    <string name="historial_en_curso">Jornada sin cerrar</string>
+
+    <!-- Ausencias -->
+    <string name="ausencias_titulo">Mis ausencias</string>
+    <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
+    <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>
+    <string name="ausencias_estado_pendiente">Pendiente</string>
+    <string name="ausencias_estado_aprobada">Aprobada</string>
+    <string name="ausencias_estado_rechazada">Rechazada</string>
+    <string name="ausencias_rango">Del %1$s al %2$s</string>
+    <string name="ausencias_resuelta_por">Resuelta por %1$s</string>
+    <string name="ausencias_comentario">Respuesta: %1$s</string>
+    <string name="ausencias_motivo">Motivo: %1$s</string>
+    <!--
+        "many" hace falta en castellano desde CLDR 42: es la categoría de
+        los múltiplos de un millón (1.000.000 de días). Aquí no se va a
+        dar nunca, pero sin declararla lint avisa y la app se quedaría
+        sin texto si alguna vez cayera en ese caso.
+    -->
+    <plurals name="ausencias_dias_habiles">
+        <item quantity="one">%d día hábil</item>
+        <item quantity="many">%d días hábiles</item>
+        <item quantity="other">%d días hábiles</item>
+    </plurals>
+
+    <!--
+        Tipos de ausencia.
+
+        El desplegable anterior se rellenaba con TipoAusencia.values().map { it.name },
+        asi que el empleado elegia entre "ASUNTOS_PROPIOS" y "FALLECIMIENTO_FAMILIAR".
+        El enum es el contrato con el backend; lo que se lee en pantalla no tiene por
+        que serlo.
+    -->
+    <string name="tipo_vacaciones">Vacaciones</string>
+    <string name="tipo_asuntos_propios">Asuntos propios</string>
+    <string name="tipo_matrimonio">Matrimonio</string>
+    <string name="tipo_fallecimiento_familiar">Fallecimiento de un familiar</string>
+    <string name="tipo_hospitalizacion_familiar">Hospitalización de un familiar</string>
+    <string name="tipo_lactancia">Lactancia</string>
+    <string name="tipo_maternidad_paternidad">Maternidad o paternidad</string>
+    <string name="tipo_medico">Visita médica</string>
+    <string name="tipo_traslado_domicilio">Traslado de domicilio</string>
+    <string name="tipo_viaje_trabajo">Viaje de trabajo</string>
+    <string name="tipo_otros">Otros</string>
+
+    <!-- Solicitar ausencia -->
+    <string name="solicitud_titulo">Solicitar ausencia</string>
+    <string name="solicitud_tipo">Tipo de ausencia</string>
+    <string name="solicitud_desde">Fecha de inicio</string>
+    <string name="solicitud_hasta">Fecha de fin</string>
+    <string name="solicitud_motivo">Motivo</string>
+    <string name="solicitud_enviar">Enviar solicitud</string>
+    <string name="solicitud_fechas_incompletas">Elige las dos fechas.</string>
+    <string name="solicitud_fecha_invertida">La fecha de fin no puede ser anterior a la de inicio.</string>
+
+    <!-- Cambiar contrasena -->
+    <string name="contrasena_titulo">Cambiar contraseña</string>
+    <string name="contrasena_actual">Contraseña actual</string>
+    <string name="contrasena_nueva">Nueva contraseña</string>
+    <string name="contrasena_repetir">Repetir nueva contraseña</string>
+    <string name="contrasena_actualizar">Actualizar contraseña</string>
+    <string name="contrasena_no_coinciden">Las dos contraseñas nuevas no coinciden.</string>
+    <string name="contrasena_corta">La contraseña debe tener al menos 8 caracteres.</string>
+
+    <!-- Gestion -->
+    <string name="gestion_titulo">Panel de gestión</string>
+    <string name="gestion_historial_equipo">Historial del equipo</string>
+    <string name="gestion_ausencias_pendientes">Ausencias pendientes</string>
+    <string name="gestion_ausencias_resueltas">Ausencias resueltas</string>
+    <string name="gestion_crear_empleado">Dar de alta a un empleado</string>
+    <string name="gestion_crear_gestor">Dar de alta a un gestor</string>
+
+    <string name="equipo_titulo">Historial del equipo</string>
+    <string name="equipo_vacio_titulo">Sin fichajes del equipo</string>
+    <string name="equipo_vacio_texto">Cuando tu equipo fiche, verás aquí sus jornadas.</string>
+    <string name="equipo_filtro">Empleado</string>
+    <string name="equipo_filtro_todos">Todo el equipo</string>
+    <string name="equipo_vacio_filtro_titulo">Sin jornadas de %1$s</string>
+    <string name="equipo_vacio_filtro_texto">Prueba a quitar el filtro para ver al resto del equipo.</string>
+
+    <string name="pendientes_titulo">Ausencias pendientes</string>
+    <string name="pendientes_vacio_titulo">Nada pendiente</string>
+    <string name="pendientes_vacio_texto">No hay solicitudes esperando tu respuesta.</string>
+    <string name="pendientes_aprobar">Aprobar</string>
+    <string name="pendientes_rechazar">Rechazar</string>
+    <string name="pendientes_comentario">Comentario</string>
+    <string name="pendientes_motivo_obligatorio">Para rechazar hay que indicar un motivo.</string>
+
+    <string name="resueltas_titulo">Ausencias resueltas</string>
+    <string name="resueltas_vacio_titulo">Todavía no hay resueltas</string>
+    <string name="resueltas_vacio_texto">Aquí quedarán las solicitudes que apruebes o rechaces.</string>
+
+    <string name="alta_empleado_titulo">Nuevo empleado</string>
+    <string name="alta_gestor_titulo">Nuevo gestor</string>
+    <string name="alta_nombre">Nombre completo</string>
+    <string name="alta_email">Correo electrónico</string>
+    <string name="alta_contrasena">Contraseña provisional</string>
+    <string name="alta_crear">Crear</string>
+
+    <!-- Estados compartidos -->
+    <string name="error_campos_obligatorios">Rellena todos los campos.</string>
+
+    <!--
+        Errores de red y de servidor.
+
+        Estaban escritos dentro de ApiErrorParser.kt, en castellano y a
+        fuego. Se usan cuando el backend no manda un "detail"
+        aprovechable, y dicen qué puede hacer la persona en vez de
+        enseñarle el número del código HTTP.
+    -->
+    <string name="error_sin_conexion">No se ha podido conectar con el servidor. Comprueba tu conexión.</string>
+    <string name="error_datos_invalidos">Los datos enviados no son válidos.</string>
+    <string name="error_sesion_caducada">Tu sesión ha caducado. Vuelve a iniciar sesión.</string>
+    <string name="error_sin_permisos">No tienes permisos para realizar esta acción.</string>
+    <string name="error_no_encontrado">No se ha encontrado lo que buscabas.</string>
+    <string name="error_conflicto">La operación entra en conflicto con el estado actual.</string>
+    <string name="error_demasiados_intentos">Demasiados intentos. Espera un momento y vuelve a probar.</string>
+    <string name="error_servidor">El servidor no está disponible. Inténtalo más tarde.</string>
+    <string name="error_inesperado">Se ha producido un error inesperado.</string>
 </resources>

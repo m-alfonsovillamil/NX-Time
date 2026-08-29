@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Tema minimo: solo lo que se ve mientras la app arranca, antes de que
+    Compose pinte la primera pantalla. El aspecto real lo define
+    NxTimeTheme (ui/theme/Theme.kt).
+
+    El fondo de arranque sigue al tema del sistema porque el color sale
+    de values-night/colors.xml, no del padre del tema. Antes el tema base
+    fijaba windowLightStatusBar a true para toda la app, asi que en modo
+    oscuro los iconos de la barra de estado quedaban oscuros sobre fondo
+    oscuro; ahora eso lo ajusta NxTimeTheme segun el tema activo.
+
+    El padre es el de la plataforma y ya no Theme.AppCompat: con
+    MainActivity heredando de ComponentActivity, ese padre era lo unico
+    que quedaba atando la libreria appcompat al proyecto.
+-->
 <resources>
-    <style name="Theme.NxTime" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-
-        <item name="colorPrimary">@color/md_theme_primary</item>
-        <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
-        <item name="colorSecondary">@color/md_theme_secondary</item>
-        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
-        <item name="colorError">@color/md_theme_error</item>
-        <item name="colorOnError">@color/md_theme_onError</item>
-        <item name="android:colorBackground">@color/md_theme_background</item>
-        <item name="colorOnBackground">@color/md_theme_onBackground</item>
-        <item name="colorSurface">@color/md_theme_surface</item>
-        <item name="colorOnSurface">@color/md_theme_onSurface</item>
-        <item name="colorSurfaceVariant">@color/md_theme_surfaceVariant</item>
-        <item name="colorOnSurfaceVariant">@color/md_theme_onSurfaceVariant</item>
-        <item name="colorOutline">@color/md_theme_outline</item>
-
-        <item name="android:statusBarColor">?attr/colorSurface</item>
-        <item name="android:windowLightStatusBar">true</item>
+    <style name="Theme.NxTime" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@color/window_background</item>
+        <item name="android:navigationBarColor">@color/window_background</item>
     </style>
 </resources>
