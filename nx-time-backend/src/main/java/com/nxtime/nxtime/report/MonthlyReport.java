@@ -19,8 +19,20 @@ public record MonthlyReport(
         List<ReportRow> filas
 ) {
 
+    /**
+     * Total en SEGUNDOS: se agrega en la unidad exacta.
+     *
+     * Sumar los minutos ya truncados de cada fila perdía hasta 59
+     * segundos por jornada -- hasta 21 minutos en un mes de 22 días
+     * laborables. Ver {@link ReportRow} y MonthlyReportTotalTest.
+     */
+    public long totalSegundos() {
+        return filas.stream().mapToLong(ReportRow::segundosNetos).sum();
+    }
+
+    /** El total en minutos, truncado UNA sola vez sobre el total exacto. */
     public long totalMinutos() {
-        return filas.stream().mapToLong(ReportRow::minutosNetos).sum();
+        return totalSegundos() / 60;
     }
 
     public String totalLegible() {

@@ -28,6 +28,9 @@ class ReportGeneratorTest {
     private final ExcelReportGenerator excelGenerator = new ExcelReportGenerator();
     private final PdfReportGenerator pdfGenerator = new PdfReportGenerator();
 
+    // Los tiempos van en SEGUNDOS desde el arreglo del total del
+    // informe (ver MonthlyReportTotalTest): se escriben como
+    // "minutos * 60" para que se siga leyendo a simple vista.
     private MonthlyReport informeDeEjemplo() {
         return new MonthlyReport(
                 "TechCorp Solutions",
@@ -35,12 +38,12 @@ class ReportGeneratorTest {
                 YearMonth.of(2026, 6),
                 List.of(
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 1),
-                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30, 480, false),
+                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30, 480 * 60, false),
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 2),
-                                LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450, false),
+                                LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450 * 60, false),
                         // Jornada cerrada por el sistema (Fase 9).
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 3),
-                                LocalTime.of(9, 0), LocalTime.of(1, 0), 0, 960, true)));
+                                LocalTime.of(9, 0), LocalTime.of(1, 0), 0, 960 * 60, true)));
     }
 
     // ---- Excel ----
@@ -138,9 +141,9 @@ class ReportGeneratorTest {
     @Test
     @DisplayName("Los minutos se formatean como '7h 30m', con el minuto a dos dígitos")
     void duracionLegible_formatoConDosDigitos() {
-        ReportRow fila = new ReportRow("X", LocalDate.now(), LocalTime.NOON, LocalTime.MIDNIGHT, 0, 450, false);
+        ReportRow fila = new ReportRow("X", LocalDate.now(), LocalTime.NOON, LocalTime.MIDNIGHT, 0, 450 * 60, false);
         ReportRow filaConMinutoBajo =
-                new ReportRow("X", LocalDate.now(), LocalTime.NOON, LocalTime.MIDNIGHT, 0, 425, false);
+                new ReportRow("X", LocalDate.now(), LocalTime.NOON, LocalTime.MIDNIGHT, 0, 425 * 60, false);
 
         assertThat(fila.duracionLegible()).isEqualTo("7h 30m");
         assertThat(filaConMinutoBajo.duracionLegible()).isEqualTo("7h 05m");
@@ -150,8 +153,8 @@ class ReportGeneratorTest {
     @DisplayName("Los días trabajados cuentan fechas distintas, no filas")
     void diasTrabajados_cuentaFechasDistintas() {
         MonthlyReport dosFichajesElMismoDia = new MonthlyReport("E", "X", YearMonth.of(2026, 6), List.of(
-                new ReportRow("X", LocalDate.of(2026, 6, 1), LocalTime.of(9, 0), LocalTime.of(13, 0), 0, 240, false),
-                new ReportRow("X", LocalDate.of(2026, 6, 1), LocalTime.of(15, 0), LocalTime.of(19, 0), 0, 240, false)));
+                new ReportRow("X", LocalDate.of(2026, 6, 1), LocalTime.of(9, 0), LocalTime.of(13, 0), 0, 240 * 60, false),
+                new ReportRow("X", LocalDate.of(2026, 6, 1), LocalTime.of(15, 0), LocalTime.of(19, 0), 0, 240 * 60, false)));
 
         assertThat(dosFichajesElMismoDia.diasTrabajados()).isEqualTo(1);
         assertThat(dosFichajesElMismoDia.totalLegible()).isEqualTo("8h 00m");

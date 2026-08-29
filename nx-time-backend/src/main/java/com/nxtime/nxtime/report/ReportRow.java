@@ -12,7 +12,19 @@ import java.time.LocalTime;
  * cuenta, el Excel y el PDF podrían acabar mostrando horas distintas
  * para el mismo fichaje.
  *
- * "minutosNetos" ya lleva descontadas las pausas, que es lo que cuenta
+ * El tiempo trabajado se guarda en **SEGUNDOS**, no en minutos, y los
+ * minutos son un valor derivado que solo se usa al presentar.
+ *
+ * No es un capricho: antes la fila guardaba los minutos ya truncados y
+ * {@link MonthlyReport} sumaba esos valores, con lo que cada jornada
+ * perdía hasta 59 segundos y el total de un mes de 22 días podía
+ * quedarse hasta 21 minutos corto -- en el PDF que se firma y se
+ * entrega ante una inspección. Es el mismo error que la auditoría
+ * inicial del proyecto encontró en el cómputo de pausas y que se
+ * resolvió igual: **agregar en la unidad exacta y redondear solo al
+ * mostrar**. Ver MonthlyReportTotalTest.
+ *
+ * "segundosNetos" ya lleva descontadas las pausas, que es lo que cuenta
  * como tiempo de trabajo efectivo.
  */
 public record ReportRow(
@@ -21,12 +33,22 @@ public record ReportRow(
         LocalTime horaEntrada,
         LocalTime horaSalida,
         long minutosPausa,
-        long minutosNetos,
+        long segundosNetos,
         boolean incidencia
 ) {
 
+    /**
+     * Minutos trabajados de ESTA jornada, truncados. Vale para mostrar
+     * una fila; NO para sumar varias -- para eso está
+     * {@link MonthlyReport#totalSegundos()}.
+     */
+    public long minutosNetos() {
+        return segundosNetos / 60;
+    }
+
     /** Formato "7h 30m", el que entiende cualquiera que abra el informe. */
     public String duracionLegible() {
-        return (minutosNetos / 60) + "h " + String.format("%02dm", minutosNetos % 60);
+        long minutos = minutosNetos();
+        return (minutos / 60) + "h " + String.format("%02dm", minutos % 60);
     }
 }

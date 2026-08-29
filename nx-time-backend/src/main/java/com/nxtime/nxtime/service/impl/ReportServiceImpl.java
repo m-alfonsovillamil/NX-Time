@@ -100,7 +100,9 @@ public class ReportServiceImpl implements ReportService {
                 entrada.toLocalTime().withSecond(0).withNano(0),
                 salida.toLocalTime().withSecond(0).withNano(0),
                 fichaje.getSegundosPausaAcumulados() / 60,
-                segundosNetos / 60,
+                // En SEGUNDOS, sin truncar: el total del informe se
+                // agrega a partir de aquí (ver ReportRow).
+                segundosNetos,
                 fichaje.isJornadaIncompleta());
     }
 

@@ -88,6 +88,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         Company techCorp = crearEmpresa("TechCorp Solutions");
         User gestorTech = crearUsuario("Marta Sánchez", "marta.sanchez@techcorp.demo", Role.GESTOR, techCorp);
+        // Estos dos roles nacieron en la Fase 4, después de escribirse el
+        // seeder, y sin ellos la demo no llegaba a lo que mejor la
+        // distingue: los informes mensuales, la corrección de fichajes y
+        // la línea temporal de auditoría son de RRHH/ADMIN, no de GESTOR.
+        User rrhhTech = crearUsuario("Elena Ríos", "elena.rios@techcorp.demo", Role.RRHH, techCorp);
+        crearUsuario("Raúl Ortega", "raul.ortega@techcorp.demo", Role.ADMIN, techCorp);
         List<User> empleadosTech = List.of(
                 crearUsuario("Javier López", "javier.lopez@techcorp.demo", Role.EMPLEADO, techCorp),
                 crearUsuario("Ana Fernández", "ana.fernandez@techcorp.demo", Role.EMPLEADO, techCorp),
@@ -121,9 +127,10 @@ public class DemoDataSeeder implements CommandLineRunner {
         sembrarAusencias(empleadosIberica, gestorIberica);
 
         log.info(
-                "Datos de demo listos: 2 empresas, {} usuarios, credenciales de gestor {} / {} (contraseña '{}').",
-                2 + empleadosTech.size() + 1 + empleadosIberica.size() + 1,
-                gestorTech.getEmail(), gestorIberica.getEmail(), DEMO_PASSWORD
+                "Datos de demo listos: 2 empresas, {} usuarios (contraseña '{}'). "
+                        + "Gestores: {} / {}. RRHH (informes, correcciones y auditoría): {}.",
+                userRepository.count(), DEMO_PASSWORD,
+                gestorTech.getEmail(), gestorIberica.getEmail(), rrhhTech.getEmail()
         );
     }
 
