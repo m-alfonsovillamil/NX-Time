@@ -74,6 +74,16 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    # El indicador de correo abre una conexión SMTP en cada sondeo, así
+    # que con el servidor de correo caído /actuator/health devuelve 503
+    # -- y ese endpoint es el health check de Render, que reiniciaría un
+    # servicio que funciona perfectamente. Sería contradecir la decisión
+    # de la Fase 10: el correo se envía AFTER_COMMIT y de forma asíncrona
+    # precisamente para que un fallo de SMTP no tumbe nada. Una cortesía
+    # no puede decidir si la aplicación está viva.
+    mail:
+      enabled: false
 
 # Configuración personalizada de la aplicación
 application:
