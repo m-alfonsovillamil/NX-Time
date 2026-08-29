@@ -38,6 +38,32 @@ spring:
       idle-timeout: 60000
       max-lifetime: 300000
 
+  # Flyway va POR SEPARADO del datasource, y no es un capricho de
+  # configuración: son dos conexiones distintas por dos motivos
+  # independientes que se acumulan.
+  #
+  #  1. ROL DISTINTO. La aplicación corre con un rol de mínimo
+  #     privilegio; Flyway necesita crear y alterar tablas. Que sean
+  #     roles distintos es lo que hace que el REVOKE sobre
+  #     auditoria_fichaje signifique algo (Fase 8): el dueño de una
+  #     tabla siempre puede saltarse sus propios permisos.
+  #
+  #  2. CONEXIÓN DIRECTA, NO POOLED. La documentación de Neon dice
+  #     explícitamente que las migraciones de esquema no deben ir por el
+  #     pooler: es PgBouncer en modo transacción y no soporta SET, que
+  #     las herramientas de migración usan. El host directo es el mismo
+  #     pero SIN el sufijo "-pooler".
+  #
+  # Los valores por defecto apuntan al datasource para que un despliegue
+  # al que se le olviden estas tres variables siga arrancando y falle de
+  # forma ruidosa al migrar (el rol de la aplicación no puede hacer DDL),
+  # en vez de no arrancar sin explicar por qué. Los valores buenos están
+  # en docs/DESPLIEGUE.md.
+  flyway:
+    url: ${SPRING_FLYWAY_URL:${DATABASE_URL}}
+    user: ${SPRING_FLYWAY_USER:${DATABASE_USERNAME}}
+    password: ${SPRING_FLYWAY_PASSWORD:${DATABASE_PASSWORD}}
+
   jpa:
     show-sql: false
 

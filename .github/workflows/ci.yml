@@ -30,7 +30,10 @@ jobs:
     # saber si corren en CI o en el portátil.
     services:
       postgres:
-        image: postgres:16-alpine
+        # La misma versión mayor que docker-compose y que Neon
+        # (PostgreSQL 18): si el CI validara contra otra, dejaría de ser
+        # una comprobación de lo que de verdad se despliega.
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: nxtime
           POSTGRES_USER: nxtime

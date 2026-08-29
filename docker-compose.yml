@@ -1,6 +1,18 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # PostgreSQL 18, la MISMA versión mayor que corre en Neon (ver
+    # docs/DESPLIEGUE.md). Antes era la 16: los tests validaban contra
+    # una versión distinta de la de producción, que es justo la paridad
+    # dev/prod que este proyecto defiende en todo lo demás.
+    #
+    # Al subir de versión, el volumen de datos existente deja de servir
+    # (el directorio de datos de PostgreSQL es específico de cada
+    # versión mayor) y el contenedor no arranca. Si te encuentras con
+    # "database files are incompatible with server":
+    #     docker compose down -v && docker compose up -d postgres
+    # Se pierde el seed de demo, que es desechable por diseño, y de paso
+    # se vuelve a ejecutar init-app-role.sql.
+    image: postgres:18-alpine
     container_name: nxtime-postgres
     environment:
       POSTGRES_DB: nxtime
@@ -13,7 +25,14 @@ services:
       # 5432 (como en esta, con un PostgreSQL 18 instalado aparte).
       - "5433:5432"
     volumes:
-      - nxtime-postgres-data:/var/lib/postgresql/data
+      # Montado en /var/lib/postgresql, NO en /var/lib/postgresql/data.
+      # Es un cambio de convención de la imagen oficial a partir de la
+      # 18: ahora guarda los datos en un subdirectorio por versión mayor
+      # (/var/lib/postgresql/18/docker), igual que hace pg_ctlcluster,
+      # para que un futuro "pg_upgrade --link" no choque con el punto de
+      # montaje. Con el montaje antiguo, la imagen 18 se niega a
+      # arrancar y avisa de "PostgreSQL data in ... (unused mount/volume)".
+      - nxtime-postgres-data:/var/lib/postgresql
       # Solo se ejecuta la primera vez que se crea el volumen de datos
       # (convención de la imagen oficial, docker-entrypoint-initdb.d) --
       # ver ese fichero para cómo crear el rol a mano en un volumen ya
