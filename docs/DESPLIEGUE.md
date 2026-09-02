@@ -129,4 +129,34 @@ Un cron gratuito (cron-job.org, UptimeRobot) llamando a `/actuator/health` cada
 - ✅ Esquema creado en Neon: las 5 migraciones aplicadas (PostgreSQL 18).
 - ✅ Rol `nxtime_app` creado y garantía append-only de la auditoría verificada
   contra Neon (ver `V5__audit_append_only_trigger.sql`).
-- ⬜ Servicio en Render: pendiente de crear.
+- ✅ **Servicio creado y funcionando**: https://nxtime-backend.onrender.com
+
+### Verificado en producción
+
+Comprobado de extremo a extremo, no solo el *health check*:
+
+| Prueba | Resultado |
+|---|---|
+| `GET /actuator/health` | `{"status":"UP","groups":["liveness","readiness"]}` |
+| `GET /v3/api-docs` | OpenAPI completo, con `servers` apuntando a la URL pública |
+| `POST /auth/register-manager` | `200` — empresa y ADMIN creados |
+| `POST /auth/login` | `200` — token firmado, rol `ADMIN` |
+| Endpoint protegido sin token | `401` |
+
+Que el registro escriba y la aplicación siga en pie confirma lo que más fácil
+sería tener mal: **Flyway migró con `neondb_owner` y la aplicación atiende con
+`nxtime_app`**. Si esas dos conexiones se hubieran configurado con el mismo rol,
+o la aplicación no habría arrancado (el rol de mínimo privilegio no puede hacer
+DDL) o el `REVOKE` sobre la auditoría habría quedado en papel mojado.
+
+### Cuidado al crear el servicio
+
+Render construye el formulario de variables a partir de `render.yaml`. Hasta
+[#6](https://github.com/m-alfonsovillamil/NX-Time/pull/6) el blueprint **no
+declaraba las tres `SPRING_FLYWAY_*`**, así que no se pedían y había que
+añadirlas a mano por el panel; sin ellas `application-prod.yml` las hereda del
+datasource y Flyway intenta migrar con el rol de la aplicación, que no puede.
+
+Ojo también con las variables que dejes **vacías**: Render las descarta en vez de
+guardarlas en blanco. Eso se llevó por delante `MAIL_FROM`, que no tiene valor
+por defecto y sin la cual la aplicación no arranca.

@@ -21,6 +21,8 @@ buena parte de las decisiones técnicas del proyecto.
 ## Índice
 
 - [Qué tiene de interesante](#qué-tiene-de-interesante)
+- [Probarlo en vivo](#probarlo-en-vivo)
+- [Capturas](#capturas)
 - [Stack](#stack)
 - [Arranque en un comando](#arranque-en-un-comando)
 - [Arquitectura](#arquitectura)
@@ -66,6 +68,57 @@ verifican explícitamente cruzando datos entre dos empresas.
 **Agregados en SQL, no en Java.** El panel de métricas usa `GROUP BY` en la base
 de datos; traer miles de filas a memoria para sumarlas sería justo lo que no hay
 que hacer.
+
+---
+
+## Probarlo en vivo
+
+La API está desplegada y funcionando:
+
+| | |
+|---|---|
+| **API** | https://nxtime-backend.onrender.com |
+| **Swagger UI** | https://nxtime-backend.onrender.com/swagger-ui.html |
+| **Salud** | https://nxtime-backend.onrender.com/actuator/health |
+
+Cuenta de demostración, con rol **ADMIN** sobre una empresa de prueba:
+
+```
+correo:      admin@nxtime.demo
+contraseña:  NxTimeDemo-SL5ybGOkYKrE
+```
+
+```bash
+curl -X POST https://nxtime-backend.onrender.com/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@nxtime.demo","contrasena":"NxTimeDemo-SL5ybGOkYKrE"}'
+```
+
+> ⏱️ **La primera petición tarda ~50 segundos.** El plan gratuito de Render
+> duerme el servicio tras 15 minutos sin tráfico, y Neon suspende la base de
+> datos por inactividad. No es un problema del proyecto, pero conviene saberlo:
+> por eso `application-prod.yml` sube el `connection-timeout` de HikariCP a 45 s.
+
+Los datos de esa empresa son ficticios y su contenido puede variar: cualquiera
+con estas credenciales puede modificarlos.
+
+---
+
+## Capturas
+
+La app Android, en Jetpack Compose, hablando con esta misma API:
+
+| Fichar | Historial | Ausencias |
+|---|---|---|
+| ![Mi jornada](docs/capturas/05-fichar-trabajando.png) | ![Mi historial](docs/capturas/07-mi-historial.png) | ![Solicitar ausencia](docs/capturas/09-solicitar-ausencia.png) |
+
+| Acceso | Panel de gestión | Ausencias del equipo |
+|---|---|---|
+| ![Login](docs/capturas/01-login.png) | ![Panel de gestión](docs/capturas/15-panel-gestion.png) | ![Ausencias resueltas](docs/capturas/22-ausencias-rechazadas.png) |
+
+Las **22 capturas**, con la explicación de qué demuestra cada una, están en
+[`docs/capturas/`](docs/capturas/). Son reales, contra la API, con los datos que
+siembra `DemoDataSeeder`.
 
 ---
 
@@ -279,7 +332,7 @@ reparte el poder de gestión.
 
 ### Backend
 
-**224 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**241 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -324,12 +377,27 @@ interfaz no está cubierta**: ver las limitaciones conocidas al final.
 
 ## Despliegue
 
+**Desplegado y en marcha** en https://nxtime-backend.onrender.com — backend en
+Render (Docker), base de datos en Neon (PostgreSQL 18), ambos en plan gratuito.
+Ver [Probarlo en vivo](#probarlo-en-vivo) para las credenciales.
+
 Guía completa en **[`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md)**: Docker
 multi-stage (imagen final de 411 MB, usuario no-root, capas cacheables),
 GitHub Actions, y Render + Neon con las variables ya convertidas al formato que
 necesita Spring.
 
-El CI ejecuta los 224 tests contra un PostgreSQL real en cada push, con la misma
+Dos detalles del despliegue que no son evidentes y están declarados en
+[`render.yaml`](render.yaml):
+
+- **La aplicación y Flyway usan roles distintos.** Flyway migra como el dueño de
+  la base; la aplicación atiende con un rol de mínimo privilegio. Es lo único que
+  hace real el `REVOKE` sobre la tabla de auditoría: el propietario de una tabla
+  siempre puede saltarse sus propios permisos.
+- **Y hosts distintos.** La aplicación va por el *pooler* de Neon; Flyway por
+  conexión directa, porque PgBouncer en modo transacción no soporta `SET`, que
+  las herramientas de migración necesitan.
+
+El CI ejecuta los 241 tests contra un PostgreSQL real en cada push, con la misma
 versión mayor que producción.
 
 ---
@@ -351,21 +419,23 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 
 Lo que está hecho y lo que no, sin adornos:
 
-**Funcionando:** la API completa, la app Android en Jetpack Compose y
-sincronizada con ella, el esquema desplegado en Neon, el CI en verde y los
+**Funcionando:** la API completa y **desplegada en Render contra Neon**, la app
+Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
 
 **Pendiente:**
 
-- **Capturas de la app**: este README todavía no las tiene, y con la reescritura
-  en Compose hay que hacerlas de cero.
-- **Servicio en Render sin crear**: la configuración está lista
-  (`render.yaml`), falta darle al botón.
-- **La app no tiene tests de interfaz**: hay 46 tests de JVM sobre los
-  ViewModel, `ApiErrorParser` y el formateo de fechas, que el CI ejecuta junto
-  con lint. Lo que no cubre nadie es la interfaz: **ninguna pantalla se ha
-  ejecutado nunca**, ni en un emulador ni en un test. Con Robolectric podrían
-  correr en la JVM sin necesidad de dispositivo.
+- **La app no tiene tests de interfaz automatizados**: hay 46 tests de JVM sobre
+  los ViewModel, `ApiErrorParser` y el formateo de fechas, que el CI ejecuta
+  junto con lint. La interfaz no la cubre ninguno. Las 11 pantallas **sí se han
+  ejecutado**, en un emulador y contra la API real —de ahí salen las capturas, y
+  también el único defecto que apareció, el calendario en inglés—, pero esa
+  comprobación es **manual**: nada impide que una regresión pase el CI. Con
+  Robolectric podrían correr en la JVM sin necesidad de dispositivo.
+- **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
+  solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
+  no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que
+  se cree desde la propia API.
 - **Hay backend que la app no enseña**: el saldo de vacaciones, el panel de
   indicadores, los informes descargables y la traza de auditoría existen en la
   API y no tienen pantalla. La auditoría es justo lo que este README destaca
