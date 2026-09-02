@@ -121,7 +121,7 @@ class DashboardServiceImplTest {
     }
 
     @Test
-    @DisplayName("Los tres periodos (hoy/semana/mes) van de más reciente a más antiguo y comparten fin")
+    @DisplayName("Los tres periodos (hoy/semana/mes) empiezan en o antes de hoy y comparten fin")
     void getPersonalDashboard_periodosOrdenadosYConMismoFin() {
         conUsuario();
         when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
@@ -134,10 +134,19 @@ class DashboardServiceImplTest {
                 .sumarSegundosTrabajados(eq(empleado.getId()), desde.capture(), hasta.capture());
 
         List<Instant> inicios = desde.getAllValues();
-        // Orden de llamada: hoy, semana, mes -> cada inicio es anterior
-        // o igual al anterior (igual si hoy ES lunes, o día 1 del mes).
+        // Orden de llamada: hoy, semana, mes. "Hoy" es el más reciente de
+        // los tres -- eso sí se cumple siempre, sea cual sea la fecha.
         assertThat(inicios.get(0)).isAfterOrEqualTo(inicios.get(1));
-        assertThat(inicios.get(1)).isAfterOrEqualTo(inicios.get(2));
+        assertThat(inicios.get(0)).isAfterOrEqualTo(inicios.get(2));
+        // Entre semana y mes NO hay orden garantizado, y por eso aquí no
+        // se comprueba ninguno: cuando la semana en curso arrancó en el
+        // mes anterior, su inicio es ANTERIOR al del mes. Pasa los
+        // primeros días de casi todos los meses -- el miércoles 2/9/2026,
+        // por ejemplo, la semana empieza el lunes 31/8 y el mes el 1/9.
+        // No es un defecto: "esta semana" son los días desde el lunes,
+        // aunque alguno caiga en agosto, así que los minutos de la semana
+        // pueden superar a los del mes. Afirmar lo contrario hacía que
+        // este test fallara según el día en que se ejecutara.
         // El fin es el mismo para los tres: mañana a las 00:00.
         assertThat(hasta.getAllValues()).containsOnly(hasta.getAllValues().get(0));
         assertThat(hasta.getAllValues().get(0)).isAfter(inicios.get(0));
