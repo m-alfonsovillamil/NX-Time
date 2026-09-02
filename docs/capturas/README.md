@@ -42,10 +42,7 @@ que se ven salen de los usuarios y fichajes que siembra `DemoDataSeeder`.
 | `19-historial-equipo-filtrado.png` | El mismo historial filtrado por un empleado |
 | `20-alta-empleado.png` | Alta de un empleado nuevo |
 | `21-ausencias-resueltas.png` | Ausencias ya resueltas, con quién las resolvió |
+| `22-ausencias-rechazadas.png` | El estado **Rechazada** en la misma lista: distintivo rojo frente al verde de "Aprobada", y el motivo del rechazo bajo cada petición |
 
-## Lo que falta
-
-No hay captura del estado **"Rechazada"** en la lista de resueltas. La que se
-tomó ese día llevaba a la vista un comentario de prueba escrito a mano, y no
-merecía entrar en el repositorio. Se puede rehacer levantando el entorno con
-datos de demo recién sembrados.
+> `22` se tomó el **02/09/2026**, en una sesión posterior, con el entorno
+> resembrado desde cero. Las demás son del 29/08.
