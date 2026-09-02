@@ -37,11 +37,44 @@ services:
 
       # De Neon. Formato JDBC, p. ej.:
       # jdbc:postgresql://ep-xxx.eu-central-1.aws.neon.tech/nxtime?sslmode=require
+      #
+      # El host va CON el sufijo "-pooler": la aplicación atiende
+      # peticiones concurrentes y Neon recomienda el pooler para eso.
       - key: DATABASE_URL
         sync: false
+      # El rol de mínimo privilegio de la Fase 8, NO el dueño de la base.
+      # Es lo que hace que el REVOKE sobre auditoria_fichaje signifique
+      # algo: el propietario de una tabla siempre puede saltarse sus
+      # propios permisos.
       - key: DATABASE_USERNAME
         sync: false
       - key: DATABASE_PASSWORD
+        sync: false
+
+      # Migraciones (Flyway). Van APARTE del datasource de arriba, y por
+      # dos motivos independientes que se acumulan -- están explicados
+      # con detalle en application-prod.yml:
+      #
+      #  1. ROL DISTINTO. Flyway necesita crear y alterar tablas, y el
+      #     rol de la aplicación no puede ni debe. Sin estas variables,
+      #     application-prod.yml las hereda del datasource y Flyway
+      #     intentaría migrar como el rol de aplicación: el despliegue
+      #     falla al arrancar. Falla de forma ruidosa a propósito, pero
+      #     falla.
+      #
+      #  2. CONEXIÓN DIRECTA, NO POOLED. El host es el mismo pero SIN el
+      #     sufijo "-pooler": PgBouncer en modo transacción no soporta
+      #     SET, que las herramientas de migración usan.
+      #
+      # Se declaran aquí, y no solo en docs/DESPLIEGUE.md, para que
+      # Render las pida al crear el servicio desde este blueprint. Que
+      # faltaran obligaba a añadirlas a mano por el panel después, y no
+      # había nada que lo recordara.
+      - key: SPRING_FLYWAY_URL
+        sync: false
+      - key: SPRING_FLYWAY_USER
+        sync: false
+      - key: SPRING_FLYWAY_PASSWORD
         sync: false
 
       # Clave de firma de los JWT. Sin ella la aplicación NO ARRANCA, y
