@@ -57,9 +57,22 @@
     <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
 
     <!-- Cronometro y resumen de la jornada -->
+    <!--
+      "Esta semana" y "Este mes", con determinante y no a secas.
+
+      Los dos periodos arrancan por su cuenta: la semana desde el lunes
+      anterior (previousOrSame(MONDAY) en DashboardServiceImpl) y el mes
+      desde el dia 1. A principio de mes eso hace que la semana salga
+      MAYOR que el mes, porque incluye dias del mes anterior. El dato es
+      correcto, pero con las etiquetas a secas "Semana" y "Mes" se leen
+      como si una estuviera contenida en la otra y parece un fallo.
+
+      No poner "Ultimos 7 dias": seria falso. La suma es desde el lunes,
+      no una ventana movil de siete dias, asi que un miercoles cubre tres.
+    -->
     <string name="fichar_tiempo_hoy">Hoy</string>
-    <string name="fichar_tiempo_semana">Semana</string>
-    <string name="fichar_tiempo_mes">Mes</string>
+    <string name="fichar_tiempo_semana">Esta semana</string>
+    <string name="fichar_tiempo_mes">Este mes</string>
     <string name="fichar_vacaciones">Vacaciones</string>
     <string name="fichar_vacaciones_detalle">%1$d de %2$d días disponibles</string>
     <string name="fichar_cronometro_descripcion">Llevas %1$s de jornada</string>
