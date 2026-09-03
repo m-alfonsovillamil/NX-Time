@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.ui.components.PantallaConBarra
 
@@ -115,6 +116,7 @@ private fun OpcionGestion(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
@@ -126,7 +128,11 @@ private fun OpcionGestion(
             Icon(
                 imageVector = icono,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                // Índigo, no el teal de siempre: es la señal de que has
+                // entrado en la zona de gestión. El resto de la app usa el
+                // primario, así que el cambio de familia de color se lee
+                // sin tener que anunciarlo.
+                tint = MaterialTheme.colorScheme.tertiary
             )
             Spacer(Modifier.size(16.dp))
             Text(text = texto, style = MaterialTheme.typography.titleMedium)

@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.AccionAuditoria
 import com.nxtime.app.data.dto.AuditoriaFichajeDTO
@@ -126,6 +127,7 @@ private fun PasoDeAuditoria(entrada: AuditoriaFichajeDTO, esUltimo: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp),
+            elevation = elevacionDeTarjeta(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             )

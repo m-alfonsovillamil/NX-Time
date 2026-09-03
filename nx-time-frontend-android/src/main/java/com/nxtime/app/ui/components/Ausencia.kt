@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
@@ -50,6 +51,7 @@ fun TarjetaAusencia(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
