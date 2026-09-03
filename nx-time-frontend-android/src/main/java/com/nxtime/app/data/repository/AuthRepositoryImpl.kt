@@ -5,6 +5,7 @@ import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.network.ApiService
 import com.nxtime.app.data.session.SessionManager
+import okhttp3.ResponseBody
 import retrofit2.Response
 
 /*
@@ -67,6 +68,32 @@ class AuthRepositoryImpl(
         fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>> {
         return apiService.getAuditoriaFichaje(fichajeId)
+    }
+
+    override suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO> {
+        return apiService.getPanelEmpresa()
+    }
+
+    override suspend fun cambiarEstadoEmpleado(
+        empleadoId: Long,
+        activo: Boolean
+    ): Response<Unit> {
+        return apiService.cambiarEstadoEmpleado(
+            empleadoId,
+            CambioEstadoEmpleadoRequest(activo)
+        )
+    }
+
+    override suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody> {
+        return apiService.descargarExcelDeHoras(anio, mes)
+    }
+
+    override suspend fun descargarPdfMensual(
+        empleadoId: Long,
+        anio: Int,
+        mes: Int
+    ): Response<ResponseBody> {
+        return apiService.descargarPdfMensual(empleadoId, anio, mes)
     }
 
     /*  Implementación de Ausencias (Empleado)  */

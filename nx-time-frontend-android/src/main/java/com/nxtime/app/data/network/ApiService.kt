@@ -4,12 +4,15 @@ import com.nxtime.app.data.dto.*
 import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.CrearGestorRequest
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
+import retrofit2.http.Streaming
 
 /*
  * Cada función aquí es un endpoint de la API.
@@ -75,6 +78,40 @@ interface ApiService {
     suspend fun getAuditoriaFichaje(
         @Path("id") fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>>
+
+    /*  Panel de empresa y gestión de altas/bajas  */
+
+    @GET("api/v1/dashboard/empresa")
+    suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
+
+    @PATCH("api/v1/gestor/empleados/{id}/estado")
+    suspend fun cambiarEstadoEmpleado(
+        @Path("id") empleadoId: Long,
+        @Body cambio: CambioEstadoEmpleadoRequest
+    ): Response<Unit>
+
+    /*
+     *  Informes (RRHH/ADMIN).
+     *
+     *  @Streaming es obligatorio: sin él, Retrofit carga el fichero
+     *  entero en memoria antes de devolverlo. Un Excel de la empresa
+     *  puede ser grande y no hay razón para tenerlo dos veces.
+     */
+
+    @Streaming
+    @GET("api/v1/informes/horas")
+    suspend fun descargarExcelDeHoras(
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<ResponseBody>
+
+    @Streaming
+    @GET("api/v1/informes/mensual/{empleadoId}")
+    suspend fun descargarPdfMensual(
+        @Path("empleadoId") empleadoId: Long,
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<ResponseBody>
 
     /*  Endpoints de Ausencias (Empleado)  */
 

@@ -92,6 +92,30 @@
     <string name="barra_ausencias">Ausencias</string>
     <string name="barra_gestion">Gestión</string>
 
+    <!-- Panel de empresa e informes -->
+    <string name="empresa_titulo">Panel de empresa</string>
+    <string name="empresa_empleados_activos">Empleados activos</string>
+    <string name="empresa_horas_mes">Horas del mes</string>
+    <string name="empresa_ausencias_pendientes">Ausencias por aprobar</string>
+    <string name="empresa_incidencias">Incidencias abiertas</string>
+    <string name="empresa_incidencias_ayuda">
+        Jornadas que cerró el sistema por no tener fichaje de salida y que
+        nadie ha corregido todavía.
+    </string>
+    <string name="empresa_horas_por_empleado">Horas por empleado</string>
+    <string name="empresa_plantilla">Plantilla</string>
+    <string name="empresa_mes">Mes del informe</string>
+    <string name="empresa_descargar_excel">Descargar Excel de horas</string>
+    <string name="empresa_descargar_pdf">PDF</string>
+    <string name="empresa_baja_titulo">¿Dar de baja a %1$s?</string>
+    <string name="empresa_baja_texto">
+        No se borra nada: sus fichajes se conservan y podrás volver a darle
+        de alta cuando quieras.
+    </string>
+    <string name="empresa_baja_confirmar">Dar de baja</string>
+    <string name="empresa_empleado_inactivo">De baja</string>
+    <string name="empresa_sin_visor">No hay ninguna aplicación para abrir este archivo.</string>
+
     <!-- Correccion de fichajes y auditoria (RRHH/ADMIN) -->
     <string name="correccion_titulo">Corregir fichaje</string>
     <string name="correccion_accion">Corregir</string>

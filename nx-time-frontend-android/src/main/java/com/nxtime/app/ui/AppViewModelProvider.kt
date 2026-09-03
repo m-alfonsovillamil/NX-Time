@@ -18,6 +18,7 @@ import com.nxtime.app.ui.fichar.FicharViewModel
 import com.nxtime.app.ui.gestion.AltaUsuarioViewModel
 import com.nxtime.app.ui.gestion.AusenciasEquipoViewModel
 import com.nxtime.app.ui.gestion.HistorialEquipoViewModel
+import com.nxtime.app.ui.gestion.PanelEmpresaViewModel
 import com.nxtime.app.ui.historial.HistorialViewModel
 import com.nxtime.app.ui.usuario.CambiarContrasenaViewModel
 
@@ -48,6 +49,7 @@ object AppViewModelProvider {
         initializer { HistorialEquipoViewModel(app().authRepository) }
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }
+        initializer { PanelEmpresaViewModel(app().authRepository) }
 
         /*
          * Estos dos necesitan saber SOBRE QUÉ fichaje trabajan. El id

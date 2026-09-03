@@ -5,6 +5,7 @@ import com.nxtime.app.data.dto.RefreshTokenRequest
 import com.nxtime.app.data.session.SessionManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.Route
@@ -42,6 +43,26 @@ class RetrofitClient(
             HttpLoggingInterceptor.Level.BODY
         } else {
             HttpLoggingInterceptor.Level.NONE
+        }
+    }
+
+    /**
+     * El mismo logging, pero sin tocar las descargas de informes.
+     *
+     * A nivel BODY, `HttpLoggingInterceptor` bufferiza el cuerpo ENTERO
+     * para poder imprimirlo. Sobre una respuesta troceada
+     * (`Transfer-Encoding: chunked`), que es como viajan el Excel y el
+     * PDF, esa lectura muere con `EOFException` **después** de que el
+     * servidor haya respondido 200: la petición se veía correcta en el
+     * log y la app enseñaba "no se ha podido conectar".
+     *
+     * Además, volcar un .xlsx binario a logcat no informa de nada.
+     */
+    private val loggingSalvoDescargas = Interceptor { chain ->
+        if (chain.request().url.encodedPath.contains("/informes/")) {
+            chain.proceed(chain.request())
+        } else {
+            loggingInterceptor.intercept(chain)
         }
     }
 
@@ -122,7 +143,7 @@ class RetrofitClient(
      */
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
-        .addInterceptor(loggingInterceptor)
+        .addInterceptor(loggingSalvoDescargas)
         .authenticator(tokenAuthenticator)
         .build()
 

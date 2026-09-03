@@ -46,6 +46,7 @@ import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
 import com.nxtime.app.ui.gestion.AusenciasEquipoScreen
 import com.nxtime.app.ui.gestion.HistorialEquipoScreen
+import com.nxtime.app.ui.gestion.PanelEmpresaScreen
 import com.nxtime.app.ui.gestion.PanelGestionScreen
 import com.nxtime.app.ui.historial.HistorialScreen
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
@@ -76,6 +77,7 @@ enum class Pantalla(val ruta: String) {
     EQUIPO("equipo"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
+    EMPRESA("empresa"),
     AUDITORIA("auditoria/{$ARG_FICHAJE_ID}"),
     CORRECCION("correccion/{$ARG_FICHAJE_ID}?$ARG_NOMBRE={$ARG_NOMBRE}" +
             "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}");
@@ -351,6 +353,11 @@ fun NxTimeNavHost(
                     // la opción se le ofrecía a cualquier gestor y el
                     // backend respondía 403 sin falta.
                     puedeCrearGestores = Permisos.puedeCrearGestores(rol),
+                    // El panel de empresa lo ve cualquier rol de gestión;
+                    // lo que hay DENTRO (informes y altas/bajas) se gatea
+                    // aparte, porque son authorities de RRHH.
+                    puedeVerPanelEmpresa = Permisos.puedeVerPanelEmpresa(rol),
+                    onIrPanelEmpresa = { navController.navigate(Pantalla.EMPRESA.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
                         navController.navigate(Pantalla.ausenciasEquipo(resueltas = false))
@@ -388,6 +395,14 @@ fun NxTimeNavHost(
                     onVerAuditoria = { registro ->
                         navController.navigate(Pantalla.auditoria(registro.id))
                     }
+                )
+            }
+
+            composable(Pantalla.EMPRESA.ruta) {
+                PanelEmpresaScreen(
+                    onVolver = navController::navigateUp,
+                    puedeGestionarEmpleados = Permisos.puedeGestionarEmpleados(rol),
+                    puedeExportar = Permisos.puedeExportarInformes(rol)
                 )
             }
 

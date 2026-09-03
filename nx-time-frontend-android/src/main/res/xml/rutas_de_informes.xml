@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lo unico que el FileProvider puede ceder: la subcarpeta "informes"
+    de la cache de la app.
+
+    Deliberadamente NO se declara la cache entera ni "files": un
+    FileProvider con la raiz abierta permitiria ceder por error cualquier
+    fichero interno, incluidas las SharedPreferences donde vive el
+    refresh token.
+-->
+<paths>
+    <cache-path name="informes" path="informes/" />
+</paths>

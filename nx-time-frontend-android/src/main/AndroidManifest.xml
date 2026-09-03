@@ -43,6 +43,30 @@
             </intent-filter>
         </activity>
 
+        <!--
+            FileProvider para los informes descargados (Excel y PDF).
+
+            Los informes se guardan en la cache de la app, no en la
+            carpeta de descargas: llevan datos personales de toda la
+            plantilla y ahi los leeria cualquier app con permiso de
+            lectura. Este proveedor concede acceso a un fichero concreto,
+            solo a la app que el usuario elija para abrirlo y solo
+            mientras dure el intent.
+
+            grantUriPermissions es lo que hace posible esa cesion
+            temporal; exported="false" impide que nadie llame al
+            proveedor por su cuenta.
+        -->
+        <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="${applicationId}.informes"
+                android:exported="false"
+                android:grantUriPermissions="true">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/rutas_de_informes" />
+        </provider>
+
     </application>
 
 </manifest>
