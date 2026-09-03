@@ -36,7 +36,7 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.RegistroEquipoDTO
 import com.nxtime.app.ui.AppViewModelProvider
-import com.nxtime.app.ui.components.EstadoCargando
+import com.nxtime.app.ui.components.ListaConRecarga
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -92,16 +92,19 @@ fun HistorialEquipoScreen(
         titulo = stringResource(R.string.equipo_titulo),
         onVolver = onVolver
     ) { modifier ->
+        ListaConRecarga(
+            cargando = estado.cargando,
+            hayContenido = estado.registrosVisibles.isNotEmpty(),
+            onRecargar = viewModel::cargar,
+            modifier = modifier
+        ) {
         when {
-            estado.cargando -> EstadoCargando(modifier)
-
             estado.error != null -> EstadoErrorPantalla(
                 mensaje = estado.error!!.resolver(),
-                onReintentar = viewModel::cargar,
-                modifier = modifier
+                onReintentar = viewModel::cargar
             )
 
-            else -> Column(modifier = modifier.fillMaxSize()) {
+            else -> Column(modifier = Modifier.fillMaxSize()) {
 
                 if (estado.empleados.isNotEmpty()) {
                     FiltroEmpleado(
@@ -145,6 +148,7 @@ fun HistorialEquipoScreen(
                     }
                 }
             }
+        }
         }
     }
 }

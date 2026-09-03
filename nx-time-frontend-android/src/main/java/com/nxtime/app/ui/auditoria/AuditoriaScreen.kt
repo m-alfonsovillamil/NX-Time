@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.auditoria
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -186,26 +187,52 @@ private fun CambiosDeHora(entrada: AuditoriaFichajeDTO) {
     val antes = leerInstantanea(entrada.valorAnterior)
     val despues = leerInstantanea(entrada.valorNuevo) ?: return
 
-    if (antes?.horaEntrada != null && antes.horaEntrada != despues.horaEntrada) {
-        Text(
-            text = stringResource(
-                R.string.auditoria_entrada_cambio,
-                DateFormats.hora(antes.horaEntrada),
-                DateFormats.hora(despues.horaEntrada)
-            ),
-            style = MaterialTheme.typography.bodyMedium
+    if (antes?.horaEntrada != despues.horaEntrada) {
+        LineaDeCambio(
+            anterior = antes?.horaEntrada,
+            nuevo = despues.horaEntrada,
+            cambio = R.string.auditoria_entrada_cambio,
+            fijado = R.string.auditoria_entrada_fijada
         )
     }
     if (antes?.horaSalida != despues.horaSalida) {
-        Text(
-            text = stringResource(
-                R.string.auditoria_salida_cambio,
-                DateFormats.hora(antes?.horaSalida),
-                DateFormats.hora(despues.horaSalida)
-            ),
-            style = MaterialTheme.typography.bodyMedium
+        LineaDeCambio(
+            anterior = antes?.horaSalida,
+            nuevo = despues.horaSalida,
+            cambio = R.string.auditoria_salida_cambio,
+            fijado = R.string.auditoria_salida_fijada
         )
     }
+}
+
+/**
+ * "Salida: 17:27 h → 18:27 h" cuando había un valor antes; solo
+ * "Salida: 22:52 h" cuando se fija por primera vez.
+ *
+ * La distinción importa: al cerrar una jornada que estaba abierta, la
+ * instantánea anterior tiene `horaSalida` a null, y pintar la flecha
+ * daba **"Salida: -- → 22:52 h"**, que obliga a descifrar qué significa
+ * ese "--" en un registro de cumplimiento normativo.
+ *
+ * Si el valor nuevo tampoco existe no se pinta nada: una línea que dijera
+ * "Salida: --" no informa de nada.
+ */
+@Composable
+private fun LineaDeCambio(
+    anterior: String?,
+    nuevo: String?,
+    @StringRes cambio: Int,
+    @StringRes fijado: Int
+) {
+    if (nuevo == null) return
+    Text(
+        text = if (anterior == null) {
+            stringResource(fijado, DateFormats.hora(nuevo))
+        } else {
+            stringResource(cambio, DateFormats.hora(anterior), DateFormats.hora(nuevo))
+        },
+        style = MaterialTheme.typography.bodyMedium
+    )
 }
 
 @Composable

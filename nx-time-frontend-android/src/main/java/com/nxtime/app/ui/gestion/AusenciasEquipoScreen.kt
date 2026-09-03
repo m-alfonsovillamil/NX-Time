@@ -35,7 +35,7 @@ import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
-import com.nxtime.app.ui.components.EstadoCargando
+import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -68,17 +68,20 @@ fun AusenciasEquipoScreen(
         ),
         onVolver = onVolver
     ) { modifier ->
+        ListaConRecarga(
+            cargando = estado.cargando,
+            hayContenido = estado.peticiones.isNotEmpty(),
+            onRecargar = viewModel::cargar,
+            modifier = modifier
+        ) {
         when {
-            estado.cargando -> EstadoCargando(modifier)
-
             // Un error de carga deja la pantalla sin nada que enseñar,
             // así que ocupa toda la pantalla y ofrece reintentar. Un
             // error al resolver una petición, en cambio, va como aviso
             // encima de la lista, que sigue siendo válida.
             estado.error != null && estado.peticiones.isEmpty() -> EstadoErrorPantalla(
                 mensaje = estado.error!!.resolver(),
-                onReintentar = viewModel::cargar,
-                modifier = modifier
+                onReintentar = viewModel::cargar
             )
 
             estado.peticiones.isEmpty() -> EstadoVacio(
@@ -89,11 +92,10 @@ fun AusenciasEquipoScreen(
                 texto = stringResource(
                     if (resueltas) R.string.resueltas_vacio_texto
                     else R.string.pendientes_vacio_texto
-                ),
-                modifier = modifier
+                )
             )
 
-            else -> Column(modifier = modifier.fillMaxSize()) {
+            else -> Column(modifier = Modifier.fillMaxSize()) {
                 estado.error?.let { mensaje ->
                     BannerError(
                         mensaje = mensaje.resolver(),
@@ -124,6 +126,7 @@ fun AusenciasEquipoScreen(
                     }
                 }
             }
+        }
         }
     }
 

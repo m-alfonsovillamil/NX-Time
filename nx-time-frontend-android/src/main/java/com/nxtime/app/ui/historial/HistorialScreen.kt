@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.historial
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
-import com.nxtime.app.ui.components.EstadoCargando
+import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -42,28 +43,31 @@ fun HistorialScreen(
     PantallaConBarra(
         titulo = stringResource(R.string.historial_titulo)
     ) { modifier ->
-        when {
-            estado.cargando -> EstadoCargando(modifier)
+        ListaConRecarga(
+            cargando = estado.cargando,
+            hayContenido = estado.registros.isNotEmpty(),
+            onRecargar = viewModel::cargar,
+            modifier = modifier
+        ) {
+            when {
+                estado.error != null -> EstadoErrorPantalla(
+                    mensaje = estado.error!!.resolver(),
+                    onReintentar = viewModel::cargar
+                )
 
-            estado.error != null -> EstadoErrorPantalla(
-                mensaje = estado.error!!.resolver(),
-                onReintentar = viewModel::cargar,
-                modifier = modifier
-            )
+                estado.registros.isEmpty() -> EstadoVacio(
+                    titulo = stringResource(R.string.historial_vacio_titulo),
+                    texto = stringResource(R.string.historial_vacio_texto)
+                )
 
-            estado.registros.isEmpty() -> EstadoVacio(
-                titulo = stringResource(R.string.historial_vacio_titulo),
-                texto = stringResource(R.string.historial_vacio_texto),
-                modifier = modifier
-            )
-
-            else -> LazyColumn(
-                modifier = modifier.fillMaxWidth(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(estado.registros, key = { it.id }) { registro ->
-                    TarjetaJornada(registro)
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(estado.registros, key = { it.id }) { registro ->
+                        TarjetaJornada(registro)
+                    }
                 }
             }
         }
