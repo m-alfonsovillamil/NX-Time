@@ -5,6 +5,7 @@ import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.Registro
+import com.nxtime.app.data.dto.ResumenPersonalDTO
 import com.nxtime.app.data.dto.TipoFichaje
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
@@ -233,5 +234,70 @@ class FicharViewModelTest {
         viewModel.cerrarSesion()
 
         verify(sesion).clearAuthData()
+    }
+
+    /*
+     * Los totales del resumen.
+     *
+     * `GET /dashboard/resumen` filtra por `hora_salida IS NOT NULL`, así
+     * que sus minutos cuentan SOLO jornadas cerradas. La pantalla tiene
+     * que sumarle la que está abierta o enseñaría "Hoy: 0h 00m" a quien
+     * lleva dos horas fichado. Estos tests fijan esa suma.
+     */
+
+    private fun resumen(
+        minutosHoy: Long = 0,
+        minutosSemana: Long = 0,
+        minutosMes: Long = 0
+    ) = ResumenPersonalDTO(
+        estadoActual = "TRABAJANDO",
+        minutosHoy = minutosHoy,
+        minutosSemana = minutosSemana,
+        minutosMes = minutosMes,
+        ausenciasPendientes = 0,
+        saldoVacaciones = null
+    )
+
+    @Test
+    fun `la jornada abierta se suma a hoy, a la semana y al mes`() {
+        val estado = FicharUiState(
+            resumen = resumen(minutosHoy = 120, minutosSemana = 600, minutosMes = 2400),
+            segundosEnCurso = 90 * 60
+        )
+
+        assertEquals(210L, estado.minutosHoy)
+        assertEquals(690L, estado.minutosSemana)
+        assertEquals(2490L, estado.minutosMes)
+    }
+
+    /**
+     * Sin ninguna jornada cerrada todavía -- el primer día de alguien --
+     * lo que se enseña es justo lo que lleva en curso, no un cero.
+     */
+    @Test
+    fun `sin jornadas cerradas el total es el tiempo en curso`() {
+        val estado = FicharUiState(resumen = resumen(), segundosEnCurso = 45 * 60)
+
+        assertEquals(45L, estado.minutosHoy)
+    }
+
+    /**
+     * Los segundos sueltos de la jornada en curso no ascienden a minuto
+     * hasta cumplirlo: 119 segundos son 1 minuto, no 2. Es la misma
+     * regla que aplica el backend, y mezclarlas daría totales que no
+     * cuadran con el informe.
+     */
+    @Test
+    fun `los segundos en curso se truncan igual que en el backend`() {
+        val estado = FicharUiState(resumen = resumen(minutosHoy = 10), segundosEnCurso = 119)
+
+        assertEquals(11L, estado.minutosHoy)
+    }
+
+    @Test
+    fun `sin resumen los totales no inventan datos`() {
+        val estado = FicharUiState(resumen = null, segundosEnCurso = 60)
+
+        assertEquals(1L, estado.minutosHoy)
     }
 }

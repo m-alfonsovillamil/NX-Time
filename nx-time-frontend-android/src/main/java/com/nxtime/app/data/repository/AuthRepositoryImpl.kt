@@ -52,6 +52,10 @@ class AuthRepositoryImpl(
         return apiService.getHistorial()
     }
 
+    override suspend fun getResumenPersonal(): Response<ResumenPersonalDTO> {
+        return apiService.getResumenPersonal()
+    }
+
     /*  Implementación de Ausencias (Empleado)  */
 
     override suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia> {

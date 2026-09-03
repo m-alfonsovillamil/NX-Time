@@ -20,6 +20,13 @@ import org.mapstruct.Named;
  * único cálculo sobre el total real acumulado, en vez de sumar minutos
  * truncados por cada pausa individual (ver TimeEntry, y auditoría).
  *
+ * Aun así ese minuto sigue siendo un valor TRUNCADO, y por eso
+ * TimeEntryResponse viaja además con los segundos en crudo: con solo los
+ * minutos no se puede reconstruir el tiempo neto exacto (una pausa de
+ * 40 s viaja como 0). Los minutos son para PINTAR; los segundos, para
+ * CALCULAR. Los segundos se mapean solos, por coincidir el nombre con el
+ * de la entidad.
+ *
  * segundosAMinutos() va marcado con @Named y se referencia con
  * qualifiedByName (no con expression="java(...)"): con expression,
  * MapStruct trataba el método como conversor implícito genérico

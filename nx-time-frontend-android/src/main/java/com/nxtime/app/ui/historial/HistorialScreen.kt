@@ -116,7 +116,7 @@ private fun TarjetaJornada(registro: Registro) {
                     valor = DateFormats.duracionNeta(
                         registro.horaEntrada,
                         registro.horaSalida,
-                        registro.minutosPausaAcumulados
+                        registro.segundosPausaAcumulados
                     ),
                     modifier = Modifier.weight(1f)
                 )

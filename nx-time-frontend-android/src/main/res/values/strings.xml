@@ -55,6 +55,23 @@
     <string name="fichar_reanuda_antes">Reanuda la jornada antes de finalizarla.</string>
     <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
 
+    <!-- Cronometro y resumen de la jornada -->
+    <string name="fichar_tiempo_hoy">Hoy</string>
+    <string name="fichar_tiempo_semana">Semana</string>
+    <string name="fichar_tiempo_mes">Mes</string>
+    <string name="fichar_vacaciones">Vacaciones</string>
+    <string name="fichar_vacaciones_detalle">%1$d de %2$d días disponibles</string>
+    <string name="fichar_cronometro_descripcion">Llevas %1$s de jornada</string>
+    <!--
+      Plural de verdad y no dos <string>: en espanol "1 solicitud" y
+      "2 solicitudes" cambian de forma, y concatenar una "s" a mano falla
+      en cuanto se traduzca a otro idioma.
+    -->
+    <plurals name="fichar_ausencias_pendientes">
+        <item quantity="one">Tienes %1$d solicitud de ausencia sin responder</item>
+        <item quantity="other">Tienes %1$d solicitudes de ausencia sin responder</item>
+    </plurals>
+
     <!-- Navegacion principal -->
     <string name="nav_historial">Mi historial</string>
     <string name="nav_ausencias">Mis ausencias</string>

@@ -19,6 +19,7 @@ interface AuthRepository {
     suspend fun getRegistroActivo(): Response<Registro?>
     suspend fun registrarFichaje(peticion: PeticionFichaje): Response<Registro>
     suspend fun getHistorial(): Response<List<Registro>>
+    suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
 
     /* Funciones de Ausencias (Empleado) */
     suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia>

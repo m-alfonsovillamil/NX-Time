@@ -36,7 +36,7 @@ class DateFormatsTest {
             DateFormats.duracionNeta(
                 "2026-08-29T07:00:00Z",
                 "2026-08-29T16:00:00Z",
-                minutosPausa = 60
+                segundosPausa = 60 * 60
             )
         )
     }
@@ -48,7 +48,7 @@ class DateFormatsTest {
             DateFormats.duracionNeta(
                 "2026-08-29T07:00:00Z",
                 "2026-08-29T15:00:59Z",
-                minutosPausa = 30
+                segundosPausa = 30 * 60
             )
         )
     }
@@ -67,7 +67,7 @@ class DateFormatsTest {
             DateFormats.duracionNeta(
                 "2026-08-29T07:00:00Z",
                 "2026-08-29T08:00:00Z",
-                minutosPausa = 120
+                segundosPausa = 120 * 60
             )
         )
     }
