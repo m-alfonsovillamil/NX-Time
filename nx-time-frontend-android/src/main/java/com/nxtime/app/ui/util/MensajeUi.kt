@@ -30,7 +30,12 @@ sealed interface MensajeUi {
 
     /** Una entrada de strings.xml, con sus argumentos si los lleva. */
     data class Recurso(
-        @StringRes val id: Int,
+        // `@param:` explícito: en Kotlin 2.2 una anotación sin destino
+        // sobre una propiedad de constructor pasará en el futuro a
+        // aplicarse también al campo, y el compilador avisa de ello.
+        // Aquí interesa solo el parámetro, que es lo que valida el lint
+        // de recursos.
+        @param:StringRes val id: Int,
         val argumentos: List<Any> = emptyList()
     ) : MensajeUi
 

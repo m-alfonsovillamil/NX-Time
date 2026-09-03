@@ -18,10 +18,18 @@ pluginManagement {
     // composeOptions.kotlinCompilerExtensionVersion, que obligaba a
     // emparejar a mano cada versión de Kotlin con la suya de Compose.
     // Subirlo es seguro: el backend no tiene ni un fichero .kt.
+    //
+    // AGP se queda en la línea 8.x (la 8.13.2 es la última) y no salta a
+    // la 9.x a propósito. Lo que se persigue aquí es Material 3
+    // Expressive, y para eso basta con el BOM de Compose 2025.11.00 (ver
+    // el porqué de esa versión en build.gradle.kts del módulo Android).
+    // Del BOM 2025.12.00 en adelante sí haría falta AGP 9.1 y
+    // `compileSdk 37`, que es una migración distinta: meterla en el
+    // mismo PR haría imposible saber cuál de las dos rompió qué.
     plugins {
-        id("com.android.application") version "8.12.0"
-        id("org.jetbrains.kotlin.android") version "2.0.21"
-        id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+        id("com.android.application") version "8.13.2"
+        id("org.jetbrains.kotlin.android") version "2.2.20"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
         id("org.springframework.boot") version "3.5.6"
         id("io.spring.dependency-management") version "1.1.7"
         id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"

@@ -2,6 +2,8 @@
  * El bloque 'plugins' define las "herramientas" que usa el proyecto.
  */
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -9,6 +11,17 @@ plugins {
     // y toma la versión del propio Kotlin, así que ya no hay que
     // emparejar a mano Kotlin <-> compilador de Compose.
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+/*
+ * `android { kotlinOptions { jvmTarget = "17" } }` quedó obsoleto en
+ * Kotlin 2.2. El destino de la JVM se declara ahora aquí, en la
+ * extensión de Kotlin y con un tipo en vez de una cadena suelta.
+ */
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
 
 /*
@@ -83,10 +96,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         // Necesario para los buildConfigField de los flavors: desde el
@@ -140,7 +149,15 @@ dependencies {
      * librerías de Compose que sean compatibles entre sí, por eso las de
      * abajo van sin número.
      */
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    /*
+     * BOM 2025.11.00 y no uno más nuevo: es el primero cuyo Material 3
+     * es la 1.4.0, es decir, Expressive ya estable (formas, esquemas de
+     * movimiento, LoadingIndicator, ButtonGroup...), y el último de esa
+     * serie que sigue compilando contra `compileSdk 36` con AGP 8.x.
+     * Del BOM 2025.12.00 en adelante, Compose pasa a la 1.10 y **exige
+     * AGP 9.1+ y compileSdk 37**, que es otra migración distinta.
+     */
+    val composeBom = platform("androidx.compose:compose-bom:2025.11.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -149,14 +166,24 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    /*
+     * NavigationSuiteScaffold: una sola declaración de destinos que se
+     * pinta como barra inferior en móvil y como raíl lateral en tablet o
+     * plegable, sin escribir dos layouts. Va en el BOM, así que sin
+     * número de versión.
+     */
+    implementation("androidx.compose.material3:material3-adaptive-navigation-suite")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.navigation:navigation-compose:2.8.4")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    // Estas tres se quedan deliberadamente por debajo de su última
+    // versión: lifecycle 2.10+, activity 1.12+ y navigation 2.10 piden
+    // AGP 9.1, igual que el BOM de arriba.
+    implementation("androidx.activity:activity-compose:1.11.0")
+    implementation("androidx.navigation:navigation-compose:2.9.8")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     // collectAsStateWithLifecycle: deja de recolectar el StateFlow
     // cuando la pantalla no está visible.
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
 
     /*
      * Dependencias base de Android.
@@ -165,7 +192,7 @@ dependencies {
      * hereda de ComponentActivity y el tema de arranque cuelga del de la
      * plataforma, así que nada del proyecto la usaba ya.
      */
-    implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.core:core-ktx:1.17.0")
 
     /*
      * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo
