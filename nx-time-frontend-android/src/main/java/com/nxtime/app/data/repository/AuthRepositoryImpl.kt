@@ -56,6 +56,19 @@ class AuthRepositoryImpl(
         return apiService.getResumenPersonal()
     }
 
+    override suspend fun corregirFichaje(
+        fichajeId: Long,
+        peticion: CorreccionFichajeRequest
+    ): Response<Registro> {
+        return apiService.corregirFichaje(fichajeId, peticion)
+    }
+
+    override suspend fun getAuditoriaFichaje(
+        fichajeId: Long
+    ): Response<List<AuditoriaFichajeDTO>> {
+        return apiService.getAuditoriaFichaje(fichajeId)
+    }
+
     /*  Implementación de Ausencias (Empleado)  */
 
     override suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia> {

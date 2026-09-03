@@ -37,18 +37,56 @@ import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.RegistroEquipoDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.EstadoCargando
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 
+/**
+ * @param puedeCorregir si se ofrece corregir un fichaje. Lo decide
+ *   `Permisos` a partir del rol: `fichaje:corregir` la tienen RRHH y
+ *   ADMIN, no un GESTOR. Ofrecérselo a quien no la tiene sería repetir el
+ *   defecto del botón "Crear gestor", que siempre acababa en 403.
+ * @param puedeAuditar ídem con `fichaje:auditoria`.
+ */
 @Composable
 fun HistorialEquipoScreen(
     onVolver: () -> Unit,
+    puedeCorregir: Boolean = false,
+    puedeAuditar: Boolean = false,
+    onCorregir: (RegistroEquipoDTO) -> Unit = {},
+    onVerAuditoria: (RegistroEquipoDTO) -> Unit = {},
     viewModel: HistorialEquipoViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+
+    /*
+     * Recargar al volver a la pantalla, no solo al crearla.
+     *
+     * Sin esto, tras corregir un fichaje se volvía aquí y la lista
+     * seguía enseñando el registro ANTIGUO -- el que la corrección
+     * acababa de anular. Y no era solo cosmético: pulsar "Ver auditoría"
+     * en esa tarjeta preguntaba por un id que el historial ya no debería
+     * contener.
+     *
+     * `ON_RESUME` y no `LaunchedEffect(Unit)`: este último solo se
+     * dispara al entrar por primera vez, que es justo el caso que ya
+     * cubría el `init` del ViewModel.
+     */
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargar()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
 
     PantallaConBarra(
         titulo = stringResource(R.string.equipo_titulo),
@@ -96,7 +134,13 @@ fun HistorialEquipoScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(visibles, key = { it.id }) { registro ->
-                            TarjetaJornadaEquipo(registro)
+                            TarjetaJornadaEquipo(
+                                registro = registro,
+                                puedeCorregir = puedeCorregir,
+                                puedeAuditar = puedeAuditar,
+                                onCorregir = { onCorregir(registro) },
+                                onVerAuditoria = { onVerAuditoria(registro) }
+                            )
                         }
                     }
                 }
@@ -148,7 +192,13 @@ private fun FiltroEmpleado(
 }
 
 @Composable
-private fun TarjetaJornadaEquipo(registro: RegistroEquipoDTO) {
+private fun TarjetaJornadaEquipo(
+    registro: RegistroEquipoDTO,
+    puedeCorregir: Boolean,
+    puedeAuditar: Boolean,
+    onCorregir: () -> Unit,
+    onVerAuditoria: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -207,6 +257,33 @@ private fun TarjetaJornadaEquipo(registro: RegistroEquipoDTO) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            /*
+             * Acciones de cumplimiento normativo, solo para quien tiene
+             * la authority. Corregir además solo tiene sentido sobre una
+             * jornada CERRADA: el backend responde 409 sobre una abierta,
+             * así que el botón ni se ofrece.
+             */
+            val jornadaCerrada = registro.horaSalida != null
+            if ((puedeCorregir && jornadaCerrada) || puedeAuditar) {
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    if (puedeAuditar) {
+                        TextButton(onClick = onVerAuditoria) {
+                            Text(stringResource(R.string.auditoria_accion))
+                        }
+                    }
+                    if (puedeCorregir && jornadaCerrada) {
+                        TextButton(onClick = onCorregir) {
+                            Text(stringResource(R.string.correccion_accion))
+                        }
+                    }
+                }
             }
         }
     }

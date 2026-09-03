@@ -2,11 +2,15 @@ package com.nxtime.app.ui
 
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nxtime.app.NxTimeApplication
 import com.nxtime.app.ui.acceso.LoginViewModel
+import com.nxtime.app.ui.auditoria.AuditoriaViewModel
+import com.nxtime.app.ui.auditoria.CorregirFichajeViewModel
+import com.nxtime.app.ui.navegacion.ARG_FICHAJE_ID
 import com.nxtime.app.ui.acceso.RegistroEmpresaViewModel
 import com.nxtime.app.ui.ausencias.AusenciasViewModel
 import com.nxtime.app.ui.ausencias.SolicitudViewModel
@@ -44,6 +48,26 @@ object AppViewModelProvider {
         initializer { HistorialEquipoViewModel(app().authRepository) }
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }
+
+        /*
+         * Estos dos necesitan saber SOBRE QUÉ fichaje trabajan. El id
+         * llega por el `SavedStateHandle`, que es donde Navigation deja
+         * los argumentos de la ruta: así el ViewModel lo recibe ya
+         * construido en vez de tener que pasárselo desde el composable,
+         * y sobrevive a un cambio de configuración sin volver a leerlo.
+         */
+        initializer {
+            AuditoriaViewModel(
+                fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
+                authRepository = app().authRepository
+            )
+        }
+        initializer {
+            CorregirFichajeViewModel(
+                fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
+                authRepository = app().authRepository
+            )
+        }
     }
 }
 
