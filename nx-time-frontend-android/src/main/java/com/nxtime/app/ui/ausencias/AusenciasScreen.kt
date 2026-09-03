@@ -16,7 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
-import com.nxtime.app.ui.components.EstadoCargando
+import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -42,28 +42,30 @@ fun AusenciasScreen(
             }
         }
     ) { modifier ->
-        when {
-            estado.cargando -> EstadoCargando(modifier)
+        ListaConRecarga(
+            cargando = estado.cargando,
+            hayContenido = estado.peticiones.isNotEmpty(),
+            onRecargar = viewModel::cargar,
+            modifier = modifier
+        ) {
+            when {
+                estado.error != null -> EstadoErrorPantalla(
+                    mensaje = estado.error!!.resolver(),
+                    onReintentar = viewModel::cargar
+                )
 
-            estado.error != null -> EstadoErrorPantalla(
-                mensaje = estado.error!!.resolver(),
-                onReintentar = viewModel::cargar,
-                modifier = modifier
-            )
+                estado.peticiones.isEmpty() -> EstadoVacio(
+                    titulo = stringResource(R.string.ausencias_vacio_titulo),
+                    texto = stringResource(R.string.ausencias_vacio_texto)
+                )
 
-            estado.peticiones.isEmpty() -> EstadoVacio(
-                titulo = stringResource(R.string.ausencias_vacio_titulo),
-                texto = stringResource(R.string.ausencias_vacio_texto),
-                modifier = modifier
-            )
-
-            else -> LazyColumn(
-                modifier = modifier,
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(estado.peticiones, key = { it.id }) { peticion ->
-                    TarjetaAusencia(peticion = peticion)
+                else -> LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(estado.peticiones, key = { it.id }) { peticion ->
+                        TarjetaAusencia(peticion = peticion)
+                    }
                 }
             }
         }

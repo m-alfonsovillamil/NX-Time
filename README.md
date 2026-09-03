@@ -106,17 +106,20 @@ con estas credenciales puede modificarlos.
 
 ## Capturas
 
-La app Android, en Jetpack Compose, hablando con esta misma API:
+La app Android, en Jetpack Compose con Material 3 Expressive, hablando con esta
+misma API:
 
-| Fichar | Historial | Ausencias |
+| Mi jornada | Panel de empresa | Traza de auditoría |
 |---|---|---|
-| ![Mi jornada](docs/capturas/05-fichar-trabajando.png) | ![Mi historial](docs/capturas/07-mi-historial.png) | ![Solicitar ausencia](docs/capturas/09-solicitar-ausencia.png) |
+| ![Mi jornada](docs/capturas/05-fichar-trabajando.png) | ![Panel de empresa](docs/capturas/23-panel-empresa.png) | ![Traza de auditoría](docs/capturas/27-traza-auditoria.png) |
+| Cronómetro en vivo y totales del día, la semana y el mes | Indicadores del mes e incidencias sin corregir | Qué cambió, quién y desde dónde, sobre un registro inmutable |
 
-| Acceso | Panel de gestión | Ausencias del equipo |
+| Historial | Corregir un fichaje | En tablet |
 |---|---|---|
-| ![Login](docs/capturas/01-login.png) | ![Panel de gestión](docs/capturas/15-panel-gestion.png) | ![Ausencias resueltas](docs/capturas/22-ausencias-rechazadas.png) |
+| ![Mi historial](docs/capturas/07-mi-historial.png) | ![Corregir fichaje](docs/capturas/26-corregir-fichaje.png) | ![Raíl en tablet](docs/capturas/28-tablet-rail.png) |
+| Total neto, ya descontadas las pausas | Solo RRHH/ADMIN, y solo sobre jornadas cerradas | La barra inferior se vuelve raíl lateral sola |
 
-Las **22 capturas**, con la explicación de qué demuestra cada una, están en
+Las **28 capturas**, con la explicación de qué demuestra cada una, están en
 [`docs/capturas/`](docs/capturas/). Son reales, contra la API, con los datos que
 siembra `DemoDataSeeder`.
 
@@ -136,7 +139,7 @@ siembra `DemoDataSeeder`.
 | Caché | Caffeine |
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
 | Build | Gradle (Kotlin DSL), monorepo de dos módulos |
-| App móvil | Kotlin 2.0 · Jetpack Compose (Material 3) · MVVM con `StateFlow` · navigation-compose · Retrofit |
+| App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · Retrofit |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
 
 ---
@@ -355,7 +358,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**46 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**78 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -369,6 +372,10 @@ empuja a escribir tests de *getters*.
 | Motivo obligatorio al rechazar una ausencia | `AusenciasEquipoViewModelTest` |
 | Que el `detail` del ProblemDetail llegue a la pantalla, y no el código HTTP | `ApiErrorParserTest` |
 | Duración neta de la jornada y formatos de fecha | `DateFormatsTest` |
+| Qué ve cada rol, espejo de `RoleAuthorities` | `PermisosTest` |
+| El cronómetro y el patrón de truncar antes de agregar | `CronometroTest` |
+| Corrección de fichajes: hora española a UTC, en verano y en invierno | `CorregirFichajeViewModelTest` |
+| Leer instantáneas de auditoría viejas o rotas sin tirar la pantalla | `InstantaneaFichajeTest` |
 
 Se prueba lo que es lógica de la app, no lo que ya prueba el backend. **La
 interfaz no está cubierta**: ver las limitaciones conocidas al final.

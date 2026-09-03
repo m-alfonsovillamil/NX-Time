@@ -146,6 +146,15 @@
     <string name="auditoria_desde_ip">Desde %1$s</string>
     <string name="auditoria_entrada_cambio">Entrada: %1$s → %2$s</string>
     <string name="auditoria_salida_cambio">Salida: %1$s → %2$s</string>
+    <!--
+      Cuando antes no habia valor no se pinta la flecha. Al cerrar una
+      jornada que estaba abierta, la instantanea anterior trae la salida
+      a null, y con la flecha salia un guion doble suelto a la izquierda
+      que obliga a descifrar que significa. Que un valor se fija por
+      primera vez se entiende solo.
+    -->
+    <string name="auditoria_entrada_fijada">Entrada: %1$s</string>
+    <string name="auditoria_salida_fijada">Salida: %1$s</string>
     <string name="auditoria_accion_creacion">Jornada creada</string>
     <string name="auditoria_accion_modificacion">Jornada modificada</string>
     <string name="auditoria_accion_correccion">Fichaje corregido</string>

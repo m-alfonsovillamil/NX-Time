@@ -1,6 +1,8 @@
 package com.nxtime.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,6 +59,15 @@ fun EstadoCargando(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Lista vacía.
+ *
+ * Es desplazable aunque el contenido quepa de sobra, y no es un capricho:
+ * `PullToRefreshBox` detecta el gesto por scroll anidado, así que sin un
+ * `verticalScroll` que le pase el desplazamiento, tirar hacia abajo aquí
+ * **no hacía absolutamente nada** -- y este es justo el sitio donde más
+ * falta hace refrescar ("acabo de fichar, a ver si ya sale").
+ */
 @Composable
 fun EstadoVacio(
     titulo: String,
@@ -66,6 +77,7 @@ fun EstadoVacio(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -134,6 +146,7 @@ fun BannerError(
     }
 }
 
+/** Desplazable por el mismo motivo que [EstadoVacio]. */
 @Composable
 fun EstadoErrorPantalla(
     mensaje: String,
@@ -143,6 +156,7 @@ fun EstadoErrorPantalla(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
