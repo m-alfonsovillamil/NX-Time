@@ -92,7 +92,7 @@ class RetrofitClient(
         }
 
         if (nuevoAccessToken == null) {
-            sessionManager.clearAuthData()
+            sessionManager.expirarSesion()
             return@Authenticator null
         }
 

@@ -83,7 +83,6 @@ class FicharViewModelTest {
             assertEquals(EstadoJornada.SIN_JORNADA, estado.estado)
             assertFalse(estado.cargando)
             assertEquals("Ana", estado.nombreUsuario)
-            assertFalse(estado.esRolDeGestion)
         }
     }
 
@@ -223,19 +222,8 @@ class FicharViewModelTest {
         assertEquals(MensajeUi.Recurso(R.string.error_sin_conexion), estado.error)
     }
 
-    /**
-     * El ADMIN es quien funda la empresa, así que una empresa recién
-     * creada solo tiene ese rol. Dejarlo fuera del panel lo cerraría
-     * fuera de su propia gestión.
-     */
-    @Test
-    fun `el admin tambien ve el panel de gestion`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("ADMIN")
-        val viewModel = viewModelCon(activo = null)
-        advanceUntilIdle()
-
-        assertTrue(viewModel.uiState.value.esRolDeGestion)
-    }
+    // Qué ve cada rol ya no se decide en este ViewModel: se mudó a
+    // `ui/util/Permisos.kt` y se prueba en `PermisosTest`.
 
     @Test
     fun `cerrar sesion borra los datos guardados`() = runTest {

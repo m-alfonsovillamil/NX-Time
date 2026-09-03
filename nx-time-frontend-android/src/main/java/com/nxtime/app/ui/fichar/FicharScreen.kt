@@ -52,19 +52,18 @@ import com.nxtime.app.ui.util.resolver
  * Pantalla principal.
  *
  * Conserva la mejor idea del diseño anterior -- el botón circular grande
- * como acción central -- pero le añade lo que le faltaba: una barra
- * superior con el resto de acciones, en lugar del muro de cinco botones
- * apilados que ocupaba media pantalla, y color según el estado real de
- * la jornada.
+ * como acción central -- y le quita lo que sobraba. Al historial, las
+ * ausencias y el panel de gestión se llega ahora por la barra de
+ * navegación, así que aquí desaparecen el muro de botones del pie y las
+ * entradas del menú que llevaban a ellos: el menú se queda solo con lo
+ * que es de la cuenta (contraseña y salir), que no es un destino sino
+ * una acción.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FicharScreen(
-    onIrHistorial: () -> Unit,
-    onIrAusencias: () -> Unit,
     onIrSolicitud: () -> Unit,
     onIrContrasena: () -> Unit,
-    onIrGestion: () -> Unit,
     onCerrarSesion: () -> Unit,
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -86,12 +85,6 @@ fun FicharScreen(
                         expanded = menuAbierto,
                         onDismissRequest = { menuAbierto = false }
                     ) {
-                        if (estado.esRolDeGestion) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.nav_panel_gestion)) },
-                                onClick = { menuAbierto = false; onIrGestion() }
-                            )
-                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.nav_contrasena)) },
                             onClick = { menuAbierto = false; onIrContrasena() }
@@ -178,11 +171,19 @@ fun FicharScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            AccesosRapidos(
-                onIrHistorial = onIrHistorial,
-                onIrAusencias = onIrAusencias,
-                onIrSolicitud = onIrSolicitud
-            )
+            /*
+             * Solicitar ausencia se queda aquí, y sola: es la única de
+             * las tres antiguas que no es un destino de la barra, sino
+             * una acción que se inicia desde la jornada.
+             */
+            OutlinedButton(
+                onClick = onIrSolicitud,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+            ) {
+                Text(stringResource(R.string.nav_solicitar))
+            }
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -231,33 +232,6 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-private fun AccesosRapidos(
-    onIrHistorial: () -> Unit,
-    onIrAusencias: () -> Unit,
-    onIrSolicitud: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        OutlinedButton(onClick = onIrSolicitud, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.nav_solicitar))
-        }
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = onIrHistorial, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.nav_historial))
-            }
-            Spacer(Modifier.size(8.dp))
-            OutlinedButton(onClick = onIrAusencias, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.nav_ausencias))
-            }
         }
     }
 }
