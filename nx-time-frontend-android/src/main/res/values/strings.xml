@@ -19,6 +19,7 @@
     <string name="volver">Volver</string>
     <string name="reintentar">Reintentar</string>
     <string name="cancelar">Cancelar</string>
+    <string name="aceptar">Aceptar</string>
     <string name="guardar">Guardar</string>
     <string name="cargando">Cargando…</string>
     <string name="mas_opciones">Más opciones</string>
@@ -90,6 +91,41 @@
     <string name="barra_historial">Historial</string>
     <string name="barra_ausencias">Ausencias</string>
     <string name="barra_gestion">Gestión</string>
+
+    <!-- Correccion de fichajes y auditoria (RRHH/ADMIN) -->
+    <string name="correccion_titulo">Corregir fichaje</string>
+    <string name="correccion_accion">Corregir</string>
+    <string name="correccion_empleado">Fichaje de %1$s</string>
+    <string name="correccion_entrada">Hora de entrada</string>
+    <string name="correccion_salida">Hora de salida</string>
+    <string name="correccion_motivo">Motivo de la corrección</string>
+    <string name="correccion_motivo_ayuda">
+        Queda registrado en la auditoría junto a tu nombre. Es obligatorio.
+    </string>
+    <string name="correccion_guardar">Guardar corrección</string>
+    <string name="correccion_motivo_vacio">Explica por qué corriges el fichaje.</string>
+    <string name="correccion_salida_anterior">
+        La hora de salida tiene que ser posterior a la de entrada.
+    </string>
+    <string name="correccion_solo_cerrados">
+        Solo se pueden corregir jornadas ya cerradas.
+    </string>
+    <string name="correccion_hecha">Fichaje corregido.</string>
+
+    <string name="auditoria_titulo">Traza de auditoría</string>
+    <string name="auditoria_accion">Ver auditoría</string>
+    <string name="auditoria_vacio_titulo">Sin cambios registrados</string>
+    <string name="auditoria_vacio_texto">
+        Este fichaje no ha sufrido ninguna modificación desde que se creó.
+    </string>
+    <string name="auditoria_por">Por %1$s</string>
+    <string name="auditoria_desde_ip">Desde %1$s</string>
+    <string name="auditoria_entrada_cambio">Entrada: %1$s → %2$s</string>
+    <string name="auditoria_salida_cambio">Salida: %1$s → %2$s</string>
+    <string name="auditoria_accion_creacion">Jornada creada</string>
+    <string name="auditoria_accion_modificacion">Jornada modificada</string>
+    <string name="auditoria_accion_correccion">Fichaje corregido</string>
+    <string name="auditoria_accion_anulacion">Fichaje anulado</string>
 
     <!-- Historial -->
     <string name="historial_titulo">Mi historial</string>

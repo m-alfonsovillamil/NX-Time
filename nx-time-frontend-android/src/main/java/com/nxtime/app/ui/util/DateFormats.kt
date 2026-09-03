@@ -31,6 +31,7 @@ object DateFormats {
     private val FECHA_LARGA = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", ES)
     private val FECHA_CORTA = DateTimeFormatter.ofPattern("dd/MM/yyyy", ES)
     private val HORA = DateTimeFormatter.ofPattern("HH:mm 'h'", ES)
+    private val FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", ES)
 
     /** "29 de agosto, 2026" a partir del instante ISO que manda el backend. */
     fun fechaLarga(instanteIso: String?): String = conInstante(instanteIso) {
@@ -144,6 +145,45 @@ object DateFormats {
 
     private fun formatoHorasMinutos(minutos: Long): String =
         "${minutos / 60}h ${String.format(ES, "%02dm", minutos % 60)}"
+
+    /** "03/09/2026 09:30" para la línea temporal de auditoría. */
+    fun fechaYHora(instanteIso: String?): String = conInstante(instanteIso) {
+        FECHA_Y_HORA.format(it)
+    }
+
+    /**
+     * La hora local española de un instante, como par (hora, minuto).
+     *
+     * La usa el formulario de corrección para partir de la hora que el
+     * usuario ve en pantalla, no de la UTC que viaja por debajo.
+     */
+    fun horaYMinutoLocal(instanteIso: String?): Pair<Int, Int>? = try {
+        instanteIso?.let {
+            val local = Instant.parse(it).atZone(ZONA_ESPANA)
+            local.hour to local.minute
+        }
+    } catch (e: DateTimeParseException) {
+        null
+    }
+
+    /** El día de calendario español al que pertenece un instante. */
+    fun fechaLocal(instanteIso: String?): LocalDate? = try {
+        instanteIso?.let { Instant.parse(it).atZone(ZONA_ESPANA).toLocalDate() }
+    } catch (e: DateTimeParseException) {
+        null
+    }
+
+    /**
+     * El camino de vuelta: una fecha y una hora **españolas** al instante
+     * ISO en UTC que espera el backend.
+     *
+     * Es la conversión que hay que hacer sí o sí antes de mandar una
+     * corrección. Componer la cadena a mano con la hora local produciría
+     * un fichaje desplazado una o dos horas según la época del año, y
+     * encima quedaría firmado en la auditoría.
+     */
+    fun aInstanteIso(fecha: LocalDate, hora: Int, minuto: Int): String =
+        fecha.atTime(hora, minuto).atZone(ZONA_ESPANA).toInstant().toString()
 
     private inline fun conInstante(
         instanteIso: String?,

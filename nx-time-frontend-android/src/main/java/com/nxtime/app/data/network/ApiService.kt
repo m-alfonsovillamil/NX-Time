@@ -57,6 +57,25 @@ interface ApiService {
     @GET("api/v1/dashboard/resumen")
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
 
+    /*
+     *  Cumplimiento normativo (RRHH/ADMIN)
+     *
+     *  Corregir nunca sobrescribe: el backend anula el fichaje original
+     *  y crea uno nuevo enlazado, y devuelve EL NUEVO. Toda la operación
+     *  queda en la traza de auditoría.
+     */
+
+    @PATCH("api/v1/fichaje/{id}")
+    suspend fun corregirFichaje(
+        @Path("id") fichajeId: Long,
+        @Body peticion: CorreccionFichajeRequest
+    ): Response<Registro>
+
+    @GET("api/v1/auditoria/fichaje/{id}")
+    suspend fun getAuditoriaFichaje(
+        @Path("id") fichajeId: Long
+    ): Response<List<AuditoriaFichajeDTO>>
+
     /*  Endpoints de Ausencias (Empleado)  */
 
     @POST("api/v1/ausencias")

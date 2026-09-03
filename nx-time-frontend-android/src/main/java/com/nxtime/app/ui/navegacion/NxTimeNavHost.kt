@@ -38,6 +38,8 @@ import com.nxtime.app.R
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.acceso.LoginScreen
 import com.nxtime.app.ui.acceso.RegistroEmpresaScreen
+import com.nxtime.app.ui.auditoria.AuditoriaScreen
+import com.nxtime.app.ui.auditoria.CorregirFichajeScreen
 import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.fichar.FicharScreen
@@ -49,6 +51,8 @@ import com.nxtime.app.ui.historial.HistorialScreen
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
 import com.nxtime.app.ui.util.Permisos
 import com.nxtime.app.ui.util.Rol
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 /**
  * Las pantallas de la aplicación.
@@ -71,7 +75,10 @@ enum class Pantalla(val ruta: String) {
     GESTION("gestion"),
     EQUIPO("equipo"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
-    ALTA_USUARIO("alta/{$ARG_ES_GESTOR}");
+    ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
+    AUDITORIA("auditoria/{$ARG_FICHAJE_ID}"),
+    CORRECCION("correccion/{$ARG_FICHAJE_ID}?$ARG_NOMBRE={$ARG_NOMBRE}" +
+            "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}");
 
     companion object {
         /** Ausencias del equipo, ya resueltas o pendientes de responder. */
@@ -79,11 +86,47 @@ enum class Pantalla(val ruta: String) {
 
         /** Alta de un empleado o de otro gestor: el mismo formulario. */
         fun altaUsuario(esGestor: Boolean) = "alta/$esGestor"
+
+        /** Línea temporal de cambios de un fichaje. */
+        fun auditoria(fichajeId: Long) = "auditoria/$fichajeId"
+
+        /**
+         * Formulario de corrección.
+         *
+         * El nombre y las dos horas viajan en la ruta para poder
+         * precargar el formulario sin volver a pedir el fichaje al
+         * servidor: la pantalla anterior ya los tiene delante. Van
+         * codificados porque un instante ISO lleva ":" y un nombre puede
+         * llevar espacios o acentos, y sin codificar romperían la ruta.
+         */
+        fun correccion(
+            fichajeId: Long,
+            nombre: String,
+            entradaIso: String?,
+            salidaIso: String?
+        ) = "correccion/$fichajeId" +
+                "?$ARG_NOMBRE=${codificar(nombre)}" +
+                "&$ARG_ENTRADA=${codificar(entradaIso)}" +
+                "&$ARG_SALIDA=${codificar(salidaIso)}"
+
+        /**
+         * `URLEncoder` codifica el espacio como `+` (es codificación de
+         * formulario), pero quien decodifica la ruta al otro lado es
+         * Navigation, que solo entiende `%20`: sin esta sustitución,
+         * "Lucía Moreno" llegaba a la pantalla como **"Lucía+Moreno"**.
+         */
+        private fun codificar(valor: String?): String =
+            URLEncoder.encode(valor.orEmpty(), StandardCharsets.UTF_8.name())
+                .replace("+", "%20")
     }
 }
 
 const val ARG_RESUELTAS = "resueltas"
 const val ARG_ES_GESTOR = "esGestor"
+const val ARG_FICHAJE_ID = "fichajeId"
+const val ARG_NOMBRE = "nombre"
+const val ARG_ENTRADA = "entrada"
+const val ARG_SALIDA = "salida"
 
 /**
  * Los destinos que salen en la barra de navegación.
@@ -325,7 +368,56 @@ fun NxTimeNavHost(
             }
 
             composable(Pantalla.EQUIPO.ruta) {
-                HistorialEquipoScreen(onVolver = navController::navigateUp)
+                HistorialEquipoScreen(
+                    onVolver = navController::navigateUp,
+                    // Corregir y auditar son operaciones de cumplimiento
+                    // normativo: `fichaje:corregir` y `fichaje:auditoria`
+                    // las tienen RRHH y ADMIN, no un GESTOR cualquiera.
+                    puedeCorregir = Permisos.puedeCorregirFichajes(rol),
+                    puedeAuditar = Permisos.puedeVerAuditoria(rol),
+                    onCorregir = { registro ->
+                        navController.navigate(
+                            Pantalla.correccion(
+                                fichajeId = registro.id,
+                                nombre = registro.usuario.nombre,
+                                entradaIso = registro.horaEntrada,
+                                salidaIso = registro.horaSalida
+                            )
+                        )
+                    },
+                    onVerAuditoria = { registro ->
+                        navController.navigate(Pantalla.auditoria(registro.id))
+                    }
+                )
+            }
+
+            composable(
+                route = Pantalla.AUDITORIA.ruta,
+                arguments = listOf(navArgument(ARG_FICHAJE_ID) { type = NavType.LongType })
+            ) {
+                AuditoriaScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(
+                route = Pantalla.CORRECCION.ruta,
+                arguments = listOf(
+                    navArgument(ARG_FICHAJE_ID) { type = NavType.LongType },
+                    navArgument(ARG_NOMBRE) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(ARG_ENTRADA) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(ARG_SALIDA) { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { entrada ->
+                CorregirFichajeScreen(
+                    nombreEmpleado = entrada.arguments?.getString(ARG_NOMBRE).orEmpty(),
+                    entradaIso = entrada.arguments?.getString(ARG_ENTRADA)?.ifBlank { null },
+                    salidaIso = entrada.arguments?.getString(ARG_SALIDA)?.ifBlank { null },
+                    // Tras corregir se vuelve al historial, que recarga
+                    // al reanudarse (ver HistorialEquipoScreen): el
+                    // fichaje corregido es OTRO registro, y dejar en
+                    // pantalla el original ya anulado engañaría.
+                    onCorregido = navController::navigateUp,
+                    onVolver = navController::navigateUp
+                )
             }
 
             composable(
