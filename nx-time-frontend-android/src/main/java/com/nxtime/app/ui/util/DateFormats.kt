@@ -61,7 +61,7 @@ object DateFormats {
      * truncar antes de agregar hacía perder hasta 21 minutos al mes.
      */
     fun duracion(entradaIso: String?, salidaIso: String?): String =
-        duracionNeta(entradaIso, salidaIso, minutosPausa = 0)
+        duracionNeta(entradaIso, salidaIso, segundosPausa = 0)
 
     /**
      * Igual que [duracion], pero descontando las pausas: es el tiempo de
@@ -76,16 +76,20 @@ object DateFormats {
      * Si las pausas superaran a la jornada -- dato incoherente que solo
      * puede venir de un fichaje corregido a mano -- se devuelve
      * [SIN_DATO] en lugar de una duración negativa.
+     *
+     * La pausa entra en SEGUNDOS y se resta antes de pasar a minutos.
+     * Antes entraba en minutos ya truncados, y eso inflaba el total: una
+     * pausa de 26 min 40 s viajaba como 26 y los 40 segundos volvían a
+     * contarse como trabajo.
      */
-    fun duracionNeta(entradaIso: String?, salidaIso: String?, minutosPausa: Long): String = try {
+    fun duracionNeta(entradaIso: String?, salidaIso: String?, segundosPausa: Long): String = try {
         if (entradaIso == null || salidaIso == null) {
             EN_CURSO
         } else {
             val segundos = Duration.between(
                 Instant.parse(entradaIso), Instant.parse(salidaIso)
-            ).seconds
-            val minutos = segundos / 60 - minutosPausa
-            if (minutos < 0) SIN_DATO else formatoHorasMinutos(minutos)
+            ).seconds - segundosPausa
+            if (segundos < 0) SIN_DATO else formatoHorasMinutos(segundos / 60)
         }
     } catch (e: DateTimeParseException) {
         SIN_DATO
@@ -93,6 +97,50 @@ object DateFormats {
 
     /** Minutos sueltos como "1h 30m"; se usa también para las pausas. */
     fun minutos(minutos: Long): String = formatoHorasMinutos(minutos)
+
+    /**
+     * Segundos netos trabajados en la jornada abierta, "02:14:38".
+     *
+     * Se cuenta en SEGUNDOS de principio a fin, sin pasar por minutos
+     * intermedios: es el mismo cuidado que hizo falta en el informe
+     * mensual del backend, donde truncar antes de agregar perdía hasta
+     * 21 minutos al mes. Un cronómetro que trunque cada vuelta se queda
+     * congelado o salta de dos en dos.
+     *
+     * Negativo no se pinta: solo puede salir de un reloj del móvil
+     * atrasado respecto al servidor, y un "-00:00:12" asusta más que un
+     * cero.
+     */
+    fun cronometro(segundos: Long): String {
+        val s = segundos.coerceAtLeast(0)
+        return String.format(ES, "%02d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
+    }
+
+    /**
+     * Segundos netos que lleva una jornada todavía abierta: lo que va de
+     * la entrada hasta ahora, menos las pausas ya terminadas.
+     *
+     * Descuenta **segundos** de pausa y no minutos a propósito. Restar
+     * `minutosPausaAcumulados * 60` parecía equivalente y no lo es: ese
+     * campo viaja truncado, así que una pausa de 40 s vale 0 minutos y
+     * el cronómetro se comía la pausa entera. Es el mismo patrón que ya
+     * mordió dos veces en el backend -- truncar antes de agregar.
+     *
+     * Solo vale mientras se está TRABAJANDO. Durante una pausa la cuenta
+     * se dispararía, porque la pausa en curso aún no está acumulada: el
+     * backend la suma al reanudar.
+     */
+    fun segundosTrabajados(
+        entradaIso: String?,
+        segundosPausa: Long,
+        ahora: Instant = Instant.now()
+    ): Long = try {
+        entradaIso?.let {
+            Duration.between(Instant.parse(it), ahora).seconds - segundosPausa
+        } ?: 0L
+    } catch (e: DateTimeParseException) {
+        0L
+    }
 
     private fun formatoHorasMinutos(minutos: Long): String =
         "${minutos / 60}h ${String.format(ES, "%02dm", minutos % 60)}"

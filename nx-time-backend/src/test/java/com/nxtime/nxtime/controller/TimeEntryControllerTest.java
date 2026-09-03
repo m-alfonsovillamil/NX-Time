@@ -56,7 +56,7 @@ class TimeEntryControllerTest {
         TimeEntry entry = TimeEntry.builder().id(1L).build();
         when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
         when(timeEntryMapper.toResponse(entry))
-                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0));
+                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0));
 
         mockMvc.perform(post("/api/v1/fichaje")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +127,7 @@ class TimeEntryControllerTest {
         TimeEntry corrected = TimeEntry.builder().id(2L).build();
         when(timeEntryService.correctTimeEntry(eq("rrhh@nxtime.test"), eq(5L), any())).thenReturn(corrected);
         when(timeEntryMapper.toResponse(corrected))
-                .thenReturn(new TimeEntryResponse(2L, Instant.now(), Instant.now(), false, 0));
+                .thenReturn(new TimeEntryResponse(2L, Instant.now(), Instant.now(), false, 0, 0));
 
         mockMvc.perform(patch("/api/v1/fichaje/5")
                         .contentType(MediaType.APPLICATION_JSON)

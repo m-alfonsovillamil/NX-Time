@@ -19,6 +19,15 @@ public record TeamTimeEntryDTO(
         Instant horaSalida,
         LocalDate fecha,
         SimpleUserDTO usuario,
-        long minutosPausaAcumulados
+
+        /** Para pintar ("Pausa: 0h 26m"). Truncado a minutos enteros. */
+        long minutosPausaAcumulados,
+
+        /**
+         * Para calcular el tiempo neto. Ver el mismo campo en
+         * {@link TimeEntryResponse}: con solo los minutos, una pausa de
+         * 40 s vale 0 y el total sale inflado en esos 40 s.
+         */
+        long segundosPausaAcumulados
 ) {
 }

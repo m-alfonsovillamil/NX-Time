@@ -52,6 +52,11 @@ interface ApiService {
     @GET("api/v1/fichaje/historial")
     suspend fun getHistorial(): Response<List<Registro>>
 
+    /*  Resumen personal (cualquier usuario con `fichaje:leer`)  */
+
+    @GET("api/v1/dashboard/resumen")
+    suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
+
     /*  Endpoints de Ausencias (Empleado)  */
 
     @POST("api/v1/ausencias")

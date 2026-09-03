@@ -10,5 +10,9 @@ data class RegistroEquipoDTO(
     val fecha: String,
     val usuario: UsuarioSimpleDTO,
 
-    val minutosPausaAcumulados: Long = 0
+    /** Para pintar. Truncado a minutos enteros. */
+    val minutosPausaAcumulados: Long = 0,
+
+    /** Para calcular. Ver el mismo campo en [Registro]. */
+    val segundosPausaAcumulados: Long = 0
 )
