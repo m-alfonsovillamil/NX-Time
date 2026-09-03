@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.HowToReg
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.Card
@@ -46,6 +47,8 @@ import com.nxtime.app.ui.components.PantallaConBarra
 @Composable
 fun PanelGestionScreen(
     puedeCrearGestores: Boolean,
+    puedeVerPanelEmpresa: Boolean,
+    onIrPanelEmpresa: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -63,6 +66,15 @@ fun PanelGestionScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Primero el panel: es la vista de conjunto desde la que se
+            // decide a qué mirar después.
+            if (puedeVerPanelEmpresa) {
+                OpcionGestion(
+                    texto = stringResource(R.string.empresa_titulo),
+                    icono = Icons.Default.Insights,
+                    onClick = onIrPanelEmpresa
+                )
+            }
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
                 icono = Icons.Default.PendingActions,

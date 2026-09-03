@@ -217,7 +217,7 @@ public class AuthServiceImpl implements AuthService {
         List<User> employees = userRepository.findByEmpresaAndRol(managerCompany, Role.EMPLEADO);
 
         return employees.stream()
-                .map(employee -> new SimpleEmployeeDTO(employee.getId(), employee.getNombre(), employee.getEmail()))
+                .map(employee -> new SimpleEmployeeDTO(employee.getId(), employee.getNombre(), employee.getEmail(), employee.isActivo()))
                 .toList();
     }
 

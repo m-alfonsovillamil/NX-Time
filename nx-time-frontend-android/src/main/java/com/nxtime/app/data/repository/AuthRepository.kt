@@ -3,6 +3,7 @@ package com.nxtime.app.data.repository
 import com.nxtime.app.data.dto.*
 import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
+import okhttp3.ResponseBody
 import retrofit2.Response
 
 /*
@@ -28,6 +29,19 @@ interface AuthRepository {
     ): Response<Registro>
 
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
+
+    /* Panel de empresa, altas/bajas e informes */
+    suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
+
+    suspend fun cambiarEstadoEmpleado(empleadoId: Long, activo: Boolean): Response<Unit>
+
+    suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody>
+
+    suspend fun descargarPdfMensual(
+        empleadoId: Long,
+        anio: Int,
+        mes: Int
+    ): Response<ResponseBody>
 
     /* Funciones de Ausencias (Empleado) */
     suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia>
