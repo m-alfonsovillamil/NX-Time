@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,17 +19,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,33 +41,51 @@ import androidx.compose.ui.unit.dp
 import com.nxtime.app.R
 
 /**
- * Armazón de las pantallas con barra superior y flecha de volver.
+ * Armazón de las pantallas con barra superior.
  *
  * Cierra uno de los hallazgos del repaso: las trece pantallas anteriores
  * usaban un tema `NoActionBar` y **ninguna tenía barra**, así que no
  * había ni título ni forma de volver que no fuera el botón del sistema.
+ *
+ * La barra es grande y se encoge al desplazar (`LargeTopAppBar` con
+ * `enterAlwaysScrollBehavior`): el título arranca con el tamaño que le
+ * corresponde a lo que es -- el nombre de la pantalla -- y se aparta en
+ * cuanto el contenido reclama el sitio. Como esto vive en un único
+ * componente, alcanza de golpe a las siete pantallas que lo usan.
+ *
+ * @param onVolver flecha de volver; `null` en los destinos a los que se
+ *   llega por la barra de navegación, que no tienen "atrás" al que ir.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaConBarra(
     titulo: String,
-    onVolver: () -> Unit,
     modifier: Modifier = Modifier,
+    onVolver: (() -> Unit)? = null,
+    acciones: @Composable RowScope.() -> Unit = {},
+    accionFlotante: @Composable () -> Unit = {},
     contenido: @Composable (Modifier) -> Unit
 ) {
+    val comportamiento = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(comportamiento.nestedScrollConnection),
+        floatingActionButton = accionFlotante,
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = { Text(titulo) },
                 navigationIcon = {
-                    IconButton(onClick = onVolver) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.volver)
-                        )
+                    if (onVolver != null) {
+                        IconButton(onClick = onVolver) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.volver)
+                            )
+                        }
                     }
-                }
+                },
+                actions = acciones,
+                scrollBehavior = comportamiento
             )
         }
     ) { padding ->

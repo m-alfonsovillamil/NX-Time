@@ -63,6 +63,17 @@
     <string name="nav_panel_gestion">Panel de gestión</string>
     <string name="nav_cerrar_sesion">Cerrar sesión</string>
 
+    <!--
+      Etiquetas de la barra de navegacion. Van aparte de las de arriba
+      porque tienen que caber en una pestaña: "Mi historial" y "Panel de
+      gestion" se truncan, y ahi el icono ya da el contexto de que es lo
+      propio del usuario.
+    -->
+    <string name="barra_jornada">Jornada</string>
+    <string name="barra_historial">Historial</string>
+    <string name="barra_ausencias">Ausencias</string>
+    <string name="barra_gestion">Gestión</string>
+
     <!-- Historial -->
     <string name="historial_titulo">Mi historial</string>
     <string name="historial_vacio_titulo">Todavía no hay fichajes</string>

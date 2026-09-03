@@ -24,7 +24,6 @@ data class FicharUiState(
     val estado: EstadoJornada = EstadoJornada.SIN_JORNADA,
     val registro: Registro? = null,
     val nombreUsuario: String = "",
-    val esRolDeGestion: Boolean = false,
     val error: MensajeUi? = null
 )
 
@@ -52,12 +51,7 @@ class FicharViewModel(
     val uiState: StateFlow<FicharUiState> = _uiState.asStateFlow()
 
     init {
-        _uiState.update {
-            it.copy(
-                nombreUsuario = sessionManager.fetchUserName().orEmpty(),
-                esRolDeGestion = sessionManager.fetchUserRole() in ROLES_DE_GESTION
-            )
-        }
+        _uiState.update { it.copy(nombreUsuario = sessionManager.fetchUserName().orEmpty()) }
         comprobarEstadoJornada()
     }
 
@@ -160,17 +154,17 @@ class FicharViewModel(
         _uiState.update { it.copy(error = null) }
     }
 
+    /*
+     * Quién ve el panel de gestión ya no se decide aquí. Vivía en esta
+     * clase como un `setOf("GESTOR", "RRHH", "ADMIN")`, y con esa única
+     * brocha se pintaban permisos que el backend distingue mucho más
+     * fino: por eso se le ofrecía "Crear gestor" a un GESTOR, que no
+     * tiene esa authority. Ahora lo resuelve `ui/util/Permisos.kt`, que
+     * es un espejo de `RoleAuthorities.java`, y lo consulta el grafo de
+     * navegación, que es quien decide qué pestañas existen.
+     */
+
     fun cerrarSesion() {
         sessionManager.clearAuthData()
-    }
-
-    companion object {
-        /**
-         * GESTOR, RRHH y ADMIN ven el panel de gestión. Desde la Fase 4
-         * del backend no basta con mirar si el rol es GESTOR: una
-         * empresa recién creada solo tiene un ADMIN, que es quien la
-         * funda, y dejarlo fuera lo cerraría fuera de su propio panel.
-         */
-        private val ROLES_DE_GESTION = setOf("GESTOR", "RRHH", "ADMIN")
     }
 }

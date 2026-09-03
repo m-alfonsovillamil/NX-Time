@@ -30,25 +30,31 @@ import com.nxtime.app.R
 import com.nxtime.app.ui.components.PantallaConBarra
 
 /**
- * Panel de gestión: la puerta a las cinco pantallas de gestor.
+ * Panel de gestión: la puerta a las pantallas de gestor.
  *
  * No tiene ViewModel porque no tiene estado ni pide datos; es un menú.
  * La versión anterior (`ManagerHomeActivity`) era también eso, pero
  * apilaba botones a pantalla completa sin decir a dónde llevaba cada
  * uno más allá de su texto.
+ *
+ * @param puedeCrearGestores si se enseña el alta de gestores. Es el
+ *   único punto del panel que no vale para todos los roles de gestión:
+ *   `gestor:crear` la tiene solo ADMIN, y hasta ahora la opción se le
+ *   ofrecía también a un GESTOR, para el que el backend respondía 403
+ *   sin excepción.
  */
 @Composable
 fun PanelGestionScreen(
-    onVolver: () -> Unit,
+    puedeCrearGestores: Boolean,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
     onIrAltaEmpleado: () -> Unit,
     onIrAltaGestor: () -> Unit
 ) {
+    // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
-        titulo = stringResource(R.string.gestion_titulo),
-        onVolver = onVolver
+        titulo = stringResource(R.string.gestion_titulo)
     ) { modifier ->
         Column(
             modifier = modifier
@@ -77,11 +83,13 @@ fun PanelGestionScreen(
                 icono = Icons.Default.PersonAdd,
                 onClick = onIrAltaEmpleado
             )
-            OpcionGestion(
-                texto = stringResource(R.string.gestion_crear_gestor),
-                icono = Icons.Default.HowToReg,
-                onClick = onIrAltaGestor
-            )
+            if (puedeCrearGestores) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_crear_gestor),
+                    icono = Icons.Default.HowToReg,
+                    onClick = onIrAltaGestor
+                )
+            }
         }
     }
 }

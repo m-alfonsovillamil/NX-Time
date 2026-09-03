@@ -34,14 +34,13 @@ import com.nxtime.app.ui.util.resolver
 
 @Composable
 fun HistorialScreen(
-    onVolver: () -> Unit,
     viewModel: HistorialViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
-        titulo = stringResource(R.string.historial_titulo),
-        onVolver = onVolver
+        titulo = stringResource(R.string.historial_titulo)
     ) { modifier ->
         when {
             estado.cargando -> EstadoCargando(modifier)

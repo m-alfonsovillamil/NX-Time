@@ -2,6 +2,9 @@ package com.nxtime.app.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Clase auxiliar para guardar datos de sesión en el móvil
@@ -11,6 +14,23 @@ class SessionManager(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("NXTIME_PREFS", Context.MODE_PRIVATE)
+
+    private val _sesionCaducada = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Avisa de que la sesión murió sola, sin que el usuario la cerrara.
+     *
+     * Lo recoge el grafo de navegación para llevar al login. Antes no
+     * existía: el `Authenticator` de `RetrofitClient` borraba el token
+     * cuando el refresco fallaba y devolvía null, pero **ninguna pantalla
+     * se enteraba**, así que la app se quedaba en "Mi jornada" enseñando
+     * el nombre cacheado y un banner de error, sin forma de volver a
+     * entrar salvo cerrando sesión a mano.
+     *
+     * `extraBufferCapacity = 1` para que emitir no bloquee ni se pierda
+     * el aviso si llega mientras nadie está recogiendo todavía.
+     */
+    val sesionCaducada: SharedFlow<Unit> = _sesionCaducada.asSharedFlow()
 
     companion object {
         private const val KEY_AUTH_TOKEN = "auth_token"
@@ -77,5 +97,19 @@ class SessionManager(context: Context) {
         editor.remove(KEY_USER_NAME)
         editor.remove(KEY_USER_ROLE)
         editor.commit()
+    }
+
+    /**
+     * Igual que [clearAuthData], pero además avisa por [sesionCaducada].
+     *
+     * Son dos métodos y no uno porque las dos salidas de la sesión no son
+     * la misma cosa: cerrarla a mano ya navega al login desde la propia
+     * pantalla, y emitir también ahí provocaría dos navegaciones
+     * seguidas. Esta la usa solo el `Authenticator`, que es quien
+     * descubre que el refresh token ya no vale.
+     */
+    fun expirarSesion() {
+        clearAuthData()
+        _sesionCaducada.tryEmit(Unit)
     }
 }
