@@ -7,6 +7,7 @@ import com.nxtime.app.data.dto.CrearGestorRequest
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -184,6 +185,31 @@ interface ApiService {
     suspend fun cambiarContrasena(
         @Body peticion: CambiarContrasenaRequest
     ): Response<Unit>
+
+
+    /*  Endpoints de PERFIL (Fase B) */
+
+    @GET("api/v1/perfil")
+    suspend fun getMiPerfil(): Response<PerfilDTO>
+
+    @PATCH("api/v1/perfil")
+    suspend fun actualizarMiPerfil(@Body cambios: ActualizarPerfilRequest): Response<PerfilDTO>
+
+    @GET("api/v1/departamentos")
+    suspend fun getDepartamentos(): Response<List<DepartamentoDTO>>
+
+    @POST("api/v1/departamentos")
+    suspend fun crearDepartamento(@Body peticion: DepartamentoRequest): Response<DepartamentoDTO>
+
+    @DELETE("api/v1/departamentos/{id}")
+    suspend fun borrarDepartamento(@Path("id") id: Long): Response<Unit>
+
+    /** `departamentoId` a null saca al empleado del que tuviera. */
+    @PATCH("api/v1/departamentos/empleados/{usuarioId}")
+    suspend fun asignarDepartamento(
+        @Path("usuarioId") usuarioId: Long,
+        @Body peticion: AsignarDepartamentoRequest
+    ): Response<PerfilDTO>
 
 
     /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */

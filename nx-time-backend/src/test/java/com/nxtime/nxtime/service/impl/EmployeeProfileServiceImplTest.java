@@ -11,13 +11,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
+import com.nxtime.nxtime.dto.ProfileResponse;
 import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
 import com.nxtime.nxtime.dto.UpdateEmployeeProfileRequest;
+import com.nxtime.nxtime.dto.UpdateProfileRequest;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
 import java.math.BigDecimal;
@@ -53,6 +58,9 @@ class EmployeeProfileServiceImplTest {
     @Mock
     private VacationBalanceRepository vacationBalanceRepository;
 
+    @Mock
+    private DepartmentRepository departmentRepository;
+
     private EmployeeProfileServiceImpl service;
 
     private Company empresa;
@@ -62,7 +70,8 @@ class EmployeeProfileServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new EmployeeProfileServiceImpl(userRepository, vacationBalanceRepository);
+        service = new EmployeeProfileServiceImpl(
+                userRepository, vacationBalanceRepository, departmentRepository);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         rrhh = User.builder().id(5L).email("rrhh@nxtime.test").nombre("Elena")
@@ -222,6 +231,144 @@ class EmployeeProfileServiceImplTest {
         assertThatThrownBy(() -> service.updateProfile(
                 404L, new UpdateEmployeeProfileRequest(null, 25), rrhh))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // Perfil propio (Fase B)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("El nombre completo une nombre y apellidos, y sin apellidos no deja un espacio suelto")
+    void perfil_nombreCompleto() {
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        empleado.setApellidos("Fernández Ruiz");
+        assertThat(service.getMyProfile(empleado).nombreCompleto()).isEqualTo("Ana Fernández Ruiz");
+
+        empleado.setApellidos(null);
+        assertThat(service.getMyProfile(empleado).nombreCompleto()).isEqualTo("Ana");
+    }
+
+    @Test
+    @DisplayName("Las iniciales son dos letras también cuando no hay apellidos")
+    void perfil_iniciales() {
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        empleado.setApellidos("Fernández");
+        assertThat(service.getMyProfile(empleado).iniciales()).isEqualTo("AF");
+
+        // Sin apellidos NO es una letra sola flotando en el círculo:
+        // son las dos primeras del nombre.
+        empleado.setApellidos(null);
+        assertThat(service.getMyProfile(empleado).iniciales()).isEqualTo("AN");
+
+        // Y un nombre de una sola letra no revienta el substring.
+        empleado.setNombre("Z");
+        assertThat(service.getMyProfile(empleado).iniciales()).isEqualTo("Z");
+    }
+
+    @Test
+    @DisplayName("Actualizar el perfil cambia solo lo que viene, y recorta los espacios")
+    void updateMyProfile_soloLoQueViene() {
+        empleado.setPuesto("Analista");
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        service.updateMyProfile(
+                new UpdateProfileRequest(null, "  Fernández  ", LocalDate.of(1995, 3, 14), null), empleado);
+
+        assertThat(empleado.getApellidos()).isEqualTo("Fernández");
+        assertThat(empleado.getFechaNacimiento()).isEqualTo(LocalDate.of(1995, 3, 14));
+        // El puesto no venía en la petición: se queda como estaba.
+        assertThat(empleado.getPuesto()).isEqualTo("Analista");
+        assertThat(empleado.getNombre()).isEqualTo("Ana");
+    }
+
+    @Test
+    @DisplayName("Una cadena vacía BORRA el dato, no guarda una cadena vacía")
+    void updateMyProfile_cadenaVaciaBorra() {
+        empleado.setPuesto("Analista");
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        service.updateMyProfile(new UpdateProfileRequest(null, null, null, "   "), empleado);
+
+        // Null y no "": si no, la pantalla enseñaría un hueco en vez de
+        // no enseñar el campo.
+        assertThat(empleado.getPuesto()).isNull();
+    }
+
+    @Test
+    @DisplayName("El nombre sí se puede cambiar, pero no vaciar")
+    void updateMyProfile_nombreVacio_lanza400() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+
+        assertThatThrownBy(() -> service.updateMyProfile(
+                new UpdateProfileRequest("   ", null, null, null), empleado))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("nombre");
+
+        assertThat(empleado.getNombre()).isEqualTo("Ana");
+    }
+
+    @Test
+    @DisplayName("Ver el perfil de alguien de otra empresa está prohibido")
+    void getProfile_otraEmpresa_lanzaTenantAccess() {
+        User ajeno = User.builder().id(99L).email("ajeno@otra.test").nombre("Ajeno")
+                .rol(Role.EMPLEADO).empresa(otraEmpresa).build();
+        when(userRepository.findById(99L)).thenReturn(Optional.of(ajeno));
+
+        assertThatThrownBy(() -> service.getProfile(99L, rrhh))
+                .isInstanceOf(TenantAccessException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // Asignación de departamento
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Asignar un departamento de la misma empresa funciona")
+    void assignDepartment_mismaEmpresa() {
+        Department departamento = Department.builder().id(3L).empresa(empresa).nombre("Operaciones").build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        when(departmentRepository.findById(3L)).thenReturn(Optional.of(departamento));
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        ProfileResponse perfil = service.assignDepartment(10L, 3L, rrhh);
+
+        assertThat(empleado.getDepartamento()).isEqualTo(departamento);
+        assertThat(perfil.departamentoNombre()).isEqualTo("Operaciones");
+    }
+
+    @Test
+    @DisplayName("Un departamento de OTRA empresa no se puede asignar aunque el empleado sea mío")
+    void assignDepartment_departamentoDeOtraEmpresa_lanzaTenantAccess() {
+        // El empleado es de mi empresa y el id del departamento existe:
+        // sin esta comprobación, un dato de otro tenant acabaría dentro
+        // de una ficha propia.
+        Department ajeno = Department.builder().id(4L).empresa(otraEmpresa).nombre("Ajeno").build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        when(departmentRepository.findById(4L)).thenReturn(Optional.of(ajeno));
+
+        assertThatThrownBy(() -> service.assignDepartment(10L, 4L, rrhh))
+                .isInstanceOf(TenantAccessException.class)
+                .hasMessageContaining("departamento");
+
+        assertThat(empleado.getDepartamento()).isNull();
+    }
+
+    @Test
+    @DisplayName("Con null se saca al empleado del departamento que tuviera")
+    void assignDepartment_null_loSaca() {
+        empleado.setDepartamento(Department.builder().id(3L).empresa(empresa).nombre("Operaciones").build());
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        lenient().when(vacationBalanceRepository.findByUsuarioAndAnio(any(), anyInt())).thenReturn(Optional.empty());
+
+        ProfileResponse perfil = service.assignDepartment(10L, null, rrhh);
+
+        assertThat(empleado.getDepartamento()).isNull();
+        assertThat(perfil.departamentoId()).isNull();
+        verify(departmentRepository, never()).findById(any());
     }
 
     @Test

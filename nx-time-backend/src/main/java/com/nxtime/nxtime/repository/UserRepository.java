@@ -16,4 +16,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByEmpresa(Company empresa);
 
     List<User> findByEmpresaAndRol(Company empresa, Role rol);
+
+    /**
+     * Cuánta gente hay en un departamento (Fase B).
+     *
+     * Borrar un departamento con plantilla dentro tiene que fallar con
+     * un mensaje que se entienda; sin esto, lo que salta es la
+     * violación de clave ajena de {@code fk_usuarios_departamento}, que
+     * llega al cliente como un 500 sin explicación.
+     */
+    long countByDepartamento_Id(long departamentoId);
 }

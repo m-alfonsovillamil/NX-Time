@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -49,12 +50,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
@@ -100,6 +103,7 @@ fun PanelEmpresaScreen(
     val alcance = rememberCoroutineScope()
     var aDarDeBaja by remember { mutableStateOf<EmpleadoSimpleDTO?>(null) }
     var aConfigurar by remember { mutableStateOf<EmpleadoSimpleDTO?>(null) }
+    var aBorrarDepartamento by remember { mutableStateOf<DepartamentoDTO?>(null) }
 
     /*
      * Escribir el fichero necesita el Context, que no tiene por qué estar
@@ -162,6 +166,15 @@ fun PanelEmpresaScreen(
                     }
                 }
 
+                if (puedeGestionarEmpleados) {
+                    Spacer(Modifier.height(24.dp))
+                    Departamentos(
+                        departamentos = estado.departamentos,
+                        onCrear = viewModel::crearDepartamento,
+                        onBorrar = { aBorrarDepartamento = it }
+                    )
+                }
+
                 Spacer(Modifier.height(24.dp))
                 Text(
                     text = stringResource(R.string.empresa_plantilla),
@@ -216,17 +229,37 @@ fun PanelEmpresaScreen(
         )
     }
 
+    aBorrarDepartamento?.let { departamento ->
+        AlertDialog(
+            onDismissRequest = { aBorrarDepartamento = null },
+            title = { Text(stringResource(R.string.empresa_departamento_borrar_titulo, departamento.nombre)) },
+            text = { Text(stringResource(R.string.empresa_departamento_borrar_texto)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.borrarDepartamento(departamento.id)
+                    aBorrarDepartamento = null
+                }) { Text(stringResource(R.string.empresa_departamento_borrar)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { aBorrarDepartamento = null }) {
+                    Text(stringResource(R.string.cancelar))
+                }
+            }
+        )
+    }
+
     aConfigurar?.let { empleado ->
         DialogoFicha(
             empleado = empleado,
+            departamentos = estado.departamentos,
             guardando = estado.guardandoFicha,
             error = estado.errorFicha,
             onCerrar = {
                 aConfigurar = null
                 viewModel.descartarErrorDeFicha()
             },
-            onGuardar = { horas, dias ->
-                viewModel.guardarFicha(empleado.id, horas, dias) { aConfigurar = null }
+            onGuardar = { horas, dias, departamentoId ->
+                viewModel.guardarFicha(empleado.id, horas, dias, departamentoId) { aConfigurar = null }
             }
         )
     }
@@ -243,15 +276,17 @@ fun PanelEmpresaScreen(
 @Composable
 private fun DialogoFicha(
     empleado: EmpleadoSimpleDTO,
+    departamentos: List<DepartamentoDTO>,
     guardando: Boolean,
     error: MensajeUi?,
     onCerrar: () -> Unit,
-    onGuardar: (String, String) -> Unit
+    onGuardar: (String, String, Long?) -> Unit
 ) {
     // La clave es el empleado: al abrir la fila de otro, los campos se
     // reinician con SUS valores en vez de arrastrar los del anterior.
     var horas by remember(empleado.id) { mutableStateOf(empleado.horasSemanales) }
     var dias by remember(empleado.id) { mutableStateOf(empleado.diasVacaciones.toString()) }
+    var departamentoId by remember(empleado.id) { mutableStateOf(empleado.departamentoId) }
 
     AlertDialog(
         onDismissRequest = onCerrar,
@@ -274,6 +309,13 @@ private fun DialogoFicha(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (departamentos.isNotEmpty()) {
+                    SelectorDeDepartamento(
+                        departamentos = departamentos,
+                        seleccionado = departamentoId,
+                        onSelecciona = { departamentoId = it }
+                    )
+                }
                 Text(
                     text = stringResource(R.string.empresa_ficha_ayuda),
                     style = MaterialTheme.typography.bodySmall,
@@ -289,7 +331,7 @@ private fun DialogoFicha(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onGuardar(horas, dias) }, enabled = !guardando) {
+            TextButton(onClick = { onGuardar(horas, dias, departamentoId) }, enabled = !guardando) {
                 Text(stringResource(R.string.empresa_ficha_guardar))
             }
         },
@@ -624,4 +666,130 @@ private fun YearMonth.formateado(): String {
     val es = Locale.forLanguageTag("es-ES")
     val texto = format(DateTimeFormatter.ofPattern("MMMM 'de' yyyy", es))
     return texto.replaceFirstChar { it.titlecase(es) }
+}
+
+/**
+ * Departamentos de la empresa: lista, alta y borrado.
+ *
+ * El botón de borrar solo aparece cuando el departamento está vacío. El
+ * recuento viene con cada uno justo para eso: enterarse por un 409
+ * después de pulsar es peor que no poder pulsar. El servidor lo sigue
+ * comprobando de todas formas — entre que se pinta la lista y se pulsa,
+ * alguien puede haber metido gente dentro.
+ */
+@Composable
+private fun Departamentos(
+    departamentos: List<DepartamentoDTO>,
+    onCrear: (String) -> Unit,
+    onBorrar: (DepartamentoDTO) -> Unit
+) {
+    var nuevo by remember { mutableStateOf("") }
+
+    Text(
+        text = stringResource(R.string.empresa_departamentos),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Spacer(Modifier.height(8.dp))
+
+    if (departamentos.isEmpty()) {
+        Text(
+            text = stringResource(R.string.empresa_departamentos_vacio),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    departamentos.forEach { departamento ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(departamento.nombre, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.empresa_departamento_empleados,
+                        departamento.empleados.toInt(),
+                        departamento.empleados
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (departamento.empleados == 0L) {
+                IconButton(onClick = { onBorrar(departamento) }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(
+                            R.string.empresa_departamento_borrar_desc, departamento.nombre
+                        )
+                    )
+                }
+            }
+        }
+        HorizontalDivider()
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = nuevo,
+            onValueChange = { nuevo = it },
+            label = { Text(stringResource(R.string.empresa_departamento_nuevo)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        TextButton(
+            onClick = {
+                onCrear(nuevo)
+                nuevo = ""
+            },
+            enabled = nuevo.isNotBlank()
+        ) {
+            Text(stringResource(R.string.empresa_departamento_anadir))
+        }
+    }
+}
+
+/** Desplegable de departamento, con "ninguno" como opción de verdad. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectorDeDepartamento(
+    departamentos: List<DepartamentoDTO>,
+    seleccionado: Long?,
+    onSelecciona: (Long?) -> Unit
+) {
+    var abierto by remember { mutableStateOf(false) }
+    val sinDepartamento = stringResource(R.string.empresa_departamento_ninguno)
+    val texto = departamentos.firstOrNull { it.id == seleccionado }?.nombre ?: sinDepartamento
+
+    ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = !abierto }) {
+        OutlinedTextField(
+            value = texto,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.perfil_departamento)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = abierto) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+            // "Ninguno" no es un hueco: es cómo se saca a alguien de su
+            // departamento sin borrar el departamento.
+            DropdownMenuItem(
+                text = { Text(sinDepartamento) },
+                onClick = { onSelecciona(null); abierto = false }
+            )
+            departamentos.forEach { departamento ->
+                DropdownMenuItem(
+                    text = { Text(departamento.nombre) },
+                    onClick = { onSelecciona(departamento.id); abierto = false }
+                )
+            }
+        }
+    }
 }

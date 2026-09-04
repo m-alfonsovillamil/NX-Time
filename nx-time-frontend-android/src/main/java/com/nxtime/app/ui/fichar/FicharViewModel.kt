@@ -273,7 +273,4 @@ class FicharViewModel(
      * navegación, que es quien decide qué pestañas existen.
      */
 
-    fun cerrarSesion() {
-        sessionManager.clearAuthData()
-    }
 }

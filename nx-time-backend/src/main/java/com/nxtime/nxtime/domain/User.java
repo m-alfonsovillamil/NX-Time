@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -76,6 +77,23 @@ public class User {
      */
     @Builder.Default
     private BigDecimal horasSemanales = new BigDecimal("40.0");
+
+    /*
+     * Datos personales (Fase B). Todos opcionales: los rellena la propia
+     * persona desde su perfil, y una plantilla ya dada de alta no tiene
+     * ninguno. "apellidos" va aparte de "nombre" porque un listado de
+     * RRHH se ordena por apellido, y eso no se puede hacer con un campo
+     * único sin partir cadenas a ojo.
+     */
+    private String apellidos;
+
+    private LocalDate fechaNacimiento;
+
+    private String puesto;
+
+    @ManyToOne
+    @JoinColumn(name = "departamento_id")
+    private Department departamento;
 
     @Version
     private long version;

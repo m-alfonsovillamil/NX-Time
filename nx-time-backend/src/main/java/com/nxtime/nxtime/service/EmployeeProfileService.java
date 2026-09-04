@@ -1,8 +1,10 @@
 package com.nxtime.nxtime.service;
 
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.dto.ProfileResponse;
 import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
 import com.nxtime.nxtime.dto.UpdateEmployeeProfileRequest;
+import com.nxtime.nxtime.dto.UpdateProfileRequest;
 import java.util.List;
 
 /**
@@ -31,4 +33,25 @@ public interface EmployeeProfileService {
      * @throws com.nxtime.nxtime.exception.TenantAccessException si es de otra empresa
      */
     SimpleEmployeeDTO updateProfile(long employeeId, UpdateEmployeeProfileRequest request, User actor);
+
+    /** Mi propia ficha completa. */
+    ProfileResponse getMyProfile(User actor);
+
+    /**
+     * Cambia MIS datos personales. Ni rol, ni jornada, ni vacaciones, ni
+     * departamento: eso no es un dato personal (ver
+     * {@link UpdateProfileRequest}). Null = no tocar.
+     */
+    ProfileResponse updateMyProfile(UpdateProfileRequest request, User actor);
+
+    /**
+     * La ficha de otra persona de mi empresa, para quien tenga
+     * {@code empleado:leer}.
+     *
+     * @throws com.nxtime.nxtime.exception.TenantAccessException si es de otra empresa
+     */
+    ProfileResponse getProfile(long usuarioId, User actor);
+
+    /** Asigna (o quita, con null) el departamento de un empleado. */
+    ProfileResponse assignDepartment(long usuarioId, Long departamentoId, User actor);
 }

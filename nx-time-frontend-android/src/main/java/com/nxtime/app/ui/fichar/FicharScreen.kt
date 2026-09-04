@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -24,9 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +57,7 @@ import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.theme.LocalColoresJornada
 import com.nxtime.app.ui.util.DateFormats
@@ -82,14 +80,13 @@ import kotlinx.coroutines.delay
 @Composable
 fun FicharScreen(
     onIrSolicitud: () -> Unit,
-    onIrContrasena: () -> Unit,
-    onCerrarSesion: () -> Unit,
+    onIrPerfil: () -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
+    iniciales: String,
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
-    var menuAbierto by remember { mutableStateOf(false) }
 
     /*
      * El latido del cronómetro. Vive aquí y no en el ViewModel para que
@@ -121,33 +118,19 @@ fun FicharScreen(
                 ),
                 actions = {
                     // Es la única pestaña que no usa PantallaConBarra, así
-                    // que la campana se coloca a mano. Va delante del menú
-                    // de tres puntos: es lo que se toca a diario, y el
-                    // desbordamiento es siempre lo último de la fila.
+                    // que campana y avatar se colocan a mano.
+                    //
+                    // El menú de tres puntos que había aquí (contraseña y
+                    // cerrar sesión) desaparece en la Fase B: son cosas
+                    // de la cuenta, y su sitio es el perfil, no un
+                    // desbordamiento en la pantalla de fichar.
                     CampanaDeAvisos(contadorAvisos, onIrAvisos)
-                    IconButton(onClick = { menuAbierto = true }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.mas_opciones)
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = menuAbierto,
-                        onDismissRequest = { menuAbierto = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.nav_contrasena)) },
-                            onClick = { menuAbierto = false; onIrContrasena() }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.nav_cerrar_sesion)) },
-                            onClick = {
-                                menuAbierto = false
-                                viewModel.cerrarSesion()
-                                onCerrarSesion()
-                            }
-                        )
-                    }
+                    Avatar(
+                        iniciales = iniciales,
+                        descripcion = stringResource(R.string.perfil_abrir),
+                        onClick = onIrPerfil,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
                 }
             )
         }

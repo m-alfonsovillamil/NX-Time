@@ -82,6 +82,19 @@ interface AuthRepository {
         diasVacaciones: Int?
     ): Response<EmpleadoSimpleDTO>
 
+    /* Funciones de Perfil (Fase B) */
+    suspend fun getMiPerfil(): Response<PerfilDTO>
+    suspend fun actualizarMiPerfil(
+        nombre: String?,
+        apellidos: String?,
+        fechaNacimiento: String?,
+        puesto: String?
+    ): Response<PerfilDTO>
+    suspend fun getDepartamentos(): Response<List<DepartamentoDTO>>
+    suspend fun crearDepartamento(nombre: String): Response<DepartamentoDTO>
+    suspend fun borrarDepartamento(id: Long): Response<Unit>
+    suspend fun asignarDepartamento(usuarioId: Long, departamentoId: Long?): Response<PerfilDTO>
+
     /* Funciones de Avisos */
     suspend fun getAvisos(): Response<List<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>

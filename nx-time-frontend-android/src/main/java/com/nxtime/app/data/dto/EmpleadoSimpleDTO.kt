@@ -31,5 +31,9 @@ data class EmpleadoSimpleDTO(
      * alguien se los ha fijado, y si no el mínimo legal de 22 que
      * aplica el backend por defecto.
      */
-    val diasVacaciones: Int = 22
+    val diasVacaciones: Int = 22,
+
+    /** Departamento al que pertenece, o null si no está en ninguno. */
+    val departamentoId: Long? = null,
+    val departamentoNombre: String? = null
 )

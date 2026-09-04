@@ -21,6 +21,7 @@ import com.nxtime.app.ui.gestion.AusenciasEquipoViewModel
 import com.nxtime.app.ui.gestion.HistorialEquipoViewModel
 import com.nxtime.app.ui.gestion.PanelEmpresaViewModel
 import com.nxtime.app.ui.historial.HistorialViewModel
+import com.nxtime.app.ui.perfil.PerfilViewModel
 import com.nxtime.app.ui.usuario.CambiarContrasenaViewModel
 
 /**
@@ -60,6 +61,7 @@ object AppViewModelProvider {
          * a un "estado de sesión" que tiene la app sin meter Hilt.
          */
         initializer { AvisosViewModel(app().authRepository) }
+        initializer { PerfilViewModel(app().authRepository, app().sessionManager) }
 
         /*
          * Estos dos necesitan saber SOBRE QUÉ fichaje trabajan. El id

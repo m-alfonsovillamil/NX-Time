@@ -2,6 +2,7 @@ package com.nxtime.app.ui.ausencias
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -10,12 +11,14 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
+import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
@@ -29,6 +32,8 @@ fun AusenciasScreen(
     onIrSolicitud: () -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
+    iniciales: String,
+    onIrPerfil: () -> Unit,
     viewModel: AusenciasViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,7 +41,15 @@ fun AusenciasScreen(
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
         titulo = stringResource(R.string.ausencias_titulo),
-        acciones = { CampanaDeAvisos(contadorAvisos, onIrAvisos) },
+        acciones = {
+            CampanaDeAvisos(contadorAvisos, onIrAvisos)
+            Avatar(
+                iniciales = iniciales,
+                descripcion = stringResource(R.string.perfil_abrir),
+                onClick = onIrPerfil,
+                modifier = Modifier.padding(end = 12.dp)
+            )
+        },
         accionFlotante = {
             FloatingActionButton(onClick = onIrSolicitud) {
                 Icon(
