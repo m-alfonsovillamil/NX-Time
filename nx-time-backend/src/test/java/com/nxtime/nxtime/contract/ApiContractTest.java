@@ -134,6 +134,7 @@ class ApiContractTest {
     private long empleadoId;
     private long registroActivoId;
     private long peticionAusenciaId;
+    private long departamentoId;
 
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -1259,6 +1260,182 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 5.d PERFIL Y DEPARTAMENTOS (Fase B)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(60)
+    void empleadoVeSuPerfil_conNombreCompletoEInicialesCalculados() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("email").asText()).isEqualTo(EMAIL_EMPLEADO);
+        // Sin apellidos todavía: el nombre completo es solo el nombre,
+        // sin espacio suelto detrás, y las iniciales son DOS letras.
+        assertThat(body.get("apellidos").isNull()).isTrue();
+        assertThat(body.get("nombreCompleto").asText()).isEqualTo(body.get("nombre").asText());
+        assertThat(body.get("iniciales").asText()).hasSize(2);
+    }
+
+    @Test
+    @Order(61)
+    void empleadoActualizaSuPerfil_yElNombreCompletoSeRecalcula() throws Exception {
+        Map<String, Object> cambios = mapOf(
+                "apellidos", "Contract Pérez",
+                "puesto", "Analista",
+                "fechaNacimiento", "1995-03-14"
+        );
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(cambios), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("apellidos").asText()).isEqualTo("Contract Pérez");
+        assertThat(body.get("puesto").asText()).isEqualTo("Analista");
+        assertThat(body.get("nombreCompleto").asText()).endsWith("Contract Pérez");
+        assertThat(body.get("iniciales").asText()).endsWith("C");
+    }
+
+    @Test
+    @Order(62)
+    void unEmpleadoNoPuedeAscenderseConUnPatchASuPerfil() throws Exception {
+        // El corazón del diseño de UpdateProfileRequest: rol, jornada y
+        // vacaciones NO están en el record, así que Jackson los descarta
+        // y no hay forma de tocarlos desde el perfil propio.
+        Map<String, Object> intento = mapOf(
+                "puesto", "Analista senior",
+                "rol", "ADMIN",
+                "horasSemanales", 1,
+                "diasVacaciones", 99
+        );
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(intento), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("rol").asText()).isEqualTo("EMPLEADO");
+        assertThat(body.get("diasVacaciones").asInt()).isEqualTo(25);   // el que fijó RRHH en el test 44
+        assertThat(body.get("horasSemanales").asDouble()).isNotEqualTo(1.0);
+    }
+
+    @Test
+    @Order(63)
+    void empleadoNoPuedeVerElPerfilDeOtro_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/1"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(64)
+    void gestorCreaUnDepartamentoYSeLoAsignaAlEmpleado() throws Exception {
+        ResponseEntity<String> creado = rest.exchange(
+                url("/api/v1/departamentos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("nombre", "Operaciones")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(creado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode departamento = bodyOf(creado);
+        assertThat(departamento.get("empleados").asLong()).isZero();
+        departamentoId = departamento.get("id").asLong();
+
+        ResponseEntity<String> asignado = rest.exchange(
+                url("/api/v1/departamentos/empleados/" + empleadoId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("departamentoId", departamentoId)), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(asignado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(asignado).get("departamentoNombre").asText()).isEqualTo("Operaciones");
+    }
+
+    @Test
+    @Order(65)
+    void crearUnDepartamentoRepetido_devuelve409() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/departamentos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("nombre", "operaciones")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        // Da igual la caja: "operaciones" y "Operaciones" son el mismo.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(66)
+    void borrarUnDepartamentoConGenteDentro_devuelve409ExplicandoCuanta() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/departamentos/" + departamentoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        // El mensaje dice cuántos hay, que es lo que la violación de
+        // clave ajena no podría decir.
+        assertThat(bodyOf(response).get("detail").asText()).contains("1");
+    }
+
+    @Test
+    @Order(67)
+    void alSacarAlEmpleadoDelDepartamento_yaSePuedeBorrar() throws Exception {
+        ResponseEntity<String> sacado = rest.exchange(
+                url("/api/v1/departamentos/empleados/" + empleadoId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("departamentoId", null)), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(sacado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(sacado).get("departamentoId").isNull()).isTrue();
+
+        ResponseEntity<String> borrado = rest.exchange(
+                url("/api/v1/departamentos/" + departamentoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(borrado.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    @Test
+    @Order(68)
+    void empleadoNoPuedeCrearDepartamentos_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/departamentos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("nombre", "Mío")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    // ------------------------------------------------------------------
     // 6. TOKEN INVÁLIDO
     // ------------------------------------------------------------------
 
@@ -1376,11 +1553,14 @@ class ApiContractTest {
     // ------------------------------------------------------------------
 
     @Test
-    @Order(60)
+    @Order(90)
     void gestorDaDeBajaAUnEmpleado_yYaNoPuedeIniciarSesion() throws Exception {
         // Colocado al final a propósito: da de baja al empleado
         // definitivamente, así que no puede ir antes de ningún otro
-        // test que necesite volver a iniciar sesión como empleado.
+        // test que necesite volver a iniciar sesión como empleado -- ni
+        // de ninguno que use su token, porque una cuenta de baja deja de
+        // poder autenticarse. Por eso el bloque de perfil (60-68) va
+        // delante y esto se movió del 60 al 90 al añadirlo.
         ResponseEntity<String> baja = rest.exchange(
                 url("/api/v1/gestor/empleados/" + empleadoId + "/estado"),
                 HttpMethod.PATCH,

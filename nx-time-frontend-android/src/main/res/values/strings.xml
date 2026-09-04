@@ -340,6 +340,55 @@
     <string name="empresa_ficha_horas_invalidas">La jornada debe ser un número mayor que 0 y como mucho 60.</string>
     <string name="empresa_ficha_dias_invalidos">Los días de vacaciones deben ser un número entero de 0 o más.</string>
 
+    <!-- Departamentos, en el panel de empresa (Fase B). -->
+    <string name="empresa_departamentos">Departamentos</string>
+    <string name="empresa_departamentos_vacio">Todavía no hay ninguno.</string>
+    <string name="empresa_departamento_nuevo">Nombre del departamento</string>
+    <string name="empresa_departamento_anadir">Añadir</string>
+    <string name="empresa_departamento_vacio">Escribe un nombre para el departamento.</string>
+    <string name="empresa_departamento_ninguno">Sin departamento</string>
+    <string name="empresa_departamento_borrar">Borrar</string>
+    <string name="empresa_departamento_borrar_desc">Borrar el departamento %1$s</string>
+    <string name="empresa_departamento_borrar_titulo">¿Borrar %1$s?</string>
+    <string name="empresa_departamento_borrar_texto">Solo se pueden borrar los departamentos que no tienen a nadie dentro.</string>
+    <!-- "many" es obligatoria en castellano desde CLDR 42. -->
+    <plurals name="empresa_departamento_empleados">
+        <item quantity="one">%1$d persona</item>
+        <item quantity="many">%1$d personas</item>
+        <item quantity="other">%1$d personas</item>
+    </plurals>
+
+    <!--
+        Perfil (Fase B).
+
+        "Cambiar contraseña" y "Cerrar sesión" viven aquí desde ahora: el
+        menú de tres puntos de "Mi jornada" desaparece, porque son cosas
+        de la cuenta y su sitio es donde está la cuenta.
+    -->
+    <string name="perfil_titulo">Mi perfil</string>
+    <string name="perfil_abrir">Mi perfil</string>
+    <string name="perfil_datos_personales">Datos personales</string>
+    <string name="perfil_datos_laborales">Datos laborales</string>
+    <string name="perfil_cuenta">Cuenta</string>
+    <string name="perfil_editar">Editar</string>
+    <string name="perfil_guardar">Guardar</string>
+    <string name="perfil_nombre">Nombre</string>
+    <string name="perfil_apellidos">Apellidos</string>
+    <string name="perfil_fecha_nacimiento">Fecha de nacimiento</string>
+    <string name="perfil_fecha_formato">aaaa-mm-dd</string>
+    <string name="perfil_puesto">Puesto</string>
+    <string name="perfil_departamento">Departamento</string>
+    <string name="perfil_rol">Rol</string>
+    <string name="perfil_jornada">Jornada semanal</string>
+    <string name="perfil_jornada_valor">%1$s horas</string>
+    <string name="perfil_vacaciones">Vacaciones de este año</string>
+    <string name="perfil_vacaciones_valor">%1$d días</string>
+    <string name="perfil_laborales_solo_rrhh">Estos datos los gestiona Recursos Humanos.</string>
+    <string name="perfil_sin_dato">—</string>
+    <string name="perfil_nombre_obligatorio">El nombre no puede quedarse vacío.</string>
+    <string name="perfil_fecha_invalida">La fecha tiene que ir en formato aaaa-mm-dd.</string>
+    <string name="perfil_fecha_futura">La fecha de nacimiento tiene que ser anterior a hoy.</string>
+
     <string name="error_sin_conexion">No se ha podido conectar con el servidor. Comprueba tu conexión.</string>
     <string name="error_datos_invalidos">Los datos enviados no son válidos.</string>
     <string name="error_sesion_caducada">Tu sesión ha caducado. Vuelve a iniciar sesión.</string>

@@ -226,15 +226,8 @@ class FicharViewModelTest {
     // Qué ve cada rol ya no se decide en este ViewModel: se mudó a
     // `ui/util/Permisos.kt` y se prueba en `PermisosTest`.
 
-    @Test
-    fun `cerrar sesion borra los datos guardados`() = runTest {
-        val viewModel = viewModelCon(activo = null)
-        advanceUntilIdle()
-
-        viewModel.cerrarSesion()
-
-        verify(sesion).clearAuthData()
-    }
+    // Cerrar sesión se mudó a PerfilViewModel en la Fase B, junto con
+    // el botón: ver `PerfilViewModelTest`.
 
     /*
      * Los totales del resumen.

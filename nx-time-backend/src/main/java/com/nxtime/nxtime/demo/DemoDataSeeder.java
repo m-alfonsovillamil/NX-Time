@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
@@ -13,6 +14,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
@@ -64,6 +66,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
     private final HolidayRepository holidayRepository;
+    private final DepartmentRepository departmentRepository;
     private final NoticeRepository noticeRepository;
     private final VacationBalanceRepository vacationBalanceRepository;
     private final PasswordEncoder passwordEncoder;
@@ -74,6 +77,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             TimeEntryRepository timeEntryRepository,
             AbsenceRequestRepository absenceRequestRepository,
             HolidayRepository holidayRepository,
+            DepartmentRepository departmentRepository,
             NoticeRepository noticeRepository,
             VacationBalanceRepository vacationBalanceRepository,
             PasswordEncoder passwordEncoder
@@ -83,6 +87,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRequestRepository = absenceRequestRepository;
         this.holidayRepository = holidayRepository;
+        this.departmentRepository = departmentRepository;
         this.noticeRepository = noticeRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.passwordEncoder = passwordEncoder;
@@ -99,26 +104,26 @@ public class DemoDataSeeder implements CommandLineRunner {
         log.info("Sembrando datos de demo...");
 
         Company techCorp = crearEmpresa("TechCorp Solutions");
-        User gestorTech = crearUsuario("Marta Sánchez", "marta.sanchez@techcorp.demo", Role.GESTOR, techCorp);
+        User gestorTech = crearUsuario("Marta", "Sánchez Prieto", "marta.sanchez@techcorp.demo", Role.GESTOR, techCorp);
         // Estos dos roles nacieron en la Fase 4, después de escribirse el
         // seeder, y sin ellos la demo no llegaba a lo que mejor la
         // distingue: los informes mensuales, la corrección de fichajes y
         // la línea temporal de auditoría son de RRHH/ADMIN, no de GESTOR.
-        User rrhhTech = crearUsuario("Elena Ríos", "elena.rios@techcorp.demo", Role.RRHH, techCorp);
-        crearUsuario("Raúl Ortega", "raul.ortega@techcorp.demo", Role.ADMIN, techCorp);
+        User rrhhTech = crearUsuario("Elena", "Ríos Bravo", "elena.rios@techcorp.demo", Role.RRHH, techCorp);
+        crearUsuario("Raúl", "Ortega Lima", "raul.ortega@techcorp.demo", Role.ADMIN, techCorp);
         List<User> empleadosTech = List.of(
-                crearUsuario("Javier López", "javier.lopez@techcorp.demo", Role.EMPLEADO, techCorp),
-                crearUsuario("Ana Fernández", "ana.fernandez@techcorp.demo", Role.EMPLEADO, techCorp),
-                crearUsuario("Carlos Ruiz", "carlos.ruiz@techcorp.demo", Role.EMPLEADO, techCorp),
-                crearUsuario("Lucía Moreno", "lucia.moreno@techcorp.demo", Role.EMPLEADO, techCorp)
+                crearUsuario("Javier", "López Serna", "javier.lopez@techcorp.demo", Role.EMPLEADO, techCorp),
+                crearUsuario("Ana", "Fernández Gil", "ana.fernandez@techcorp.demo", Role.EMPLEADO, techCorp),
+                crearUsuario("Carlos", "Ruiz Alonso", "carlos.ruiz@techcorp.demo", Role.EMPLEADO, techCorp),
+                crearUsuario("Lucía", "Moreno Vega", "lucia.moreno@techcorp.demo", Role.EMPLEADO, techCorp)
         );
 
         Company consultoraIberica = crearEmpresa("Consultora Ibérica");
-        User gestorIberica = crearUsuario("Pedro Navarro", "pedro.navarro@iberica.demo", Role.GESTOR, consultoraIberica);
+        User gestorIberica = crearUsuario("Pedro", "Navarro Cid", "pedro.navarro@iberica.demo", Role.GESTOR, consultoraIberica);
         List<User> empleadosIberica = List.of(
-                crearUsuario("Sofía Domínguez", "sofia.dominguez@iberica.demo", Role.EMPLEADO, consultoraIberica),
-                crearUsuario("Diego Vázquez", "diego.vazquez@iberica.demo", Role.EMPLEADO, consultoraIberica),
-                crearUsuario("Elena Castro", "elena.castro@iberica.demo", Role.EMPLEADO, consultoraIberica)
+                crearUsuario("Sofía", "Domínguez Paz", "sofia.dominguez@iberica.demo", Role.EMPLEADO, consultoraIberica),
+                crearUsuario("Diego", "Vázquez Cruz", "diego.vazquez@iberica.demo", Role.EMPLEADO, consultoraIberica),
+                crearUsuario("Elena", "Castro Nieto", "elena.castro@iberica.demo", Role.EMPLEADO, consultoraIberica)
         );
 
         for (User empleado : empleadosTech) {
@@ -142,6 +147,12 @@ public class DemoDataSeeder implements CommandLineRunner {
         // enseña 40 h y 22 días para toda la plantilla: las dos
         // pantallas nuevas parecerían no hacer nada en la demo
         // desplegada, que es justo lo que ve quien abre el proyecto.
+        // Fase B. Sin departamentos ni datos personales, el perfil sale
+        // con la mitad de los campos vacíos en la demo desplegada y el
+        // avatar de todo el mundo es una letra suelta.
+        sembrarPerfiles(empleadosTech, techCorp, "Ingeniería", "Producto");
+        sembrarPerfiles(empleadosIberica, consultoraIberica, "Consultoría", "Administración");
+
         sembrarFichas(empleadosTech);
         sembrarFichas(empleadosIberica);
         sembrarAvisos(empleadosTech, gestorTech);
@@ -159,9 +170,20 @@ public class DemoDataSeeder implements CommandLineRunner {
         return companyRepository.save(Company.builder().nombre(nombre).build());
     }
 
-    private User crearUsuario(String nombre, String email, Role rol, Company empresa) {
+    /**
+     * El nombre y los apellidos van SEPARADOS desde la Fase B.
+     *
+     * Antes el seeder metía "Javier López" entero en `nombre`, que era
+     * inofensivo mientras no existía la columna `apellidos` -- pero en
+     * cuanto existe, añadirle unos apellidos deja a la gente llamándose
+     * "Javier López García Ruiz". Y las iniciales del avatar salían de
+     * las dos primeras letras del nombre ("JA") en vez de ser una por
+     * palabra ("JL").
+     */
+    private User crearUsuario(String nombre, String apellidos, String email, Role rol, Company empresa) {
         return userRepository.save(User.builder()
                 .nombre(nombre)
+                .apellidos(apellidos)
                 .email(email)
                 .contrasena(passwordEncoder.encode(DEMO_PASSWORD))
                 .rol(rol)
@@ -323,6 +345,39 @@ public class DemoDataSeeder implements CommandLineRunner {
                 .anio(anio)
                 .diasTotales(25)
                 .build());
+    }
+
+    /**
+     * Departamentos y datos personales (Fase B).
+     *
+     * El puesto y la fecha de nacimiento solo a algunos, a propósito:
+     * son opcionales de verdad y la pantalla tiene que aguantar verlos
+     * vacíos.
+     */
+    private void sembrarPerfiles(List<User> empleados, Company empresa, String... nombresDeDepartamento) {
+        List<Department> departamentos = java.util.Arrays.stream(nombresDeDepartamento)
+                .map(nombre -> departmentRepository.save(
+                        Department.builder().empresa(empresa).nombre(nombre).build()))
+                .toList();
+
+        // Los apellidos los pone ya crearUsuario: son lo que hace que el
+        // avatar enseñe dos iniciales de verdad ("JL" y no "JA").
+        // Puestos sin marca de género: se reparten por posición entre
+        // nombres de hombre y de mujer, y "Desarrolladora backend" en la
+        // ficha de Javier canta.
+        String[] puestos = {"Desarrollo backend", "Soporte técnico", null, "Análisis de datos"};
+
+        for (int i = 0; i < empleados.size(); i++) {
+            User empleado = empleados.get(i);
+            empleado.setPuesto(puestos[i % puestos.length]);
+            // Uno de cada tres sin fecha de nacimiento: es opcional y la
+            // pantalla tiene que enseñarlo así.
+            if (i % 3 != 2) {
+                empleado.setFechaNacimiento(LocalDate.of(1988 + i, 1 + (i * 3) % 12, 5 + i));
+            }
+            empleado.setDepartamento(departamentos.get(i % departamentos.size()));
+            userRepository.save(empleado);
+        }
     }
 
     /**

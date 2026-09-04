@@ -174,6 +174,37 @@ class AuthRepositoryImpl(
         )
     }
 
+    override suspend fun getMiPerfil(): Response<PerfilDTO> {
+        return apiService.getMiPerfil()
+    }
+
+    override suspend fun actualizarMiPerfil(
+        nombre: String?,
+        apellidos: String?,
+        fechaNacimiento: String?,
+        puesto: String?
+    ): Response<PerfilDTO> {
+        return apiService.actualizarMiPerfil(
+            ActualizarPerfilRequest(nombre, apellidos, fechaNacimiento, puesto)
+        )
+    }
+
+    override suspend fun getDepartamentos(): Response<List<DepartamentoDTO>> {
+        return apiService.getDepartamentos()
+    }
+
+    override suspend fun crearDepartamento(nombre: String): Response<DepartamentoDTO> {
+        return apiService.crearDepartamento(DepartamentoRequest(nombre))
+    }
+
+    override suspend fun borrarDepartamento(id: Long): Response<Unit> {
+        return apiService.borrarDepartamento(id)
+    }
+
+    override suspend fun asignarDepartamento(usuarioId: Long, departamentoId: Long?): Response<PerfilDTO> {
+        return apiService.asignarDepartamento(usuarioId, AsignarDepartamentoRequest(departamentoId))
+    }
+
     override suspend fun getAvisos(): Response<List<AvisoDTO>> {
         return apiService.getAvisos()
     }

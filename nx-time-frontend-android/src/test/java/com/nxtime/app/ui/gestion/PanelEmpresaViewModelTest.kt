@@ -2,6 +2,7 @@ package com.nxtime.app.ui.gestion
 
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
+import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
 import com.nxtime.app.data.repository.AuthRepository
@@ -61,6 +62,7 @@ class PanelEmpresaViewModelTest {
             )
         )
         whenever(repositorio.getMisEmpleados()).thenReturn(Response.success(listOf(empleado)))
+        whenever(repositorio.getDepartamentos()).thenReturn(Response.success(emptyList()))
     }
 
     @Test
@@ -70,7 +72,7 @@ class PanelEmpresaViewModelTest {
         advanceUntilIdle()
 
         var guardado = false
-        viewModel.guardarFicha(10L, horas = "61", dias = "22") { guardado = true }
+        viewModel.guardarFicha(10L, horas = "61", dias = "22", departamentoId = null) { guardado = true }
         advanceUntilIdle()
 
         assertFalse(guardado)
@@ -87,7 +89,7 @@ class PanelEmpresaViewModelTest {
         val viewModel = PanelEmpresaViewModel(repositorio)
         advanceUntilIdle()
 
-        viewModel.guardarFicha(10L, horas = "ocho", dias = "22") {}
+        viewModel.guardarFicha(10L, horas = "ocho", dias = "22", departamentoId = null) {}
         advanceUntilIdle()
 
         assertEquals(
@@ -103,7 +105,7 @@ class PanelEmpresaViewModelTest {
         val viewModel = PanelEmpresaViewModel(repositorio)
         advanceUntilIdle()
 
-        viewModel.guardarFicha(10L, horas = "40", dias = "-1") {}
+        viewModel.guardarFicha(10L, horas = "40", dias = "-1", departamentoId = null) {}
         advanceUntilIdle()
 
         assertEquals(
@@ -124,7 +126,7 @@ class PanelEmpresaViewModelTest {
         advanceUntilIdle()
 
         var guardado = false
-        viewModel.guardarFicha(10L, horas = "37,5", dias = "25") { guardado = true }
+        viewModel.guardarFicha(10L, horas = "37,5", dias = "25", departamentoId = null) { guardado = true }
         advanceUntilIdle()
 
         assertTrue(guardado)
@@ -139,7 +141,7 @@ class PanelEmpresaViewModelTest {
         val viewModel = PanelEmpresaViewModel(repositorio)
         advanceUntilIdle()
 
-        viewModel.guardarFicha(10L, horas = "37.5", dias = "25") {}
+        viewModel.guardarFicha(10L, horas = "37.5", dias = "25", departamentoId = null) {}
         advanceUntilIdle()
 
         // Una en el init y otra al guardar: se recarga en vez de retocar
@@ -147,6 +149,73 @@ class PanelEmpresaViewModelTest {
         verify(repositorio, times(2)).getMisEmpleados()
         assertFalse(viewModel.uiState.value.guardandoFicha)
         assertEquals(null, viewModel.uiState.value.errorFicha)
+    }
+
+    @Test
+    fun `guardar la ficha manda tambien el departamento, que es otro endpoint`() = runTest {
+        conPanelCargado()
+        whenever(repositorio.configurarFichaEmpleado(any(), anyOrNull(), anyOrNull()))
+            .thenReturn(Response.success(empleado))
+        whenever(repositorio.asignarDepartamento(any(), anyOrNull()))
+            .thenReturn(Response.success(null))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        viewModel.guardarFicha(10L, horas = "40", dias = "22", departamentoId = 3L) {}
+        advanceUntilIdle()
+
+        // Jornada/vacaciones y departamento son authorities distintas en
+        // el backend, así que son dos llamadas.
+        verify(repositorio).configurarFichaEmpleado(eq(10L), eq("40"), eq(22))
+        verify(repositorio).asignarDepartamento(eq(10L), eq(3L))
+    }
+
+    @Test
+    fun `sacar a alguien de su departamento manda null, que ahi si significa algo`() = runTest {
+        conPanelCargado()
+        whenever(repositorio.configurarFichaEmpleado(any(), anyOrNull(), anyOrNull()))
+            .thenReturn(Response.success(empleado))
+        whenever(repositorio.asignarDepartamento(any(), anyOrNull()))
+            .thenReturn(Response.success(null))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        viewModel.guardarFicha(10L, horas = "40", dias = "22", departamentoId = null) {}
+        advanceUntilIdle()
+
+        verify(repositorio).asignarDepartamento(eq(10L), eq(null))
+    }
+
+    @Test
+    fun `un departamento sin nombre no sale a la red`() = runTest {
+        conPanelCargado()
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        viewModel.crearDepartamento("   ")
+        advanceUntilIdle()
+
+        assertEquals(
+            MensajeUi.Recurso(R.string.empresa_departamento_vacio),
+            viewModel.uiState.value.error
+        )
+        verify(repositorio, never()).crearDepartamento(any())
+    }
+
+    @Test
+    fun `crear un departamento recorta el nombre y recarga`() = runTest {
+        conPanelCargado()
+        whenever(repositorio.crearDepartamento(any()))
+            .thenReturn(Response.success(DepartamentoDTO(1L, "Ventas", 0L)))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        viewModel.crearDepartamento("  Ventas  ")
+        advanceUntilIdle()
+
+        verify(repositorio).crearDepartamento(eq("Ventas"))
+        // Una carga en el init y otra tras crear.
+        verify(repositorio, times(2)).getDepartamentos()
     }
 
     @Test
@@ -158,7 +227,7 @@ class PanelEmpresaViewModelTest {
         advanceUntilIdle()
 
         var guardado = false
-        viewModel.guardarFicha(10L, horas = "37.5", dias = "25") { guardado = true }
+        viewModel.guardarFicha(10L, horas = "37.5", dias = "25", departamentoId = null) { guardado = true }
         advanceUntilIdle()
 
         assertFalse(guardado)

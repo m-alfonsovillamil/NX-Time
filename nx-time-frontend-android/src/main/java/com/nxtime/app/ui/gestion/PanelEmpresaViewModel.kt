@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
 import com.nxtime.app.data.network.ApiErrorParser
@@ -25,6 +26,7 @@ data class PanelEmpresaUiState(
     val empleados: List<EmpleadoSimpleDTO> = emptyList(),
     val mes: YearMonth = YearMonth.now(),
     val descargando: Boolean = false,
+    val departamentos: List<DepartamentoDTO> = emptyList(),
     val guardandoFicha: Boolean = false,
     val errorFicha: MensajeUi? = null,
     val error: MensajeUi? = null
@@ -57,8 +59,10 @@ class PanelEmpresaViewModel(
                 // que la más lenta y no la suma de ambas.
                 val panelDiferido = async { authRepository.getPanelEmpresa() }
                 val empleadosDiferido = async { authRepository.getMisEmpleados() }
+                val departamentosDiferido = async { authRepository.getDepartamentos() }
                 val panel = panelDiferido.await()
                 val empleados = empleadosDiferido.await()
+                val departamentos = departamentosDiferido.await()
 
                 if (!panel.isSuccessful) {
                     _uiState.update {
@@ -70,7 +74,8 @@ class PanelEmpresaViewModel(
                     it.copy(
                         cargando = false,
                         panel = panel.body(),
-                        empleados = empleados.body().orEmpty()
+                        empleados = empleados.body().orEmpty(),
+                        departamentos = departamentos.body().orEmpty()
                     )
                 }
             } catch (e: Exception) {
@@ -111,6 +116,54 @@ class PanelEmpresaViewModel(
     fun descartarErrorDeFicha() = _uiState.update { it.copy(errorFicha = null) }
 
     /**
+     * Crea un departamento.
+     *
+     * El nombre repetido lo rechaza el servidor con un 409 y su mensaje;
+     * aquí solo se para el nombre vacío, que no merece un viaje.
+     */
+    fun crearDepartamento(nombre: String) {
+        if (nombre.isBlank()) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.empresa_departamento_vacio)) }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.crearDepartamento(nombre.trim())
+                if (respuesta.isSuccessful) {
+                    cargar()
+                } else {
+                    _uiState.update { it.copy(error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /**
+     * Borra un departamento.
+     *
+     * No se comprueba aquí que esté vacío: el recuento que viene con
+     * cada uno decide si se ofrece el botón, y el servidor sigue siendo
+     * quien lo garantiza -- entre que se pintó la lista y se pulsa,
+     * alguien puede haber metido gente dentro.
+     */
+    fun borrarDepartamento(id: Long) {
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.borrarDepartamento(id)
+                if (respuesta.isSuccessful) {
+                    cargar()
+                } else {
+                    _uiState.update { it.copy(error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /**
      * Guarda la ficha de un empleado: jornada semanal y días de
      * vacaciones del año en curso.
      *
@@ -122,7 +175,13 @@ class PanelEmpresaViewModel(
      * @param alGuardar se llama solo si el servidor acepta, para que la
      *   pantalla pueda cerrar el diálogo.
      */
-    fun guardarFicha(empleadoId: Long, horas: String, dias: String, alGuardar: () -> Unit) {
+    fun guardarFicha(
+        empleadoId: Long,
+        horas: String,
+        dias: String,
+        departamentoId: Long?,
+        alGuardar: () -> Unit
+    ) {
         val horasNormalizadas = horas.trim().replace(',', '.')
         val horasNumero = horasNormalizadas.toDoubleOrNull()
         if (horasNumero == null || horasNumero <= 0.0 || horasNumero > 60.0) {
@@ -146,7 +205,10 @@ class PanelEmpresaViewModel(
                 val respuesta = authRepository.configurarFichaEmpleado(
                     empleadoId, horasNormalizadas, diasNumero
                 )
+                // El departamento es otro endpoint y otra authority: se
+                // manda aparte, y solo si la ficha ha ido bien.
                 if (respuesta.isSuccessful) {
+                    authRepository.asignarDepartamento(empleadoId, departamentoId)
                     _uiState.update { it.copy(guardandoFicha = false, errorFicha = null) }
                     alGuardar()
                     // Recargar en vez de retocar la lista en local, igual

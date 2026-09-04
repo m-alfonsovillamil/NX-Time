@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
 
@@ -50,6 +51,8 @@ import com.nxtime.app.ui.components.PantallaConBarra
 fun PanelGestionScreen(
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
+    iniciales: String,
+    onIrPerfil: () -> Unit,
     puedeCrearGestores: Boolean,
     puedeVerPanelEmpresa: Boolean,
     onIrPanelEmpresa: () -> Unit,
@@ -62,7 +65,15 @@ fun PanelGestionScreen(
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
         titulo = stringResource(R.string.gestion_titulo),
-        acciones = { CampanaDeAvisos(contadorAvisos, onIrAvisos) }
+        acciones = {
+            CampanaDeAvisos(contadorAvisos, onIrAvisos)
+            Avatar(
+                iniciales = iniciales,
+                descripcion = stringResource(R.string.perfil_abrir),
+                onClick = onIrPerfil,
+                modifier = Modifier.padding(end = 12.dp)
+            )
+        }
     ) { modifier ->
         Column(
             modifier = modifier

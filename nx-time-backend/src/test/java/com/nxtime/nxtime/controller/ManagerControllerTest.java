@@ -150,7 +150,7 @@ class ManagerControllerTest {
 
     private static SimpleEmployeeDTO fichaDeEjemplo() {
         return new SimpleEmployeeDTO(
-                2L, "Empleado", "empleado@nxtime.test", true, new BigDecimal("37.5"), 25);
+                2L, "Empleado", "empleado@nxtime.test", true, new BigDecimal("37.5"), 25, 3L, "Operaciones");
     }
 
     @Test

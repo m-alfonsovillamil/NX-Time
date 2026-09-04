@@ -64,6 +64,7 @@ public final class RoleAuthorities {
     private static final Set<String> RRHH = union(GESTOR, Set.of(
             "empleado:gestionar",
             "empleado:configurar",
+            "departamento:gestionar",
             "fichaje:corregir",
             "fichaje:auditoria",
             "informe:exportar"

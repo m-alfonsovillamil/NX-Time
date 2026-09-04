@@ -39,6 +39,16 @@ public record SimpleEmployeeDTO(
          * PATCH no hay fila para casi nadie, y un null aquí obligaría a
          * cada cliente a repetir la regla del valor por defecto.
          */
-        int diasVacaciones
+        int diasVacaciones,
+
+        /**
+         * Departamento al que pertenece, o null. Viaja con el listado
+         * porque el diálogo que edita la ficha necesita saber en cuál
+         * está para precargar el selector, y la relación ya viene
+         * cargada con el usuario: no cuesta ninguna consulta más.
+         */
+        Long departamentoId,
+
+        String departamentoNombre
 ) {
 }

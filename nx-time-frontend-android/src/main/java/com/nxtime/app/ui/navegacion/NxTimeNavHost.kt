@@ -57,6 +57,8 @@ import com.nxtime.app.ui.gestion.HistorialEquipoScreen
 import com.nxtime.app.ui.gestion.PanelEmpresaScreen
 import com.nxtime.app.ui.gestion.PanelGestionScreen
 import com.nxtime.app.ui.historial.HistorialScreen
+import com.nxtime.app.ui.perfil.PerfilScreen
+import com.nxtime.app.ui.perfil.PerfilViewModel
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
 import com.nxtime.app.ui.util.Permisos
 import com.nxtime.app.ui.util.Rol
@@ -80,6 +82,7 @@ enum class Pantalla(val ruta: String) {
     HISTORIAL("historial"),
     AUSENCIAS("ausencias"),
     AVISOS("avisos"),
+    PERFIL("perfil"),
     SOLICITUD("solicitud"),
     CONTRASENA("contrasena"),
     GESTION("gestion"),
@@ -205,6 +208,17 @@ fun NxTimeNavHost(
     val irAAvisos = { navController.navigate(Pantalla.AVISOS.ruta) }
 
     /*
+     * El perfil se comparte por el mismo motivo que los avisos: sus
+     * INICIALES van en el avatar de las cuatro barras superiores, así
+     * que si cada pantalla creara su instancia, editar el nombre dejaría
+     * el avatar desactualizado hasta reiniciar.
+     */
+    val perfilViewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val estadoPerfil by perfilViewModel.uiState.collectAsStateWithLifecycle()
+    val iniciales = estadoPerfil.perfil?.iniciales.orEmpty()
+    val irAPerfil = { navController.navigate(Pantalla.PERFIL.ruta) }
+
+    /*
      * Entrar y salir de la sesión vacían la pila de atrás.
      *
      * Es lo que antes conseguía el `finish()` de `irAHome()`: sin esto,
@@ -222,8 +236,10 @@ fun NxTimeNavHost(
          */
         if (destino == Pantalla.LOGIN) {
             avisosViewModel.limpiar()
+            perfilViewModel.limpiar()
         } else {
             avisosViewModel.refrescarContador()
+            perfilViewModel.cargar()
         }
         navController.navigate(destino.ruta) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -239,6 +255,18 @@ fun NxTimeNavHost(
      */
     LaunchedEffect(sessionManager) {
         sessionManager.sesionCaducada.collect { entrarA(Pantalla.LOGIN) }
+    }
+
+    /*
+     * Arranque en frío con la sesión ya iniciada: no se pasa por
+     * `entrarA`, así que sin esto el avatar de las cuatro barras se
+     * quedaría sin iniciales hasta que alguien abriera el perfil.
+     */
+    LaunchedEffect(sesionIniciada) {
+        if (sesionIniciada) {
+            perfilViewModel.cargar()
+            avisosViewModel.refrescarContador()
+        }
     }
 
     /* Salto entre pestañas: ni apila ni recarga. */
@@ -360,10 +388,10 @@ fun NxTimeNavHost(
                 LaunchedEffect(Unit) { avisosViewModel.refrescarContador() }
                 FicharScreen(
                     onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) },
-                    onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
-                    onCerrarSesion = { entrarA(Pantalla.LOGIN) },
+                    onIrPerfil = irAPerfil,
                     contadorAvisos = estadoAvisos.noLeidos,
-                    onIrAvisos = irAAvisos
+                    onIrAvisos = irAAvisos,
+                    iniciales = iniciales
                 )
             }
 
@@ -373,7 +401,9 @@ fun NxTimeNavHost(
             composable(Pantalla.HISTORIAL.ruta) {
                 HistorialScreen(
                     contadorAvisos = estadoAvisos.noLeidos,
-                    onIrAvisos = irAAvisos
+                    onIrAvisos = irAAvisos,
+                    iniciales = iniciales,
+                    onIrPerfil = irAPerfil
                 )
             }
 
@@ -381,12 +411,31 @@ fun NxTimeNavHost(
                 AusenciasScreen(
                     onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) },
                     contadorAvisos = estadoAvisos.noLeidos,
-                    onIrAvisos = irAAvisos
+                    onIrAvisos = irAAvisos,
+                    iniciales = iniciales,
+                    onIrPerfil = irAPerfil
                 )
             }
 
             // Pantalla hoja: conserva la flecha de volver y oculta la
             // barra de navegación, así que no entra en DestinoPrincipal.
+            composable(Pantalla.PERFIL.ruta) {
+                // Por si se llega aquí sin haber pasado por entrarA
+                // (arranque con sesión ya iniciada).
+                LaunchedEffect(Unit) {
+                    if (perfilViewModel.uiState.value.perfil == null) perfilViewModel.cargar()
+                }
+                PerfilScreen(
+                    onVolver = navController::navigateUp,
+                    onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
+                    onCerrarSesion = {
+                        perfilViewModel.cerrarSesion()
+                        entrarA(Pantalla.LOGIN)
+                    },
+                    viewModel = perfilViewModel
+                )
+            }
+
             composable(Pantalla.AVISOS.ruta) {
                 LaunchedEffect(Unit) { avisosViewModel.cargar() }
                 AvisosScreen(
@@ -414,6 +463,8 @@ fun NxTimeNavHost(
                 PanelGestionScreen(
                     contadorAvisos = estadoAvisos.noLeidos,
                     onIrAvisos = irAAvisos,
+                    iniciales = iniciales,
+                    onIrPerfil = irAPerfil,
                     // Solo ADMIN tiene la authority `gestor:crear`. Antes
                     // la opción se le ofrecía a cualquier gestor y el
                     // backend respondía 403 sin falta.
