@@ -3,6 +3,20 @@
 # application-dev.yml / application-prod.yml.
 
 spring:
+  servlet:
+    multipart:
+      # Hasta la Fase B no había ninguna subida de ficheros, así que
+      # esto ni existía y regían los valores por defecto de Spring
+      # (1 MB por fichero, 10 MB por petición): un CV normal de dos
+      # páginas escaneadas ya no cabía.
+      #
+      # 5 MB es el límite real del CV; la foto se acepta igual de grande
+      # porque llega directa de la cámara del móvil y el servidor la
+      # reescala a 256x256 antes de guardarla (ver AttachmentService).
+      # El límite por petición va un poco por encima para dejar sitio a
+      # las cabeceras del multipart.
+      max-file-size: 5MB
+      max-request-size: 6MB
   jpa:
     # El esquema lo crea y versiona Flyway (ver
     # resources/db/migration/), no Hibernate: "validate" comprueba que
