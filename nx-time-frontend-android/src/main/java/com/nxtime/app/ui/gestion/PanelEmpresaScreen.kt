@@ -3,6 +3,11 @@ package com.nxtime.app.ui.gestion
 import android.content.ActivityNotFoundException
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -241,14 +246,36 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(Modifier.height(8.dp))
+        /*
+         * La escala se fija con la MEDIA del equipo como referencia, no
+         * solo con el máximo. Con barras proporcionales al mayor, quien
+         * más ha trabajado siempre llena la barra y todos los demás se
+         * ven "cortos": el gráfico dice quién trabaja más, que ya se lee
+         * en los números, y no dice lo único que importa -- quién se sale
+         * de lo normal.
+         *
+         * El tope de la escala es el mayor entre el máximo y la media,
+         * para que la marca de la media siempre caiga dentro del dibujo.
+         */
+        val media = panel.horasPorEmpleado.sumOf { it.minutos } / panel.horasPorEmpleado.size
         val maximo = panel.horasPorEmpleado.maxOf { it.minutos }.coerceAtLeast(1)
+        val tope = maxOf(maximo, media).coerceAtLeast(1)
+
         panel.horasPorEmpleado.forEach { fila ->
             BarraDeHoras(
                 nombre = fila.nombre,
                 minutos = fila.minutos,
-                proporcion = fila.minutos.toFloat() / maximo
+                proporcion = fila.minutos.toFloat() / tope,
+                proporcionMedia = media.toFloat() / tope,
+                porEncimaDeLaMedia = fila.minutos > media
             )
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.empresa_media_equipo, DateFormats.minutos(media)),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -293,14 +320,26 @@ private fun Indicador(
 }
 
 /**
- * Una barra por empleado, proporcional al que más ha trabajado.
+ * Una barra por empleado, con la media del equipo marcada encima.
  *
- * Se dibuja con una `Card` de anchura variable en vez de traer una
+ * Sin esa marca, la gráfica no decía nada: eran barras planas sin escala
+ * ni referencia, así que "9h 30m" quedaba tan suelto como el número que
+ * ya estaba escrito al lado. Con la línea de la media se lee de un
+ * vistazo lo único que un gestor busca aquí -- **quién se sale de lo
+ * normal**, hacia arriba o hacia abajo.
+ *
+ * Se dibuja con `Box` y anchuras proporcionales en vez de traer una
  * librería de gráficas: son cuatro o cinco filas y un solo eje, y una
  * dependencia entera para esto no se paga sola.
  */
 @Composable
-private fun BarraDeHoras(nombre: String, minutos: Long, proporcion: Float) {
+private fun BarraDeHoras(
+    nombre: String,
+    minutos: Long,
+    proporcion: Float,
+    proporcionMedia: Float,
+    porEncimaDeLaMedia: Boolean
+) {
     Column(modifier = Modifier.padding(vertical = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
@@ -311,25 +350,73 @@ private fun BarraDeHoras(nombre: String, minutos: Long, proporcion: Float) {
             Text(
                 text = DateFormats.minutos(minutos),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Quien está por encima de la media se marca en el color
+                // de gestión; el resto queda en gris.
+                color = if (porEncimaDeLaMedia) {
+                    MaterialTheme.colorScheme.tertiary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
         }
         Spacer(Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Card(
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+        ) {
+            // El carril de fondo da la escala completa: sin él, todas las
+            // barras parecerían llenas y no compararían nada.
+            Box(
                 modifier = Modifier
-                    .weight(proporcion.coerceIn(0.02f, 1f))
-                    .height(8.dp),
-                colors = CardDefaults.cardColors(
-                    // Índigo: estas barras son datos de gestión, no del
-                    // propio empleado.
-                    containerColor = MaterialTheme.colorScheme.tertiary
-                )
-            ) {}
-            // El hueco restante mantiene la escala: sin él, todas las
-            // barras ocuparían el ancho completo y no compararían nada.
-            val resto = 1f - proporcion.coerceIn(0.02f, 1f)
-            if (resto > 0f) Spacer(Modifier.weight(resto))
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .align(Alignment.CenterStart)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(proporcion.coerceIn(0.02f, 1f))
+                    .height(8.dp)
+                    .align(Alignment.CenterStart)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.tertiary)
+            )
+            /*
+             * La marca de la media, encima de todo y sobresaliendo de la
+             * barra por arriba y por abajo para que se lea como una
+             * referencia y no como un trozo de la propia barra.
+             *
+             * Va en dos capas -- un filo del color de la tarjeta y un
+             * nucleo gris dentro -- porque tiene que verse sobre dos
+             * fondos distintos: el carril vacio, que es gris claro, y el
+             * relleno indigo de quien esta por encima de la media, que es
+             * justo la fila donde la marca mas importa. Con una sola capa
+             * gris, la marca de Javier Lopez desaparecia dentro de su
+             * propia barra.
+             */
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(proporcionMedia.coerceIn(0f, 1f))
+                    .align(Alignment.CenterStart),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(6.dp)
+                        .height(14.dp)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .height(14.dp)
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant)
+                    )
+                }
+            }
         }
     }
 }

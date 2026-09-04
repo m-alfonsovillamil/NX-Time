@@ -42,7 +42,7 @@ class DashboardControllerTest {
     void getPersonalDashboard_conAuthority_devuelve200() throws Exception {
         when(dashboardService.getPersonalDashboard("empleado@nxtime.test")).thenReturn(
                 new PersonalDashboardResponse(WorkStatus.TRABAJANDO, 450, 1800, 7200, 2,
-                        new VacationBalanceResponse(2026, 22, 5, 17)));
+                        new VacationBalanceResponse(2026, 22, 5, 17), 2400));
 
         mockMvc.perform(get("/api/v1/dashboard/resumen"))
                 .andExpect(status().isOk())

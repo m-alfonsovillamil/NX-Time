@@ -1,0 +1,46 @@
+<!--
+    Marca del icono de lanzador: la N de NX Time trazada como una linea
+    de tiempo.
+
+    Sustituye al reloj metalico fotorrealista con "NX Time" grabado
+    dentro. Aquel tenia tres problemas de manual: texto dentro del icono
+    (a 48 dp no se lee y las mascaras se lo comen), fotorrealismo en un
+    sistema que lleva anos en iconografia plana, y ningun parentesco con
+    la app — ni el teal ni las formas.
+
+    Por que una N y no un reloj: un reloj podria ser de cualquier
+    aplicacion. La letra es de esta. Y su zigzag — baja, sube, baja —
+    se lee ademas como una linea de tiempo, que es lo que la app mide.
+    El punto del extremo marca el "ahora".
+
+    Solo la N, no "NX": el nombre ya va escrito debajo del icono en el
+    lanzador, y meter dos letras aqui reparte el grosor de trazo entre
+    ambas hasta que a 26 px se empastan. Un icono de lanzador es un
+    simbolo, no un rotulo.
+
+    GEOMETRIA. Lienzo de 108, pero el sistema solo garantiza un circulo
+    de 66 centrado: el resto lo recorta la mascara del lanzador. La N va
+    de 37 a 71 en los dos ejes, y el punto mas lejano del conjunto — el
+    borde exterior del circulo del extremo — queda a 31 del centro, con
+    2 de margen sobre los 33 disponibles.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- La N: sube, diagonal, sube -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="11"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M37,71 L37,37 L71,71 L71,37" />
+
+    <!-- El "ahora": el extremo de la linea, marcado -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M71,37m-7,0a7,7 0 1,1 14,0a7,7 0 1,1 -14,0" />
+</vector>
