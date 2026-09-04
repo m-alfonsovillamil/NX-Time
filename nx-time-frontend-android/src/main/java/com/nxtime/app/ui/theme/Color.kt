@@ -67,9 +67,26 @@ val LightOutlineVariant = Color(0xFFBFD2D4)
 val LightSurfaceContainer = Color(0xFFFFFFFF)
 val LightSurfaceContainerHigh = Color(0xFFF4FAFB)
 
-/** Los dos extremos del degradado del fondo. */
-val LightFondoArriba = Color(0xFFF2FAFB)
-val LightFondoAbajo = Color(0xFFE4F1F3)
+/**
+ * Los dos extremos del degradado del fondo.
+ *
+ * El salto es deliberadamente visible. La primera versión iba de
+ * `#F2FAFB` a `#E4F1F3` y era tan sutil que no se leía como una
+ * decisión, sino como un artefacto de renderizado: se pagaba el coste
+ * (rehacer el tema oscuro, scaffolds transparentes) sin cobrar el
+ * beneficio. O se nota, o sobra.
+ *
+ * Hasta dónde puede llegar lo fija el contraste, y ahí hubo que elegir:
+ * con texto `primary` puesto directamente sobre el fondo, el degradado
+ * más oscuro que aún daba 4,5:1 saltaba **menos** que el original
+ * invisible. No se puede tener las dos cosas. La solución no fue
+ * suavizar el degradado sino **dejar de poner teal sobre el fondo**: el
+ * saludo va en tinta y "Solicitar ausencia" pasó a botón tonal. Así el
+ * salto de luminancia es de 0,143 -- casi el doble que antes -- y lo que
+ * queda encima llega a 5,8:1 en el peor caso.
+ */
+val LightFondoArriba = Color(0xFFF4FCFD)
+val LightFondoAbajo = Color(0xFFD9EDF0)
 
 // ---- Tema oscuro ----
 val DarkPrimary = Color(0xFF5FD4DE)
@@ -114,8 +131,8 @@ val DarkSurfaceContainerHigh = Color(0xFF1F2C2E)
  * algo más claro abajo -- para que la barra de navegación no se hunda en
  * negro y siga leyéndose como una superficie.
  */
-val DarkFondoArriba = Color(0xFF0C1416)
-val DarkFondoAbajo = Color(0xFF122123)
+val DarkFondoArriba = Color(0xFF0A1113)
+val DarkFondoAbajo = Color(0xFF16292C)
 
 /**
  * Colores del estado de la jornada.

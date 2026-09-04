@@ -23,6 +23,7 @@ import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.VacationBalanceService;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -84,6 +85,33 @@ class DashboardServiceImplTest {
 
         assertThat(service.getPersonalDashboard(empleado.getEmail()).estadoActual())
                 .isEqualTo(WorkStatus.SIN_JORNADA);
+    }
+
+    @Test
+    @DisplayName("La jornada semanal esperada viaja en minutos, no en horas decimales")
+    void getPersonalDashboard_devuelveLaJornadaSemanalEnMinutos() {
+        conUsuario();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+
+        // 40 h por defecto (art. 34 ET) = 2400 minutos.
+        assertThat(service.getPersonalDashboard(empleado.getEmail()).minutosJornadaSemanal())
+                .isEqualTo(2400L);
+    }
+
+    /**
+     * 37,5 h es una jornada real y frecuente, y es justo el caso que
+     * rompería si la conversión pasara por `double`: 37.5 * 60 en coma
+     * flotante puede dar 2249.9999999999995, que truncado son 2249.
+     */
+    @Test
+    @DisplayName("Una jornada con media hora no pierde un minuto por la coma flotante")
+    void getPersonalDashboard_jornadaConMediaHora_noPierdeMinutos() {
+        empleado.setHorasSemanales(new BigDecimal("37.5"));
+        conUsuario();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+
+        assertThat(service.getPersonalDashboard(empleado.getEmail()).minutosJornadaSemanal())
+                .isEqualTo(2250L);
     }
 
     @Test

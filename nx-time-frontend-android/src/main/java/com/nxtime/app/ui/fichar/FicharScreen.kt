@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -162,7 +164,15 @@ fun FicharScreen(
                 Text(
                     text = stringResource(R.string.fichar_saludo, estado.nombreUsuario),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    /*
+                     * En tinta y no en teal. Un titular de color sobre un
+                     * fondo de color es lo que ataba el degradado: con el
+                     * saludo en `primary`, cualquier degradado que se
+                     * notara bajaba el contraste de 4,5:1. Y a 26 sp en
+                     * Sora Bold el saludo no necesita color para destacar
+                     * -- el color se reserva para estado y acción.
+                     */
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
@@ -206,10 +216,33 @@ fun FicharScreen(
                         )
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
+
+                /*
+                 * De qué se compone la jornada abierta. Va justo debajo
+                 * de los controles y encima de los totales, que es el
+                 * orden en que se leen: qué estoy haciendo, qué llevo
+                 * hoy, y qué llevo acumulado.
+                 */
+                ComposicionDeLaJornada(
+                    segundosTrabajados = estado.segundosEnCurso,
+                    segundosPausa = estado.registro?.segundosPausaAcumulados ?: 0,
+                    horaEntradaIso = estado.registro?.horaEntrada,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+                Spacer(Modifier.height(20.dp))
             }
 
             ResumenDeTiempos(estado)
+
+            estado.resumen?.let { resumen ->
+                Spacer(Modifier.height(14.dp))
+                ProgresoSemanal(
+                    minutosTrabajados = estado.minutosSemana,
+                    minutosObjetivo = resumen.minutosJornadaSemanal,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+            }
 
             estado.resumen?.ausenciasPendientes
                 ?.takeIf { it > 0 }
@@ -234,8 +267,14 @@ fun FicharScreen(
              * Solicitar ausencia se queda aquí, y sola: es la única de
              * las tres antiguas que no es un destino de la barra, sino
              * una acción que se inicia desde la jornada.
+             *
+             * Tonal y no perfilado: un botón perfilado sobre un fondo con
+             * degradado se difumina -- el borde y la etiqueta iban en
+             * `primary`, que es justo lo que no aguanta el extremo oscuro
+             * del degradado. Relleno, además, se lee como lo que es: una
+             * acción secundaria de verdad, no un adorno.
              */
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = onIrSolicitud,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,7 +430,23 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
             containerColor = fondo,
             contentColor = contenido
         ),
-        modifier = Modifier.size(220.dp)
+        /*
+         * 176 dp y no 220: el botón seguía siendo el elemento dominante
+         * de la pantalla, pero ocupaba un tercio de la altura para
+         * llevar dos palabras y un cronómetro, y empujaba los datos
+         * hacia abajo dejando un hueco muerto al final. Sigue muy por
+         * encima del mínimo táctil de 48 dp -- no se pierde nada de
+         * accesibilidad -- y el sitio que suelta lo ocupan ahora la
+         * composición de la jornada y el progreso de la semana.
+         */
+        /*
+         * El relleno por defecto de un Button son 24 dp por lado, pensados
+         * para un boton ancho y bajo. Aqui dejaban 128 dp utiles de los
+         * 176 y "Finalizar jornada" se partia en dos lineas dentro de un
+         * boton que tiene sitio de sobra. Con 12 dp quedan 152 y entra.
+         */
+        contentPadding = PaddingValues(12.dp),
+        modifier = Modifier.size(176.dp)
     ) {
         if (estado.cargando) {
             CircularProgressIndicator(color = contenido)
@@ -407,7 +462,7 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
                         stringResource(R.string.fichar_cronometro_descripcion, tiempo)
                     Text(
                         text = tiempo,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.semantics { contentDescription = descripcion }
                     )
@@ -420,7 +475,14 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
                             else -> R.string.fichar_finalizar
                         }
                     ),
-                    style = MaterialTheme.typography.titleLarge,
+                    // `titleMedium` y no `titleLarge`: al bajar el boton a
+                    // 176 dp, "Finalizar jornada" se partia en dos lineas
+                    // y empujaba al cronometro contra el borde.
+                    style = MaterialTheme.typography.titleMedium,
+                    // Sin `maxLines`: con el relleno reducido entra en una
+                    // linea, pero quien tenga la fuente del sistema al 200 %
+                    // necesita que parta en dos antes que recortar la
+                    // palabra.
                     textAlign = TextAlign.Center
                 )
             }

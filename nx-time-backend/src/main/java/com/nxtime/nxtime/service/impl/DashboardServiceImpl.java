@@ -16,6 +16,7 @@ import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.DashboardService;
 import com.nxtime.nxtime.service.VacationBalanceService;
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -96,7 +97,8 @@ public class DashboardServiceImpl implements DashboardService {
                 aMinutos(segundosSemana),
                 aMinutos(segundosMes),
                 ausenciasPendientes,
-                vacationBalanceService.getBalance(user, hoy.getYear()));
+                vacationBalanceService.getBalance(user, hoy.getYear()),
+                aMinutosSemanales(user));
     }
 
     @Override
@@ -150,5 +152,21 @@ public class DashboardServiceImpl implements DashboardService {
     /** Truncado, no redondeado: 89 segundos son 1 minuto trabajado, no 2. */
     private long aMinutos(long segundos) {
         return segundos / 60;
+    }
+
+    /**
+     * La jornada esperada del usuario, de horas por semana a minutos.
+     *
+     * `horasSemanales` es un `BigDecimal` porque admite medias horas
+     * (37,5 h es una jornada real y frecuente). Se multiplica en decimal
+     * y se convierte al final, en vez de pasar por double: 37.5 * 60 en
+     * coma flotante puede dar 2249.9999999999995.
+     */
+    private long aMinutosSemanales(User user) {
+        BigDecimal horas = user.getHorasSemanales();
+        if (horas == null) {
+            return 0;
+        }
+        return horas.multiply(BigDecimal.valueOf(60)).longValue();
     }
 }

@@ -76,6 +76,16 @@
     <string name="fichar_vacaciones">Vacaciones</string>
     <string name="fichar_vacaciones_detalle">%1$d de %2$d días disponibles</string>
     <string name="fichar_cronometro_descripcion">Llevas %1$s de jornada</string>
+
+    <!-- Composicion de la jornada abierta y progreso de la semana -->
+    <string name="jornada_trabajado">%1$s trabajados</string>
+    <string name="jornada_pausado">%1$s de pausa</string>
+    <string name="jornada_desde">Desde las %1$s</string>
+    <string name="jornada_composicion_descripcion">
+        Hoy llevas %1$s trabajados y %2$s de pausa
+    </string>
+    <string name="jornada_semana_objetivo">Progreso de la semana</string>
+    <string name="jornada_semana_progreso">%1$s de %2$s</string>
     <!--
       Plural de verdad y no dos <string>: en espanol "1 solicitud" y
       "2 solicitudes" cambian de forma, y concatenar una "s" a mano falla
@@ -116,6 +126,7 @@
         nadie ha corregido todavía.
     </string>
     <string name="empresa_horas_por_empleado">Horas por empleado</string>
+    <string name="empresa_media_equipo">La marca vertical es la media del equipo: %1$s</string>
     <string name="empresa_plantilla">Plantilla</string>
     <string name="empresa_mes">Mes del informe</string>
     <string name="empresa_descargar_excel">Descargar Excel de horas</string>
