@@ -79,6 +79,10 @@ import java.util.Locale
  *
  * @param puedeGestionarEmpleados si se ofrece el alta/baja
  *   (`empleado:gestionar`, RRHH y ADMIN).
+ * @param puedeConfigurarEmpleados si se ofrece editar la ficha
+ *   (`empleado:configurar`). Authority distinta de la anterior aunque
+ *   hoy la tengan los mismos roles: desactivar una cuenta y fijar la
+ *   jornada contractual de alguien no son la misma operación.
  * @param puedeExportar si se ofrecen los informes (`informe:exportar`,
  *   mismos roles). Van separados porque son authorities distintas en el
  *   backend, aunque hoy coincidan los roles que las tienen.
@@ -87,6 +91,7 @@ import java.util.Locale
 fun PanelEmpresaScreen(
     onVolver: () -> Unit,
     puedeGestionarEmpleados: Boolean,
+    puedeConfigurarEmpleados: Boolean,
     puedeExportar: Boolean,
     viewModel: PanelEmpresaViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -168,6 +173,7 @@ fun PanelEmpresaScreen(
                     FilaEmpleado(
                         empleado = empleado,
                         puedeGestionar = puedeGestionarEmpleados,
+                        puedeConfigurar = puedeConfigurarEmpleados,
                         puedeExportar = puedeExportar,
                         descargando = estado.descargando,
                         onConfigurar = { aConfigurar = empleado },
@@ -548,6 +554,7 @@ private fun SelectorDeMes(mes: YearMonth, onCambia: (YearMonth) -> Unit) {
 private fun FilaEmpleado(
     empleado: EmpleadoSimpleDTO,
     puedeGestionar: Boolean,
+    puedeConfigurar: Boolean,
     puedeExportar: Boolean,
     descargando: Boolean,
     onConfigurar: () -> Unit,
@@ -589,7 +596,7 @@ private fun FilaEmpleado(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (puedeGestionar) {
+            if (puedeConfigurar) {
                 IconButton(onClick = onConfigurar) {
                     Icon(
                         Icons.Default.Tune,

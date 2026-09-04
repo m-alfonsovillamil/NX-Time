@@ -467,6 +467,10 @@ fun NxTimeNavHost(
                 PanelEmpresaScreen(
                     onVolver = navController::navigateUp,
                     puedeGestionarEmpleados = Permisos.puedeGestionarEmpleados(rol),
+                    // Dar de baja y configurar la ficha son authorities
+                    // distintas en el backend aunque hoy coincidan sus
+                    // roles: van por separado también aquí.
+                    puedeConfigurarEmpleados = Permisos.puedeConfigurarEmpleados(rol),
                     puedeExportar = Permisos.puedeExportarInformes(rol)
                 )
             }

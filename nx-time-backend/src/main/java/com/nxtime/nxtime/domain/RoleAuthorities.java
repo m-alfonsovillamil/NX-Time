@@ -22,6 +22,16 @@ import java.util.Set;
  * "empleado:gestionar" (dar de baja/alta a un empleado) la tienen RRHH
  * y ADMIN: es la autoridad que usa el nuevo endpoint de desactivación
  * de usuarios.
+ * "empleado:configurar" (Fase A: fijar la jornada semanal y los días de
+ * vacaciones) va con los mismos roles, y aun así es una authority
+ * aparte. Hoy no restringe nada que "empleado:gestionar" no restrinja
+ * ya -- igual que pasa entre "fichaje:corregir", "fichaje:auditoria" e
+ * "informe:exportar", que también coinciden rol a rol. Lo que separa no
+ * es quién puede hacerlo sino QUÉ se está haciendo: desactivar una
+ * cuenta y fijar la jornada contractual de alguien no son la misma
+ * operación, y el día que un GESTOR deba poder la segunda sobre su
+ * equipo sin poder nunca la primera, ese cambio es una línea aquí y
+ * ningún endpoint tocado.
  * "fichaje:corregir" y "fichaje:auditoria" (Fase 8) las tienen RRHH y
  * ADMIN: corregir un fichaje pasado y ver su línea temporal de cambios
  * es una operación de cumplimiento normativo (RD-ley 8/2019), no algo
@@ -53,6 +63,7 @@ public final class RoleAuthorities {
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(
             "empleado:gestionar",
+            "empleado:configurar",
             "fichaje:corregir",
             "fichaje:auditoria",
             "informe:exportar"

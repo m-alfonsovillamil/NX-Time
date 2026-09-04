@@ -1051,7 +1051,7 @@ class ApiContractTest {
     void rrhhConfiguraLaFichaDeUnEmpleado_devuelve200ConLosValoresNuevos() throws Exception {
         // El gestor de este flujo es en realidad un ADMIN
         // (registerManager crea ADMIN desde la Fase 4), así que tiene
-        // "empleado:gestionar".
+        // "empleado:configurar".
         Map<String, Object> ficha = mapOf("horasSemanales", 37.5, "diasVacaciones", 25);
 
         ResponseEntity<String> response = rest.exchange(

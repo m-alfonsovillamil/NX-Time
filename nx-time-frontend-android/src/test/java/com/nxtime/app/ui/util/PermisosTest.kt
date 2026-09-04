@@ -40,6 +40,7 @@ class PermisosTest {
         assertFalse(Permisos.puedeCorregirFichajes(null))
         assertFalse(Permisos.puedeCrearGestores(null))
         assertFalse(Permisos.puedeExportarInformes(null))
+        assertFalse(Permisos.puedeConfigurarEmpleados(null))
     }
 
     @Test
@@ -52,6 +53,7 @@ class PermisosTest {
         assertFalse(Permisos.puedeVerAuditoria(rol))
         assertFalse(Permisos.puedeExportarInformes(rol))
         assertFalse(Permisos.puedeCrearGestores(rol))
+        assertFalse(Permisos.puedeConfigurarEmpleados(rol))
     }
 
     @Test
@@ -68,6 +70,9 @@ class PermisosTest {
         assertFalse(Permisos.puedeVerAuditoria(rol))
         assertFalse(Permisos.puedeExportarInformes(rol))
         assertFalse(Permisos.puedeGestionarEmpleados(rol))
+        // La jornada contractual y los días de vacaciones son un dato de
+        // RRHH, no algo que decida quien lleva el equipo día a día.
+        assertFalse(Permisos.puedeConfigurarEmpleados(rol))
     }
 
     /**
@@ -89,6 +94,7 @@ class PermisosTest {
         assertTrue(Permisos.puedeVerAuditoria(rol))
         assertTrue(Permisos.puedeExportarInformes(rol))
         assertTrue(Permisos.puedeGestionarEmpleados(rol))
+        assertTrue(Permisos.puedeConfigurarEmpleados(rol))
         assertFalse(Permisos.puedeCrearGestores(rol))
     }
 
@@ -104,6 +110,7 @@ class PermisosTest {
         assertTrue(Permisos.puedeAprobarAusencias(rol))
         assertTrue(Permisos.puedeCrearEmpleados(rol))
         assertTrue(Permisos.puedeGestionarEmpleados(rol))
+        assertTrue(Permisos.puedeConfigurarEmpleados(rol))
         assertTrue(Permisos.puedeCorregirFichajes(rol))
         assertTrue(Permisos.puedeVerAuditoria(rol))
         assertTrue(Permisos.puedeExportarInformes(rol))

@@ -180,14 +180,14 @@ public class ManagerController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "Sin la authority 'empleado:gestionar', "
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'empleado:configurar', "
                     + "o empleado de otra empresa (aislamiento multi-tenant)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Empleado no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PatchMapping("/empleados/{id}/ficha")
-    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    @PreAuthorize("hasAuthority('empleado:configurar')")
     public ResponseEntity<SimpleEmployeeDTO> updateEmployeeProfile(
             @PathVariable long id,
             @Valid @RequestBody UpdateEmployeeProfileRequest request,

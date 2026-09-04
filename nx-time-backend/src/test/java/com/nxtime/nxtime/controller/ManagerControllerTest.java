@@ -155,7 +155,7 @@ class ManagerControllerTest {
 
     @Test
     @WithMockSecurityUser(rol = Role.RRHH)
-    @DisplayName("PATCH /gestor/empleados/{id}/ficha con 'empleado:gestionar' (RRHH) devuelve 200")
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha con 'empleado:configurar' (RRHH) devuelve 200")
     void updateEmployeeProfile_comoRRHH_devuelve200() throws Exception {
         when(employeeProfileService.updateProfile(eq(2L), any(), any())).thenReturn(fichaDeEjemplo());
 
@@ -170,7 +170,7 @@ class ManagerControllerTest {
 
     @Test
     @WithMockSecurityUser(rol = Role.GESTOR)
-    @DisplayName("PATCH /gestor/empleados/{id}/ficha como GESTOR devuelve 403: la jornada contractual es de RRHH")
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha como GESTOR devuelve 403: sin 'empleado:configurar'")
     void updateEmployeeProfile_comoGestor_devuelve403() throws Exception {
         mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
                         .contentType(MediaType.APPLICATION_JSON)
