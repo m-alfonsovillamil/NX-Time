@@ -1,7 +1,12 @@
 # Capturas de la app Android
 
-Rehechas el **03/09/2026**, tras el rediseño a Material 3 Expressive. Emulador
+Rehechas el **04/09/2026**, tras aplicar la línea visual "Fichaje". Emulador
 `Medium_Phone_API_35` (Android 15) contra el backend local con el perfil `demo`.
+
+La dirección se apoya en cuatro cosas que el proyecto no estaba usando: una
+escala de **formas** propia (`Theme.kt` nunca pasaba un `Shapes()`), **Sora** en
+titulares y cifras, un **fondo con degradado** pintado una sola vez detrás de
+todo, y un **índigo** reservado a la zona de gestión.
 
 Son capturas reales de la aplicación hablando con la API, no maquetas: los datos
 que se ven salen de los usuarios y fichajes que siembra `DemoDataSeeder`.
@@ -65,4 +70,4 @@ Lo que exige `empleado:gestionar`, `informe:exportar`, `fichaje:corregir` y
 ---
 
 `13-calendario-antes-en-ingles.png` **no se ha rehecho**: documenta un defecto ya
-corregido y no se puede volver a reproducir. Las 27 restantes son del 03/09/2026.
+corregido y no se puede volver a reproducir. Las 27 restantes son del 04/09/2026.
