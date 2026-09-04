@@ -3,6 +3,9 @@ package com.nxtime.nxtime.demo;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
+import com.nxtime.nxtime.domain.Attachment;
+import com.nxtime.nxtime.domain.AttachmentData;
+import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Holiday;
@@ -13,6 +16,8 @@ import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.AttachmentDataRepository;
+import com.nxtime.nxtime.repository.AttachmentRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
@@ -20,7 +25,13 @@ import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -28,6 +39,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -67,6 +79,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final AbsenceRequestRepository absenceRequestRepository;
     private final HolidayRepository holidayRepository;
     private final DepartmentRepository departmentRepository;
+    private final AttachmentRepository attachmentRepository;
+    private final AttachmentDataRepository attachmentDataRepository;
     private final NoticeRepository noticeRepository;
     private final VacationBalanceRepository vacationBalanceRepository;
     private final PasswordEncoder passwordEncoder;
@@ -78,6 +92,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             AbsenceRequestRepository absenceRequestRepository,
             HolidayRepository holidayRepository,
             DepartmentRepository departmentRepository,
+            AttachmentRepository attachmentRepository,
+            AttachmentDataRepository attachmentDataRepository,
             NoticeRepository noticeRepository,
             VacationBalanceRepository vacationBalanceRepository,
             PasswordEncoder passwordEncoder
@@ -88,6 +104,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.absenceRequestRepository = absenceRequestRepository;
         this.holidayRepository = holidayRepository;
         this.departmentRepository = departmentRepository;
+        this.attachmentRepository = attachmentRepository;
+        this.attachmentDataRepository = attachmentDataRepository;
         this.noticeRepository = noticeRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.passwordEncoder = passwordEncoder;
@@ -155,6 +173,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         sembrarFichas(empleadosTech);
         sembrarFichas(empleadosIberica);
+
+        // Fase B2. Solo a algunos: la pantalla tiene que enseñar tanto un
+        // avatar con foto como uno con iniciales, y un perfil con CV como
+        // uno sin él.
+        sembrarAdjuntos(empleadosTech);
+        sembrarAdjuntos(empleadosIberica);
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
 
@@ -377,6 +401,99 @@ public class DemoDataSeeder implements CommandLineRunner {
             }
             empleado.setDepartamento(departamentos.get(i % departamentos.size()));
             userRepository.save(empleado);
+        }
+    }
+
+    /**
+     * Un CV y una foto de ejemplo (Fase B2), a la mitad de la plantilla.
+     *
+     * El PDF y el JPEG se generan aquí en vez de leerlos de
+     * `src/main/resources`: son ficheros mínimos válidos, y meter
+     * binarios en el repositorio para que la demo tenga un adjunto sería
+     * pagar un precio permanente por un dato de ejemplo.
+     *
+     * La foto se guarda ya reescalada, igual que haría el servicio: el
+     * seeder va a los repositorios y no a los servicios (ver el Javadoc
+     * de la clase), así que le toca respetar la misma invariante.
+     */
+    private void sembrarAdjuntos(List<User> empleados) {
+        for (int i = 0; i < empleados.size(); i++) {
+            // Uno sí y uno no: el avatar con iniciales tiene que verse
+            // igual de bien que el que tiene foto.
+            if (i % 2 != 0) {
+                continue;
+            }
+            User empleado = empleados.get(i);
+            guardarAdjunto(empleado, AttachmentType.CV, "cv-" + empleado.getId() + ".pdf",
+                    "application/pdf", pdfMinimo(empleado));
+            guardarAdjunto(empleado, AttachmentType.FOTO, "foto.jpg",
+                    "image/jpeg", avatarDeEjemplo(empleado));
+        }
+    }
+
+    private void guardarAdjunto(User empleado, AttachmentType tipo, String nombre,
+                                String mime, byte[] contenido) {
+        if (contenido == null) {
+            return;
+        }
+        Attachment adjunto = attachmentRepository.save(Attachment.builder()
+                .empresa(empleado.getEmpresa())
+                .usuario(empleado)
+                .tipo(tipo)
+                .nombreOriginal(nombre)
+                .mime(mime)
+                .tamanoBytes(contenido.length)
+                .subidoEn(Instant.now())
+                .build());
+        attachmentDataRepository.save(AttachmentData.builder()
+                .adjuntoId(adjunto.getId())
+                .contenido(contenido)
+                .build());
+    }
+
+    /**
+     * Un PDF de una página en blanco: lo mínimo que un visor acepta.
+     *
+     * Empieza por "%PDF-", que es justo lo que mira la validación por
+     * contenido de {@code AttachmentService}, así que el CV de demo pasa
+     * por el mismo aro que uno subido de verdad.
+     */
+    private byte[] pdfMinimo(User empleado) {
+        // Se concatena en vez de usar String.formatted(): un PDF está
+        // lleno de '%' ("%PDF-1.4", "%%EOF") y el formateador los toma
+        // por conversiones, así que revienta con
+        // UnknownFormatConversionException al arrancar.
+        String pdf = """
+                %PDF-1.4
+                1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+                2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+                3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj
+                trailer<</Root 1 0 R>>
+                % CV de ejemplo de """
+                + empleado.getNombre() + "\n%%EOF";
+        return pdf.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /** Un JPEG de 256x256 de un color liso, distinto por persona. */
+    private byte[] avatarDeEjemplo(User empleado) {
+        BufferedImage imagen = new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
+        Graphics2D lienzo = imagen.createGraphics();
+        try {
+            // Un tono por persona, para que no salgan todos iguales.
+            lienzo.setColor(Color.getHSBColor((empleado.getId() % 10) / 10f, 0.45f, 0.75f));
+            lienzo.fillRect(0, 0, 256, 256);
+        } finally {
+            lienzo.dispose();
+        }
+        try {
+            ByteArrayOutputStream salida = new ByteArrayOutputStream();
+            ImageIO.write(imagen, "jpg", salida);
+            return salida.toByteArray();
+        } catch (IOException e) {
+            // Los datos de demo no valen una excepción que impida
+            // arrancar: sin foto, el avatar enseña las iniciales.
+            log.warn("No se ha podido generar el avatar de demo de {}", empleado.getEmail());
+            return null;
         }
     }
 

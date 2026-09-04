@@ -57,9 +57,13 @@ class RetrofitClient(
      * log y la app enseñaba "no se ha podido conectar".
      *
      * Además, volcar un .xlsx binario a logcat no informa de nada.
+     *
+     * Desde la Fase B2 se excluyen también los adjuntos, que son otro
+     * cuerpo binario: un PDF que se descarga y una foto que se sube.
      */
     private val loggingSalvoDescargas = Interceptor { chain ->
-        if (chain.request().url.encodedPath.contains("/informes/")) {
+        val ruta = chain.request().url.encodedPath
+        if (ruta.contains("/informes/") || ruta.contains("/adjuntos")) {
             chain.proceed(chain.request())
         } else {
             loggingInterceptor.intercept(chain)

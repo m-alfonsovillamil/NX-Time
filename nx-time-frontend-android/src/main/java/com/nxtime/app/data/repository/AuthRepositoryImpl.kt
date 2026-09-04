@@ -5,6 +5,9 @@ import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.network.ApiService
 import com.nxtime.app.data.session.SessionManager
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 
@@ -203,6 +206,40 @@ class AuthRepositoryImpl(
 
     override suspend fun asignarDepartamento(usuarioId: Long, departamentoId: Long?): Response<PerfilDTO> {
         return apiService.asignarDepartamento(usuarioId, AsignarDepartamentoRequest(departamentoId))
+    }
+
+    override suspend fun getMisAdjuntos(): Response<List<AdjuntoDTO>> {
+        return apiService.getMisAdjuntos()
+    }
+
+    /**
+     * El multipart se arma aquí y no en el ViewModel: la forma del
+     * cuerpo es cosa de la capa de datos, como en el resto.
+     *
+     * El `mime` que se manda es solo informativo -- el servidor decide
+     * el tipo real mirando los primeros bytes --, pero se envía el que
+     * el sistema declara para el fichero elegido en vez de un
+     * `application/octet-stream` genérico.
+     */
+    override suspend fun subirAdjunto(
+        contenido: ByteArray,
+        nombre: String,
+        mime: String,
+        tipo: String
+    ): Response<AdjuntoDTO> {
+        val cuerpo = contenido.toRequestBody(mime.toMediaTypeOrNull())
+        return apiService.subirAdjunto(
+            MultipartBody.Part.createFormData("fichero", nombre, cuerpo),
+            tipo.toRequestBody("text/plain".toMediaTypeOrNull())
+        )
+    }
+
+    override suspend fun descargarAdjunto(adjuntoId: Long): Response<ResponseBody> {
+        return apiService.descargarAdjunto(adjuntoId)
+    }
+
+    override suspend fun borrarAdjunto(adjuntoId: Long): Response<Unit> {
+        return apiService.borrarAdjunto(adjuntoId)
     }
 
     override suspend fun getAvisos(): Response<List<AvisoDTO>> {

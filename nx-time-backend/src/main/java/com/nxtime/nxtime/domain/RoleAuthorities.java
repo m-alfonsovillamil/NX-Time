@@ -22,6 +22,11 @@ import java.util.Set;
  * "empleado:gestionar" (dar de baja/alta a un empleado) la tienen RRHH
  * y ADMIN: es la autoridad que usa el nuevo endpoint de desactivación
  * de usuarios.
+ * "adjunto:subir" (Fase B2: el propio CV y la propia foto) la tiene
+ * EMPLEADO, porque son SUS ficheros. Descargar un adjunto no la pide:
+ * basta con estar autenticado y que sea de la misma empresa, porque un
+ * gestor necesita leer el CV de su equipo. Borrar sí la pide, y además
+ * el servicio comprueba que el adjunto sea tuyo.
  * "empleado:configurar" (Fase A: fijar la jornada semanal y los días de
  * vacaciones) va con los mismos roles, y aun así es una authority
  * aparte. Hoy no restringe nada que "empleado:gestionar" no restrinja
@@ -50,7 +55,8 @@ public final class RoleAuthorities {
             "fichaje:leer",
             "fichaje:escribir",
             "ausencia:leer",
-            "ausencia:escribir"
+            "ausencia:escribir",
+            "adjunto:subir"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(

@@ -28,9 +28,14 @@ import java.io.File
 suspend fun guardarEnCache(
     context: Context,
     cuerpo: ResponseBody,
-    nombreFichero: String
+    nombreFichero: String,
+    subcarpeta: String = "informes"
 ): File = withContext(Dispatchers.IO) {
-    val carpeta = File(context.cacheDir, "informes").apply { mkdirs() }
+    // La subcarpeta es parámetro desde la Fase B2: el CV va a
+    // "adjuntos" y los informes a "informes". Las dos están declaradas
+    // en res/xml/rutas_de_informes.xml, que es lo único que el
+    // FileProvider puede ceder.
+    val carpeta = File(context.cacheDir, subcarpeta).apply { mkdirs() }
     val destino = File(carpeta, nombreFichero)
     cuerpo.byteStream().use { entrada ->
         destino.outputStream().use { salida -> entrada.copyTo(salida) }
