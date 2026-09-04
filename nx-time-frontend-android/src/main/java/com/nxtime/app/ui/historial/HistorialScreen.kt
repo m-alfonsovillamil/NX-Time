@@ -30,19 +30,23 @@ import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
+import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 
 @Composable
 fun HistorialScreen(
+    contadorAvisos: Int,
+    onIrAvisos: () -> Unit,
     viewModel: HistorialViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
-        titulo = stringResource(R.string.historial_titulo)
+        titulo = stringResource(R.string.historial_titulo),
+        acciones = { CampanaDeAvisos(contadorAvisos, onIrAvisos) }
     ) { modifier ->
         ListaConRecarga(
             cargando = estado.cargando,

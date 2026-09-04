@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -88,6 +89,24 @@ public class GlobalExceptionHandler {
 
         log.warn("Parámetros inválidos: {}", detalle);
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detalle);
+    }
+
+    /**
+     * Dos personas han editado la misma fila a la vez y la segunda ha
+     * llegado con una @Version vieja (Fase A).
+     *
+     * Sin este manejador caía en el 500 genérico de abajo, que es
+     * mentira: no ha fallado nada del servidor, ha fallado una carrera
+     * entre dos usuarios y volver a intentarlo la resuelve. Se hace
+     * visible ahora porque la ficha de empleado es la primera pantalla
+     * donde dos personas de RRHH editan de verdad al mismo empleado,
+     * pero el manejador vale para cualquier entidad con @Version.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLocking(ObjectOptimisticLockingFailureException ex) {
+        log.warn("Edición concurrente sobre {}: {}", ex.getPersistentClassName(), ex.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "Otra persona ha modificado estos datos mientras los editabas. Vuelve a cargarlos e inténtalo de nuevo.");
     }
 
     @ExceptionHandler(AuthenticationException.class)

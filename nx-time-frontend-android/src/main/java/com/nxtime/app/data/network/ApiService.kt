@@ -158,6 +158,16 @@ interface ApiService {
     @GET("api/v1/gestor/ausencias-historial")
     suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>>
 
+    /**
+     * Configura la jornada semanal y/o los días de vacaciones del año
+     * en curso. Es un PATCH: lo que va a null no se toca.
+     */
+    @PATCH("api/v1/gestor/empleados/{id}/ficha")
+    suspend fun configurarFichaEmpleado(
+        @Path("id") empleadoId: Long,
+        @Body ficha: FichaEmpleadoRequest
+    ): Response<EmpleadoSimpleDTO>
+
 
     /* Endpoint CREAR GESTOR */
 
@@ -174,5 +184,21 @@ interface ApiService {
     suspend fun cambiarContrasena(
         @Body peticion: CambiarContrasenaRequest
     ): Response<Unit>
+
+
+    /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */
+
+    @GET("api/v1/avisos")
+    suspend fun getAvisos(): Response<List<AvisoDTO>>
+
+    /** Solo el contador: se pide mucho más a menudo que la lista. */
+    @GET("api/v1/avisos/no-leidos")
+    suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>
+
+    @PATCH("api/v1/avisos/{id}/leido")
+    suspend fun marcarAvisoLeido(@Path("id") avisoId: Long): Response<Unit>
+
+    @PATCH("api/v1/avisos/leer-todos")
+    suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
 
 }

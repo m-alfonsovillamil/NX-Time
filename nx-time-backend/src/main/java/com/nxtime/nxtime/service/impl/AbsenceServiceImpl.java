@@ -120,8 +120,8 @@ public class AbsenceServiceImpl implements AbsenceService {
         userRepository.findByEmpresa(user.getEmpresa()).stream()
                 .filter(User::isActivo)
                 .filter(posible -> RoleAuthorities.forRole(posible.getRol()).contains(AUTHORITY_APROBAR))
-                .forEach(aprobador -> eventPublisher.publishEvent(new NotificationEvents.AbsenceRequested(
-                        saved, aprobador.getEmail(), aprobador.getNombre())));
+                .forEach(aprobador -> eventPublisher.publishEvent(
+                        new NotificationEvents.AbsenceRequested(saved, aprobador)));
 
         log.info("Nueva petición de ausencia de {} ({} - {}, {} días hábiles)",
                 email, saved.getFechaInicio(), saved.getFechaFin(), diasHabiles);

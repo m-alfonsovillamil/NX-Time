@@ -1039,6 +1039,226 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 5.b FICHA DE EMPLEADO (Fase A)
+    // ------------------------------------------------------------------
+    // Va DESPUÉS del bloque de ausencias a propósito: el test 38
+    // comprueba el saldo por defecto de 22 días, y fijarlo a mano antes
+    // lo rompería. (Consulta el año 2027, así que en realidad no chocan,
+    // pero el orden deja clara la intención.)
+
+    @Test
+    @Order(44)
+    void rrhhConfiguraLaFichaDeUnEmpleado_devuelve200ConLosValoresNuevos() throws Exception {
+        // El gestor de este flujo es en realidad un ADMIN
+        // (registerManager crea ADMIN desde la Fase 4), así que tiene
+        // "empleado:gestionar".
+        Map<String, Object> ficha = mapOf("horasSemanales", 37.5, "diasVacaciones", 25);
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/gestor/empleados/" + empleadoId + "/ficha"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(ficha), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("horasSemanales").asDouble()).isEqualTo(37.5);
+        assertThat(body.get("diasVacaciones").asInt()).isEqualTo(25);
+    }
+
+    @Test
+    @Order(45)
+    void elSaldoDeVacacionesRefleja_loQueEscribioLaFicha() throws Exception {
+        // La prueba de que el PATCH escribe DE VERDAD en
+        // "saldo_vacaciones": hasta la Fase A nadie llamaba nunca a
+        // save() sobre esa tabla, así que nada lo comprobaba.
+        int anioActual = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Madrid")).getYear();
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ausencias/saldo-vacaciones?anio=" + anioActual),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(response).get("diasTotales").asInt()).isEqualTo(25);
+    }
+
+    @Test
+    @Order(46)
+    void empleadoNoPuedeConfigurarFichas_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/gestor/empleados/" + empleadoId + "/ficha"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("horasSemanales", 20.0)), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(47)
+    void configurarLaFichaDeOtraEmpresa_devuelve403() throws Exception {
+        // Aislamiento multi-tenant a mano (ADR 006): no hay filtro
+        // automático, cada endpoint compara la empresa.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/gestor/empleados/" + empleadoId + "/ficha"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("horasSemanales", 20.0)), authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(48)
+    void configurarLaFichaConJornadaFueraDeRango_devuelve400() throws Exception {
+        // El CHECK de la base dice horas_semanales <= 60; el DTO lo
+        // espeja para que esto sea un 400 y no un 500.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/gestor/empleados/" + empleadoId + "/ficha"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("horasSemanales", 61.0)), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------
+    // 5.c AVISOS DENTRO DE LA APLICACIÓN (Fase A)
+    // ------------------------------------------------------------------
+    // Los avisos los escribe un listener @Async AFTER_COMMIT, así que
+    // hay carrera entre el 200 de la operación y el INSERT: por eso se
+    // sondea en vez de comprobar justo después. Lo que se fija aquí es
+    // el CONTRATO HTTP; que cada evento produzca su aviso lo comprueba
+    // NotificationListenerTest, que es síncrono y determinista.
+
+    private JsonNode esperarAvisosDe(String token) throws Exception {
+        JsonNode avisos = null;
+        for (int intento = 0; intento < 30; intento++) {
+            ResponseEntity<String> response = rest.exchange(
+                    url("/api/v1/avisos"),
+                    HttpMethod.GET,
+                    new HttpEntity<>(authHeaders(token)),
+                    String.class
+            );
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            avisos = bodyOf(response);
+            if (avisos.size() > 0) {
+                return avisos;
+            }
+            Thread.sleep(100);
+        }
+        return avisos;
+    }
+
+    @Test
+    @Order(55)
+    void elEmpleadoTieneAvisosDeLoQueLeHaPasado() throws Exception {
+        JsonNode avisos = esperarAvisosDe(empleadoToken);
+
+        assertThat(avisos.isArray()).isTrue();
+        // Al menos la bienvenida del alta (test 10) y la resolución de
+        // su ausencia (test 33).
+        assertThat(avisos.size()).isGreaterThanOrEqualTo(2);
+
+        JsonNode primero = avisos.get(0);
+        assertThat(primero.has("id")).isTrue();
+        assertThat(primero.has("tipo")).isTrue();
+        assertThat(primero.has("titulo")).isTrue();
+        assertThat(primero.has("rutaDestino")).isTrue();
+        assertThat(primero.get("leido").asBoolean()).isFalse();
+    }
+
+    @Test
+    @Order(56)
+    void marcarUnAvisoComoLeidoBajaElContadorDeNoLeidos() throws Exception {
+        ResponseEntity<String> antes = rest.exchange(
+                url("/api/v1/avisos/no-leidos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(antes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        int noLeidosAntes = bodyOf(antes).get("noLeidos").asInt();
+        assertThat(noLeidosAntes).isPositive();
+
+        long avisoId = esperarAvisosDe(empleadoToken).get(0).get("id").asLong();
+        ResponseEntity<String> marcado = rest.exchange(
+                url("/api/v1/avisos/" + avisoId + "/leido"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(marcado.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> despues = rest.exchange(
+                url("/api/v1/avisos/no-leidos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(despues).get("noLeidos").asInt()).isEqualTo(noLeidosAntes - 1);
+    }
+
+    @Test
+    @Order(57)
+    void marcarElAvisoDeOtraPersona_devuelve403() throws Exception {
+        // Más estricto que el aislamiento entre empresas: el gestor y el
+        // empleado son de la MISMA empresa y aun así no pueden tocarse
+        // los avisos.
+        long avisoDelGestor = esperarAvisosDe(gestorToken).get(0).get("id").asLong();
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/avisos/" + avisoDelGestor + "/leido"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(58)
+    void marcarTodosLosAvisosDejaElContadorACero() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/avisos/leer-todos"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> contador = rest.exchange(
+                url("/api/v1/avisos/no-leidos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(contador).get("noLeidos").asInt()).isZero();
+    }
+
+    @Test
+    @Order(59)
+    void consultarAvisosSinAutenticar_devuelve401() throws Exception {
+        // Los avisos no piden authority, pero sí sesión.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/avisos"),
+                HttpMethod.GET,
+                new HttpEntity<>(jsonHeaders()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    // ------------------------------------------------------------------
     // 6. TOKEN INVÁLIDO
     // ------------------------------------------------------------------
 

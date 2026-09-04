@@ -234,10 +234,10 @@ class AbsenceServiceImplTest {
                 ArgumentCaptor.forClass(NotificationEvents.AbsenceRequested.class);
         verify(eventPublisher, times(3)).publishEvent(captor.capture());
 
-        assertThat(captor.getAllValues()).extracting(NotificationEvents.AbsenceRequested::emailDestino)
+        assertThat(captor.getAllValues()).extracting(evento -> evento.destinatario().getEmail())
                 .containsExactlyInAnyOrder(admin.getEmail(), rrhh.getEmail(), gestorActivo.getEmail());
         // Ni al empleado que la pidió, ni a otros empleados, ni a quien está de baja.
-        assertThat(captor.getAllValues()).extracting(NotificationEvents.AbsenceRequested::emailDestino)
+        assertThat(captor.getAllValues()).extracting(evento -> evento.destinatario().getEmail())
                 .doesNotContain(empleado.getEmail(), otroEmpleado.getEmail(), gestorDeBaja.getEmail());
     }
 

@@ -5,14 +5,20 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Holiday;
+import com.nxtime.nxtime.domain.Notice;
+import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
+import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.repository.VacationBalanceRepository;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -58,6 +64,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
     private final HolidayRepository holidayRepository;
+    private final NoticeRepository noticeRepository;
+    private final VacationBalanceRepository vacationBalanceRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
@@ -66,6 +74,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             TimeEntryRepository timeEntryRepository,
             AbsenceRequestRepository absenceRequestRepository,
             HolidayRepository holidayRepository,
+            NoticeRepository noticeRepository,
+            VacationBalanceRepository vacationBalanceRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -73,6 +83,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRequestRepository = absenceRequestRepository;
         this.holidayRepository = holidayRepository;
+        this.noticeRepository = noticeRepository;
+        this.vacationBalanceRepository = vacationBalanceRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -125,6 +137,15 @@ public class DemoDataSeeder implements CommandLineRunner {
         // ck_peticiones_resolucion_coherente).
         sembrarAusencias(empleadosTech, gestorTech);
         sembrarAusencias(empleadosIberica, gestorIberica);
+
+        // Fase A. Sin esto la campana sale a cero y el diálogo de ficha
+        // enseña 40 h y 22 días para toda la plantilla: las dos
+        // pantallas nuevas parecerían no hacer nada en la demo
+        // desplegada, que es justo lo que ve quien abre el proyecto.
+        sembrarFichas(empleadosTech);
+        sembrarFichas(empleadosIberica);
+        sembrarAvisos(empleadosTech, gestorTech);
+        sembrarAvisos(empleadosIberica, gestorIberica);
 
         log.info(
                 "Datos de demo listos: 2 empresas, {} usuarios (contraseña '{}'). "
@@ -270,5 +291,90 @@ public class DemoDataSeeder implements CommandLineRunner {
                     .estado(AbsenceStatus.PENDIENTE)
                     .build());
         }
+    }
+
+    /**
+     * Fichas variadas (Fase A): una jornada reducida y un derecho de
+     * vacaciones por encima del mínimo.
+     *
+     * Hasta la Fase A nadie escribía nunca en "saldo_vacaciones" ni en
+     * "usuarios.horas_semanales", así que en la demo todo el mundo salía
+     * con 40 h y 22 días y el formulario de ficha parecía decorativo.
+     * Con esto se ve de un vistazo que los dos campos son de verdad
+     * editables y que el saldo por defecto convive con el explícito.
+     */
+    private void sembrarFichas(List<User> empleados) {
+        if (empleados.isEmpty()) {
+            return;
+        }
+        int anio = LocalDate.now(MADRID_ZONE).getYear();
+
+        // Al primero, jornada reducida de 37,5 h: el caso que justifica
+        // que la columna sea NUMERIC(4,1) y no un entero.
+        User jornadaReducida = empleados.get(0);
+        jornadaReducida.setHorasSemanales(new BigDecimal("37.5"));
+        userRepository.save(jornadaReducida);
+
+        // Al último, 25 días por convenio. Los demás se quedan sin fila
+        // y heredan los 22 de DIAS_POR_DEFECTO, que es el caso normal.
+        User conConvenio = empleados.get(empleados.size() - 1);
+        vacationBalanceRepository.save(VacationBalance.builder()
+                .usuario(conConvenio)
+                .anio(anio)
+                .diasTotales(25)
+                .build());
+    }
+
+    /**
+     * Avisos de ejemplo (Fase A), en correspondencia con las ausencias
+     * que acaba de sembrar {@link #sembrarAusencias}: al empleado, el de
+     * su ausencia resuelta; al gestor, uno por cada petición que tiene
+     * pendiente de resolver.
+     *
+     * Se dejan algunos SIN LEER a propósito -- si no, la campana saldría
+     * a cero y no se vería el contador, que es lo que la fase añade -- y
+     * con fechas escalonadas hacia atrás, porque una lista donde todo
+     * tiene la misma marca de tiempo se lee como datos falsos.
+     */
+    private void sembrarAvisos(List<User> empleados, User gestor) {
+        Instant ahora = Instant.now();
+
+        for (int i = 0; i < empleados.size(); i++) {
+            User empleado = empleados.get(i);
+            boolean aprobada = i % 2 == 0;
+
+            crearAviso(empleado, NoticeType.BIENVENIDA,
+                    "Bienvenido a " + empleado.getEmpresa().getNombre(),
+                    "Tu cuenta ya está activa. Desde aquí puedes fichar tu jornada y pedir ausencias.",
+                    ahora.minus(60, ChronoUnit.DAYS), true);
+
+            crearAviso(empleado, NoticeType.AUSENCIA_RESUELTA,
+                    "Tu ausencia ha sido " + (aprobada ? "aprobada" : "rechazada"),
+                    "VACACIONES. " + (aprobada
+                            ? "Aprobada, que las disfrutes."
+                            : "Rechazada: esas fechas coinciden con el cierre trimestral."),
+                    ahora.minus(30L + i, ChronoUnit.DAYS), false);
+
+            // El gestor ve una petición pendiente por cada empleado: es
+            // lo que hace que su campana lleve un número de verdad.
+            crearAviso(gestor, NoticeType.AUSENCIA_SOLICITADA,
+                    "Nueva petición de " + empleado.getNombre(),
+                    "ASUNTOS_PROPIOS, pendiente de resolver.",
+                    ahora.minus(2L + i, ChronoUnit.HOURS), false);
+        }
+    }
+
+    private void crearAviso(User destinatario, NoticeType tipo, String titulo,
+                            String cuerpo, Instant creadoEn, boolean leido) {
+        noticeRepository.save(Notice.builder()
+                .empresa(destinatario.getEmpresa())
+                .destinatario(destinatario)
+                .tipo(tipo)
+                .titulo(titulo)
+                .cuerpo(cuerpo)
+                .rutaDestino(tipo.getRutaDestinoPorDefecto())
+                .leido(leido)
+                .creadoEn(creadoEn)
+                .build());
     }
 }

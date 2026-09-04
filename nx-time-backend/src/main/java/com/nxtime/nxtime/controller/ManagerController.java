@@ -4,10 +4,12 @@ import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
+import com.nxtime.nxtime.dto.UpdateEmployeeProfileRequest;
 import com.nxtime.nxtime.dto.UpdateEmployeeStatusRequest;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.AuthService;
+import com.nxtime.nxtime.service.EmployeeProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -54,10 +56,14 @@ public class ManagerController {
 
     private final AuthService authService;
     private final AbsenceService absenceService;
+    private final EmployeeProfileService employeeProfileService;
 
-    public ManagerController(AuthService authService, AbsenceService absenceService) {
+    public ManagerController(AuthService authService,
+                             AbsenceService absenceService,
+                             EmployeeProfileService employeeProfileService) {
         this.authService = authService;
         this.absenceService = absenceService;
+        this.employeeProfileService = employeeProfileService;
     }
 
     @Operation(summary = "Crear un empleado", description = "En la empresa de quien lo crea. Rol EMPLEADO fijo.")
@@ -100,7 +106,8 @@ public class ManagerController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Listar mis empleados", description = "Los EMPLEADO de la empresa de quien pregunta.")
+    @Operation(summary = "Listar mis empleados", description = "Los EMPLEADO de la empresa de quien pregunta, "
+            + "con su jornada semanal y sus días de vacaciones efectivos del año en curso.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Listado de empleados",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = SimpleEmployeeDTO.class)))),
@@ -112,7 +119,7 @@ public class ManagerController {
     @GetMapping("/mis-empleados")
     @PreAuthorize("hasAuthority('empleado:leer')")
     public ResponseEntity<List<SimpleEmployeeDTO>> getMyEmployees(@AuthenticationPrincipal SecurityUser manager) {
-        return ResponseEntity.ok(authService.getMyEmployees(manager.getUser()));
+        return ResponseEntity.ok(employeeProfileService.getMyEmployees(manager.getUser()));
     }
 
     @Operation(summary = "Historial de ausencias del equipo", description = "Todas las que ya no están PENDIENTE.")
@@ -156,5 +163,36 @@ public class ManagerController {
     ) {
         authService.setEmployeeActive(id, request.activo(), manager.getUser());
         return ResponseEntity.ok().build();
+    }
+
+    // Nuevo en la Fase A: usuarios.horas_semanales y saldo_vacaciones
+    // existían desde la Fase 9 pero SOLO se leían -- no había ningún
+    // endpoint que los escribiera, así que toda la plantilla se
+    // quedaba en 40 h/semana y en los 22 días por defecto para siempre.
+    @Operation(summary = "Configurar la ficha de un empleado",
+            description = "Jornada semanal en horas y días de vacaciones del AÑO EN CURSO (Europe/Madrid). "
+                    + "Es un PATCH: los campos ausentes o null NO se tocan, y un cuerpo vacío es un 200 sin "
+                    + "efecto. Si el empleado todavía no tenía saldo de vacaciones para el año, se crea.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ficha actualizada",
+                    content = @Content(schema = @Schema(implementation = SimpleEmployeeDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Jornada fuera de (0, 60] o días negativos",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'empleado:gestionar', "
+                    + "o empleado de otra empresa (aislamiento multi-tenant)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Empleado no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PatchMapping("/empleados/{id}/ficha")
+    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    public ResponseEntity<SimpleEmployeeDTO> updateEmployeeProfile(
+            @PathVariable long id,
+            @Valid @RequestBody UpdateEmployeeProfileRequest request,
+            @AuthenticationPrincipal SecurityUser manager
+    ) {
+        return ResponseEntity.ok(employeeProfileService.updateProfile(id, request, manager.getUser()));
     }
 }

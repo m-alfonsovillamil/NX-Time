@@ -160,4 +160,34 @@ class AuthRepositoryImpl(
         return apiService.crearGestor(peticion)
     }
 
+    // El cuerpo se arma aquí y no en el ViewModel, igual que en
+    // cambiarEstadoEmpleado: la forma del request es cosa de la capa de
+    // datos, no de la pantalla.
+    override suspend fun configurarFichaEmpleado(
+        empleadoId: Long,
+        horasSemanales: String?,
+        diasVacaciones: Int?
+    ): Response<EmpleadoSimpleDTO> {
+        return apiService.configurarFichaEmpleado(
+            empleadoId,
+            FichaEmpleadoRequest(horasSemanales, diasVacaciones)
+        )
+    }
+
+    override suspend fun getAvisos(): Response<List<AvisoDTO>> {
+        return apiService.getAvisos()
+    }
+
+    override suspend fun getContadorAvisos(): Response<ContadorAvisosDTO> {
+        return apiService.getContadorAvisos()
+    }
+
+    override suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit> {
+        return apiService.marcarAvisoLeido(avisoId)
+    }
+
+    override suspend fun marcarTodosLosAvisosLeidos(): Response<Unit> {
+        return apiService.marcarTodosLosAvisosLeidos()
+    }
+
 }

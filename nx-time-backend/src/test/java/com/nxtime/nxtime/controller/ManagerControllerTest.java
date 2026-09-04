@@ -7,12 +7,16 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
 import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.AuthService;
+import com.nxtime.nxtime.service.EmployeeProfileService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
+import java.math.BigDecimal;
 import com.nxtime.nxtime.web.support.WebMvcTestSecurityConfig;
 import com.nxtime.nxtime.web.support.WithMockSecurityUser;
 import java.util.List;
@@ -46,6 +50,9 @@ class ManagerControllerTest {
 
     @MockitoBean
     private AbsenceService absenceService;
+
+    @MockitoBean
+    private EmployeeProfileService employeeProfileService;
 
     @Test
     @WithMockSecurityUser(rol = Role.GESTOR)
@@ -92,7 +99,7 @@ class ManagerControllerTest {
     @WithMockSecurityUser(rol = Role.GESTOR)
     @DisplayName("GET /gestor/mis-empleados con 'empleado:leer' devuelve 200")
     void getMyEmployees_conAuthority_devuelve200() throws Exception {
-        when(authService.getMyEmployees(any())).thenReturn(List.of());
+        when(employeeProfileService.getMyEmployees(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/gestor/mis-empleados")).andExpect(status().isOk());
     }
@@ -135,5 +142,71 @@ class ManagerControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ------------------------------------------------------------------
+    // Fase A: la ficha de empleado
+    // ------------------------------------------------------------------
+
+    private static SimpleEmployeeDTO fichaDeEjemplo() {
+        return new SimpleEmployeeDTO(
+                2L, "Empleado", "empleado@nxtime.test", true, new BigDecimal("37.5"), 25);
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha con 'empleado:gestionar' (RRHH) devuelve 200")
+    void updateEmployeeProfile_comoRRHH_devuelve200() throws Exception {
+        when(employeeProfileService.updateProfile(eq(2L), any(), any())).thenReturn(fichaDeEjemplo());
+
+        mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horasSemanales\":37.5,\"diasVacaciones\":25}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.horasSemanales").value(37.5))
+                .andExpect(jsonPath("$.diasVacaciones").value(25));
+        verify(employeeProfileService).updateProfile(eq(2L), any(), any());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.GESTOR)
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha como GESTOR devuelve 403: la jornada contractual es de RRHH")
+    void updateEmployeeProfile_comoGestor_devuelve403() throws Exception {
+        mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horasSemanales\":37.5}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.EMPLEADO)
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha como EMPLEADO devuelve 403")
+    void updateEmployeeProfile_comoEmpleado_devuelve403() throws Exception {
+        mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horasSemanales\":37.5}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha con 61 horas devuelve 400, no un 500 de la base")
+    void updateEmployeeProfile_jornadaFueraDeRango_devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horasSemanales\":61.0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("PATCH /gestor/empleados/{id}/ficha con el cuerpo vacío devuelve 200: es un PATCH, null es 'no tocar'")
+    void updateEmployeeProfile_cuerpoVacio_devuelve200() throws Exception {
+        when(employeeProfileService.updateProfile(eq(2L), any(), any())).thenReturn(fichaDeEjemplo());
+
+        mockMvc.perform(patch("/api/v1/gestor/empleados/2/ficha")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
     }
 }
