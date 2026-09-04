@@ -302,6 +302,44 @@
         aprovechable, y dicen qué puede hacer la persona en vez de
         enseñarle el número del código HTTP.
     -->
+    <!--
+        Avisos dentro de la aplicación.
+
+        Antes de esto, un empleado solo se enteraba de que le habían
+        resuelto una ausencia por correo, y si ese correo no llegaba no
+        quedaba rastro dentro de la app.
+    -->
+    <string name="avisos_titulo">Avisos</string>
+    <string name="avisos_vacio_titulo">No tienes avisos</string>
+    <string name="avisos_vacio_texto">Aquí aparecerán las novedades sobre tus ausencias y tu cuenta.</string>
+    <string name="avisos_marcar_todos">Marcar todo</string>
+    <!-- El número que cabe en el círculo del badge; a partir de ahí, "9+". -->
+    <string name="avisos_muchos">%1$d+</string>
+    <!-- "many" (múltiplos de un millón) es obligatoria en castellano desde CLDR 42. -->
+    <plurals name="avisos_sin_leer">
+        <item quantity="one">Avisos: %1$d sin leer</item>
+        <item quantity="many">Avisos: %1$d sin leer</item>
+        <item quantity="other">Avisos: %1$d sin leer</item>
+    </plurals>
+
+    <!--
+        Ficha de empleado: jornada semanal y días de vacaciones.
+
+        Las dos existían en la base desde hacía tiempo pero solo se
+        leían, así que toda la plantilla se quedaba en 40 h y 22 días
+        para siempre.
+    -->
+    <string name="empresa_ficha_editar">Editar la ficha de %1$s</string>
+    <string name="empresa_ficha_titulo">Ficha de %1$s</string>
+    <string name="empresa_ficha_horas">Jornada semanal (horas)</string>
+    <string name="empresa_ficha_dias">Días de vacaciones al año</string>
+    <string name="empresa_ficha_ayuda">Los días de vacaciones se aplican al año en curso.</string>
+    <string name="empresa_ficha_guardar">Guardar</string>
+    <string name="empresa_ficha_cancelar">Cancelar</string>
+    <string name="empresa_ficha_resumen">%1$s h/semana · %2$d días</string>
+    <string name="empresa_ficha_horas_invalidas">La jornada debe ser un número mayor que 0 y como mucho 60.</string>
+    <string name="empresa_ficha_dias_invalidos">Los días de vacaciones deben ser un número entero de 0 o más.</string>
+
     <string name="error_sin_conexion">No se ha podido conectar con el servidor. Comprueba tu conexión.</string>
     <string name="error_datos_invalidos">Los datos enviados no son válidos.</string>
     <string name="error_sesion_caducada">Tu sesión ha caducado. Vuelve a iniciar sesión.</string>

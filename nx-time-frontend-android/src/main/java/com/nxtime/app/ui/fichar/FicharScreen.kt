@@ -60,6 +60,7 @@ import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.theme.LocalColoresJornada
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
@@ -83,6 +84,8 @@ fun FicharScreen(
     onIrSolicitud: () -> Unit,
     onIrContrasena: () -> Unit,
     onCerrarSesion: () -> Unit,
+    contadorAvisos: Int,
+    onIrAvisos: () -> Unit,
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -117,6 +120,11 @@ fun FicharScreen(
                     containerColor = Color.Transparent
                 ),
                 actions = {
+                    // Es la única pestaña que no usa PantallaConBarra, así
+                    // que la campana se coloca a mano. Va delante del menú
+                    // de tres puntos: es lo que se toca a diario, y el
+                    // desbordamiento es siempre lo último de la fila.
+                    CampanaDeAvisos(contadorAvisos, onIrAvisos)
                     IconButton(onClick = { menuAbierto = true }) {
                         Icon(
                             Icons.Default.MoreVert,

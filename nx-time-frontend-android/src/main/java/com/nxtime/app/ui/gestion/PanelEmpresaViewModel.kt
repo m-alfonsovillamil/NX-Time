@@ -3,6 +3,7 @@ package com.nxtime.app.ui.gestion
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nxtime.app.R
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
 import com.nxtime.app.data.network.ApiErrorParser
@@ -24,6 +25,8 @@ data class PanelEmpresaUiState(
     val empleados: List<EmpleadoSimpleDTO> = emptyList(),
     val mes: YearMonth = YearMonth.now(),
     val descargando: Boolean = false,
+    val guardandoFicha: Boolean = false,
+    val errorFicha: MensajeUi? = null,
     val error: MensajeUi? = null
 )
 
@@ -101,6 +104,63 @@ class PanelEmpresaViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    fun descartarErrorDeFicha() = _uiState.update { it.copy(errorFicha = null) }
+
+    /**
+     * Guarda la ficha de un empleado: jornada semanal y días de
+     * vacaciones del año en curso.
+     *
+     * Valida en local antes de salir a la red, igual que hace
+     * `AltaUsuarioViewModel`: el backend también lo comprueba (espeja
+     * los CHECK de la base), pero un 400 de ida y vuelta para decir que
+     * 61 horas no caben en una semana es un viaje que no hace falta.
+     *
+     * @param alGuardar se llama solo si el servidor acepta, para que la
+     *   pantalla pueda cerrar el diálogo.
+     */
+    fun guardarFicha(empleadoId: Long, horas: String, dias: String, alGuardar: () -> Unit) {
+        val horasNormalizadas = horas.trim().replace(',', '.')
+        val horasNumero = horasNormalizadas.toDoubleOrNull()
+        if (horasNumero == null || horasNumero <= 0.0 || horasNumero > 60.0) {
+            _uiState.update {
+                it.copy(errorFicha = MensajeUi.Recurso(R.string.empresa_ficha_horas_invalidas))
+            }
+            return
+        }
+
+        val diasNumero = dias.trim().toIntOrNull()
+        if (diasNumero == null || diasNumero < 0) {
+            _uiState.update {
+                it.copy(errorFicha = MensajeUi.Recurso(R.string.empresa_ficha_dias_invalidos))
+            }
+            return
+        }
+
+        _uiState.update { it.copy(guardandoFicha = true, errorFicha = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.configurarFichaEmpleado(
+                    empleadoId, horasNormalizadas, diasNumero
+                )
+                if (respuesta.isSuccessful) {
+                    _uiState.update { it.copy(guardandoFicha = false, errorFicha = null) }
+                    alGuardar()
+                    // Recargar en vez de retocar la lista en local, igual
+                    // que el alta/baja: un solo camino de código.
+                    cargar()
+                } else {
+                    _uiState.update {
+                        it.copy(guardandoFicha = false, errorFicha = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(guardandoFicha = false, errorFicha = ApiErrorParser.mensajeDeRed(e))
+                }
             }
         }
     }

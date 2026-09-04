@@ -36,8 +36,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.navArgument
 import com.nxtime.app.R
+import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.acceso.LoginScreen
 import com.nxtime.app.ui.acceso.RegistroEmpresaScreen
@@ -45,6 +48,8 @@ import com.nxtime.app.ui.auditoria.AuditoriaScreen
 import com.nxtime.app.ui.auditoria.CorregirFichajeScreen
 import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
+import com.nxtime.app.ui.avisos.AvisosScreen
+import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
 import com.nxtime.app.ui.gestion.AusenciasEquipoScreen
@@ -74,6 +79,7 @@ enum class Pantalla(val ruta: String) {
     FICHAR("fichar"),
     HISTORIAL("historial"),
     AUSENCIAS("ausencias"),
+    AVISOS("avisos"),
     SOLICITUD("solicitud"),
     CONTRASENA("contrasena"),
     GESTION("gestion"),
@@ -187,6 +193,18 @@ fun NxTimeNavHost(
     var rol by remember { mutableStateOf(Rol.de(sessionManager.fetchUserRole())) }
 
     /*
+     * El ViewModel de avisos se pide AQUÍ, fuera de cualquier
+     * `composable {}`, y eso es lo que hace que quede anclado al
+     * ViewModelStore de la Activity y no al de una entrada de la pila:
+     * así la campana de la barra superior y la pantalla de avisos
+     * comparten una única instancia sin necesidad de Hilt. Marcar un
+     * aviso como leído baja el contador en las cuatro pestañas a la vez.
+     */
+    val avisosViewModel: AvisosViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val estadoAvisos by avisosViewModel.uiState.collectAsStateWithLifecycle()
+    val irAAvisos = { navController.navigate(Pantalla.AVISOS.ruta) }
+
+    /*
      * Entrar y salir de la sesión vacían la pila de atrás.
      *
      * Es lo que antes conseguía el `finish()` de `irAHome()`: sin esto,
@@ -197,6 +215,16 @@ fun NxTimeNavHost(
      */
     fun entrarA(destino: Pantalla) {
         rol = Rol.de(sessionManager.fetchUserRole())
+        /*
+         * El ViewModel de avisos vive en la Activity, así que sobrevive
+         * al cierre de sesión: sin este limpiar(), quien entrase después
+         * vería durante unos segundos el contador del usuario anterior.
+         */
+        if (destino == Pantalla.LOGIN) {
+            avisosViewModel.limpiar()
+        } else {
+            avisosViewModel.refrescarContador()
+        }
         navController.navigate(destino.ruta) {
             popUpTo(navController.graph.id) { inclusive = true }
         }
@@ -326,10 +354,16 @@ fun NxTimeNavHost(
             }
 
             composable(Pantalla.FICHAR.ruta) {
+                // No hay push: el contador se refresca al volver a la
+                // pantalla de inicio. Un sondeo periódico gastaría
+                // batería y datos para algo que nadie ha pedido.
+                LaunchedEffect(Unit) { avisosViewModel.refrescarContador() }
                 FicharScreen(
                     onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) },
                     onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
-                    onCerrarSesion = { entrarA(Pantalla.LOGIN) }
+                    onCerrarSesion = { entrarA(Pantalla.LOGIN) },
+                    contadorAvisos = estadoAvisos.noLeidos,
+                    onIrAvisos = irAAvisos
                 )
             }
 
@@ -337,12 +371,28 @@ fun NxTimeNavHost(
             // se llega a ellos por la pestaña, no con una flecha de
             // volver, así que ya no reciben `onVolver`.
             composable(Pantalla.HISTORIAL.ruta) {
-                HistorialScreen()
+                HistorialScreen(
+                    contadorAvisos = estadoAvisos.noLeidos,
+                    onIrAvisos = irAAvisos
+                )
             }
 
             composable(Pantalla.AUSENCIAS.ruta) {
                 AusenciasScreen(
-                    onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) }
+                    onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) },
+                    contadorAvisos = estadoAvisos.noLeidos,
+                    onIrAvisos = irAAvisos
+                )
+            }
+
+            // Pantalla hoja: conserva la flecha de volver y oculta la
+            // barra de navegación, así que no entra en DestinoPrincipal.
+            composable(Pantalla.AVISOS.ruta) {
+                LaunchedEffect(Unit) { avisosViewModel.cargar() }
+                AvisosScreen(
+                    onVolver = navController::navigateUp,
+                    onNavegar = { ruta -> navController.navigate(ruta) },
+                    viewModel = avisosViewModel
                 )
             }
 
@@ -362,6 +412,8 @@ fun NxTimeNavHost(
 
             composable(Pantalla.GESTION.ruta) {
                 PanelGestionScreen(
+                    contadorAvisos = estadoAvisos.noLeidos,
+                    onIrAvisos = irAAvisos,
                     // Solo ADMIN tiene la authority `gestor:crear`. Antes
                     // la opción se le ofrecía a cualquier gestor y el
                     // backend respondía 403 sin falta.
@@ -415,6 +467,10 @@ fun NxTimeNavHost(
                 PanelEmpresaScreen(
                     onVolver = navController::navigateUp,
                     puedeGestionarEmpleados = Permisos.puedeGestionarEmpleados(rol),
+                    // Dar de baja y configurar la ficha son authorities
+                    // distintas en el backend aunque hoy coincidan sus
+                    // roles: van por separado también aquí.
+                    puedeConfigurarEmpleados = Permisos.puedeConfigurarEmpleados(rol),
                     puedeExportar = Permisos.puedeExportarInformes(rol)
                 )
             }

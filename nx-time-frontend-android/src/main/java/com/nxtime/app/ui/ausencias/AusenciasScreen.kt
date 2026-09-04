@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
+import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
@@ -26,6 +27,8 @@ import com.nxtime.app.ui.util.resolver
 @Composable
 fun AusenciasScreen(
     onIrSolicitud: () -> Unit,
+    contadorAvisos: Int,
+    onIrAvisos: () -> Unit,
     viewModel: AusenciasViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -33,6 +36,7 @@ fun AusenciasScreen(
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
         titulo = stringResource(R.string.ausencias_titulo),
+        acciones = { CampanaDeAvisos(contadorAvisos, onIrAvisos) },
         accionFlotante = {
             FloatingActionButton(onClick = onIrSolicitud) {
                 Icon(

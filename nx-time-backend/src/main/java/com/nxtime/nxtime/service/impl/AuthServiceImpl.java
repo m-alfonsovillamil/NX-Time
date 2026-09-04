@@ -10,7 +10,6 @@ import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
-import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
@@ -23,7 +22,6 @@ import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -209,16 +207,6 @@ public class AuthServiceImpl implements AuthService {
         user.setContrasena(passwordEncoder.encode(request.contrasenaNueva()));
         userRepository.save(user);
         log.info("Contraseña cambiada: {}", user.getEmail());
-    }
-
-    @Override
-    public List<SimpleEmployeeDTO> getMyEmployees(User manager) {
-        Company managerCompany = manager.getEmpresa();
-        List<User> employees = userRepository.findByEmpresaAndRol(managerCompany, Role.EMPLEADO);
-
-        return employees.stream()
-                .map(employee -> new SimpleEmployeeDTO(employee.getId(), employee.getNombre(), employee.getEmail(), employee.isActivo()))
-                .toList();
     }
 
     @Override

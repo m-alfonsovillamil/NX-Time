@@ -54,6 +54,17 @@ object Permisos {
     /** Da de alta o de baja a un empleado (`empleado:gestionar`). */
     fun puedeGestionarEmpleados(rol: Rol?): Boolean = alMenos(rol, Rol.RRHH)
 
+    /**
+     * Fija la jornada semanal y los días de vacaciones (`empleado:configurar`).
+     *
+     * Hoy coincide rol a rol con [puedeGestionarEmpleados], igual que en
+     * el backend: son dos capacidades distintas sobre la misma persona
+     * (desactivar su cuenta / fijar su jornada contractual) que de
+     * momento tienen los mismos roles. Se mantienen separadas para que
+     * el día que se repartan distinto solo cambie esta línea.
+     */
+    fun puedeConfigurarEmpleados(rol: Rol?): Boolean = alMenos(rol, Rol.RRHH)
+
     /** Corrige un fichaje cerrado (`fichaje:corregir`). */
     fun puedeCorregirFichajes(rol: Rol?): Boolean = alMenos(rol, Rol.RRHH)
 

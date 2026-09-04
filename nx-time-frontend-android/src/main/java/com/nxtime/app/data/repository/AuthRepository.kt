@@ -72,4 +72,20 @@ interface AuthRepository {
      */
     suspend fun crearGestor(peticion: CrearGestorRequest): Response<Unit>
 
+    /**
+     * Configura la ficha de un empleado. Los parámetros a null no se
+     * tocan en el servidor.
+     */
+    suspend fun configurarFichaEmpleado(
+        empleadoId: Long,
+        horasSemanales: String?,
+        diasVacaciones: Int?
+    ): Response<EmpleadoSimpleDTO>
+
+    /* Funciones de Avisos */
+    suspend fun getAvisos(): Response<List<AvisoDTO>>
+    suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>
+    suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit>
+    suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
+
 }

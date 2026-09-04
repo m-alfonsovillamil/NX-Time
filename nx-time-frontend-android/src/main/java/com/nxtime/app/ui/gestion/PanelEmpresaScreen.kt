@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,6 +31,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,6 +66,7 @@ import com.nxtime.app.ui.informes.MIME_PDF
 import com.nxtime.app.ui.informes.compartirInforme
 import com.nxtime.app.ui.informes.guardarEnCache
 import com.nxtime.app.ui.util.DateFormats
+import com.nxtime.app.ui.util.MensajeUi
 import com.nxtime.app.ui.util.resolver
 import kotlinx.coroutines.launch
 import okhttp3.ResponseBody
@@ -74,6 +79,10 @@ import java.util.Locale
  *
  * @param puedeGestionarEmpleados si se ofrece el alta/baja
  *   (`empleado:gestionar`, RRHH y ADMIN).
+ * @param puedeConfigurarEmpleados si se ofrece editar la ficha
+ *   (`empleado:configurar`). Authority distinta de la anterior aunque
+ *   hoy la tengan los mismos roles: desactivar una cuenta y fijar la
+ *   jornada contractual de alguien no son la misma operación.
  * @param puedeExportar si se ofrecen los informes (`informe:exportar`,
  *   mismos roles). Van separados porque son authorities distintas en el
  *   backend, aunque hoy coincidan los roles que las tienen.
@@ -82,6 +91,7 @@ import java.util.Locale
 fun PanelEmpresaScreen(
     onVolver: () -> Unit,
     puedeGestionarEmpleados: Boolean,
+    puedeConfigurarEmpleados: Boolean,
     puedeExportar: Boolean,
     viewModel: PanelEmpresaViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -89,6 +99,7 @@ fun PanelEmpresaScreen(
     val contexto = LocalContext.current
     val alcance = rememberCoroutineScope()
     var aDarDeBaja by remember { mutableStateOf<EmpleadoSimpleDTO?>(null) }
+    var aConfigurar by remember { mutableStateOf<EmpleadoSimpleDTO?>(null) }
 
     /*
      * Escribir el fichero necesita el Context, que no tiene por qué estar
@@ -162,8 +173,10 @@ fun PanelEmpresaScreen(
                     FilaEmpleado(
                         empleado = empleado,
                         puedeGestionar = puedeGestionarEmpleados,
+                        puedeConfigurar = puedeConfigurarEmpleados,
                         puedeExportar = puedeExportar,
                         descargando = estado.descargando,
+                        onConfigurar = { aConfigurar = empleado },
                         onCambiaEstado = { activo ->
                             if (activo) {
                                 viewModel.cambiarEstadoEmpleado(empleado.id, true)
@@ -202,6 +215,90 @@ fun PanelEmpresaScreen(
             }
         )
     }
+
+    aConfigurar?.let { empleado ->
+        DialogoFicha(
+            empleado = empleado,
+            guardando = estado.guardandoFicha,
+            error = estado.errorFicha,
+            onCerrar = {
+                aConfigurar = null
+                viewModel.descartarErrorDeFicha()
+            },
+            onGuardar = { horas, dias ->
+                viewModel.guardarFicha(empleado.id, horas, dias) { aConfigurar = null }
+            }
+        )
+    }
+}
+
+/**
+ * Jornada semanal y días de vacaciones de un empleado.
+ *
+ * Un diálogo y no una pantalla propia: son dos campos numéricos, y el
+ * panel ya usa este mismo patrón para la baja. Una ruta nueva con su
+ * argumento, su `navArgument` y su ViewModel sería más andamiaje que
+ * formulario.
+ */
+@Composable
+private fun DialogoFicha(
+    empleado: EmpleadoSimpleDTO,
+    guardando: Boolean,
+    error: MensajeUi?,
+    onCerrar: () -> Unit,
+    onGuardar: (String, String) -> Unit
+) {
+    // La clave es el empleado: al abrir la fila de otro, los campos se
+    // reinician con SUS valores en vez de arrastrar los del anterior.
+    var horas by remember(empleado.id) { mutableStateOf(empleado.horasSemanales) }
+    var dias by remember(empleado.id) { mutableStateOf(empleado.diasVacaciones.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onCerrar,
+        title = { Text(stringResource(R.string.empresa_ficha_titulo, empleado.nombre)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = horas,
+                    onValueChange = { horas = it },
+                    label = { Text(stringResource(R.string.empresa_ficha_horas)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = dias,
+                    onValueChange = { dias = it },
+                    label = { Text(stringResource(R.string.empresa_ficha_dias)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(R.string.empresa_ficha_ayuda),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (error != null) {
+                    Text(
+                        text = error.resolver(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onGuardar(horas, dias) }, enabled = !guardando) {
+                Text(stringResource(R.string.empresa_ficha_guardar))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCerrar) {
+                Text(stringResource(R.string.empresa_ficha_cancelar))
+            }
+        }
+    )
 }
 
 @Composable
@@ -457,8 +554,10 @@ private fun SelectorDeMes(mes: YearMonth, onCambia: (YearMonth) -> Unit) {
 private fun FilaEmpleado(
     empleado: EmpleadoSimpleDTO,
     puedeGestionar: Boolean,
+    puedeConfigurar: Boolean,
     puedeExportar: Boolean,
     descargando: Boolean,
+    onConfigurar: () -> Unit,
     onCambiaEstado: (Boolean) -> Unit,
     onDescargaPdf: () -> Unit
 ) {
@@ -484,6 +583,28 @@ private fun FilaEmpleado(
                         MaterialTheme.colorScheme.error
                     }
                 )
+                // La ficha se enseña siempre, aunque no se pueda editar:
+                // saber la jornada de alguien es parte de llevar un
+                // equipo, cambiarla es cosa de RRHH.
+                Text(
+                    text = stringResource(
+                        R.string.empresa_ficha_resumen,
+                        empleado.horasSemanales,
+                        empleado.diasVacaciones
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (puedeConfigurar) {
+                IconButton(onClick = onConfigurar) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = stringResource(
+                            R.string.empresa_ficha_editar, empleado.nombre
+                        )
+                    )
+                }
             }
             if (puedeExportar) {
                 TextButton(onClick = onDescargaPdf, enabled = !descargando) {

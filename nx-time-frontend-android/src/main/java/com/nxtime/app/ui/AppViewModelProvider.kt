@@ -14,6 +14,7 @@ import com.nxtime.app.ui.navegacion.ARG_FICHAJE_ID
 import com.nxtime.app.ui.acceso.RegistroEmpresaViewModel
 import com.nxtime.app.ui.ausencias.AusenciasViewModel
 import com.nxtime.app.ui.ausencias.SolicitudViewModel
+import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.fichar.FicharViewModel
 import com.nxtime.app.ui.gestion.AltaUsuarioViewModel
 import com.nxtime.app.ui.gestion.AusenciasEquipoViewModel
@@ -50,6 +51,15 @@ object AppViewModelProvider {
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }
         initializer { PanelEmpresaViewModel(app().authRepository) }
+
+        /*
+         * Este se pide desde el cuerpo de NxTimeNavHost, fuera de los
+         * `composable {}`, así que queda anclado al ViewModelStore de la
+         * Activity: es la única instancia, y la comparten la campana de
+         * la barra superior y la pantalla de avisos. Es lo más parecido
+         * a un "estado de sesión" que tiene la app sin meter Hilt.
+         */
+        initializer { AvisosViewModel(app().authRepository) }
 
         /*
          * Estos dos necesitan saber SOBRE QUÉ fichaje trabajan. El id

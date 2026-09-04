@@ -7,8 +7,6 @@ import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
-import com.nxtime.nxtime.dto.SimpleEmployeeDTO;
-import java.util.List;
 
 public interface AuthService {
 
@@ -27,8 +25,6 @@ public interface AuthService {
     void createManager(CreateManagerRequest request, User admin);
 
     void changePassword(ChangePasswordRequest request, User user);
-
-    List<SimpleEmployeeDTO> getMyEmployees(User manager);
 
     /** Da de alta o de baja a un empleado de la misma empresa que quien gestiona. */
     void setEmployeeActive(long employeeId, boolean activo, User actingManager);
