@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -70,10 +71,20 @@ fun PantallaConBarra(
 
     Scaffold(
         modifier = modifier.nestedScroll(comportamiento.nestedScrollConnection),
+        // Transparente para dejar pasar el degradado que `NxTimeTheme`
+        // pinta detrás de todo. Con el color por defecto, cada pantalla
+        // taparía el fondo con un liso y el degradado no se vería.
+        containerColor = Color.Transparent,
         floatingActionButton = accionFlotante,
         topBar = {
             LargeTopAppBar(
                 title = { Text(titulo) },
+                // La barra también pinta fondo propio, y con el color por
+                // defecto cortaría el degradado con una banda lisa arriba.
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent
+                ),
                 navigationIcon = {
                     if (onVolver != null) {
                         IconButton(onClick = onVolver) {

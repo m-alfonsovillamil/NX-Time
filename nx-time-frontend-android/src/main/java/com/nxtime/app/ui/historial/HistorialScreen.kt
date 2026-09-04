@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
@@ -85,6 +86,7 @@ fun HistorialScreen(
 private fun TarjetaJornada(registro: Registro) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )

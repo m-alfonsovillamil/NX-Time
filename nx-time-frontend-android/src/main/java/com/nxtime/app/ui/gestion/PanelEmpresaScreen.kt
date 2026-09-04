@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.ui.AppViewModelProvider
@@ -261,6 +262,7 @@ private fun Indicador(
 ) {
     Card(
         modifier = modifier,
+        elevation = elevacionDeTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = if (alerta) {
                 MaterialTheme.colorScheme.errorContainer
@@ -319,7 +321,9 @@ private fun BarraDeHoras(nombre: String, minutos: Long, proporcion: Float) {
                     .weight(proporcion.coerceIn(0.02f, 1f))
                     .height(8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    // Índigo: estas barras son datos de gestión, no del
+                    // propio empleado.
+                    containerColor = MaterialTheme.colorScheme.tertiary
                 )
             ) {}
             // El hueco restante mantiene la escala: sin él, todas las

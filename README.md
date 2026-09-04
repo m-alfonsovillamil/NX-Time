@@ -107,7 +107,8 @@ con estas credenciales puede modificarlos.
 ## Capturas
 
 La app Android, en Jetpack Compose con Material 3 Expressive, hablando con esta
-misma API:
+misma API. Formas propias, **Sora** en titulares y cifras, fondo con degradado y
+tarjetas que flotan sobre él:
 
 | Mi jornada | Panel de empresa | Traza de auditoría |
 |---|---|---|
@@ -139,7 +140,7 @@ siembra `DemoDataSeeder`.
 | Caché | Caffeine |
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
 | Build | Gradle (Kotlin DSL), monorepo de dos módulos |
-| App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · Retrofit |
+| App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · tema propio de color, formas y tipografía · Retrofit |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
 
 ---
