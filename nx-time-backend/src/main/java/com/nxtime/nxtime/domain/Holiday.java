@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.domain;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -24,6 +26,11 @@ import lombok.Setter;
  * "fecha" es LocalDate, no Instant, por la misma razón que
  * AbsenceRequest.fechaInicio: un festivo es un día de calendario, no un
  * instante concreto.
+ *
+ * Desde la Fase C lleva además un {@link HolidayScope}, que detalla ese
+ * "propio de esa empresa" en autonómico, local o de convenio. Las dos
+ * columnas no pueden contradecirse: la base lo impone con
+ * {@code ck_festivos_ambito_coherente} (ver V9__calendario.sql).
  */
 @Entity(name = "festivos")
 @Getter
@@ -44,6 +51,9 @@ public class Holiday {
     private LocalDate fecha;
 
     private String descripcion;
+
+    @Enumerated(EnumType.STRING)
+    private HolidayScope ambito;
 
     @Override
     public boolean equals(Object o) {

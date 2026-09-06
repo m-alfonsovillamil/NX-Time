@@ -1,8 +1,10 @@
 package com.nxtime.app.ui.util
 
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -32,6 +34,7 @@ object DateFormats {
     private val FECHA_CORTA = DateTimeFormatter.ofPattern("dd/MM/yyyy", ES)
     private val HORA = DateTimeFormatter.ofPattern("HH:mm 'h'", ES)
     private val FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", ES)
+    private val MES_Y_ANIO = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", ES)
 
     /** "29 de agosto, 2026" a partir del instante ISO que manda el backend. */
     fun fechaLarga(instanteIso: String?): String = conInstante(instanteIso) {
@@ -51,6 +54,22 @@ object DateFormats {
         fechaIso?.let { FECHA_CORTA.format(LocalDate.parse(it)) } ?: SIN_DATO
     } catch (e: DateTimeParseException) {
         SIN_DATO
+    }
+
+    /**
+     * Una fecha ISO (`2026-05-15`) como [LocalDate], o `null` si no se
+     * puede leer.
+     *
+     * Sin zona horaria, y ahí está la diferencia con [fechaLocal]: esto
+     * son los días de calendario que manda el backend (festivos,
+     * ausencias), que ya vienen sin hora. Pasarlos por `Instant` les
+     * inventaría una medianoche UTC y en España caerían el día anterior
+     * durante el horario de verano.
+     */
+    fun fechaIso(fechaIso: String?): LocalDate? = try {
+        fechaIso?.let { LocalDate.parse(it) }
+    } catch (e: DateTimeParseException) {
+        null
     }
 
     /**
@@ -98,6 +117,30 @@ object DateFormats {
 
     /** Minutos sueltos como "1h 30m"; se usa también para las pausas. */
     fun minutos(minutos: Long): String = formatoHorasMinutos(minutos)
+
+    /**
+     * "Mayo de 2026", para la cabecera del calendario.
+     *
+     * En español el mes va en minúscula, pero como título de la pantalla
+     * queda raro, así que se pone en mayúscula la inicial -- y con el
+     * `Locale` español, no con el del móvil: en turco la mayúscula de "i"
+     * no es "I", y ese es el fallo clásico de `uppercase()` sin locale.
+     */
+    fun mesYAnio(periodo: YearMonth): String {
+        val texto = MES_Y_ANIO.format(periodo)
+        return texto.replaceFirstChar { it.titlecase(ES) }
+    }
+
+    /**
+     * La inicial de un día de la semana ("L", "M", "X"...), en español.
+     *
+     * Va aquí y no en la pantalla por lo mismo que todo lo demás de esta
+     * clase: `getDisplayName` sin `Locale` explícito usa el del móvil, y
+     * en un teléfono en inglés la fila de la rejilla saldría "M T W T F
+     * S S" con el resto de la pantalla en español.
+     */
+    fun inicialDelDia(dia: DayOfWeek): String =
+        dia.getDisplayName(java.time.format.TextStyle.NARROW, ES).uppercase(ES)
 
     /**
      * Segundos netos trabajados en la jornada abierta, "02:14:38".
@@ -171,6 +214,26 @@ object DateFormats {
         instanteIso?.let { Instant.parse(it).atZone(ZONA_ESPANA).toLocalDate() }
     } catch (e: DateTimeParseException) {
         null
+    }
+
+    /**
+     * Días de calendario que separan la salida de la entrada. 0 cuando
+     * la jornada empieza y acaba el mismo día.
+     *
+     * Existe por el turno de noche: una jornada de 22:52 a 00:29 se
+     * enseñaba como "Entrada 22:52 h / Salida 00:29 h" sin decir en
+     * ninguna parte que la salida es del día siguiente, y así leída
+     * parece una jornada de veintidós horas hacia atrás. Con el
+     * calendario delante se nota todavía más.
+     *
+     * Se comparan **días de calendario españoles**, no horas: restar
+     * instantes daría 0 para una jornada de 23:00 a 00:30 (hora y media)
+     * cuando el día sí ha cambiado, que es justo lo que hay que decir.
+     */
+    fun diasDeDiferencia(entradaIso: String?, salidaIso: String?): Int {
+        val entrada = fechaLocal(entradaIso) ?: return 0
+        val salida = fechaLocal(salidaIso) ?: return 0
+        return (salida.toEpochDay() - entrada.toEpochDay()).toInt().coerceAtLeast(0)
     }
 
     /**

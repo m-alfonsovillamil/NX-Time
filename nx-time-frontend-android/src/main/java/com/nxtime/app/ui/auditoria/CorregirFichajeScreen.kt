@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.auditoria
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -22,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -103,6 +106,39 @@ fun CorregirFichajeScreen(
                 minuto = estado.minutoSalida,
                 onPulsa = { eligiendo = Campo.SALIDA }
             )
+
+            /*
+             * El turno de noche. Sin este interruptor las dos horas se
+             * componían sobre la misma fecha, así que una jornada de
+             * 22:52 a 00:29 no se podía corregir: la salida quedaba
+             * veintidós horas antes de la entrada y el formulario se
+             * negaba a enviarla. Llega ya puesto si la jornada original
+             * cruzaba la medianoche.
+             */
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.correccion_salida_otro_dia),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = DateFormats.fechaCorta(
+                            if (estado.salidaEsOtroDia) estado.fecha.plusDays(1) else estado.fecha
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = estado.salidaEsOtroDia,
+                    onCheckedChange = viewModel::cambiarSalidaEsOtroDia
+                )
+            }
 
             OutlinedTextField(
                 value = estado.motivo,

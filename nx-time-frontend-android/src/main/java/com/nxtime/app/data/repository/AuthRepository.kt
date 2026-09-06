@@ -95,6 +95,12 @@ interface AuthRepository {
     suspend fun borrarDepartamento(id: Long): Response<Unit>
     suspend fun asignarDepartamento(usuarioId: Long, departamentoId: Long?): Response<PerfilDTO>
 
+    /* Funciones de Calendario (Fase C) */
+    suspend fun getCalendario(anio: Int, mes: Int, equipo: Boolean): Response<CalendarioDTO>
+    suspend fun crearFestivo(peticion: FestivoRequest): Response<FestivoDTO>
+    suspend fun editarFestivo(id: Long, peticion: FestivoRequest): Response<FestivoDTO>
+    suspend fun borrarFestivo(id: Long): Response<Unit>
+
     /* Funciones de Avisos */
     suspend fun getAvisos(): Response<List<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>

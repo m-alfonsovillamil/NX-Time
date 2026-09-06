@@ -16,3 +16,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [004](004-java-sobre-kotlin.md) | Migrar el backend de Kotlin a Java 21 |
 | [005](005-authorities-granulares.md) | Autorización por authorities granulares, no por roles |
 | [006](006-multitenant-por-discriminador.md) | Multi-tenant por discriminador |
+| [008](008-festivos-calculados-y-compartidos.md) | Festivos nacionales calculados, compartidos y no editables |

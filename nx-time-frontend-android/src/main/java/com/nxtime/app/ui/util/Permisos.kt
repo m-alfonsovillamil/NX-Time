@@ -48,6 +48,16 @@ object Permisos {
     /** Aprueba o rechaza ausencias de su equipo (`ausencia:aprobar`). */
     fun puedeAprobarAusencias(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
+    /**
+     * Ve las ausencias de sus compañeros (`ausencia:leer:equipo`).
+     *
+     * Aparte de [puedeAprobarAusencias] aunque hoy coincidan: leer el
+     * calendario del equipo y decidir sobre sus vacaciones son dos cosas
+     * distintas, y el backend las separa en dos authorities. Es lo que
+     * decide si el calendario ofrece el interruptor "ver al equipo".
+     */
+    fun puedeVerAusenciasDelEquipo(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
     /** Da de alta empleados (`empleado:crear`). */
     fun puedeCrearEmpleados(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
@@ -82,6 +92,19 @@ object Permisos {
 
     /** Ve el panel de indicadores de la empresa (`fichaje:leer:equipo`). */
     fun puedeVerPanelEmpresa(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
+    /**
+     * Añade y quita festivos del calendario laboral (`calendario:gestionar`).
+     *
+     * Empieza en GESTOR: quien ya decide si tus vacaciones se aprueban es
+     * quien sabe qué días de convenio cierra el centro.
+     *
+     * **Ojo**: esto no alcanza a los festivos NACIONALES. Esos son una
+     * fila compartida por todas las empresas y los pone el sistema, así
+     * que ahí el límite no lo marca el rol sino el propio festivo -- por
+     * eso cada uno viaja con su campo `editable` y hay que mirar los dos.
+     */
+    fun puedeGestionarCalendario(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
     private fun alMenos(rol: Rol?, minimo: Rol): Boolean =
         rol != null && rol.ordinal >= minimo.ordinal

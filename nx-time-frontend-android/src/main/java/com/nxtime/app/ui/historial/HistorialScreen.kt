@@ -33,6 +33,7 @@ import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
+import com.nxtime.app.ui.components.horaDeSalida
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 
@@ -125,11 +126,9 @@ private fun TarjetaJornada(registro: Registro) {
                 )
                 Dato(
                     etiqueta = stringResource(R.string.historial_salida),
-                    valor = if (registro.horaSalida == null) {
-                        stringResource(R.string.historial_en_curso)
-                    } else {
-                        DateFormats.hora(registro.horaSalida)
-                    },
+                    // Dice "(+1 d)" si la jornada cruzó la medianoche:
+                    // ver `horaDeSalida`.
+                    valor = horaDeSalida(registro.horaEntrada, registro.horaSalida),
                     modifier = Modifier.weight(1f)
                 )
                 Dato(
