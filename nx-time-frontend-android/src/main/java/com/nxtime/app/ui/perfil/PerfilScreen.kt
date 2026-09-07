@@ -84,6 +84,7 @@ import com.nxtime.app.ui.util.resolver
 fun PerfilScreen(
     onVolver: () -> Unit,
     onIrContrasena: () -> Unit,
+    onIrHorasExtra: () -> Unit,
     onCerrarSesion: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -179,6 +180,16 @@ fun PerfilScreen(
 
                     Spacer(Modifier.height(24.dp))
                     DatosLaborales(perfil, estado.proyectoActual)
+
+                    // Fase F. Aquí y no solo en el panel de gestión: un
+                    // empleado no entra ahí, y sus horas extra son suyas.
+                    // Sin esta entrada, la única forma de llegar a ellas
+                    // sería pulsando el aviso de la campana -- que
+                    // caduca en cuanto lo lee.
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = onIrHorasExtra, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.horas_extra_ver))
+                    }
 
                     Spacer(Modifier.height(24.dp))
                     Cuenta(onIrContrasena = onIrContrasena, onCerrarSesion = onCerrarSesion)

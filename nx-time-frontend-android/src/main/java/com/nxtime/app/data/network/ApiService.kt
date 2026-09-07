@@ -105,6 +105,44 @@ interface ApiService {
         @Body peticion: DisputaRequest
     ): Response<CorreccionDTO>
 
+    /*  Horas extra (Fase F)  */
+
+    /**
+     * Mis avisos de exceso de jornada. No pide permisos de gestion: son
+     * mis horas, y el aviso me llega a mi antes que a nadie.
+     */
+    @GET("api/v1/horas-extra")
+    suspend fun getMisHorasExtra(
+        @Query("anio") anio: Int? = null
+    ): Response<List<HorasExtraDTO>>
+
+    /** La bandeja de quien revisa. Los ABIERTO salen primero. */
+    @GET("api/v1/horas-extra/equipo")
+    suspend fun getHorasExtraDelEquipo(
+        @Query("anio") anio: Int? = null
+    ): Response<List<HorasExtraDTO>>
+
+    /**
+     * Aceptar el exceso (cuenta para la bolsa) o justificarlo (se
+     * archiva). Nadie revisa los suyos propios: eso lo rechaza el
+     * servidor con 403 aunque el rol tenga la authority.
+     */
+    @PATCH("api/v1/horas-extra/{id}")
+    suspend fun revisarHorasExtra(
+        @Path("id") avisoId: Long,
+        @Body peticion: RevisarHorasExtraRequest
+    ): Response<HorasExtraDTO>
+
+    /**
+     * La bolsa anual del art. 35.2 ET. Sin `usuarioId` devuelve la
+     * propia; con el, la de otra persona, y eso ya pide permisos.
+     */
+    @GET("api/v1/horas-extra/bolsa")
+    suspend fun getBolsaHorasExtra(
+        @Query("usuarioId") usuarioId: Long? = null,
+        @Query("anio") anio: Int? = null
+    ): Response<BolsaHorasExtraDTO>
+
     @GET("api/v1/auditoria/fichaje/{id}")
     suspend fun getAuditoriaFichaje(
         @Path("id") fichajeId: Long

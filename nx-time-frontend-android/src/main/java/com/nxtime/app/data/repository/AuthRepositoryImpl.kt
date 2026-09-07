@@ -91,6 +91,32 @@ class AuthRepositoryImpl(
         return apiService.disputarCorreccion(correccionId, DisputaRequest(motivo))
     }
 
+    /* Horas extra (Fase F) */
+
+    override suspend fun getMisHorasExtra(anio: Int?): Response<List<HorasExtraDTO>> {
+        return apiService.getMisHorasExtra(anio)
+    }
+
+    override suspend fun getHorasExtraDelEquipo(anio: Int?): Response<List<HorasExtraDTO>> {
+        return apiService.getHorasExtraDelEquipo(anio)
+    }
+
+    override suspend fun revisarHorasExtra(
+        avisoId: Long,
+        aceptar: Boolean,
+        justificacion: String?
+    ): Response<HorasExtraDTO> {
+        return apiService.revisarHorasExtra(
+            avisoId, RevisarHorasExtraRequest(aceptar, justificacion))
+    }
+
+    override suspend fun getBolsaHorasExtra(
+        usuarioId: Long?,
+        anio: Int?
+    ): Response<BolsaHorasExtraDTO> {
+        return apiService.getBolsaHorasExtra(usuarioId, anio)
+    }
+
     override suspend fun getAuditoriaFichaje(
         fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>> {

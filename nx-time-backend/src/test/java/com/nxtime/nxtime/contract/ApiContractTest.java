@@ -2101,6 +2101,123 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 5d. HORAS EXTRA (Fase F)
+    // ------------------------------------------------------------------
+    // Aqui NO se comprueba la deteccion: los avisos los crea el proceso
+    // nocturno sobre jornadas reales de mas de nueve horas, y montar eso
+    // por HTTP significaria fichar y esperar. Esa parte esta cubierta
+    // contra PostgreSQL real en OvertimeServiceIT.
+    //
+    // Lo que se fija aqui es el REPARTO DE PERMISOS, que en esta fase no
+    // es simetrico y es justo lo que un cliente puede romper sin darse
+    // cuenta: ver lo tuyo no pide authority, revisar si.
+
+    @Test
+    @Order(110)
+    void unEmpleadoVeSusHorasExtraSinPermisosDeGestion() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(response).isArray()).isTrue();
+    }
+
+    @Test
+    @Order(111)
+    void unEmpleadoNoVeLaBandejaDelEquipo_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/equipo"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(112)
+    void quienRevisaSiVeLaBandejaDelEquipo() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/equipo"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @Order(113)
+    void laBolsaAnualSaleDeLas80HorasDelArticulo35() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/bolsa"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // 80 h en minutos. Viaja el tope y no solo lo consumido para que
+        // el cliente pueda pintar la barra sin llevar la cifra legal
+        // escrita en el codigo -- si el convenio la cambia, cambia aqui.
+        assertThat(bodyOf(response).get("minutosTope").asInt()).isEqualTo(4800);
+        assertThat(bodyOf(response).get("minutosConsumidos").asInt()).isZero();
+        assertThat(bodyOf(response).get("minutosDisponibles").asInt()).isEqualTo(4800);
+        assertThat(bodyOf(response).get("alLimite").asBoolean()).isFalse();
+    }
+
+    @Test
+    @Order(114)
+    void unEmpleadoNoVeLaBolsaDeOtraPersona_devuelve403() throws Exception {
+        // Mirar la bolsa ajena es una operacion de revision aunque solo
+        // se lea: son las horas de otro. Se pide la de un id que no es
+        // el suyo; da igual de quien sea o si existe, porque el permiso
+        // se comprueba antes de ir a buscar a nadie.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/bolsa?usuarioId=" + (empleadoId + 1)),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(115)
+    void unEmpleadoNoPuedeRevisarAvisos_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/999999"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("aceptar", true)), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        // 403 y no 404: el permiso se comprueba antes de ir a buscar el
+        // aviso, asi que un 404 aqui filtraria que ese id no existe.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(116)
+    void revisarUnAvisoQueNoExiste_devuelve404() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/horas-extra/999999"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("aceptar", true)), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ------------------------------------------------------------------
     // 6. TOKEN INVÁLIDO
     // ------------------------------------------------------------------
 

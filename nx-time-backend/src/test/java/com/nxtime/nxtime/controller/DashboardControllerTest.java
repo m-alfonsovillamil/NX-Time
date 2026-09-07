@@ -63,12 +63,13 @@ class DashboardControllerTest {
     @DisplayName("GET /dashboard/empresa con 'fichaje:leer:equipo' devuelve 200")
     void getCompanyDashboard_conAuthority_devuelve200() throws Exception {
         when(dashboardService.getCompanyDashboard("gestor@nxtime.test"))
-                .thenReturn(new CompanyDashboardResponse(4, 12000, 3, 1, List.of()));
+                .thenReturn(new CompanyDashboardResponse(4, 12000, 3, 1, 2, List.of()));
 
         mockMvc.perform(get("/api/v1/dashboard/empresa"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.empleadosActivos").value(4))
-                .andExpect(jsonPath("$.incidenciasAbiertas").value(1));
+                .andExpect(jsonPath("$.incidenciasAbiertas").value(1))
+                .andExpect(jsonPath("$.horasExtraAbiertas").value(2));
     }
 
     @Test

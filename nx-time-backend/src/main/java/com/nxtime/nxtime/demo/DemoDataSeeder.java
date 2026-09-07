@@ -20,6 +20,8 @@ import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
+import com.nxtime.nxtime.dto.OvertimeAlertResponse;
+import com.nxtime.nxtime.dto.ReviewOvertimeRequest;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
 import com.nxtime.nxtime.repository.AttachmentRepository;
@@ -39,6 +41,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import com.nxtime.nxtime.service.NationalHolidayGenerator;
+import com.nxtime.nxtime.service.OvertimeService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -47,7 +50,9 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +101,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final CorrectionRequestRepository correctionRequestRepository;
     private final ProjectRepository projectRepository;
     private final ProjectAssignmentRepository projectAssignmentRepository;
+    private final OvertimeService overtimeService;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
@@ -112,6 +118,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             CorrectionRequestRepository correctionRequestRepository,
             ProjectRepository projectRepository,
             ProjectAssignmentRepository projectAssignmentRepository,
+            OvertimeService overtimeService,
             PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -127,6 +134,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.correctionRequestRepository = correctionRequestRepository;
         this.projectRepository = projectRepository;
         this.projectAssignmentRepository = projectAssignmentRepository;
+        this.overtimeService = overtimeService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -163,6 +171,25 @@ public class DemoDataSeeder implements CommandLineRunner {
                 crearUsuario("Elena", "Castro Nieto", "elena.castro@iberica.demo", Role.EMPLEADO, consultoraIberica)
         );
 
+        sembrarFestivos(techCorp);
+        sembrarFestivos(consultoraIberica);
+
+        // Las ausencias van ANTES que los fichajes desde la Fase F: el
+        // sembrado de jornadas las consulta para no fichar los días que
+        // alguien estaba de vacaciones. Antes daba igual -- eran dos
+        // conjuntos de datos que nadie cruzaba -- pero el detector de
+        // horas extra sí los cruza: descuenta las ausencias aprobadas del
+        // objetivo semanal, así que fichar durante ellas producía semanas
+        // de cinco jornadas medidas contra un objetivo de cuatro días, y
+        // un exceso que en realidad no existía.
+        //
+        // El gestor de cada empresa es quien resuelve las peticiones de
+        // sus empleados: desde la Fase 9 una petición resuelta SIEMPRE
+        // tiene resolutor y fecha (lo comprueba la propia base de datos,
+        // ck_peticiones_resolucion_coherente).
+        sembrarAusencias(empleadosTech, gestorTech);
+        sembrarAusencias(empleadosIberica, gestorIberica);
+
         for (User empleado : empleadosTech) {
             sembrarFichajes(empleado, techCorp);
         }
@@ -170,21 +197,11 @@ public class DemoDataSeeder implements CommandLineRunner {
             sembrarFichajes(empleado, consultoraIberica);
         }
 
-        sembrarFestivos(techCorp);
-        sembrarFestivos(consultoraIberica);
-
         // Fase D. Sin esto, las barras de horas por proyecto salen
         // vacías en la demo desplegada y la pantalla de proyectos
         // parece no hacer nada.
         sembrarProyectos(empleadosTech, techCorp, "NX-CORE", "NX-APP");
         sembrarProyectos(empleadosIberica, consultoraIberica, "CI-AUDIT", "CI-ERP");
-
-        // El gestor de cada empresa es quien resuelve las peticiones de
-        // sus empleados: desde la Fase 9 una petición resuelta SIEMPRE
-        // tiene resolutor y fecha (lo comprueba la propia base de datos,
-        // ck_peticiones_resolucion_coherente).
-        sembrarAusencias(empleadosTech, gestorTech);
-        sembrarAusencias(empleadosIberica, gestorIberica);
 
         // Fase A. Sin esto la campana sale a cero y el diálogo de ficha
         // enseña 40 h y 22 días para toda la plantilla: las dos
@@ -208,6 +225,14 @@ public class DemoDataSeeder implements CommandLineRunner {
         // la demo desplegada y no se ve lo unico que la distingue: que
         // una correccion la tiene que aceptar alguien.
         sembrarCorrecciones(empleadosTech, rrhhTech);
+
+        // Fase F. Se llama al detector DE VERDAD sobre los fichajes que
+        // se acaban de sembrar, en vez de inventar avisos a mano. Cuesta
+        // lo mismo y da dos cosas gratis: los datos de demo no pueden
+        // contradecir a la lógica (que es lo que pasa en cuanto hay dos
+        // sitios que deciden qué es un exceso), y cada arranque de la
+        // demo es una prueba de humo del proceso nocturno.
+        sembrarHorasExtra(gestorTech, gestorIberica);
 
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
@@ -261,9 +286,27 @@ public class DemoDataSeeder implements CommandLineRunner {
         int jitterMinutos = (int) (empleado.getId() % 20) - 10;
         boolean dejarJornadaDeHoyAbierta = empleado.getId() % 2 == 0;
 
+        // Los días de vacaciones aprobadas no se fichan. Parece obvio y
+        // hasta la Fase F daba igual, porque nadie cruzaba las dos cosas;
+        // el detector de horas extra sí las cruza, y una semana con tres
+        // días de vacaciones Y cinco jornadas fichadas salía como exceso.
+        Set<LocalDate> diasDeAusencia = new HashSet<>();
+        for (AbsenceRequest ausencia : absenceRequestRepository.findSolapadas(empleado, inicio, hoy)) {
+            if (ausencia.getEstado() != AbsenceStatus.APROBADA) {
+                continue;
+            }
+            for (LocalDate dia = ausencia.getFechaInicio();
+                    !dia.isAfter(ausencia.getFechaFin()); dia = dia.plusDays(1)) {
+                diasDeAusencia.add(dia);
+            }
+        }
+
         for (LocalDate fecha = inicio; !fecha.isAfter(hoy); fecha = fecha.plusDays(1)) {
             if (fecha.getDayOfWeek().getValue() >= 6) {
                 continue; // fin de semana
+            }
+            if (diasDeAusencia.contains(fecha)) {
+                continue;
             }
 
             boolean esHoy = fecha.isEqual(hoy);
@@ -284,7 +327,15 @@ public class DemoDataSeeder implements CommandLineRunner {
                 // Jornada de hoy: abierta, sin pausas todavía.
                 builder.segundosPausaAcumulados(0);
             } else {
-                Instant horaSalida = ZonedDateTime.of(fecha, LocalTime.of(17, 30).plusMinutes(jitterMinutos), MADRID_ZONE)
+                // Fase F: algunos días se alargan de verdad, hasta las
+                // 20:30. Sin ellos la demo no tendría ni un solo exceso
+                // que detectar y la pantalla de horas extra saldría
+                // vacía -- con la jornada normal de 9:00 a 17:30 nadie
+                // se acerca a las nueve horas del art. 34.3 ET.
+                LocalTime salida = esJornadaLarga(empleado, fecha)
+                        ? LocalTime.of(20, 30)
+                        : LocalTime.of(17, 30);
+                Instant horaSalida = ZonedDateTime.of(fecha, salida.plusMinutes(jitterMinutos), MADRID_ZONE)
                         .toInstant();
                 long segundosPausa = ChronoUnit.SECONDS.between(
                         LocalTime.of(0, 0), LocalTime.of(0, 30).plusMinutes(jitterMinutos % 5)); // ~30 min de comida
@@ -293,6 +344,24 @@ public class DemoDataSeeder implements CommandLineRunner {
 
             timeEntryRepository.save(builder.build());
         }
+    }
+
+    /**
+     * Qué días se alargan (Fase F).
+     *
+     * Es determinista y no aleatorio, como todo lo demás del seeder: la
+     * demo tiene que enseñar lo mismo en cada arranque, y un exceso que
+     * aparece y desaparece según la tirada haría imposible describir una
+     * captura de pantalla.
+     *
+     * Uno de cada seis días laborables, empezando en un punto distinto
+     * por persona. Sale a poco más de un día largo cada semana y media:
+     * suficiente para que haya avisos diarios y algún semanal, y poco
+     * bastante para que la plantilla entera no parezca estar de crisis
+     * permanente.
+     */
+    private boolean esJornadaLarga(User empleado, LocalDate fecha) {
+        return (fecha.toEpochDay() + empleado.getId()) % 6 == 0;
     }
 
     /**
@@ -645,6 +714,57 @@ public class DemoDataSeeder implements CommandLineRunner {
                 "Ajuste de la hora de salida segun el parte del centro.",
                 CorrectionStatus.EN_DISPUTA,
                 "Ese dia sali a la hora que fiche; tengo el correo de salida.");
+    }
+
+    /**
+     * Horas extra de la demo (Fase F).
+     *
+     * Corre el detector sobre los últimos 30 días —no los 90 que abarcan
+     * los fichajes— por dos razones. Una es la ventana: el proceso
+     * nocturno mira catorce días atrás, y un histórico de tres meses de
+     * avisos no representaría lo que la aplicación hace de verdad. La
+     * otra es que cada aviso genera una notificación a su dueño, y con
+     * noventa días la campana de la demo no enseñaría más que horas
+     * extra.
+     *
+     * Después se revisan dos, uno de cada manera. Sin esto todos
+     * saldrían ABIERTO y la pantalla no enseñaría lo que la distingue:
+     * que un exceso medido puede acabar contando como horas extra o no,
+     * y que eso lo decide una persona.
+     */
+    private void sembrarHorasExtra(User... revisores) {
+        // El flush NO es opcional. El detector lee los fichajes con una
+        // consulta NATIVA, y Hibernate no garantiza volcar antes de una
+        // consulta así lo que todavía tiene pendiente en el contexto de
+        // persistencia. Todo el seeder corre en una sola transacción, así
+        // que sin esto el detector podría mirar una tabla vacía y la
+        // pantalla de horas extra saldría en blanco -- un fallo que no
+        // deja ningún error, solo un resultado vacío.
+        timeEntryRepository.flush();
+
+        LocalDate hoy = LocalDate.now(MADRID_ZONE);
+        overtimeService.detectar(hoy.minusDays(30), hoy.minusDays(1));
+
+        for (User revisor : revisores) {
+            List<OvertimeAlertResponse> abiertos =
+                    overtimeService.delEquipo(revisor, hoy.getYear()).stream()
+                            .filter(aviso -> "ABIERTO".equals(aviso.estado()))
+                            // Nadie revisa lo suyo, ni en la demo: el
+                            // servicio lo rechazaría con un 403.
+                            .filter(aviso -> aviso.usuarioId() != revisor.getId())
+                            .toList();
+
+            if (!abiertos.isEmpty()) {
+                overtimeService.revisar(abiertos.get(0).id(),
+                        new ReviewOvertimeRequest(true, null), revisor);
+            }
+            if (abiertos.size() > 1) {
+                overtimeService.revisar(abiertos.get(1).id(),
+                        new ReviewOvertimeRequest(false,
+                                "Jornada intensiva pactada para el cierre del proyecto."),
+                        revisor);
+            }
+        }
     }
 
     private void crearSolicitud(

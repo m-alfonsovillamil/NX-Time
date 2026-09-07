@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -175,6 +176,52 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             @Param("desde") Instant desde,
             @Param("hasta") Instant hasta);
 
+    /**
+     * Minutos trabajados por persona y por DÍA en un rango (Fase F): la
+     * materia prima del detector de horas extra.
+     *
+     * Tres cosas que no son evidentes en el SQL:
+     *
+     * <b>1. El día se calcula en Europe/Madrid.</b> Las marcas se
+     * guardan en UTC (ADR 002), así que agrupar por la fecha del
+     * {@code TIMESTAMPTZ} en crudo mandaría al día siguiente todo lo
+     * fichado a partir de las 22:00 en verano. La misma precaución que
+     * ya hizo falta en la Fase D.
+     *
+     * <b>2. Una jornada cuenta en el día en que EMPIEZA.</b> Un turno de
+     * 22:00 a 06:00 son ocho horas del martes, no cuatro del martes y
+     * cuatro del miércoles: partirla por la medianoche dejaría dos
+     * medias jornadas y ninguna se pasaría nunca del umbral diario.
+     *
+     * <b>3. Se SUMAN las jornadas del mismo día.</b> Un turno partido de
+     * 5 h + 5 h son diez horas trabajadas y se pasa del art. 34.3 igual
+     * que una jornada seguida de diez. Mirar fichaje a fichaje dejaría
+     * escapar justo el caso que más importa.
+     *
+     * {@code ultimoRegistroId} es el fichaje más tardío del día: es el
+     * que cruzó el umbral y el que la pantalla ofrece corregir. En un
+     * día de un solo fichaje es "el" fichaje, sin más.
+     */
+    @Query(value = """
+            SELECT r.usuario_id AS usuarioId,
+                   r.empresa_id AS empresaId,
+                   (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date AS dia,
+                   SUM(EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
+                       - r.segundos_pausa_acumulados) AS segundos,
+                   (ARRAY_AGG(r.id ORDER BY r.hora_entrada DESC))[1] AS ultimoRegistroId
+            FROM registros r
+            WHERE r.anulado = false
+              AND r.hora_salida IS NOT NULL
+              AND r.hora_entrada >= :desde
+              AND r.hora_entrada < :hasta
+            GROUP BY r.usuario_id, r.empresa_id,
+                     (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date
+            ORDER BY r.usuario_id, dia
+            """, nativeQuery = true)
+    List<DailyWorkProjection> sumarSegundosPorUsuarioYDia(
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
     /** Proyección de {@link #sumarSegundosPorEmpleado}: Spring Data la implementa sola. */
     interface EmployeeHoursProjection {
         long getUsuarioId();
@@ -182,5 +229,18 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
         String getNombre();
 
         long getSegundos();
+    }
+
+    /** Proyección de {@link #sumarSegundosPorUsuarioYDia} (Fase F). */
+    interface DailyWorkProjection {
+        long getUsuarioId();
+
+        long getEmpresaId();
+
+        LocalDate getDia();
+
+        long getSegundos();
+
+        long getUltimoRegistroId();
     }
 }

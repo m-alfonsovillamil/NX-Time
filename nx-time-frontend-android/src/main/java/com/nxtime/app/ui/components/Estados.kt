@@ -105,6 +105,33 @@ fun EstadoVacio(
 }
 
 /**
+ * El hueco de UNA SECCIÓN vacía, no el de la pantalla entera (Fase F).
+ *
+ * [EstadoVacio] ocupa toda la pantalla y hace scroll por su cuenta, así
+ * que dentro de un `item {}` de un `LazyColumn` **revienta la app**:
+ * recibe una altura máxima infinita y Compose lanza
+ * `IllegalStateException`. No es una precaución teórica -- pasó, y solo
+ * en el camino de quien revisa horas extra, porque era el único con dos
+ * secciones que pueden vaciarse por separado.
+ *
+ * Por eso esto no dibuja icono ni se centra en vertical: es una línea de
+ * texto que explica un hueco entre otras cosas, y su tamaño lo pone su
+ * contenido.
+ */
+@Composable
+fun SeccionVacia(texto: String, modifier: Modifier = Modifier) {
+    Text(
+        text = texto,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 24.dp),
+        textAlign = TextAlign.Center
+    )
+}
+
+/**
  * Aviso de error dentro de la pantalla.
  *
  * Va en linea y no en un Toast a proposito: un Toast desaparece solo, se

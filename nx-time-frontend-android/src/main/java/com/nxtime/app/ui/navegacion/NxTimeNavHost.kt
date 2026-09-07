@@ -52,6 +52,7 @@ import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.correcciones.CorreccionesScreen
+import com.nxtime.app.ui.horasextra.HorasExtraScreen
 import com.nxtime.app.ui.calendario.CalendarioScreen
 import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
@@ -98,6 +99,11 @@ enum class Pantalla(val ruta: String) {
     // Hoja tambien: se llega desde el panel de gestion y desde un
     // aviso, no desde la barra (que ya esta en el maximo de cinco).
     CORRECCIONES("correcciones"),
+    // Hoja tambien, y la unica a la que se llega desde DOS sitios: del
+    // perfil (las tuyas) y del panel de gestion (las del equipo). Es la
+    // misma pantalla porque para quien la abre es la misma cosa; lo que
+    // cambia es cuanto de ella se le ensena.
+    HORAS_EXTRA("horas-extra"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
     EMPRESA("empresa"),
@@ -479,6 +485,7 @@ fun NxTimeNavHost(
                 PerfilScreen(
                     onVolver = navController::navigateUp,
                     onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
+                    onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     onCerrarSesion = {
                         perfilViewModel.cerrarSesion()
                         entrarA(Pantalla.LOGIN)
@@ -527,6 +534,7 @@ fun NxTimeNavHost(
                     onIrPanelEmpresa = { navController.navigate(Pantalla.EMPRESA.ruta) },
                     onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
                     onIrCorrecciones = { navController.navigate(Pantalla.CORRECCIONES.ruta) },
+                    onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
                         navController.navigate(Pantalla.ausenciasEquipo(resueltas = false))
@@ -545,6 +553,14 @@ fun NxTimeNavHost(
 
             composable(Pantalla.CORRECCIONES.ruta) {
                 CorreccionesScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(Pantalla.HORAS_EXTRA.ruta) {
+                // No recibe `puedeRevisar`: lo resuelve el propio
+                // ViewModel a partir del rol de la sesion, porque se
+                // entra desde dos sitios distintos y pasarlo por los dos
+                // caminos era garantizar que uno se quedara atras.
+                HorasExtraScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.PROYECTOS.ruta) {

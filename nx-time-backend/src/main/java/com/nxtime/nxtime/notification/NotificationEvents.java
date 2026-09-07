@@ -2,6 +2,7 @@ package com.nxtime.nxtime.notification;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.CorrectionRequest;
+import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.User;
 import java.util.List;
 
@@ -63,5 +64,45 @@ public final class NotificationEvents {
 
     /** El dueño no la acepta: escala a quien resuelve disputas. */
     public record CorrectionDisputed(CorrectionRequest solicitud, List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
+    // Fase F: horas extra
+    // ------------------------------------------------------------------
+
+    /**
+     * El proceso nocturno ha detectado un exceso de jornada.
+     *
+     * <b>Va solo al empleado, no a quien revisa</b>, y esa asimetría es
+     * deliberada. Una empresa mediana genera decenas de excesos al mes;
+     * mandarle cada uno por correo a cada gestor es spam por diseño, y un
+     * buzón que se ignora es peor que no avisar. Quien revisa trabaja
+     * desde una COLA — el contador de avisos abiertos del panel y la
+     * bandeja de {@code GET /api/v1/horas-extra/equipo} —, que es como se
+     * lleva un trabajo recurrente.
+     *
+     * El empleado sí lo recibe uno a uno porque para él no es
+     * recurrente: es su martes, y es el único que sabe si fue una
+     * intensiva pactada o un fichaje mal cerrado. Avisarle antes de que
+     * nadie decida es lo que le da tiempo a pedir la corrección.
+     *
+     * Se mantiene la lista de destinatarios en vez de un solo usuario
+     * porque el listener no tiene por qué saber esa regla; hoy trae uno.
+     */
+    public record OvertimeDetected(OvertimeAlert aviso, List<User> destinatarios) {
+    }
+
+    /**
+     * La bolsa anual del art. 35.2 ET se acerca al tope.
+     *
+     * Lleva las cifras ya calculadas y no el aviso que la cruzó, porque
+     * el mensaje no habla de ese exceso concreto sino del año entero.
+     */
+    public record OvertimeBalanceNearLimit(
+            User empleado,
+            int anio,
+            int minutosConsumidos,
+            int minutosDisponibles,
+            List<User> destinatarios) {
     }
 }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--/*
+  Se ha detectado un exceso de jornada (Fase F).
+
+  El mismo correo va al empleado y a quien revisa, pero no dice lo mismo:
+  "tuOwn" cambia el texto a segunda persona. Son dos lecturas distintas
+  del mismo hecho -- una es "mira si esto es correcto", la otra es "te
+  toca decidir" -- y mandar el texto de gestor a quien hizo las horas se
+  lee como una acusación.
+
+  El correo insiste en que todavía no cuenta como horas extra. Es el
+  punto entero de la fase: el reloj mide, la persona decide.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Exceso de jornada detectado', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${propio}">
+        Hemos detectado un exceso de jornada en tus fichajes.
+    </p>
+    <p th:unless="${propio}">
+        Hemos detectado un exceso de jornada en los fichajes de
+        <strong th:text="${empleado}">Empleado</strong>.
+    </p>
+
+    <p style="margin: 0;">
+        <span th:text="${periodo}">El martes 3 de marzo</span>:
+        <strong th:text="${trabajado}">10 h 30 min</strong>
+        frente a las <span th:text="${esperado}">9 h</span> del límite.
+    </p>
+    <p style="margin: 4px 0 0;">
+        Exceso: <strong th:text="${exceso}">1 h 30 min</strong>
+    </p>
+
+    <p style="margin-top: 20px;" th:if="${propio}">
+        Todavía no cuenta como horas extra. Si el fichaje no refleja lo que
+        pasó de verdad, pide una corrección antes de que se revise.
+    </p>
+    <p style="margin-top: 20px;" th:unless="${propio}">
+        Todavía no cuenta como horas extra: queda pendiente de que alguien lo
+        revise y decida si lo fueron.
+    </p>
+</div>
+</body>
+</html>

@@ -7,6 +7,7 @@ import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,16 +38,23 @@ public class WorkingDayServiceImpl implements WorkingDayService {
 
     @Override
     public int contarDiasHabiles(Company empresa, LocalDate desde, LocalDate hasta) {
+        return diasHabiles(empresa, desde, hasta).size();
+    }
+
+    @Override
+    public Set<LocalDate> diasHabiles(Company empresa, LocalDate desde, LocalDate hasta) {
         if (desde.isAfter(hasta)) {
-            return 0;
+            return Set.of();
         }
 
         Set<LocalDate> festivos = festivosDelRango(empresa.getId(), desde, hasta);
 
-        int habiles = 0;
+        // LinkedHashSet y no HashSet: quien recorra el resultado los verá
+        // en orden cronológico, que es como se leen unas fechas.
+        Set<LocalDate> habiles = new LinkedHashSet<>();
         for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
             if (esDiaHabil(fecha, festivos)) {
-                habiles++;
+                habiles.add(fecha);
             }
         }
         return habiles;

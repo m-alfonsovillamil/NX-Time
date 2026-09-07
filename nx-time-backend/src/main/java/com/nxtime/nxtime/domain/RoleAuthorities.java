@@ -67,6 +67,15 @@ import java.util.Set;
  * encima de los dos. "fichaje:corregir" se queda con el significado que
  * siempre tuvo, ahora explícito: pedir una corrección sobre el fichaje
  * de OTRA persona.
+ * "horasextra:revisar" (Fase F) empieza en GESTOR: decidir si las once
+ * horas del martes fueron horas extra o una intensiva pactada es
+ * justo el conocimiento que tiene quien lleva el equipo, y no hace falta
+ * subir a RRHH para eso. Nótese que NO hay authority para "ver mis
+ * propias horas extra": son tuyas, y pedir permiso para mirar tu propia
+ * jornada sería absurdo. Lo que la authority no concede en ningún caso
+ * es revisar lo de uno mismo -- eso lo prohíbe el servicio aunque el rol
+ * dé el permiso, por el mismo conflicto de interés que ya obligó a
+ * separarlo en las correcciones de la Fase E.
  */
 public final class RoleAuthorities {
 
@@ -92,7 +101,8 @@ public final class RoleAuthorities {
             "empleado:leer",
             "calendario:gestionar",
             "proyecto:gestionar",
-            "correccion:aprobar"
+            "correccion:aprobar",
+            "horasextra:revisar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

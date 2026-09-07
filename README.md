@@ -69,6 +69,16 @@ verifican explícitamente cruzando datos entre dos empresas.
 de datos; traer miles de filas a memoria para sumarlas sería justo lo que no hay
 que hacer.
 
+**Horas extra detectadas, no imputadas.** Un proceso nocturno marca las jornadas
+de más de 9 h (art. 34.3 ET) y las semanas por encima de la jornada contratada,
+pero **el umbral semanal se prorratea por los días hábiles reales** — descontando
+festivos y ausencias aprobadas —, porque dividir entre cinco a ciegas convierte
+cada puente en una falsa alarma. Lo que detecta es un *aviso*: solo cuenta para
+la bolsa anual de 80 h (art. 35.2 ET) cuando una persona lo acepta, y esa bolsa
+**se calcula al leer, no se guarda**, para que una corrección de un fichaje
+pasado no la deje mintiendo
+([ADR](docs/adr/011-horas-extra-detectadas-no-imputadas.md)).
+
 ---
 
 ## Probarlo en vivo
@@ -323,12 +333,17 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 | Rol | Además de lo anterior, puede |
 |---|---|
 | **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias |
-| **GESTOR** | ver y aprobar las de su equipo, crear empleados |
-| **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja |
+| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario y los proyectos, aprobar correcciones, revisar horas extra |
+| **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores |
 
 Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
 reparte el poder de gestión.
+
+Dos permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
+corrección que pidió él mismo, ni revisa sus propias horas extra**, tenga el rol
+que tenga. Eso no lo puede aplicar un `@PreAuthorize` —quien revisa tiene la
+authority, justamente— así que lo comprueba el servicio.
 
 ---
 
@@ -420,6 +435,11 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 4. [Java en vez de Kotlin](docs/adr/004-java-sobre-kotlin.md)
 5. [Authorities granulares en vez de roles](docs/adr/005-authorities-granulares.md)
 6. [Multi-tenant por discriminador](docs/adr/006-multitenant-por-discriminador.md)
+7. [El CV y la foto en PostgreSQL, y en una tabla aparte](docs/adr/007-binarios-en-postgresql.md)
+8. [Festivos nacionales calculados, compartidos y no editables](docs/adr/008-festivos-calculados-y-compartidos.md)
+9. [Asignaciones a proyecto con vigencia, y el solape impedido por la base](docs/adr/009-asignaciones-con-vigencia.md)
+10. [Ninguna corrección de fichaje se aplica sola](docs/adr/010-correcciones-con-aprobacion.md)
+11. [Las horas extra se detectan, no se imputan](docs/adr/011-horas-extra-detectadas-no-imputadas.md)
 
 ---
 
