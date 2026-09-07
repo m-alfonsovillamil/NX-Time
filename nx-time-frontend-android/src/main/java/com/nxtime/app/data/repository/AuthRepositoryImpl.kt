@@ -242,6 +242,52 @@ class AuthRepositoryImpl(
         return apiService.borrarAdjunto(adjuntoId)
     }
 
+    override suspend fun getProyectos(): Response<List<ProyectoDTO>> {
+        return apiService.getProyectos()
+    }
+
+    override suspend fun getProyecto(id: Long, anio: Int, mes: Int): Response<DetalleProyectoDTO> {
+        return apiService.getProyecto(id, anio, mes)
+    }
+
+    override suspend fun getHorasPorProyecto(anio: Int, mes: Int): Response<HorasPorProyectoDTO> {
+        return apiService.getHorasPorProyecto(anio, mes)
+    }
+
+    override suspend fun getProyectosDeEmpleado(usuarioId: Long): Response<List<AsignacionProyectoDTO>> {
+        return apiService.getProyectosDeEmpleado(usuarioId)
+    }
+
+    override suspend fun crearProyecto(peticion: ProyectoRequest): Response<ProyectoDTO> {
+        return apiService.crearProyecto(peticion)
+    }
+
+    override suspend fun editarProyecto(id: Long, peticion: ProyectoRequest): Response<ProyectoDTO> {
+        return apiService.editarProyecto(id, peticion)
+    }
+
+    override suspend fun cambiarEstadoProyecto(id: Long, activo: Boolean): Response<ProyectoDTO> {
+        return apiService.cambiarEstadoProyecto(id, EstadoProyectoRequest(activo))
+    }
+
+    override suspend fun borrarProyecto(id: Long): Response<Unit> {
+        return apiService.borrarProyecto(id)
+    }
+
+    override suspend fun asignarAProyecto(
+        proyectoId: Long,
+        peticion: AsignarProyectoRequest
+    ): Response<AsignacionProyectoDTO> {
+        return apiService.asignarAProyecto(proyectoId, peticion)
+    }
+
+    override suspend fun finalizarAsignacion(
+        asignacionId: Long,
+        fechaFin: String
+    ): Response<AsignacionProyectoDTO> {
+        return apiService.finalizarAsignacion(asignacionId, FinalizarAsignacionRequest(fechaFin))
+    }
+
     override suspend fun getCalendario(anio: Int, mes: Int, equipo: Boolean): Response<CalendarioDTO> {
         return apiService.getCalendario(anio, mes, equipo)
     }

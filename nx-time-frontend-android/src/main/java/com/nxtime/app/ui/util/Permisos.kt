@@ -106,6 +106,15 @@ object Permisos {
      */
     fun puedeGestionarCalendario(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
+    /**
+     * Crea proyectos y reparte asignaciones (`proyecto:gestionar`).
+     *
+     * Leerlos lo puede todo el mundo (`proyecto:leer`), porque saber en
+     * qué proyecto estás es parte de tu propia ficha; repartir el trabajo
+     * empieza en GESTOR.
+     */
+    fun puedeGestionarProyectos(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
     private fun alMenos(rol: Rol?, minimo: Rol): Boolean =
         rol != null && rol.ordinal >= minimo.ordinal
 }

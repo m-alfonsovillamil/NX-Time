@@ -18,3 +18,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [006](006-multitenant-por-discriminador.md) | Multi-tenant por discriminador |
 | [007](007-binarios-en-postgresql.md) | El CV y la foto en PostgreSQL, y en una tabla aparte |
 | [008](008-festivos-calculados-y-compartidos.md) | Festivos nacionales calculados, compartidos y no editables |
+| [009](009-asignaciones-con-vigencia.md) | Asignaciones a proyecto con vigencia, y el solape impedido por la base |

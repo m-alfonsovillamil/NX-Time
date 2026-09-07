@@ -474,4 +474,52 @@
 
     <!-- Barra de navegación -->
     <string name="barra_calendario">Calendario</string>
+
+    <!-- Proyectos (Fase D) -->
+    <string name="proyectos_titulo">Proyectos</string>
+    <string name="proyectos_nuevo">Nuevo proyecto</string>
+    <string name="proyectos_crear">Crear</string>
+    <string name="proyectos_codigo">Código</string>
+    <string name="proyectos_codigo_ayuda">Es lo que identifica al proyecto en los informes. Por ejemplo, NX-2026-04.</string>
+    <string name="proyectos_nombre">Nombre</string>
+    <string name="proyectos_descripcion">Descripción (opcional)</string>
+    <string name="proyectos_fecha_inicio">Empieza el</string>
+    <string name="proyectos_desde">Desde el %1$s</string>
+    <string name="proyectos_rango">Del %1$s al %2$s</string>
+    <string name="proyectos_vacio_titulo">Todavía no hay proyectos</string>
+    <string name="proyectos_vacio_texto">Cuando se cree uno, aparecerá aquí con las horas que se le imputen.</string>
+    <string name="proyectos_cerrado_etiqueta">Cerrado</string>
+    <string name="proyectos_cerrar">Cerrar el proyecto</string>
+    <string name="proyectos_reabrir">Reabrir</string>
+    <string name="proyectos_horas_del_mes">Horas de este mes</string>
+    <string name="proyectos_sin_horas">Nadie ha imputado horas a este proyecto en el mes.</string>
+    <string name="proyectos_quien_ha_estado">Quién ha estado</string>
+    <string name="proyectos_asignar">Asignar a alguien</string>
+    <string name="proyectos_asignar_confirmar">Asignar</string>
+    <string name="proyectos_empleado">Empleado</string>
+    <string name="proyectos_desde_etiqueta">Desde el</string>
+    <string name="proyectos_hasta_etiqueta">Hasta el</string>
+    <string name="proyectos_asignar_ayuda">Nadie puede estar en dos proyectos a la vez. Si ya está en otro, primero hay que sacarle de aquel.</string>
+    <string name="proyectos_sacar">Sacar del proyecto</string>
+    <string name="proyectos_sacar_confirmar">Sacar</string>
+    <!--
+        Se dice explícitamente que las horas se quedan: es la duda
+        inmediata al ver un botón que suena a borrar.
+    -->
+    <string name="proyectos_sacar_aviso">%1$s deja de estar en el proyecto a partir del día siguiente. Las horas que ya puso aquí se quedan.</string>
+    <string name="proyectos_creado">Proyecto creado.</string>
+    <string name="proyectos_cerrado">Proyecto cerrado.</string>
+    <string name="proyectos_reabierto">Proyecto reabierto.</string>
+    <string name="proyectos_borrado">Proyecto borrado.</string>
+    <string name="proyectos_asignado">Asignación creada.</string>
+    <string name="proyectos_asignacion_cerrada">Asignación cerrada.</string>
+    <string name="proyectos_mi_proyecto">Mi proyecto</string>
+    <string name="proyectos_sin_proyecto">Sin proyecto asignado</string>
+    <string name="proyectos_horas_por_proyecto">Horas por proyecto</string>
+    <!-- "many" por el mismo motivo que en ausencias_dias_habiles. -->
+    <plurals name="proyectos_asignados">
+        <item quantity="one">%d persona asignada</item>
+        <item quantity="many">%d personas asignadas</item>
+        <item quantity="other">%d personas asignadas</item>
+    </plurals>
 </resources>

@@ -12,6 +12,8 @@ import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.HolidayScope;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
+import com.nxtime.nxtime.domain.Project;
+import com.nxtime.nxtime.domain.ProjectAssignment;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
@@ -23,6 +25,8 @@ import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
+import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
+import com.nxtime.nxtime.repository.ProjectRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
@@ -85,6 +89,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final AttachmentDataRepository attachmentDataRepository;
     private final NoticeRepository noticeRepository;
     private final VacationBalanceRepository vacationBalanceRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectAssignmentRepository projectAssignmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
@@ -98,6 +104,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             AttachmentDataRepository attachmentDataRepository,
             NoticeRepository noticeRepository,
             VacationBalanceRepository vacationBalanceRepository,
+            ProjectRepository projectRepository,
+            ProjectAssignmentRepository projectAssignmentRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -110,6 +118,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.attachmentDataRepository = attachmentDataRepository;
         this.noticeRepository = noticeRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
+        this.projectRepository = projectRepository;
+        this.projectAssignmentRepository = projectAssignmentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -155,6 +165,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         sembrarFestivos(techCorp);
         sembrarFestivos(consultoraIberica);
+
+        // Fase D. Sin esto, las barras de horas por proyecto salen
+        // vacías en la demo desplegada y la pantalla de proyectos
+        // parece no hacer nada.
+        sembrarProyectos(empleadosTech, techCorp, "NX-CORE", "NX-APP");
+        sembrarProyectos(empleadosIberica, consultoraIberica, "CI-AUDIT", "CI-ERP");
 
         // El gestor de cada empresa es quien resuelve las peticiones de
         // sus empleados: desde la Fase 9 una petición resuelta SIEMPRE
@@ -297,6 +313,73 @@ public class DemoDataSeeder implements CommandLineRunner {
                 "San Isidro", HolidayScope.LOCAL);
         crearFestivoDeEmpresa(empresa, LocalDate.of(anio, 7, 25),
                 "Día de convenio de " + empresa.getNombre(), HolidayScope.EMPRESA);
+    }
+
+    /**
+     * Dos proyectos por empresa y un <b>relevo real</b> a mitad del
+     * periodo sembrado (Fase D).
+     *
+     * El relevo es lo importante: la mitad de la plantilla empieza en el
+     * primer proyecto y se cambia al segundo hace 45 días, cerrando la
+     * asignación anterior el día antes. Sin eso, la demo enseñaría a todo
+     * el mundo con una única asignación abierta y la vigencia —que es la
+     * razón de ser de esta fase— no se vería por ninguna parte: las horas
+     * de esas personas aparecen repartidas entre los DOS proyectos, cada
+     * tramo en el suyo.
+     *
+     * Los fichajes sembrados cubren los últimos 90 días
+     * ({@link #sembrarFichajes}), así que el corte a 45 parte el periodo
+     * por la mitad y los dos proyectos salen con horas.
+     */
+    private void sembrarProyectos(List<User> empleados, Company empresa, String codigoUno, String codigoDos) {
+        LocalDate hoy = LocalDate.now(MADRID_ZONE);
+        LocalDate inicio = hoy.minusDays(90);
+        LocalDate relevo = hoy.minusDays(45);
+
+        Project primero = projectRepository.save(Project.builder()
+                .empresa(empresa)
+                .codigo(codigoUno)
+                .nombre("Plataforma " + empresa.getNombre())
+                .descripcion("Mantenimiento y evolución de la plataforma principal.")
+                .fechaInicio(inicio)
+                .activo(true)
+                .build());
+
+        Project segundo = projectRepository.save(Project.builder()
+                .empresa(empresa)
+                .codigo(codigoDos)
+                .nombre("Nueva aplicación móvil")
+                .descripcion("Desarrollo del cliente móvil.")
+                .fechaInicio(relevo)
+                .activo(true)
+                .build());
+
+        for (int i = 0; i < empleados.size(); i++) {
+            User empleado = empleados.get(i);
+
+            if (i % 2 == 0) {
+                // Se queda en el primero todo el periodo.
+                crearAsignacion(empresa, empleado, primero, inicio, null);
+            } else {
+                // Relevo: cierra en el primero el día ANTES de empezar en
+                // el segundo. Si las dos asignaciones compartieran el día
+                // del relevo, el EXCLUDE de la base rechazaría la
+                // segunda -- que es exactamente lo que tiene que hacer.
+                crearAsignacion(empresa, empleado, primero, inicio, relevo.minusDays(1));
+                crearAsignacion(empresa, empleado, segundo, relevo, null);
+            }
+        }
+    }
+
+    private void crearAsignacion(
+            Company empresa, User empleado, Project proyecto, LocalDate desde, LocalDate hasta) {
+        projectAssignmentRepository.save(ProjectAssignment.builder()
+                .empresa(empresa)
+                .usuario(empleado)
+                .proyecto(proyecto)
+                .fechaInicio(desde)
+                .fechaFin(hasta)
+                .build());
     }
 
     private void crearFestivoDeEmpresa(

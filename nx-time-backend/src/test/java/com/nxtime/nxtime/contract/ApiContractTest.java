@@ -162,6 +162,9 @@ class ApiContractTest {
     private long adjuntoId;
     private long festivoId;
     private long festivoNacionalId;
+    private long proyectoId;
+    private long otroProyectoId;
+    private long asignacionId;
 
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -1827,6 +1830,217 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    // ------------------------------------------------------------------
+    // 5c. PROYECTOS Y HORAS POR PROYECTO (Fase D)
+    // ------------------------------------------------------------------
+    // El test que de verdad importa aquí es el 83: comprueba contra un
+    // PostgreSQL real que la restricción EXCLUDE impide que una persona
+    // esté en dos proyectos el mismo día. Es una regla que vive en la
+    // base de datos, así que ningún test con mocks puede verificarla.
+
+    @Test
+    @Order(80)
+    void gestorCreaUnProyecto() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "codigo", "NX-CORE",
+                        "nombre", "Plataforma",
+                        "fechaInicio", "2026-01-01")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode proyecto = bodyOf(response);
+        assertThat(proyecto.get("activo").asBoolean()).isTrue();
+        assertThat(proyecto.get("asignados").asLong()).isZero();
+        proyectoId = proyecto.get("id").asLong();
+
+        // Un segundo proyecto, para poder intentar el solape en el 83.
+        ResponseEntity<String> otro = rest.exchange(
+                url("/api/v1/proyectos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "codigo", "NX-APP",
+                        "nombre", "Aplicación móvil",
+                        "fechaInicio", "2026-01-01")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(otro.getStatusCode()).isEqualTo(HttpStatus.OK);
+        otroProyectoId = bodyOf(otro).get("id").asLong();
+    }
+
+    @Test
+    @Order(81)
+    void unCodigoDeProyectoRepetido_devuelve409() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "codigo", "nx-core",
+                        "nombre", "Otro",
+                        "fechaInicio", "2026-01-01")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        // Da igual la caja, como con los departamentos.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(82)
+    void gestorAsignaAlEmpleadoAlProyecto() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos/" + proyectoId + "/asignaciones"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "usuarioId", empleadoId,
+                        "fechaInicio", "2026-01-01")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode asignacion = bodyOf(response);
+        assertThat(asignacion.get("proyectoCodigo").asText()).isEqualTo("NX-CORE");
+        // Sin fecha de fin: sigue asignado.
+        assertThat(asignacion.get("fechaFin").isNull()).isTrue();
+        asignacionId = asignacion.get("id").asLong();
+    }
+
+    @Test
+    @Order(83)
+    void nadiePuedeEstarEnDosProyectosElMismoDia_devuelve409() throws Exception {
+        // La asignación anterior no tiene fecha de fin, así que cubre
+        // desde 2026-01-01 hasta el infinito: cualquier fecha posterior
+        // choca. Lo impide el EXCLUDE de la base, no el código Java.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos/" + otroProyectoId + "/asignaciones"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "usuarioId", empleadoId,
+                        "fechaInicio", "2026-06-01")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        // Y el mensaje dice en qué proyecto está, no "error inesperado".
+        assertThat(bodyOf(response).get("detail").asText()).contains("NX-CORE");
+    }
+
+    @Test
+    @Order(84)
+    void alCerrarLaAsignacionAnterior_yaSePuedeAsignarAlOtroProyecto() throws Exception {
+        ResponseEntity<String> cerrada = rest.exchange(
+                url("/api/v1/proyectos/asignaciones/" + asignacionId),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("fechaFin", "2026-05-31")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(cerrada.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(cerrada).get("fechaFin").asText()).isEqualTo("2026-05-31");
+
+        // El relevo es al día siguiente: un rango [.., 31/5] y otro que
+        // empieza el 1/6 no se solapan (daterange normaliza el límite
+        // superior a exclusivo).
+        ResponseEntity<String> nueva = rest.exchange(
+                url("/api/v1/proyectos/" + otroProyectoId + "/asignaciones"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "usuarioId", empleadoId,
+                        "fechaInicio", "2026-06-01")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(nueva.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(nueva).get("proyectoCodigo").asText()).isEqualTo("NX-APP");
+    }
+
+    @Test
+    @Order(85)
+    void elHistorialDeAsignacionesConservaLasCerradas() throws Exception {
+        // Cerrar una asignación NO la borra: es lo que permite que las
+        // horas de enero a mayo sigan imputadas a NX-CORE.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos/empleados/" + empleadoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode asignaciones = bodyOf(response);
+        assertThat(asignaciones).hasSize(2);
+    }
+
+    @Test
+    @Order(86)
+    void unEmpleadoNoPuedeCrearProyectos_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "codigo", "MIO",
+                        "nombre", "Mi proyecto",
+                        "fechaInicio", "2026-01-01")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(87)
+    void unGestorDeOtraEmpresaNoPuedeTocarNuestrosProyectos_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos/" + proyectoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(88)
+    void borrarUnProyectoConAsignaciones_devuelve409YSugiereCerrarlo() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/proyectos/" + proyectoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("ciérralo");
+    }
+
+    @Test
+    @Order(89)
+    void cerrarUnProyectoNoBorraSuHistorial() throws Exception {
+        ResponseEntity<String> cerrado = rest.exchange(
+                url("/api/v1/proyectos/" + proyectoId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("activo", false)), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(cerrado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(cerrado).get("activo").asBoolean()).isFalse();
+        // Sigue teniendo su asignación: cerrar no es borrar.
+        assertThat(bodyOf(cerrado).get("asignados").asLong()).isEqualTo(1);
+
+        // Y las horas del mes siguen respondiendo (vacías en este test:
+        // los fichajes del contrato no caen en el rango de asignación).
+        ResponseEntity<String> horas = rest.exchange(
+                url("/api/v1/proyectos/horas?anio=2026&mes=6"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(horas.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(horas).get("mes").asInt()).isEqualTo(6);
     }
 
     // ------------------------------------------------------------------

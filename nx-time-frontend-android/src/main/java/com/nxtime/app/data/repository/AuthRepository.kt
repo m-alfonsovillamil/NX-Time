@@ -112,6 +112,24 @@ interface AuthRepository {
     suspend fun editarFestivo(id: Long, peticion: FestivoRequest): Response<FestivoDTO>
     suspend fun borrarFestivo(id: Long): Response<Unit>
 
+    /* Funciones de Proyectos (Fase D) */
+    suspend fun getProyectos(): Response<List<ProyectoDTO>>
+    suspend fun getProyecto(id: Long, anio: Int, mes: Int): Response<DetalleProyectoDTO>
+    suspend fun getHorasPorProyecto(anio: Int, mes: Int): Response<HorasPorProyectoDTO>
+    suspend fun getProyectosDeEmpleado(usuarioId: Long): Response<List<AsignacionProyectoDTO>>
+    suspend fun crearProyecto(peticion: ProyectoRequest): Response<ProyectoDTO>
+    suspend fun editarProyecto(id: Long, peticion: ProyectoRequest): Response<ProyectoDTO>
+    suspend fun cambiarEstadoProyecto(id: Long, activo: Boolean): Response<ProyectoDTO>
+    suspend fun borrarProyecto(id: Long): Response<Unit>
+    suspend fun asignarAProyecto(
+        proyectoId: Long,
+        peticion: AsignarProyectoRequest
+    ): Response<AsignacionProyectoDTO>
+    suspend fun finalizarAsignacion(
+        asignacionId: Long,
+        fechaFin: String
+    ): Response<AsignacionProyectoDTO>
+
     /* Funciones de Avisos */
     suspend fun getAvisos(): Response<List<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>

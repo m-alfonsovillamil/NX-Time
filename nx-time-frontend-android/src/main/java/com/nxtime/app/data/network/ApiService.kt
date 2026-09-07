@@ -272,6 +272,63 @@ interface ApiService {
     suspend fun borrarFestivo(@Path("id") id: Long): Response<Unit>
 
 
+    /*  Endpoints de PROYECTOS (Fase D) */
+
+    @GET("api/v1/proyectos")
+    suspend fun getProyectos(): Response<List<ProyectoDTO>>
+
+    @GET("api/v1/proyectos/{id}")
+    suspend fun getProyecto(
+        @Path("id") id: Long,
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<DetalleProyectoDTO>
+
+    /** Agregado de toda la empresa: exige `fichaje:leer:equipo`. */
+    @GET("api/v1/proyectos/horas")
+    suspend fun getHorasPorProyecto(
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<HorasPorProyectoDTO>
+
+    /** El histórico de asignaciones de una persona, para su perfil. */
+    @GET("api/v1/proyectos/empleados/{usuarioId}")
+    suspend fun getProyectosDeEmpleado(
+        @Path("usuarioId") usuarioId: Long
+    ): Response<List<AsignacionProyectoDTO>>
+
+    @POST("api/v1/proyectos")
+    suspend fun crearProyecto(@Body peticion: ProyectoRequest): Response<ProyectoDTO>
+
+    @PATCH("api/v1/proyectos/{id}")
+    suspend fun editarProyecto(
+        @Path("id") id: Long,
+        @Body peticion: ProyectoRequest
+    ): Response<ProyectoDTO>
+
+    @PATCH("api/v1/proyectos/{id}/estado")
+    suspend fun cambiarEstadoProyecto(
+        @Path("id") id: Long,
+        @Body peticion: EstadoProyectoRequest
+    ): Response<ProyectoDTO>
+
+    @DELETE("api/v1/proyectos/{id}")
+    suspend fun borrarProyecto(@Path("id") id: Long): Response<Unit>
+
+    @POST("api/v1/proyectos/{id}/asignaciones")
+    suspend fun asignarAProyecto(
+        @Path("id") proyectoId: Long,
+        @Body peticion: AsignarProyectoRequest
+    ): Response<AsignacionProyectoDTO>
+
+    /** Cierra la asignación con una fecha de fin; NO la borra. */
+    @PATCH("api/v1/proyectos/asignaciones/{asignacionId}")
+    suspend fun finalizarAsignacion(
+        @Path("asignacionId") asignacionId: Long,
+        @Body peticion: FinalizarAsignacionRequest
+    ): Response<AsignacionProyectoDTO>
+
+
     /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */
 
     @GET("api/v1/avisos")

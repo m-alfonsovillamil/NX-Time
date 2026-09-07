@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,6 +57,7 @@ fun PanelGestionScreen(
     puedeCrearGestores: Boolean,
     puedeVerPanelEmpresa: Boolean,
     onIrPanelEmpresa: () -> Unit,
+    onIrProyectos: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -100,6 +102,14 @@ fun PanelGestionScreen(
                 texto = stringResource(R.string.gestion_historial_equipo),
                 icono = Icons.AutoMirrored.Filled.ListAlt,
                 onClick = onIrHistorialEquipo
+            )
+            // Los proyectos los ve cualquier rol de gestión; lo que hay
+            // DENTRO (alta y asignaciones) se gatea aparte, dentro de la
+            // propia pantalla, con `proyecto:gestionar`.
+            OpcionGestion(
+                texto = stringResource(R.string.proyectos_titulo),
+                icono = Icons.Default.WorkOutline,
+                onClick = onIrProyectos
             )
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_resueltas),
