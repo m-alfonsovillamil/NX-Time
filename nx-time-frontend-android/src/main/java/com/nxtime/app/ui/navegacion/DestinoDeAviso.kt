@@ -23,6 +23,8 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_AUSENCIAS -> Pantalla.AUSENCIAS.ruta
     DESTINO_AUSENCIAS_EQUIPO_PENDIENTES -> Pantalla.ausenciasEquipo(resueltas = false)
     DESTINO_AUSENCIAS_EQUIPO_RESUELTAS -> Pantalla.ausenciasEquipo(resueltas = true)
+    DESTINO_CORRECCIONES_PENDIENTES -> Pantalla.CORRECCIONES.ruta
+    DESTINO_HISTORIAL -> Pantalla.HISTORIAL.ruta
     else -> null
 }
 
@@ -30,3 +32,8 @@ const val DESTINO_FICHAR = "fichar"
 const val DESTINO_AUSENCIAS = "ausencias"
 const val DESTINO_AUSENCIAS_EQUIPO_PENDIENTES = "ausencias-equipo/pendientes"
 const val DESTINO_AUSENCIAS_EQUIPO_RESUELTAS = "ausencias-equipo/resueltas"
+
+// Fase E. El backend manda estos destinos con los avisos de
+// correcciones (ver NoticeType).
+const val DESTINO_CORRECCIONES_PENDIENTES = "correcciones/pendientes"
+const val DESTINO_HISTORIAL = "historial"

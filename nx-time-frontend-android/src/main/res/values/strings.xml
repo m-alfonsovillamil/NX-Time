@@ -150,7 +150,14 @@
     <string name="correccion_motivo_ayuda">
         Queda registrado en la auditoría junto a tu nombre. Es obligatorio.
     </string>
-    <string name="correccion_guardar">Guardar corrección</string>
+    <!--
+        "Pedir" y no "Guardar": desde la Fase E esto crea una solicitud
+        y el fichaje no cambia hasta que alguien la aprueba. Un boton que
+        dice guardar promete algo que casi nunca pasa.
+    -->
+    <string name="correccion_guardar">Pedir corrección</string>
+    <!-- Cuando corriges tu propio fichaje, el nombre sobra. -->
+    <string name="correccion_mi_fichaje">Mi fichaje</string>
     <string name="correccion_motivo_vacio">Explica por qué corriges el fichaje.</string>
     <string name="correccion_salida_anterior">
         La hora de salida tiene que ser posterior a la de entrada.
@@ -522,4 +529,50 @@
         <item quantity="many">%d personas asignadas</item>
         <item quantity="other">%d personas asignadas</item>
     </plurals>
+
+    <!-- Correcciones con aprobación (Fase E) -->
+    <string name="correcciones_titulo">Correcciones</string>
+    <string name="correcciones_esperan_por_ti">Esperan por ti</string>
+    <string name="correcciones_pedidas_por_mi">Las que he pedido</string>
+    <string name="correcciones_vacio_titulo">No hay correcciones</string>
+    <string name="correcciones_vacio_texto">Aquí verás las correcciones de fichaje que tengas que resolver y las que hayas pedido tú.</string>
+    <string name="correcciones_quien_pide">%1$s propone corregir un fichaje de %2$s</string>
+    <!--
+        Cuando quien pide es el dueño del fichaje, repetir su nombre dos
+        veces ("Javier propone corregir un fichaje de Javier") queda
+        raro y no añade nada.
+    -->
+    <string name="correcciones_pide_el_suyo">%1$s pide corregir un fichaje suyo</string>
+    <string name="correcciones_de_a">De %1$s a %2$s</string>
+    <string name="correcciones_motivo">Motivo</string>
+    <string name="correcciones_no_acepta">No lo acepta: %1$s</string>
+    <string name="correcciones_comentario">Respuesta: %1$s</string>
+    <string name="correcciones_aprobar">Aprobar</string>
+    <string name="correcciones_rechazar">Rechazar</string>
+    <string name="correcciones_rechazar_ayuda">La persona que la pidió verá este motivo, y el fichaje se queda como está.</string>
+    <!--
+        Disputar no es rechazar, y el texto tiene que dejarlo claro: un
+        rechazo cierra la solicitud y una disputa la escala.
+    -->
+    <string name="correcciones_disputar">No estoy de acuerdo</string>
+    <string name="correcciones_disputar_ayuda">La corrección no se aplica y pasa a revisarla Recursos Humanos, que decide en firme.</string>
+    <string name="correcciones_estado_pendiente">Pendiente</string>
+    <string name="correcciones_estado_aprobada">Aprobada</string>
+    <string name="correcciones_estado_rechazada">Rechazada</string>
+    <string name="correcciones_estado_en_disputa">En revisión</string>
+    <string name="correcciones_aprobada">Corrección aprobada.</string>
+    <string name="correcciones_rechazada">Corrección rechazada.</string>
+    <string name="correcciones_disputada">Se ha enviado a Recursos Humanos.</string>
+    <string name="correcciones_pedir">Pedir corrección</string>
+    <!--
+        Lo que se dice al guardar depende de si se ha aplicado o solo
+        pedido: decir "corregido" cuando el fichaje sigue igual sería
+        mentir a quien acaba de pulsar guardar.
+    -->
+    <string name="correccion_pedida">Corrección pedida. El fichaje no cambia hasta que la aprueben.</string>
+    <string name="correccion_aplicada">Fichaje corregido.</string>
+    <!-- Auditoría: las tres acciones nuevas -->
+    <string name="auditoria_accion_solicitud_correccion">Corrección solicitada</string>
+    <string name="auditoria_accion_rechazo_correccion">Corrección rechazada</string>
+    <string name="auditoria_accion_disputa">Corrección no aceptada</string>
 </resources>

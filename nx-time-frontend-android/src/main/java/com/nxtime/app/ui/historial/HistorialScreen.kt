@@ -14,6 +14,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +40,7 @@ import com.nxtime.app.ui.util.resolver
 
 @Composable
 fun HistorialScreen(
+    onPedirCorreccion: (Registro) -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
     iniciales: String,
@@ -83,7 +85,7 @@ fun HistorialScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(estado.registros, key = { it.id }) { registro ->
-                        TarjetaJornada(registro)
+                        TarjetaJornada(registro, { onPedirCorreccion(registro) })
                     }
                 }
             }
@@ -99,7 +101,7 @@ fun HistorialScreen(
  * anterior, y la que corresponde a lo que se factura como trabajado.
  */
 @Composable
-private fun TarjetaJornada(registro: Registro) {
+private fun TarjetaJornada(registro: Registro, onPedirCorreccion: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = elevacionDeTarjeta(),
@@ -154,6 +156,24 @@ private fun TarjetaJornada(registro: Registro) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            /*
+             * Pedir que corrijan TU propio fichaje (Fase E).
+             *
+             * Hasta ahora un empleado no podia hacerlo: solo podia
+             * esperar a que alguien de RRHH lo corrigiera por su cuenta.
+             *
+             * Solo sobre jornadas ya cerradas: una activa se cierra
+             * fichando, no corrigiendo, y el backend la rechaza.
+             */
+            if (registro.horaSalida != null) {
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onPedirCorreccion) {
+                        Text(stringResource(R.string.correcciones_pedir))
+                    }
+                }
             }
         }
     }

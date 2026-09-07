@@ -32,7 +32,19 @@ public enum NoticeType {
     AUSENCIA_RESUELTA("ausencias"),
 
     /** Te acaban de dar de alta en una empresa. */
-    BIENVENIDA("fichar");
+    BIENVENIDA("fichar"),
+
+    // Fase E. El destino es lógico, no una ruta de Compose: lo traduce
+    // DestinoDeAviso.kt en Android.
+
+    /** Te toca resolver una corrección. */
+    CORRECCION_SOLICITADA("correcciones/pendientes"),
+
+    /** Han resuelto la corrección que pediste. */
+    CORRECCION_RESUELTA("historial"),
+
+    /** Una corrección ha acabado en disputa y la resuelve RRHH. */
+    CORRECCION_EN_DISPUTA("correcciones/pendientes");
 
     private final String rutaDestinoPorDefecto;
 

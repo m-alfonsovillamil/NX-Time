@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.notification;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.User;
+import java.util.List;
 
 /**
  * Eventos que disparan una notificación (Fase 10; desde la Fase A,
@@ -40,5 +42,26 @@ public final class NotificationEvents {
 
     /** Se ha dado de alta a un empleado: se le da la bienvenida. */
     public record EmployeeCreated(User empleado, String nombreEmpresa) {
+    }
+
+    // ------------------------------------------------------------------
+    // Fase E: correcciones con aprobación
+    // ------------------------------------------------------------------
+    // Los tres llevan la lista de destinatarios YA RESUELTA, y no un rol
+    // o una authority, por lo mismo que el resto de eventos de aquí: el
+    // listener corre @Async y fuera de la sesión JPA, así que no puede
+    // salir a buscar a nadie. Quién debe enterarse depende de quién pidió
+    // la corrección, y eso solo lo sabe el servicio.
+
+    /** Alguien ha pedido corregir un fichaje. Va a quien tenga que resolverla. */
+    public record CorrectionRequested(CorrectionRequest solicitud, List<User> destinatarios) {
+    }
+
+    /** Aprobada o rechazada. Va a quien la pidió. */
+    public record CorrectionResolved(CorrectionRequest solicitud, List<User> destinatarios) {
+    }
+
+    /** El dueño no la acepta: escala a quien resuelve disputas. */
+    public record CorrectionDisputed(CorrectionRequest solicitud, List<User> destinatarios) {
     }
 }

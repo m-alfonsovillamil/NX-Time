@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--/*
+  La corrección que pediste se ha resuelto (Fase E).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu corrección ha sido resuelta', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${aprobada}">
+        <strong th:text="${resolutor}">Quien la ha revisado</strong> ha <strong>aprobado</strong>
+        la corrección que pediste. El fichaje ya está actualizado, y tanto el original como la
+        corrección quedan en el historial.
+    </p>
+
+    <p th:unless="${aprobada}">
+        <strong th:text="${resolutor}">Quien la ha revisado</strong> ha <strong>rechazado</strong>
+        la corrección que pediste. El fichaje se queda como estaba.
+    </p>
+
+    <p th:if="${comentario != null and !comentario.isBlank()}" style="margin: 0;">
+        Comentario: <span th:text="${comentario}">Comentario</span>
+    </p>
+</div>
+</body>
+</html>

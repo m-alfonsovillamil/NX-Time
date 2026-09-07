@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.auditoria
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,8 +65,20 @@ fun CorregirFichajeScreen(
         viewModel.precargar(entradaIso, salidaIso)
     }
 
+    val contexto = LocalContext.current
     LaunchedEffect(estado.corregido) {
-        if (estado.corregido) onCorregido()
+        if (estado.corregido) {
+            // Lo que se dice depende de lo que ha pasado de verdad: casi
+            // siempre la correccion queda PEDIDA y el fichaje sigue
+            // igual, asi que decir "corregido" seria mentir.
+            Toast.makeText(
+                contexto,
+                if (estado.aplicadaEnElActo) R.string.correccion_aplicada
+                else R.string.correccion_pedida,
+                Toast.LENGTH_LONG
+            ).show()
+            onCorregido()
+        }
     }
 
     var eligiendo by remember { mutableStateOf<Campo?>(null) }
@@ -83,7 +97,13 @@ fun CorregirFichajeScreen(
             }
 
             Text(
-                text = stringResource(R.string.correccion_empleado, nombreEmpleado),
+                // Desde el historial propio no llega nombre: pintar
+                // "Fichaje de " a secas queda cojo.
+                text = if (nombreEmpleado.isBlank()) {
+                    stringResource(R.string.correccion_mi_fichaje)
+                } else {
+                    stringResource(R.string.correccion_empleado, nombreEmpleado)
+                },
                 style = MaterialTheme.typography.titleMedium
             )
             Text(

@@ -28,7 +28,13 @@ enum class AccionAuditoria {
     CREACION,
     MODIFICACION,
     CORRECCION,
-    ANULACION;
+    ANULACION,
+
+    // Fase E: la correccion deja de aplicarse sola, asi que la traza
+    // recoge tambien lo que se INTENTO y no salio adelante.
+    SOLICITUD_CORRECCION,
+    RECHAZO_CORRECCION,
+    DISPUTA;
 
     companion object {
         /**

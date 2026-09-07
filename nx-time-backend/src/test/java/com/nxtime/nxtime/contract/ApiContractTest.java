@@ -30,6 +30,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -159,6 +160,7 @@ class ApiContractTest {
     private long registroActivoId;
     private long peticionAusenciaId;
     private long departamentoId;
+    private long correccionId;
     private long adjuntoId;
     private long festivoId;
     private long festivoNacionalId;
@@ -659,67 +661,126 @@ class ApiContractTest {
         Map<String, Object> correccion = mapOf(
                 "horaEntrada", "2026-01-01T08:00:00Z",
                 "horaSalida", "2026-01-01T17:00:00Z",
-                "motivo", "Un GESTOR normal no debería poder hacer esto."
+                "motivo", "Un GESTOR normal no deberia poder pedir esto sobre el fichaje de otro."
         );
 
         ResponseEntity<String> response = rest.exchange(
-                url("/api/v1/fichaje/" + registroActivoId),
-                HttpMethod.PATCH,
+                url("/api/v1/fichaje/" + registroActivoId + "/correcciones"),
+                HttpMethod.POST,
                 new HttpEntity<>(toJson(correccion), authHeaders(gestor2Token)),
                 String.class
         );
 
-        // GESTOR tiene "fichaje:leer:equipo" pero no "fichaje:corregir"
-        // (solo RRHH/ADMIN, ver RoleAuthorities) -- corregir un fichaje
-        // pasado es una operación de cumplimiento normativo, no de
-        // gestión de equipo del día a día.
+        // Desde la Fase E cualquiera puede PEDIR una correccion de su
+        // propio fichaje, pero pedirla sobre el de OTRA persona sigue
+        // exigiendo "fichaje:corregir" (RRHH+), que un GESTOR no tiene.
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
     @Order(29)
-    void adminCorrigeFichajeCerrado_devuelve200_yQuedaTrazaCompletaEnAuditoria() throws Exception {
+    void adminPideCorreccionDeFichajeAjeno_quedaPendienteDeQueLaAcepteElEmpleado() throws Exception {
         Map<String, Object> correccion = mapOf(
                 "horaEntrada", "2026-01-01T08:00:00Z",
                 "horaSalida", "2026-01-01T17:00:00Z",
                 "motivo", "El empleado ficho la entrada con 15 minutos de retraso por error del reloj."
         );
 
-        ResponseEntity<String> correctionResponse = rest.exchange(
-                url("/api/v1/fichaje/" + registroActivoId),
-                HttpMethod.PATCH,
-                new HttpEntity<>(toJson(correccion), authHeaders(gestorToken)), // gestorToken es en realidad ADMIN, ver Fase 4
+        // gestorToken es en realidad ADMIN (ver Fase 4). Antes esto
+        // corregia EN EL ACTO y devolvia 200; ahora crea una SOLICITUD y
+        // devuelve 202, porque el fichaje no se ha tocado: quien decide
+        // es el empleado, que es a quien le cambian sus horas.
+        ResponseEntity<String> solicitud = rest.exchange(
+                url("/api/v1/fichaje/" + registroActivoId + "/correcciones"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(correccion), authHeaders(gestorToken)),
                 String.class
         );
 
-        assertThat(correctionResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode correctionBody = bodyOf(correctionResponse);
-        long fichajeCorregidoId = correctionBody.get("id").asLong();
-        // Nunca sobrescribe: el id devuelto es el de una fila NUEVA, no
-        // el del fichaje original que se corrigió.
-        assertThat(fichajeCorregidoId).isNotEqualTo(registroActivoId);
-        assertThat(correctionBody.get("horaEntrada").asText()).startsWith("2026-01-01T08:00:00");
+        assertThat(solicitud.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        JsonNode cuerpo = bodyOf(solicitud);
+        assertThat(cuerpo.get("estado").asText()).isEqualTo("PENDIENTE");
+        correccionId = cuerpo.get("id").asLong();
 
-        // El fichaje original queda anulado -> ya no aparece en el
-        // historial del empleado (ver TimeEntryRepository.findHistoryByUsuario).
+        // El fichaje sigue intacto y en el historial del empleado.
         ResponseEntity<String> historial = rest.exchange(
                 url("/api/v1/fichaje/historial"),
                 HttpMethod.GET,
                 new HttpEntity<>(authHeaders(empleadoToken)),
                 String.class
         );
-        JsonNode historialBody = bodyOf(historial);
+        boolean sigueElOriginal = false;
+        for (JsonNode fichaje : bodyOf(historial)) {
+            if (fichaje.get("id").asLong() == registroActivoId) {
+                sigueElOriginal = true;
+            }
+        }
+        assertThat(sigueElOriginal)
+                .as("mientras la correccion esta pendiente, el fichaje no cambia")
+                .isTrue();
+
+        // Y al empleado le aparece como algo que tiene que resolver EL,
+        // aunque no tenga ninguna authority de aprobacion.
+        ResponseEntity<String> pendientes = rest.exchange(
+                url("/api/v1/correcciones/pendientes"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(pendientes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(pendientes)).hasSize(1);
+        assertThat(bodyOf(pendientes).get(0).get("puedoResolver").asBoolean()).isTrue();
+        assertThat(bodyOf(pendientes).get(0).get("puedoDisputar").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(292)
+    void quienPidioLaCorreccionNoPuedeAprobarsela_devuelve403() throws Exception {
+        // El caso que da sentido a toda la fase: si quien la pide pudiera
+        // aprobarsela, seguiria cambiando las horas de otro por su cuenta.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/correcciones/" + correccionId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("aprobada", true)), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(293)
+    void elEmpleadoApruebaLaCorreccionDeSuFichaje_yEntoncesSiSeAplica() throws Exception {
+        ResponseEntity<String> resuelta = rest.exchange(
+                url("/api/v1/correcciones/" + correccionId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(
+                        toJson(mapOf("aprobada", true, "comentario", "Es verdad, el reloj iba mal")),
+                        authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(resuelta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(resuelta).get("estado").asText()).isEqualTo("APROBADA");
+
+        // Ahora si: el original queda anulado y desaparece del historial,
+        // sustituido por la version corregida.
+        ResponseEntity<String> historial = rest.exchange(
+                url("/api/v1/fichaje/historial"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
         boolean apareceElOriginal = false;
-        for (JsonNode fichaje : historialBody) {
+        for (JsonNode fichaje : bodyOf(historial)) {
             if (fichaje.get("id").asLong() == registroActivoId) {
                 apareceElOriginal = true;
             }
         }
         assertThat(apareceElOriginal).as("el fichaje anulado no debe salir en el historial").isFalse();
 
-        // La línea temporal del fichaje ORIGINAL conserva toda la
-        // traza: su creación (INICIO), sus modificaciones (pausa, FIN)
-        // y, al final, la corrección -- con motivo, y con quién la hizo.
+        // La traza del original lo cuenta entero: lo que se pidio y lo
+        // que acabo aplicandose.
         ResponseEntity<String> auditoria = rest.exchange(
                 url("/api/v1/auditoria/fichaje/" + registroActivoId),
                 HttpMethod.GET,
@@ -728,26 +789,22 @@ class ApiContractTest {
         );
         assertThat(auditoria.getStatusCode()).isEqualTo(HttpStatus.OK);
         JsonNode trail = bodyOf(auditoria);
-        assertThat(trail.isArray()).isTrue();
-        assertThat(trail.size()).isGreaterThanOrEqualTo(4); // CREACION + PAUSA_INICIO + PAUSA_FIN + FIN + CORRECCION
+        assertThat(trail.get(0).get("accion").asText()).isEqualTo("CREACION");
 
-        JsonNode primeraEntrada = trail.get(0);
-        assertThat(primeraEntrada.get("accion").asText()).isEqualTo("CREACION");
-        assertThat(primeraEntrada.get("valorAnterior").isNull()).isTrue();
-
-        JsonNode ultimaEntrada = trail.get(trail.size() - 1);
-        assertThat(ultimaEntrada.get("accion").asText()).isEqualTo("CORRECCION");
-        assertThat(ultimaEntrada.get("motivo").asText()).contains("retraso por error del reloj");
-        assertThat(ultimaEntrada.get("modificadoPor").get("nombre").asText()).isNotBlank();
+        List<String> acciones = new ArrayList<>();
+        for (JsonNode fila : trail) {
+            acciones.add(fila.get("accion").asText());
+        }
+        // La solicitud queda anotada aunque por si sola no cambiara nada.
+        assertThat(acciones).contains("SOLICITUD_CORRECCION", "CORRECCION");
+        assertThat(trail.get(trail.size() - 1).get("accion").asText()).isEqualTo("CORRECCION");
     }
 
     @Test
-    @Order(291)
-    void corregirElMismoFichajeOriginalOtraVez_devuelve409ConProblemDetail() throws Exception {
-        // Ya se corrigió en el test anterior (registroActivoId sigue
-        // apuntando al ORIGINAL, ahora anulado) -- corregir el mismo
-        // original dos veces no tiene sentido: hay que corregir la
-        // versión nueva, no la ya sustituida.
+    @Order(294)
+    void pedirOtraCorreccionDelMismoOriginalYaAnulado_devuelve409() throws Exception {
+        // Corregir el mismo original dos veces no tiene sentido: hay que
+        // corregir la version nueva, no la ya sustituida.
         Map<String, Object> correccion = mapOf(
                 "horaEntrada", "2026-01-01T08:00:00Z",
                 "horaSalida", "2026-01-01T17:00:00Z",
@@ -755,8 +812,8 @@ class ApiContractTest {
         );
 
         ResponseEntity<String> response = rest.exchange(
-                url("/api/v1/fichaje/" + registroActivoId),
-                HttpMethod.PATCH,
+                url("/api/v1/fichaje/" + registroActivoId + "/correcciones"),
+                HttpMethod.POST,
                 new HttpEntity<>(toJson(correccion), authHeaders(gestorToken)),
                 String.class
         );

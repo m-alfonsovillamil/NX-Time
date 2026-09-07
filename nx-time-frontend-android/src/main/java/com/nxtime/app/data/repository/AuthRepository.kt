@@ -23,10 +23,20 @@ interface AuthRepository {
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
 
     /* Cumplimiento normativo (RRHH/ADMIN) */
-    suspend fun corregirFichaje(
+    /** Pide una correccion; no la aplica. Ver ApiService. */
+    suspend fun solicitarCorreccion(
         fichajeId: Long,
         peticion: CorreccionFichajeRequest
-    ): Response<Registro>
+    ): Response<CorreccionDTO>
+
+    suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
+    suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
+    suspend fun resolverCorreccion(
+        correccionId: Long,
+        aprobada: Boolean,
+        comentario: String?
+    ): Response<CorreccionDTO>
+    suspend fun disputarCorreccion(correccionId: Long, motivo: String): Response<CorreccionDTO>
 
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
 

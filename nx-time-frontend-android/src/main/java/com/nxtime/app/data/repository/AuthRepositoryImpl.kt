@@ -60,11 +60,35 @@ class AuthRepositoryImpl(
         return apiService.getResumenPersonal()
     }
 
-    override suspend fun corregirFichaje(
+    override suspend fun solicitarCorreccion(
         fichajeId: Long,
         peticion: CorreccionFichajeRequest
-    ): Response<Registro> {
-        return apiService.corregirFichaje(fichajeId, peticion)
+    ): Response<CorreccionDTO> {
+        return apiService.solicitarCorreccion(fichajeId, peticion)
+    }
+
+    override suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>> {
+        return apiService.getCorreccionesPendientes()
+    }
+
+    override suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>> {
+        return apiService.getMisCorrecciones()
+    }
+
+    override suspend fun resolverCorreccion(
+        correccionId: Long,
+        aprobada: Boolean,
+        comentario: String?
+    ): Response<CorreccionDTO> {
+        return apiService.resolverCorreccion(
+            correccionId, ResolverCorreccionRequest(aprobada, comentario))
+    }
+
+    override suspend fun disputarCorreccion(
+        correccionId: Long,
+        motivo: String
+    ): Response<CorreccionDTO> {
+        return apiService.disputarCorreccion(correccionId, DisputaRequest(motivo))
     }
 
     override suspend fun getAuditoriaFichaje(

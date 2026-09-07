@@ -51,6 +51,7 @@ import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
+import com.nxtime.app.ui.correcciones.CorreccionesScreen
 import com.nxtime.app.ui.calendario.CalendarioScreen
 import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
@@ -94,6 +95,9 @@ enum class Pantalla(val ruta: String) {
     // Hoja del panel de gestión, no una sexta pestaña: la barra de
     // navegación ya está en el máximo de cinco que fija Material 3.
     PROYECTOS("proyectos"),
+    // Hoja tambien: se llega desde el panel de gestion y desde un
+    // aviso, no desde la barra (que ya esta en el maximo de cinco).
+    CORRECCIONES("correcciones"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
     EMPRESA("empresa"),
@@ -417,6 +421,19 @@ fun NxTimeNavHost(
             // volver, así que ya no reciben `onVolver`.
             composable(Pantalla.HISTORIAL.ruta) {
                 HistorialScreen(
+                    // Reutiliza el mismo formulario que usa RRHH: los
+                    // selectores de hora y el motivo son los mismos, y
+                    // ahora los dos caminos acaban en una SOLICITUD.
+                    onPedirCorreccion = { registro ->
+                        navController.navigate(
+                            Pantalla.correccion(
+                                fichajeId = registro.id,
+                                nombre = "",
+                                entradaIso = registro.horaEntrada,
+                                salidaIso = registro.horaSalida
+                            )
+                        )
+                    },
                     contadorAvisos = estadoAvisos.noLeidos,
                     onIrAvisos = irAAvisos,
                     iniciales = iniciales,
@@ -509,6 +526,7 @@ fun NxTimeNavHost(
                     puedeVerPanelEmpresa = Permisos.puedeVerPanelEmpresa(rol),
                     onIrPanelEmpresa = { navController.navigate(Pantalla.EMPRESA.ruta) },
                     onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
+                    onIrCorrecciones = { navController.navigate(Pantalla.CORRECCIONES.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
                         navController.navigate(Pantalla.ausenciasEquipo(resueltas = false))
@@ -523,6 +541,10 @@ fun NxTimeNavHost(
                         navController.navigate(Pantalla.altaUsuario(esGestor = true))
                     }
                 )
+            }
+
+            composable(Pantalla.CORRECCIONES.ruta) {
+                CorreccionesScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.PROYECTOS.ruta) {
