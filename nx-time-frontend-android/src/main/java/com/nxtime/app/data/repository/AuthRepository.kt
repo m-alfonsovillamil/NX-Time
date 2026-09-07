@@ -95,6 +95,17 @@ interface AuthRepository {
     suspend fun borrarDepartamento(id: Long): Response<Unit>
     suspend fun asignarDepartamento(usuarioId: Long, departamentoId: Long?): Response<PerfilDTO>
 
+    /* Funciones de Adjuntos (Fase B2) */
+    suspend fun getMisAdjuntos(): Response<List<AdjuntoDTO>>
+    suspend fun subirAdjunto(
+        contenido: ByteArray,
+        nombre: String,
+        mime: String,
+        tipo: String
+    ): Response<AdjuntoDTO>
+    suspend fun descargarAdjunto(adjuntoId: Long): Response<ResponseBody>
+    suspend fun borrarAdjunto(adjuntoId: Long): Response<Unit>
+
     /* Funciones de Avisos */
     suspend fun getAvisos(): Response<List<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>

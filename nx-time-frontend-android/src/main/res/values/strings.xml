@@ -389,6 +389,24 @@
     <string name="perfil_fecha_invalida">La fecha tiene que ir en formato aaaa-mm-dd.</string>
     <string name="perfil_fecha_futura">La fecha de nacimiento tiene que ser anterior a hoy.</string>
 
+    <!-- Adjuntos: CV y foto (Fase B2). -->
+    <string name="perfil_foto_cambiar">Cambiar la foto</string>
+    <string name="perfil_cv">Mi currículum</string>
+    <string name="perfil_cv_vacio">Todavía no has subido ninguno.</string>
+    <string name="perfil_cv_detalle">%1$s · subido el %2$s</string>
+    <string name="perfil_cv_subir">Subir mi currículum</string>
+    <string name="perfil_cv_reemplazar">Reemplazar el currículum</string>
+    <string name="perfil_cv_descargar">Abrir</string>
+    <string name="perfil_cv_borrar">Borrar</string>
+    <!--
+        Se avisa del formato porque el servidor comprueba el CONTENIDO
+        del fichero y no su extensión: sin este texto, el error al subir
+        un .doc renombrado a .pdf parecería arbitrario.
+    -->
+    <string name="perfil_cv_ayuda">Solo PDF, hasta 5 MB. Se comprueba el contenido del fichero, no su extensión.</string>
+    <string name="perfil_adjunto_vacio">El fichero elegido está vacío.</string>
+    <string name="perfil_adjunto_ilegible">No se ha podido leer el fichero elegido.</string>
+
     <string name="error_sin_conexion">No se ha podido conectar con el servidor. Comprueba tu conexión.</string>
     <string name="error_datos_invalidos">Los datos enviados no son válidos.</string>
     <string name="error_sesion_caducada">Tu sesión ha caducado. Vuelve a iniciar sesión.</string>

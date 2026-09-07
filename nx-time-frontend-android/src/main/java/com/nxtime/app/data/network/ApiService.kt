@@ -4,12 +4,16 @@ import com.nxtime.app.data.dto.*
 import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.CrearGestorRequest
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -210,6 +214,34 @@ interface ApiService {
         @Path("usuarioId") usuarioId: Long,
         @Body peticion: AsignarDepartamentoRequest
     ): Response<PerfilDTO>
+
+
+    /*  Endpoints de ADJUNTOS: CV y foto (Fase B2) */
+
+    @GET("api/v1/perfil/adjuntos")
+    suspend fun getMisAdjuntos(): Response<List<AdjuntoDTO>>
+
+    @Multipart
+    @POST("api/v1/perfil/adjuntos")
+    suspend fun subirAdjunto(
+        @Part fichero: MultipartBody.Part,
+        @Part("tipo") tipo: RequestBody
+    ): Response<AdjuntoDTO>
+
+    /**
+     * Los bytes de un adjunto.
+     *
+     * `@Streaming` para no cargar el cuerpo entero en memoria antes de
+     * escribirlo, igual que los informes. Y por el mismo motivo,
+     * RetrofitClient tiene que dejar esta ruta fuera del interceptor de
+     * logging: a nivel BODY bufferiza la respuesta y la rompe.
+     */
+    @Streaming
+    @GET("api/v1/perfil/adjuntos/{id}")
+    suspend fun descargarAdjunto(@Path("id") adjuntoId: Long): Response<ResponseBody>
+
+    @DELETE("api/v1/perfil/adjuntos/{id}")
+    suspend fun borrarAdjunto(@Path("id") adjuntoId: Long): Response<Unit>
 
 
     /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */

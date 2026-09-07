@@ -10,4 +10,11 @@
 -->
 <paths>
     <cache-path name="informes" path="informes/" />
+    <!--
+        Los adjuntos (el CV) van a su propia subcarpeta y no a la de
+        informes: son documentos distintos, y una carpeta por cosa hace
+        que borrar la caché de una no se lleve la otra por delante.
+        Sigue sin declararse la caché entera, por lo mismo que arriba.
+    -->
+    <cache-path name="adjuntos" path="adjuntos/" />
 </paths>
