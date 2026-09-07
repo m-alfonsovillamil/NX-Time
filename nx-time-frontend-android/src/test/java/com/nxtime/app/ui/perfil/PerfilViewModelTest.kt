@@ -2,6 +2,7 @@ package com.nxtime.app.ui.perfil
 
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
+import com.nxtime.app.data.dto.AdjuntoDTO
 import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
@@ -49,8 +50,18 @@ class PerfilViewModelTest {
         diasVacaciones = 22
     )
 
-    private suspend fun conPerfilCargado(): PerfilViewModel {
+    private val cv = AdjuntoDTO(
+        id = 5L,
+        tipo = "CV",
+        nombreOriginal = "mi cv.pdf",
+        mime = "application/pdf",
+        tamanoBytes = 2048,
+        subidoEn = "2026-09-01T10:00:00Z"
+    )
+
+    private suspend fun conPerfilCargado(adjuntos: List<AdjuntoDTO> = emptyList()): PerfilViewModel {
         whenever(repositorio.getMiPerfil()).thenReturn(Response.success(perfil))
+        whenever(repositorio.getMisAdjuntos()).thenReturn(Response.success(adjuntos))
         return PerfilViewModel(repositorio, sesion).also { it.cargar() }
     }
 
@@ -253,6 +264,131 @@ class PerfilViewModelTest {
 
         assertFalse(viewModel.uiState.value.editando)
         verify(repositorio, never()).actualizarMiPerfil(anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+    }
+
+    // ------------------------------------------------------------------
+    // Adjuntos (Fase B2)
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `cargar el perfil trae tambien el CV`() = runTest {
+        val viewModel = conPerfilCargado(listOf(cv))
+        advanceUntilIdle()
+
+        assertEquals(cv, viewModel.uiState.value.cv)
+    }
+
+    @Test
+    fun `sin adjuntos no hay CV ni foto, y el perfil se lee igual`() = runTest {
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.uiState.value.cv)
+        assertEquals(null, viewModel.uiState.value.foto)
+        assertEquals(perfil, viewModel.uiState.value.perfil)
+    }
+
+    @Test
+    fun `si fallan los adjuntos NO se enseña un error`() = runTest {
+        // El perfil se lee perfectamente sin foto ni currículum: un
+        // banner rojo por no haber podido bajar un avatar molestaría más
+        // de lo que informa.
+        whenever(repositorio.getMiPerfil()).thenReturn(Response.success(perfil))
+        whenever(repositorio.getMisAdjuntos()).thenThrow(RuntimeException("sin red"))
+        val viewModel = PerfilViewModel(repositorio, sesion).also { it.cargar() }
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.uiState.value.error)
+        assertEquals(perfil, viewModel.uiState.value.perfil)
+    }
+
+    @Test
+    fun `un fichero vacio no sale a la red`() = runTest {
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        viewModel.subirAdjunto(ByteArray(0), "cv.pdf", "application/pdf", TIPO_CV)
+        advanceUntilIdle()
+
+        assertEquals(
+            MensajeUi.Recurso(R.string.perfil_adjunto_vacio),
+            viewModel.uiState.value.errorFormulario
+        )
+        verify(repositorio, never()).subirAdjunto(any(), any(), any(), any())
+    }
+
+    @Test
+    fun `subir manda los bytes tal cual, sin mirar la extension`() = runTest {
+        // El tipo lo decide el SERVIDOR por los primeros bytes:
+        // comprobar la extensión aquí sería una falsa sensación de
+        // control. Un fichero llamado .txt se manda igual, y es el 400
+        // del servidor el que lo para.
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+        val bytes = "%PDF-1.7".toByteArray()
+        whenever(repositorio.subirAdjunto(any(), any(), any(), any()))
+            .thenReturn(Response.success(cv))
+
+        viewModel.subirAdjunto(bytes, "curriculum.txt", "text/plain", TIPO_CV)
+        advanceUntilIdle()
+
+        verify(repositorio).subirAdjunto(eq(bytes), eq("curriculum.txt"), eq("text/plain"), eq(TIPO_CV))
+    }
+
+    @Test
+    fun `un 400 del servidor al subir se enseña en la pantalla`() = runTest {
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+        whenever(repositorio.subirAdjunto(any(), any(), any(), any()))
+            .thenReturn(Response.error(400, okhttp3.ResponseBody.create(null, "")))
+
+        viewModel.subirAdjunto("MZ".toByteArray(), "cv.pdf", "application/pdf", TIPO_CV)
+        advanceUntilIdle()
+
+        assertEquals(
+            MensajeUi.Recurso(R.string.error_datos_invalidos),
+            viewModel.uiState.value.errorFormulario
+        )
+        assertFalse(viewModel.uiState.value.subiendo)
+    }
+
+    @Test
+    fun `borrar el CV lo quita de la pantalla`() = runTest {
+        val viewModel = conPerfilCargado(listOf(cv))
+        advanceUntilIdle()
+        whenever(repositorio.borrarAdjunto(5L)).thenReturn(Response.success(Unit))
+
+        viewModel.borrarCv()
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.uiState.value.cv)
+        verify(repositorio).borrarAdjunto(5L)
+    }
+
+    @Test
+    fun `descargar el CV entrega el cuerpo con su nombre original`() = runTest {
+        val viewModel = conPerfilCargado(listOf(cv))
+        advanceUntilIdle()
+        val cuerpo = okhttp3.ResponseBody.create(null, "%PDF-1.7")
+        whenever(repositorio.descargarAdjunto(5L)).thenReturn(Response.success(cuerpo))
+
+        var nombreRecibido: String? = null
+        viewModel.descargarCv { _, nombre -> nombreRecibido = nombre }
+        advanceUntilIdle()
+
+        assertEquals("mi cv.pdf", nombreRecibido)
+        assertFalse(viewModel.uiState.value.descargandoCv)
+    }
+
+    @Test
+    fun `sin CV no hay nada que descargar y no se llama a nadie`() = runTest {
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        viewModel.descargarCv { _, _ -> }
+        advanceUntilIdle()
+
+        verify(repositorio, never()).descargarAdjunto(any())
     }
 
     @Test
