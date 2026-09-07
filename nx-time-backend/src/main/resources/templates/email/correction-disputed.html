@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--/*
+  Una corrección ha acabado en disputa y la resuelve RRHH (Fase E).
+
+  Se mandan los DOS motivos, el de la corrección y el de la disputa,
+  porque quien tiene que decidir en firme necesita las dos versiones:
+  con una sola estaría dando la razón a quien se la contó.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Corrección en disputa', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${empleado}">Empleado</strong> no acepta la corrección que
+        <strong th:text="${solicitante}">Solicitante</strong> propuso sobre su fichaje. Queda
+        pendiente de que la resuelvas tú.
+    </p>
+
+    <p style="margin: 0;">
+        Motivo de la corrección: <span th:text="${motivoCorreccion}">Motivo</span>
+    </p>
+    <p style="margin: 4px 0 0;">
+        Por qué no la acepta: <span th:text="${motivoDisputa}">Motivo</span>
+    </p>
+
+    <p style="margin-top: 20px;">El fichaje sigue sin cambiarse hasta que decidas.</p>
+</div>
+</body>
+</html>

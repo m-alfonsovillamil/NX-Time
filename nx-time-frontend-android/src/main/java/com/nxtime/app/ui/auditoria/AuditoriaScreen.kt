@@ -244,6 +244,11 @@ private fun textoDeAccion(accion: String): String =
         AccionAuditoria.MODIFICACION -> stringResource(R.string.auditoria_accion_modificacion)
         AccionAuditoria.CORRECCION -> stringResource(R.string.auditoria_accion_correccion)
         AccionAuditoria.ANULACION -> stringResource(R.string.auditoria_accion_anulacion)
+        AccionAuditoria.SOLICITUD_CORRECCION ->
+            stringResource(R.string.auditoria_accion_solicitud_correccion)
+        AccionAuditoria.RECHAZO_CORRECCION ->
+            stringResource(R.string.auditoria_accion_rechazo_correccion)
+        AccionAuditoria.DISPUTA -> stringResource(R.string.auditoria_accion_disputa)
         // Una acción que esta versión no conoce se enseña en crudo: en un
         // registro de cumplimiento, callar una línea es peor que pintarla
         // fea.

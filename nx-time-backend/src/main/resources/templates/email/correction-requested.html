@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--/*
+  Aviso de que hay una corrección esperando (Fase E).
+
+  El mismo correo sirve para los dos casos, y `sobreSuFichaje` es lo que
+  los separa: que te propongan cambiar TUS horas no es lo mismo que
+  tener que revisar las de otro, y el texto tiene que decir cuál de las
+  dos cosas es. Con un solo párrafo genérico, quien lo recibe no sabría
+  si le están pidiendo permiso o encargándole trabajo.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Corrección de fichaje pendiente', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${sobreSuFichaje}">
+        <strong th:text="${nombreSolicitante}">Alguien</strong> propone corregir las horas de uno
+        de <strong>tus fichajes</strong>. No se ha cambiado nada todavía: hace falta que lo
+        apruebes tú.
+    </p>
+
+    <p th:unless="${sobreSuFichaje}">
+        <strong th:text="${nombreSolicitante}">Alguien</strong> ha pedido corregir un fichaje suyo
+        y te toca revisarlo.
+    </p>
+
+    <p style="margin: 0;">Motivo: <span th:text="${motivo}">Motivo</span></p>
+
+    <p style="margin-top: 20px;" th:if="${sobreSuFichaje}">
+        Si no estás de acuerdo, puedes no aceptarla y lo revisará Recursos Humanos.
+    </p>
+    <p style="margin-top: 20px;" th:unless="${sobreSuFichaje}">
+        Tienes la solicitud pendiente en la aplicación.
+    </p>
+</div>
+</body>
+</html>

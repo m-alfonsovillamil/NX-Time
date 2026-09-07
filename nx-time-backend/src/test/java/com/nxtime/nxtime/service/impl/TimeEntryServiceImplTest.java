@@ -347,102 +347,12 @@ class TimeEntryServiceImplTest {
         assertThat(auditRow.getValorNuevo()).doesNotContain("\"horaSalida\":null");
     }
 
-    // ---- correctTimeEntry (Fase 8) ----
-
-    @Test
-    @DisplayName("correctTimeEntry anula el original, crea uno nuevo enlazado y publica un evento CORRECCION")
-    void correctTimeEntry_fichajeValido_creaCorreccionYPublicaEvento() {
-        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
-        Instant horaEntrada = Instant.now().minusSeconds(7200);
-        Instant horaSalida = Instant.now().minusSeconds(3600);
-        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
-                .horaEntrada(horaEntrada).horaSalida(horaSalida).build();
-        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
-        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
-
-        Instant horaEntradaCorregida = horaEntrada.minusSeconds(600);
-        TimeEntryCorrectionRequest request =
-                new TimeEntryCorrectionRequest(horaEntradaCorregida, horaSalida, "Se le olvidó fichar la entrada a tiempo.");
-
-        TimeEntry result = service.correctTimeEntry(rrhh.getEmail(), 5L, request);
-
-        assertThat(result.getHoraEntrada()).isEqualTo(horaEntradaCorregida);
-        assertThat(result.getRegistroOriginal()).isEqualTo(original);
-        assertThat(original.isAnulado()).isTrue();
-
-        ArgumentCaptor<TimeEntryAuditEvent> captor = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
-        verify(eventPublisher).publishEvent(captor.capture());
-        var auditRow = captor.getValue().auditRow();
-        assertThat(auditRow.getAccion()).isEqualTo(AuditAction.CORRECCION);
-        assertThat(auditRow.getModificadoPor()).isEqualTo(rrhh);
-        assertThat(auditRow.getMotivo()).isEqualTo(request.motivo());
-    }
-
-    @Test
-    @DisplayName("correctTimeEntry sobre un fichaje de OTRA empresa lanza TenantAccessException")
-    void correctTimeEntry_fichajeDeOtraEmpresa_lanzaTenantAccessException() {
-        Company otraEmpresa = Company.builder().id(2L).build();
-        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
-        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(otraEmpresa)
-                .horaEntrada(Instant.now().minusSeconds(7200)).horaSalida(Instant.now().minusSeconds(3600)).build();
-        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
-        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
-
-        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
-
-        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
-                .isInstanceOf(TenantAccessException.class);
-    }
-
-    @Test
-    @DisplayName("correctTimeEntry sobre un fichaje ya corregido antes lanza BusinessException")
-    void correctTimeEntry_fichajeYaAnulado_lanzaBusinessException() {
-        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
-        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
-                .horaEntrada(Instant.now().minusSeconds(7200)).horaSalida(Instant.now().minusSeconds(3600))
-                .anulado(true).build();
-        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
-        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
-
-        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
-
-        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("ya fue corregido");
-    }
-
-    @Test
-    @DisplayName("correctTimeEntry sobre una jornada activa (sin horaSalida) lanza BusinessException")
-    void correctTimeEntry_jornadaActiva_lanzaBusinessException() {
-        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
-        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
-                .horaEntrada(Instant.now()).build();
-        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
-        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
-
-        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(Instant.now(), Instant.now(), "motivo");
-
-        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("activa");
-    }
-
-    @Test
-    @DisplayName("correctTimeEntry con horaSalida no posterior a horaEntrada lanza BusinessException 400")
-    void correctTimeEntry_horaSalidaNoPosterior_lanzaBusinessException() {
-        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
-        Instant hora = Instant.now();
-        TimeEntry original = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
-                .horaEntrada(hora.minusSeconds(7200)).horaSalida(hora.minusSeconds(3600)).build();
-        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
-        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(original));
-
-        TimeEntryCorrectionRequest request = new TimeEntryCorrectionRequest(hora, hora, "motivo");
-
-        assertThatThrownBy(() -> service.correctTimeEntry(rrhh.getEmail(), 5L, request))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("posterior");
-    }
+    // ---- correcciones ----
+    //
+    // Los tests de correctTimeEntry vivían aquí. Se han ido a
+    // CorrectionServiceImplTest con la Fase E: corregir dejó de ser algo
+    // que este servicio hace y pasó a ser el paso final de una solicitud
+    // aprobada, con reglas propias sobre quién puede aprobarla.
 
     // ---- getAuditTrail (Fase 8) ----
 

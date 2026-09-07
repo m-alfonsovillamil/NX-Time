@@ -37,7 +37,7 @@ import lombok.Setter;
  *
  * Cambios de la Fase 8 (auditoría inalterable de fichajes):
  *  - "anulado"/"registroOriginal": una corrección (RRHH/ADMIN, ver
- *    TimeEntryServiceImpl.correctTimeEntry) NUNCA sobrescribe
+ *    CorrectionServiceImpl, desde la Fase E) NUNCA sobrescribe
  *    horaEntrada/horaSalida en la fila original -- crea una fila nueva
  *    con los valores correctos y "registroOriginal" apuntando a la que
  *    corrige, y marca la original "anulado = true". El historial

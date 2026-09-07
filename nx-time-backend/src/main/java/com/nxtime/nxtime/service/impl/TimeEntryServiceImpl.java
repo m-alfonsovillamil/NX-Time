@@ -8,7 +8,6 @@ import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
-import com.nxtime.nxtime.dto.TimeEntryCorrectionRequest;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
@@ -206,56 +205,6 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     // auditoría existe para conservar. En su lugar, la original se
     // anula (registros.anulado = true) y se crea una fila nueva con los
     // valores correctos, enlazada por registro_original_id.
-    @Override
-    @Transactional
-    public TimeEntry correctTimeEntry(String actorEmail, long timeEntryId, TimeEntryCorrectionRequest request) {
-        User actor = userRepository.findByEmail(actorEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + actorEmail));
-
-        TimeEntry original = timeEntryRepository.findById(timeEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Fichaje no encontrado."));
-
-        if (original.getEmpresa().getId() != actor.getEmpresa().getId()) {
-            throw new TenantAccessException("No puedes corregir fichajes de otra empresa.");
-        }
-        if (original.isAnulado()) {
-            throw new BusinessException("Este fichaje ya fue corregido antes; corrige la nueva versión, no la original.");
-        }
-        if (original.getHoraSalida() == null) {
-            throw new BusinessException("No se puede corregir una jornada activa; ciérrala primero.");
-        }
-        if (!request.horaSalida().isAfter(request.horaEntrada())) {
-            throw new BusinessException(
-                    "La hora de salida corregida debe ser posterior a la de entrada.", HttpStatus.BAD_REQUEST);
-        }
-
-        String beforeJson = toJson(original);
-
-        TimeEntry correction = timeEntryRepository.save(TimeEntry.builder()
-                .usuario(original.getUsuario())
-                .empresa(original.getEmpresa())
-                .horaEntrada(request.horaEntrada())
-                .horaSalida(request.horaSalida())
-                .registroOriginal(original)
-                .build());
-
-        original.setAnulado(true);
-        timeEntryRepository.save(original);
-
-        TimeEntryAudit auditRow = TimeEntryAudit.builder()
-                .registro(original)
-                .usuario(original.getUsuario())
-                .modificadoPor(actor)
-                .accion(AuditAction.CORRECCION)
-                .valorAnterior(beforeJson)
-                .valorNuevo(toJson(correction))
-                .motivo(request.motivo())
-                .build();
-        eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
-
-        log.info("Fichaje {} corregido por {} (fichaje corregido id={})", timeEntryId, actorEmail, correction.getId());
-        return correction;
-    }
 
     @Override
     public List<TimeEntryAudit> getAuditTrail(String actorEmail, long timeEntryId) {

@@ -7,6 +7,8 @@ import com.nxtime.nxtime.domain.Attachment;
 import com.nxtime.nxtime.domain.AttachmentData;
 import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.CorrectionRequest;
+import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.HolidayScope;
@@ -22,6 +24,7 @@ import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
 import com.nxtime.nxtime.repository.AttachmentRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
@@ -49,6 +52,7 @@ import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -89,6 +93,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final AttachmentDataRepository attachmentDataRepository;
     private final NoticeRepository noticeRepository;
     private final VacationBalanceRepository vacationBalanceRepository;
+    private final CorrectionRequestRepository correctionRequestRepository;
     private final ProjectRepository projectRepository;
     private final ProjectAssignmentRepository projectAssignmentRepository;
     private final PasswordEncoder passwordEncoder;
@@ -104,6 +109,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             AttachmentDataRepository attachmentDataRepository,
             NoticeRepository noticeRepository,
             VacationBalanceRepository vacationBalanceRepository,
+            CorrectionRequestRepository correctionRequestRepository,
             ProjectRepository projectRepository,
             ProjectAssignmentRepository projectAssignmentRepository,
             PasswordEncoder passwordEncoder
@@ -118,6 +124,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.attachmentDataRepository = attachmentDataRepository;
         this.noticeRepository = noticeRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
+        this.correctionRequestRepository = correctionRequestRepository;
         this.projectRepository = projectRepository;
         this.projectAssignmentRepository = projectAssignmentRepository;
         this.passwordEncoder = passwordEncoder;
@@ -197,6 +204,11 @@ public class DemoDataSeeder implements CommandLineRunner {
         // uno sin él.
         sembrarAdjuntos(empleadosTech);
         sembrarAdjuntos(empleadosIberica);
+        // Fase E. Sin esto, la pantalla de correcciones sale vacia en
+        // la demo desplegada y no se ve lo unico que la distingue: que
+        // una correccion la tiene que aceptar alguien.
+        sembrarCorrecciones(empleadosTech, rrhhTech);
+
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
 
@@ -600,6 +612,65 @@ public class DemoDataSeeder implements CommandLineRunner {
      * con fechas escalonadas hacia atrás, porque una lista donde todo
      * tiene la misma marca de tiempo se lee como datos falsos.
      */
+    /**
+     * Tres solicitudes de correccion, una por cada situacion que el
+     * flujo distingue (Fase E).
+     *
+     * Son tres y no una porque el estado por si solo no cuenta la
+     * historia: lo que cambia entre ellas es QUIEN tiene que resolver, y
+     * eso solo se ve con una pedida por el empleado, otra pedida sobre
+     * el, y una que acabo en disputa. Con un unico ejemplo, la pantalla
+     * de correcciones parece una lista de pendientes cualquiera.
+     */
+    private void sembrarCorrecciones(List<User> empleados, User rrhh) {
+        if (empleados.size() < 3) {
+            return;
+        }
+
+        // 1. La pide el propio empleado: espera a que la apruebe alguien
+        //    con "correccion:aprobar".
+        crearSolicitud(empleados.get(0), empleados.get(0),
+                "Olvide fichar la salida y me la cerro el proceso nocturno.",
+                CorrectionStatus.PENDIENTE, null);
+
+        // 2. La pide RRHH sobre el fichaje de otra persona: quien decide
+        //    es ELLA, aunque no tenga ninguna authority de aprobacion.
+        crearSolicitud(empleados.get(1), rrhh,
+                "El reloj de la entrada iba adelantado ese dia.",
+                CorrectionStatus.PENDIENTE, null);
+
+        // 3. Igual que la anterior, pero el empleado no la acepta: pasa a
+        //    disputa y la resuelve RRHH en firme.
+        crearSolicitud(empleados.get(2), rrhh,
+                "Ajuste de la hora de salida segun el parte del centro.",
+                CorrectionStatus.EN_DISPUTA,
+                "Ese dia sali a la hora que fiche; tengo el correo de salida.");
+    }
+
+    private void crearSolicitud(
+            User dueno, User solicitante, String motivo, CorrectionStatus estado, String motivoDisputa) {
+        // Sobre una jornada ya cerrada: una activa no se puede corregir.
+        TimeEntry fichaje = timeEntryRepository.findHistoryByUsuario(dueno, PageRequest.of(0, 5)).stream()
+                .filter(registro -> registro.getHoraSalida() != null && !registro.isAnulado())
+                .findFirst()
+                .orElse(null);
+        if (fichaje == null) {
+            return;
+        }
+
+        correctionRequestRepository.save(CorrectionRequest.builder()
+                .empresa(dueno.getEmpresa())
+                .registro(fichaje)
+                .solicitante(solicitante)
+                .horaEntradaPropuesta(fichaje.getHoraEntrada().minus(15, ChronoUnit.MINUTES))
+                .horaSalidaPropuesta(fichaje.getHoraSalida())
+                .motivo(motivo)
+                .estado(estado)
+                .motivoDisputa(motivoDisputa)
+                .creadoEn(Instant.now().minus(1, ChronoUnit.DAYS))
+                .build());
+    }
+
     private void sembrarAvisos(List<User> empleados, User gestor) {
         Instant ahora = Instant.now();
 

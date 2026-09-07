@@ -3,7 +3,8 @@ package com.nxtime.app.ui.auditoria
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.CorreccionFichajeRequest
-import com.nxtime.app.data.dto.Registro
+import com.nxtime.app.data.dto.CorreccionDTO
+import com.nxtime.app.data.dto.UsuarioSimpleDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,11 +45,19 @@ class CorregirFichajeViewModelTest {
 
     private fun viewModel() = CorregirFichajeViewModel(7L, repositorio)
 
-    private val registro = Registro(
-        id = 8,
-        horaEntrada = "2026-09-03T07:00:00Z",
-        horaSalida = "2026-09-03T15:00:00Z",
-        enPausa = false
+    /**
+     * Desde la Fase E el endpoint devuelve la SOLICITUD, no el fichaje
+     * corregido: casi siempre queda pendiente y el fichaje no cambia.
+     */
+    private fun solicitud(estado: String = "PENDIENTE") = CorreccionDTO(
+        id = 1,
+        fichajeId = 8,
+        empleado = UsuarioSimpleDTO("Ana"),
+        solicitante = UsuarioSimpleDTO("Ana"),
+        horaEntradaPropuesta = "2026-09-03T07:00:00Z",
+        horaSalidaPropuesta = "2026-09-03T15:00:00Z",
+        motivo = "Motivo",
+        estado = estado
     )
 
     /**
@@ -58,8 +67,8 @@ class CorregirFichajeViewModelTest {
      */
     @Test
     fun `las horas se mandan en UTC, no en hora local`() = runTest {
-        whenever(repositorio.corregirFichaje(any(), any()))
-            .thenReturn(Response.success(registro))
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud()))
 
         val viewModel = viewModel()
         viewModel.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z")
@@ -68,7 +77,7 @@ class CorregirFichajeViewModelTest {
         advanceUntilIdle()
 
         val captor = argumentCaptor<CorreccionFichajeRequest>()
-        verify(repositorio).corregirFichaje(eq(7L), captor.capture())
+        verify(repositorio).solicitarCorreccion(eq(7L), captor.capture())
         assertEquals("2026-09-03T07:00:00Z", captor.firstValue.horaEntrada)
         assertEquals("2026-09-03T15:00:00Z", captor.firstValue.horaSalida)
     }
@@ -80,8 +89,8 @@ class CorregirFichajeViewModelTest {
      */
     @Test
     fun `el desfase cambia con el horario de invierno`() = runTest {
-        whenever(repositorio.corregirFichaje(any(), any()))
-            .thenReturn(Response.success(registro))
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud()))
 
         val viewModel = viewModel()
         // 15 de enero: las 09:00 españolas son las 08:00Z.
@@ -91,7 +100,7 @@ class CorregirFichajeViewModelTest {
         advanceUntilIdle()
 
         val captor = argumentCaptor<CorreccionFichajeRequest>()
-        verify(repositorio).corregirFichaje(eq(7L), captor.capture())
+        verify(repositorio).solicitarCorreccion(eq(7L), captor.capture())
         assertEquals("2026-01-15T08:00:00Z", captor.firstValue.horaEntrada)
         assertEquals("2026-01-15T17:00:00Z", captor.firstValue.horaSalida)
     }
@@ -120,7 +129,7 @@ class CorregirFichajeViewModelTest {
         viewModel.guardar()
         advanceUntilIdle()
 
-        verify(repositorio, never()).corregirFichaje(any(), any())
+        verify(repositorio, never()).solicitarCorreccion(any(), any())
         assertEquals(
             MensajeUi.Recurso(R.string.correccion_motivo_vacio),
             viewModel.uiState.value.error
@@ -136,7 +145,7 @@ class CorregirFichajeViewModelTest {
         viewModel.guardar()
         advanceUntilIdle()
 
-        verify(repositorio, never()).corregirFichaje(any(), any())
+        verify(repositorio, never()).solicitarCorreccion(any(), any())
         assertEquals(
             MensajeUi.Recurso(R.string.correccion_salida_anterior),
             viewModel.uiState.value.error
@@ -150,7 +159,7 @@ class CorregirFichajeViewModelTest {
      */
     @Test
     fun `un 409 se enseña con el mensaje del backend`() = runTest {
-        whenever(repositorio.corregirFichaje(any(), any())).thenReturn(
+        whenever(repositorio.solicitarCorreccion(any(), any())).thenReturn(
             Response.error(
                 409,
                 """{"status":409,"detail":"El fichaje ya fue corregido."}"""
@@ -195,8 +204,8 @@ class CorregirFichajeViewModelTest {
 
     @Test
     fun `con el interruptor puesto la salida se manda con la fecha del dia siguiente`() = runTest {
-        whenever(repositorio.corregirFichaje(any(), any()))
-            .thenReturn(Response.success(registro))
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud()))
 
         val viewModel = viewModel()
         viewModel.precargar("2026-09-03T20:52:00Z", "2026-09-03T22:29:00Z")
@@ -206,7 +215,7 @@ class CorregirFichajeViewModelTest {
         advanceUntilIdle()
 
         val captor = argumentCaptor<CorreccionFichajeRequest>()
-        verify(repositorio).corregirFichaje(eq(7L), captor.capture())
+        verify(repositorio).solicitarCorreccion(eq(7L), captor.capture())
         assertEquals("2026-09-03T20:52:00Z", captor.firstValue.horaEntrada)
         // Las 00:45 del DÍA 4 en hora española son las 22:45Z del día 3.
         assertEquals("2026-09-03T22:45:00Z", captor.firstValue.horaSalida)
@@ -224,7 +233,7 @@ class CorregirFichajeViewModelTest {
         viewModel.guardar()
         advanceUntilIdle()
 
-        verify(repositorio, never()).corregirFichaje(any(), any())
+        verify(repositorio, never()).solicitarCorreccion(any(), any())
         assertEquals(
             MensajeUi.Recurso(R.string.correccion_salida_anterior),
             viewModel.uiState.value.error
@@ -239,10 +248,44 @@ class CorregirFichajeViewModelTest {
         assertFalse(viewModel.uiState.value.salidaEsOtroDia)
     }
 
+    /**
+     * El caso normal desde la Fase E: la solicitud se acepta pero el
+     * fichaje NO se ha tocado. La pantalla tiene que poder decirlo, y
+     * por eso `aplicadaEnElActo` es false.
+     */
+    @Test
+    fun `una correccion PEDIDA termina la pantalla pero no dice que se haya aplicado`() = runTest {
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud("PENDIENTE")))
+
+        val viewModel = viewModel()
+        viewModel.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z")
+        viewModel.cambiarMotivo("Se olvido fichar la salida")
+        viewModel.guardar()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.corregido)
+        assertFalse(viewModel.uiState.value.aplicadaEnElActo)
+    }
+
+    @Test
+    fun `una auto-aprobada si dice que se ha aplicado`() = runTest {
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud("APROBADA")))
+
+        val viewModel = viewModel()
+        viewModel.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z")
+        viewModel.cambiarMotivo("Se olvido fichar la salida")
+        viewModel.guardar()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.aplicadaEnElActo)
+    }
+
     @Test
     fun `una correccion aceptada marca la pantalla como terminada`() = runTest {
-        whenever(repositorio.corregirFichaje(any(), any()))
-            .thenReturn(Response.success(registro))
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud()))
 
         val viewModel = viewModel()
         viewModel.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z")

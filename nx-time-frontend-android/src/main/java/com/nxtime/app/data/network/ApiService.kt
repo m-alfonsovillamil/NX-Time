@@ -73,11 +73,37 @@ interface ApiService {
      *  queda en la traza de auditoría.
      */
 
-    @PATCH("api/v1/fichaje/{id}")
-    suspend fun corregirFichaje(
+    /**
+     * Pide corregir un fichaje. **No lo corrige**: crea una solicitud.
+     *
+     * Sustituye al PATCH que aplicaba el cambio en el acto. La respuesta
+     * llega con 202 si queda pendiente y 200 si se ha auto-aprobado; el
+     * campo `estado` dice cual de los dos ha sido, asi que la app no
+     * necesita mirar el codigo HTTP.
+     */
+    @POST("api/v1/fichaje/{id}/correcciones")
+    suspend fun solicitarCorreccion(
         @Path("id") fichajeId: Long,
         @Body peticion: CorreccionFichajeRequest
-    ): Response<Registro>
+    ): Response<CorreccionDTO>
+
+    @GET("api/v1/correcciones/pendientes")
+    suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
+
+    @GET("api/v1/correcciones/mias")
+    suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
+
+    @PATCH("api/v1/correcciones/{id}/estado")
+    suspend fun resolverCorreccion(
+        @Path("id") correccionId: Long,
+        @Body peticion: ResolverCorreccionRequest
+    ): Response<CorreccionDTO>
+
+    @POST("api/v1/correcciones/{id}/disputa")
+    suspend fun disputarCorreccion(
+        @Path("id") correccionId: Long,
+        @Body peticion: DisputaRequest
+    ): Response<CorreccionDTO>
 
     @GET("api/v1/auditoria/fichaje/{id}")
     suspend fun getAuditoriaFichaje(

@@ -6,6 +6,7 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.CorreccionFichajeRequest
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.correcciones.EstadoCorreccion
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +37,14 @@ data class CorregirFichajeUiState(
     val motivo: String = "",
     val enviando: Boolean = false,
     val corregido: Boolean = false,
+    /**
+     * Si la correccion se APLICO, o solo quedo pedida.
+     *
+     * Desde la Fase E casi siempre es false: el fichaje no cambia
+     * hasta que alguien aprueba. Decir "corregido" en los dos casos
+     * seria mentirle a quien acaba de pulsar guardar.
+     */
+    val aplicadaEnElActo: Boolean = false,
     val error: MensajeUi? = null
 )
 
@@ -133,12 +142,22 @@ class CorregirFichajeViewModel(
         _uiState.update { it.copy(enviando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.corregirFichaje(
+                val respuesta = authRepository.solicitarCorreccion(
                     fichajeId,
                     CorreccionFichajeRequest(entrada, salida, estado.motivo.trim())
                 )
+                val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful) {
-                    _uiState.update { it.copy(enviando = false, corregido = true) }
+                    // Desde la Fase E esto PIDE la corrección; solo se
+                    // aplica en el acto si el servidor la auto-aprueba.
+                    // Lo dice el estado que devuelve, no el código HTTP:
+                    // así la pantalla puede decir la verdad sobre lo que
+                    // acaba de pasar en vez de dar por hecho que ya está.
+                    val aplicada =
+                        EstadoCorreccion.de(cuerpo?.estado) == EstadoCorreccion.APROBADA
+                    _uiState.update {
+                        it.copy(enviando = false, corregido = true, aplicadaEnElActo = aplicada)
+                    }
                 } else {
                     _uiState.update {
                         it.copy(enviando = false, error = ApiErrorParser.mensajeDe(respuesta))

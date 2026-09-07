@@ -3,6 +3,8 @@ package com.nxtime.nxtime.notification;
 import com.nxtime.nxtime.config.AsyncConfig;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
+import com.nxtime.nxtime.domain.CorrectionRequest;
+import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
@@ -182,6 +184,104 @@ public class NotificationListener {
         } catch (RuntimeException e) {
             log.error("No se pudo publicar el aviso {} para el usuario {}: {}",
                     comando.tipo(), comando.destinatarioId(), e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Fase E: correcciones con aprobación
+    // ------------------------------------------------------------------
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCorrectionRequested(NotificationEvents.CorrectionRequested evento) {
+        CorrectionRequest solicitud = evento.solicitud();
+        String quienPide = solicitud.getSolicitante().getNombre();
+        // Que te pidan corregir TU fichaje no es lo mismo que tener que
+        // aprobar el de otro: el titular lo dice, porque de él depende
+        // si esto es "revisa lo tuyo" o "te toca resolver".
+        boolean sobreSuFichaje = !solicitud.laPidioElDueno();
+        String titulo = sobreSuFichaje
+                ? quienPide + " propone corregir un fichaje tuyo"
+                : "Corrección pendiente de " + quienPide;
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    solicitud.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.CORRECCION_SOLICITADA,
+                    titulo,
+                    solicitud.getMotivo(),
+                    NoticeType.CORRECCION_SOLICITADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "correction-requested",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "nombreSolicitante", quienPide,
+                            "sobreSuFichaje", sobreSuFichaje,
+                            "empleado", solicitud.getDuenoDelFichaje().getNombre(),
+                            "motivo", solicitud.getMotivo()));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCorrectionResolved(NotificationEvents.CorrectionResolved evento) {
+        CorrectionRequest solicitud = evento.solicitud();
+        boolean aprobada = solicitud.getEstado() == CorrectionStatus.APROBADA;
+        String titulo = "Tu corrección ha sido " + (aprobada ? "aprobada" : "rechazada");
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    solicitud.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.CORRECCION_RESUELTA,
+                    titulo,
+                    solicitud.getComentarioResolucion() != null
+                            ? solicitud.getComentarioResolucion() : solicitud.getMotivo(),
+                    NoticeType.CORRECCION_RESUELTA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "correction-resolved",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "aprobada", aprobada,
+                            "resolutor", solicitud.getAprobador() != null
+                                    ? solicitud.getAprobador().getNombre() : "quien la ha revisado",
+                            "comentario", solicitud.getComentarioResolucion()));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCorrectionDisputed(NotificationEvents.CorrectionDisputed evento) {
+        CorrectionRequest solicitud = evento.solicitud();
+        String titulo = solicitud.getDuenoDelFichaje().getNombre()
+                + " no acepta una corrección de su fichaje";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    solicitud.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.CORRECCION_EN_DISPUTA,
+                    titulo,
+                    solicitud.getMotivoDisputa(),
+                    NoticeType.CORRECCION_EN_DISPUTA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "correction-disputed",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "empleado", solicitud.getDuenoDelFichaje().getNombre(),
+                            "solicitante", solicitud.getSolicitante().getNombre(),
+                            "motivoCorreccion", solicitud.getMotivo(),
+                            "motivoDisputa", solicitud.getMotivoDisputa()));
         }
     }
 

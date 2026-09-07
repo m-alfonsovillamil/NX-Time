@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Insights
@@ -58,6 +59,7 @@ fun PanelGestionScreen(
     puedeVerPanelEmpresa: Boolean,
     onIrPanelEmpresa: () -> Unit,
     onIrProyectos: () -> Unit,
+    onIrCorrecciones: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -106,6 +108,14 @@ fun PanelGestionScreen(
             // Los proyectos los ve cualquier rol de gestión; lo que hay
             // DENTRO (alta y asignaciones) se gatea aparte, dentro de la
             // propia pantalla, con `proyecto:gestionar`.
+            // Las correcciones las ve cualquier rol de gestion, pero lo
+            // que puede RESOLVER cada uno lo decide el servidor: aqui no
+            // se gatea nada.
+            OpcionGestion(
+                texto = stringResource(R.string.correcciones_titulo),
+                icono = Icons.Default.EditNote,
+                onClick = onIrCorrecciones
+            )
             OpcionGestion(
                 texto = stringResource(R.string.proyectos_titulo),
                 icono = Icons.Default.WorkOutline,

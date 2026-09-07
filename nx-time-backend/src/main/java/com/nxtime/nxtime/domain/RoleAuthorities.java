@@ -58,6 +58,15 @@ import java.util.Set;
  * con el mismo reparto que "calendario:gestionar" y aun así es una
  * authority aparte, por el motivo de siempre: nombra la OPERACIÓN, no
  * el rol.
+ * "correccion:solicitar" (Fase E) la tiene TODO EL MUNDO, y es lo más
+ * importante que cambia esta fase: hasta ahora un empleado no podía
+ * pedir que le corrigieran un fichaje suyo, solo esperar a que alguien
+ * lo hiciera. "correccion:aprobar" empieza en GESTOR, y
+ * "correccion:disputa:resolver" en RRHH -- una disputa es entre el
+ * empleado y quien lleva su equipo, así que la resuelve alguien por
+ * encima de los dos. "fichaje:corregir" se queda con el significado que
+ * siempre tuvo, ahora explícito: pedir una corrección sobre el fichaje
+ * de OTRA persona.
  */
 public final class RoleAuthorities {
 
@@ -71,7 +80,8 @@ public final class RoleAuthorities {
             "ausencia:escribir",
             "adjunto:subir",
             "calendario:leer",
-            "proyecto:leer"
+            "proyecto:leer",
+            "correccion:solicitar"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -81,13 +91,15 @@ public final class RoleAuthorities {
             "empleado:crear",
             "empleado:leer",
             "calendario:gestionar",
-            "proyecto:gestionar"
+            "proyecto:gestionar",
+            "correccion:aprobar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(
             "empleado:gestionar",
             "empleado:configurar",
             "departamento:gestionar",
+            "correccion:disputa:resolver",
             "fichaje:corregir",
             "fichaje:auditoria",
             "informe:exportar"
