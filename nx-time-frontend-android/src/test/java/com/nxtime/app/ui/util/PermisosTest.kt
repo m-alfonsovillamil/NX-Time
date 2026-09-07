@@ -61,6 +61,9 @@ class PermisosTest {
         // Y las ausencias ajenas tampoco se ven desde una cuenta de
         // empleado, ni siquiera como bandas en el calendario.
         assertFalse(Permisos.puedeVerAusenciasDelEquipo(rol))
+        // Los proyectos los LEE todo el mundo, pero repartir el trabajo
+        // empieza en GESTOR (`proyecto:gestionar`).
+        assertFalse(Permisos.puedeGestionarProyectos(rol))
     }
 
     @Test
@@ -74,6 +77,7 @@ class PermisosTest {
         // días de convenio cierra el centro.
         assertTrue(Permisos.puedeGestionarCalendario(rol))
         assertTrue(Permisos.puedeVerAusenciasDelEquipo(rol))
+        assertTrue(Permisos.puedeGestionarProyectos(rol))
 
         // Corregir un fichaje y exportar el informe mensual son
         // operaciones de cumplimiento (RD-ley 8/2019), reservadas a RRHH.
@@ -128,5 +132,6 @@ class PermisosTest {
         assertTrue(Permisos.puedeCrearGestores(rol))
         assertTrue(Permisos.puedeVerPanelEmpresa(rol))
         assertTrue(Permisos.puedeGestionarCalendario(rol))
+        assertTrue(Permisos.puedeGestionarProyectos(rol))
     }
 }

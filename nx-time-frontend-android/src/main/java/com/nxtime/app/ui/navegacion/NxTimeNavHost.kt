@@ -61,6 +61,7 @@ import com.nxtime.app.ui.gestion.PanelGestionScreen
 import com.nxtime.app.ui.historial.HistorialScreen
 import com.nxtime.app.ui.perfil.PerfilScreen
 import com.nxtime.app.ui.perfil.PerfilViewModel
+import com.nxtime.app.ui.proyectos.ProyectosScreen
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
 import com.nxtime.app.ui.util.Permisos
 import com.nxtime.app.ui.util.Rol
@@ -90,6 +91,9 @@ enum class Pantalla(val ruta: String) {
     CONTRASENA("contrasena"),
     GESTION("gestion"),
     EQUIPO("equipo"),
+    // Hoja del panel de gestión, no una sexta pestaña: la barra de
+    // navegación ya está en el máximo de cinco que fija Material 3.
+    PROYECTOS("proyectos"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
     EMPRESA("empresa"),
@@ -504,6 +508,7 @@ fun NxTimeNavHost(
                     // aparte, porque son authorities de RRHH.
                     puedeVerPanelEmpresa = Permisos.puedeVerPanelEmpresa(rol),
                     onIrPanelEmpresa = { navController.navigate(Pantalla.EMPRESA.ruta) },
+                    onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
                         navController.navigate(Pantalla.ausenciasEquipo(resueltas = false))
@@ -517,6 +522,17 @@ fun NxTimeNavHost(
                     onIrAltaGestor = {
                         navController.navigate(Pantalla.altaUsuario(esGestor = true))
                     }
+                )
+            }
+
+            composable(Pantalla.PROYECTOS.ruta) {
+                ProyectosScreen(
+                    onVolver = navController::navigateUp,
+                    // Se entra desde el panel de gestión, que ya exige
+                    // ser GESTOR, así que hoy esto siempre es true. Se
+                    // pasa igualmente para que la pantalla no dé por
+                    // supuesto quién la abre (ver ProyectosScreen).
+                    puedeGestionar = Permisos.puedeGestionarProyectos(rol)
                 )
             }
 

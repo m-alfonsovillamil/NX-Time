@@ -3,6 +3,7 @@ package com.nxtime.app.ui.perfil
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.AsignacionProyectoDTO
 import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
@@ -28,6 +29,13 @@ data class PerfilUiState(
     val apellidos: String = "",
     val fechaNacimiento: String = "",
     val puesto: String = "",
+    /**
+     * El proyecto en el que se está AHORA (Fase D), o null si ninguno.
+     *
+     * Solo el vigente: el histórico completo se ve en la pantalla de
+     * proyectos, y aquí lo que se pregunta es "¿en qué estoy?".
+     */
+    val proyectoActual: AsignacionProyectoDTO? = null,
     val errorFormulario: MensajeUi? = null,
     val error: MensajeUi? = null
 )
@@ -64,6 +72,7 @@ class PerfilViewModel(
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful && cuerpo != null) {
                     _uiState.update { it.copy(cargando = false, perfil = cuerpo, error = null) }
+                    cargarProyectoActual(cuerpo.id)
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
@@ -74,6 +83,28 @@ class PerfilViewModel(
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
             }
+        }
+    }
+
+    /**
+     * El proyecto vigente, en una petición aparte.
+     *
+     * Va después del perfil y no en paralelo porque necesita el id que
+     * viene en él. Un fallo aquí **no se enseña**: el perfil ya está en
+     * pantalla y no poder decir en qué proyecto estás no justifica un
+     * banner de error encima de tus datos personales. Es el mismo
+     * criterio que el contador de la campana.
+     */
+    private suspend fun cargarProyectoActual(usuarioId: Long) {
+        try {
+            val respuesta = authRepository.getProyectosDeEmpleado(usuarioId)
+            if (respuesta.isSuccessful) {
+                _uiState.update { estado ->
+                    estado.copy(proyectoActual = respuesta.body()?.firstOrNull { it.vigente })
+                }
+            }
+        } catch (_: Exception) {
+            // Mismo motivo.
         }
     }
 

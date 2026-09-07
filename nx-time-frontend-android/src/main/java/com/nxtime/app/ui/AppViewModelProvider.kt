@@ -23,6 +23,7 @@ import com.nxtime.app.ui.gestion.HistorialEquipoViewModel
 import com.nxtime.app.ui.gestion.PanelEmpresaViewModel
 import com.nxtime.app.ui.historial.HistorialViewModel
 import com.nxtime.app.ui.perfil.PerfilViewModel
+import com.nxtime.app.ui.proyectos.ProyectosViewModel
 import com.nxtime.app.ui.usuario.CambiarContrasenaViewModel
 
 /**
@@ -54,6 +55,7 @@ object AppViewModelProvider {
         initializer { AltaUsuarioViewModel(app().authRepository) }
         initializer { PanelEmpresaViewModel(app().authRepository) }
         initializer { CalendarioViewModel(app().authRepository) }
+        initializer { ProyectosViewModel(app().authRepository) }
 
         /*
          * Este se pide desde el cuerpo de NxTimeNavHost, fuera de los

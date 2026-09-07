@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
+import com.nxtime.app.data.dto.HorasProyectoDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
@@ -27,6 +28,12 @@ data class PanelEmpresaUiState(
     val mes: YearMonth = YearMonth.now(),
     val descargando: Boolean = false,
     val departamentos: List<DepartamentoDTO> = emptyList(),
+    /**
+     * Horas por proyecto del mes en curso (Fase D). Vacía si la empresa
+     * no usa proyectos todavía, y entonces la sección no se pinta: una
+     * gráfica sin barras no dice nada.
+     */
+    val horasPorProyecto: List<HorasProyectoDTO> = emptyList(),
     val guardandoFicha: Boolean = false,
     val errorFicha: MensajeUi? = null,
     val error: MensajeUi? = null
@@ -60,9 +67,17 @@ class PanelEmpresaViewModel(
                 val panelDiferido = async { authRepository.getPanelEmpresa() }
                 val empleadosDiferido = async { authRepository.getMisEmpleados() }
                 val departamentosDiferido = async { authRepository.getDepartamentos() }
+                // El mes de los proyectos es el ACTUAL, no el del
+                // selector de informes: ese selector es solo para las
+                // descargas, y los indicadores de arriba también hablan
+                // del mes en curso.
+                val ahora = YearMonth.now()
+                val proyectosDiferido =
+                    async { authRepository.getHorasPorProyecto(ahora.year, ahora.monthValue) }
                 val panel = panelDiferido.await()
                 val empleados = empleadosDiferido.await()
                 val departamentos = departamentosDiferido.await()
+                val proyectos = proyectosDiferido.await()
 
                 if (!panel.isSuccessful) {
                     _uiState.update {
@@ -75,7 +90,12 @@ class PanelEmpresaViewModel(
                         cargando = false,
                         panel = panel.body(),
                         empleados = empleados.body().orEmpty(),
-                        departamentos = departamentos.body().orEmpty()
+                        departamentos = departamentos.body().orEmpty(),
+                        // Si esta falla no se enseña error: el panel se
+                        // ve igual sin la gráfica de proyectos, y un
+                        // banner por algo secundario taparía los
+                        // indicadores que sí cargaron.
+                        horasPorProyecto = proyectos.body()?.proyectos.orEmpty()
                     )
                 }
             } catch (e: Exception) {

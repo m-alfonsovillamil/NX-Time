@@ -17,3 +17,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [005](005-authorities-granulares.md) | Autorización por authorities granulares, no por roles |
 | [006](006-multitenant-por-discriminador.md) | Multi-tenant por discriminador |
 | [008](008-festivos-calculados-y-compartidos.md) | Festivos nacionales calculados, compartidos y no editables |
+| [009](009-asignaciones-con-vigencia.md) | Asignaciones a proyecto con vigencia, y el solape impedido por la base |

@@ -63,6 +63,7 @@ import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoCargando
 import com.nxtime.app.ui.components.EstadoErrorPantalla
+import com.nxtime.app.ui.components.BarraDeHoras
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.informes.MIME_EXCEL
 import com.nxtime.app.ui.informes.MIME_PDF
@@ -402,7 +403,7 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
 
         panel.horasPorEmpleado.forEach { fila ->
             BarraDeHoras(
-                nombre = fila.nombre,
+                etiqueta = fila.nombre,
                 minutos = fila.minutos,
                 proporcion = fila.minutos.toFloat() / tope,
                 proporcionMedia = media.toFloat() / tope,
@@ -415,6 +416,41 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+
+    /*
+     * Horas por proyecto (Fase D), con la MISMA barra que las de arriba.
+     *
+     * Solo se pinta si hay proyectos con horas: una empresa que no los
+     * usa no tiene por qué ver una sección vacía preguntándose qué le
+     * falta por rellenar.
+     *
+     * La etiqueta es el código y no el nombre: "NX-2026-04" cabe en la
+     * barra y es lo que identifica al proyecto en un informe, mientras
+     * que un nombre largo se recortaría a la mitad.
+     */
+    if (estado.horasPorProyecto.isNotEmpty()) {
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = stringResource(R.string.proyectos_horas_por_proyecto),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(8.dp))
+
+        val mediaProyectos =
+            estado.horasPorProyecto.sumOf { it.minutos } / estado.horasPorProyecto.size
+        val maximoProyectos = estado.horasPorProyecto.maxOf { it.minutos }.coerceAtLeast(1)
+        val topeProyectos = maxOf(maximoProyectos, mediaProyectos).coerceAtLeast(1)
+
+        estado.horasPorProyecto.forEach { fila ->
+            BarraDeHoras(
+                etiqueta = fila.codigo,
+                minutos = fila.minutos,
+                proporcion = fila.minutos.toFloat() / topeProyectos,
+                proporcionMedia = mediaProyectos.toFloat() / topeProyectos,
+                porEncimaDeLaMedia = fila.minutos > mediaProyectos
+            )
+        }
     }
 }
 
@@ -453,108 +489,6 @@ private fun Indicador(
             if (alerta && ayuda != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(text = ayuda, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-/**
- * Una barra por empleado, con la media del equipo marcada encima.
- *
- * Sin esa marca, la gráfica no decía nada: eran barras planas sin escala
- * ni referencia, así que "9h 30m" quedaba tan suelto como el número que
- * ya estaba escrito al lado. Con la línea de la media se lee de un
- * vistazo lo único que un gestor busca aquí -- **quién se sale de lo
- * normal**, hacia arriba o hacia abajo.
- *
- * Se dibuja con `Box` y anchuras proporcionales en vez de traer una
- * librería de gráficas: son cuatro o cinco filas y un solo eje, y una
- * dependencia entera para esto no se paga sola.
- */
-@Composable
-private fun BarraDeHoras(
-    nombre: String,
-    minutos: Long,
-    proporcion: Float,
-    proporcionMedia: Float,
-    porEncimaDeLaMedia: Boolean
-) {
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = nombre,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = DateFormats.minutos(minutos),
-                style = MaterialTheme.typography.bodyMedium,
-                // Quien está por encima de la media se marca en el color
-                // de gestión; el resto queda en gris.
-                color = if (porEncimaDeLaMedia) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(14.dp)
-        ) {
-            // El carril de fondo da la escala completa: sin él, todas las
-            // barras parecerían llenas y no compararían nada.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(proporcion.coerceIn(0.02f, 1f))
-                    .height(8.dp)
-                    .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.tertiary)
-            )
-            /*
-             * La marca de la media, encima de todo y sobresaliendo de la
-             * barra por arriba y por abajo para que se lea como una
-             * referencia y no como un trozo de la propia barra.
-             *
-             * Va en dos capas -- un filo del color de la tarjeta y un
-             * nucleo gris dentro -- porque tiene que verse sobre dos
-             * fondos distintos: el carril vacio, que es gris claro, y el
-             * relleno indigo de quien esta por encima de la media, que es
-             * justo la fila donde la marca mas importa. Con una sola capa
-             * gris, la marca de Javier Lopez desaparecia dentro de su
-             * propia barra.
-             */
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(proporcionMedia.coerceIn(0f, 1f))
-                    .align(Alignment.CenterStart),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(6.dp)
-                        .height(14.dp)
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(14.dp)
-                            .background(MaterialTheme.colorScheme.onSurfaceVariant)
-                    )
-                }
             }
         }
     }

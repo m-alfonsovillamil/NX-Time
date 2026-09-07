@@ -47,6 +47,12 @@ import java.util.Set;
  * NO alcanza a los festivos nacionales: esos son una fila compartida
  * por todas las empresas y los siembra el sistema, así que el límite
  * ahí no lo pone el rol sino el ámbito (ver HolidayScope).
+ * "proyecto:leer" (Fase D) la tiene todo el mundo, porque saber en qué
+ * proyecto estás es parte de tu propia ficha; "proyecto:gestionar"
+ * empieza en GESTOR, que es quien reparte el trabajo de su equipo. Va
+ * con el mismo reparto que "calendario:gestionar" y aun así es una
+ * authority aparte, por el motivo de siempre: nombra la OPERACIÓN, no
+ * el rol.
  */
 public final class RoleAuthorities {
 
@@ -58,7 +64,8 @@ public final class RoleAuthorities {
             "fichaje:escribir",
             "ausencia:leer",
             "ausencia:escribir",
-            "calendario:leer"
+            "calendario:leer",
+            "proyecto:leer"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -67,7 +74,8 @@ public final class RoleAuthorities {
             "ausencia:leer:equipo",
             "empleado:crear",
             "empleado:leer",
-            "calendario:gestionar"
+            "calendario:gestionar",
+            "proyecto:gestionar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

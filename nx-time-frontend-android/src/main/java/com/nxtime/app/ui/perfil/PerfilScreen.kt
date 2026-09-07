@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.AsignacionProyectoDTO
 import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BotonPrincipal
@@ -93,7 +94,7 @@ fun PerfilScreen(
                     }
 
                     Spacer(Modifier.height(24.dp))
-                    DatosLaborales(perfil)
+                    DatosLaborales(perfil, estado.proyectoActual)
 
                     Spacer(Modifier.height(24.dp))
                     Cuenta(onIrContrasena = onIrContrasena, onCerrarSesion = onCerrarSesion)
@@ -160,7 +161,7 @@ private fun DatosPersonales(perfil: PerfilDTO, onEditar: () -> Unit) {
 }
 
 @Composable
-private fun DatosLaborales(perfil: PerfilDTO) {
+private fun DatosLaborales(perfil: PerfilDTO, proyecto: AsignacionProyectoDTO?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = elevacionDeTarjeta(),
@@ -173,6 +174,15 @@ private fun DatosLaborales(perfil: PerfilDTO) {
             )
             Spacer(Modifier.height(8.dp))
             Dato(stringResource(R.string.perfil_departamento), perfil.departamentoNombre)
+            // El proyecto VIGENTE, no el histórico: aquí lo que se
+            // pregunta es "¿en qué estoy?". Se enseña siempre, también
+            // cuando no hay ninguno, para que quede claro que el dato
+            // existe y está vacío -- y no que la app no lo sabe.
+            Dato(
+                stringResource(R.string.proyectos_mi_proyecto),
+                proyecto?.let { "${it.proyectoCodigo} · ${it.proyectoNombre}" }
+                    ?: stringResource(R.string.proyectos_sin_proyecto)
+            )
             Dato(stringResource(R.string.perfil_rol), perfil.rol)
             Dato(
                 stringResource(R.string.perfil_jornada),
