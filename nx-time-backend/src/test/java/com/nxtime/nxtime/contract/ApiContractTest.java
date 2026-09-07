@@ -19,10 +19,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -116,7 +124,23 @@ class ApiContractTest {
     @Value("${local.server.port}")
     private int port;
 
-    private final TestRestTemplate rest = new TestRestTemplate();
+    private final TestRestTemplate rest = restConDescargas();
+
+    /**
+     * Un TestRestTemplate que sabe leer respuestas binarias.
+     *
+     * Por defecto no puede extraer un {@code byte[]} de un
+     * {@code application/pdf}, y desde la Fase B2 hay endpoints que
+     * devuelven exactamente eso. Se añade un ByteArrayHttpMessageConverter
+     * que acepta cualquier tipo de contenido.
+     */
+    private static TestRestTemplate restConDescargas() {
+        TestRestTemplate plantilla = new TestRestTemplate();
+        ByteArrayHttpMessageConverter binario = new ByteArrayHttpMessageConverter();
+        binario.setSupportedMediaTypes(List.of(MediaType.ALL));
+        plantilla.getRestTemplate().getMessageConverters().add(0, binario);
+        return plantilla;
+    }
     private final ObjectMapper json = new ObjectMapper();
 
     // Estado compartido entre tests ordenados (construyen un flujo real).
@@ -135,6 +159,7 @@ class ApiContractTest {
     private long registroActivoId;
     private long peticionAusenciaId;
     private long departamentoId;
+    private long adjuntoId;
     private long festivoId;
     private long festivoNacionalId;
     private long proyectoId;
@@ -1441,6 +1466,177 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 5.e ADJUNTOS: CV Y FOTO (Fase B2)
+    // ------------------------------------------------------------------
+
+    /** Un PDF de verdad en lo que se comprueba: su cabecera. */
+    private static byte[] pdfDePrueba() {
+        byte[] contenido = new byte[64];
+        System.arraycopy("%PDF-1.7".getBytes(StandardCharsets.UTF_8), 0, contenido, 0, 8);
+        return contenido;
+    }
+
+    private HttpEntity<MultiValueMap<String, Object>> multipart(
+            String token, String nombre, String tipo, byte[] contenido) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> cuerpo = new LinkedMultiValueMap<>();
+        cuerpo.add("fichero", new ByteArrayResource(contenido) {
+            @Override
+            public String getFilename() {
+                return nombre;
+            }
+        });
+        cuerpo.add("tipo", tipo);
+        return new HttpEntity<>(cuerpo, headers);
+    }
+
+    @Test
+    @Order(70)
+    void empleadoSubeSuCv_devuelve200ConElMimeReal() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.POST,
+                multipart(empleadoToken, "mi cv.pdf", "CV", pdfDePrueba()),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("tipo").asText()).isEqualTo("CV");
+        assertThat(body.get("mime").asText()).isEqualTo("application/pdf");
+        assertThat(body.get("nombreOriginal").asText()).isEqualTo("mi cv.pdf");
+        adjuntoId = body.get("id").asLong();
+    }
+
+    @Test
+    @Order(71)
+    void unEjecutableRenombradoAPdf_devuelve400() throws Exception {
+        // "MZ" es la cabecera de un .exe de Windows. El nombre dice .pdf
+        // y el Content-Type del multipart también: los dos los elige
+        // quien sube, y por eso se mira el contenido.
+        byte[] exe = {0x4D, 0x5A, (byte) 0x90, 0x00, 0x03, 0x00, 0x00, 0x00};
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.POST,
+                multipart(empleadoToken, "cv.pdf", "CV", exe),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(response).get("detail").asText()).contains("contenido");
+    }
+
+    @Test
+    @Order(72)
+    void elCvSeDescargaComoAttachment_conSuContenidoIntacto() throws Exception {
+        ResponseEntity<byte[]> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                byte[].class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION))
+                .startsWith("attachment")
+                .contains("mi cv.pdf");
+        assertThat(response.getBody()).isEqualTo(pdfDePrueba());
+    }
+
+    @Test
+    @Order(73)
+    void elGestorPuedeDescargarElCvDeSuEquipo() throws Exception {
+        // Descargar es de EMPRESA, no de persona: un gestor necesita
+        // poder leer el currículum de su equipo.
+        ResponseEntity<byte[]> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                byte[].class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @Order(74)
+    void alguienDeOtraEmpresaNoPuedeDescargarlo_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(75)
+    void elGestorNoPuedeBorrarleElCvAlEmpleado_devuelve403() throws Exception {
+        // La asimetría: leerlo sí, borrárselo no.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(76)
+    void subirOtroCvReemplazaElAnterior_yElViejoDejaDeExistir() throws Exception {
+        ResponseEntity<String> nuevo = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.POST,
+                multipart(empleadoToken, "cv v2.pdf", "CV", pdfDePrueba()),
+                String.class
+        );
+        assertThat(nuevo.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        long nuevoId = bodyOf(nuevo).get("id").asLong();
+        assertThat(nuevoId).isNotEqualTo(adjuntoId);
+
+        // Un CV vigente por persona: el anterior se ha ido, y sus bytes
+        // con él (ON DELETE CASCADE).
+        ResponseEntity<String> viejo = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(viejo.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        ResponseEntity<String> lista = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(lista)).hasSize(1);
+        adjuntoId = nuevoId;
+    }
+
+    @Test
+    @Order(77)
+    void elEmpleadoBorraSuPropioCv_devuelve204() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + adjuntoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    // ------------------------------------------------------------------
     // 5b. CALENDARIO LABORAL (Fase C)
     // ------------------------------------------------------------------
     // Van sobre 2030, un año que ningún otro test toca: así se prueba de
@@ -1449,7 +1645,7 @@ class ApiContractTest {
     // resultado dependa de en qué año se ejecute la suite.
 
     @Test
-    @Order(70)
+    @Order(100)
     void mirarUnAnioPorPrimeraVez_siembraSusFestivosNacionales() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario?anio=2030&mes=12"),
@@ -1475,7 +1671,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(71)
+    @Order(101)
     void unGestorNoPuedeBorrarUnFestivoNacional_devuelve403() throws Exception {
         // Es la regla que protege a las demás empresas: borrar Navidad
         // desde una se la quitaría del calendario a todas.
@@ -1491,7 +1687,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(72)
+    @Order(102)
     void gestorAnadeUnFestivoLocalYApareceEnSuMes() throws Exception {
         ResponseEntity<String> creado = rest.exchange(
                 url("/api/v1/calendario/festivos"),
@@ -1520,7 +1716,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(73)
+    @Order(103)
     void dosFestivosDeEmpresaElMismoDia_devuelve409() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario/festivos"),
@@ -1537,7 +1733,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(74)
+    @Order(104)
     void crearUnFestivoConAmbitoNacional_devuelve400() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario/festivos"),
@@ -1555,7 +1751,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(75)
+    @Order(105)
     void unGestorDeOtraEmpresaNoPuedeTocarNuestrosFestivos_devuelve403() throws Exception {
         // ADR 006: no hay filtro multi-tenant automático, así que esto
         // solo pasa si el endpoint compara empresa_id a mano.
@@ -1570,7 +1766,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(76)
+    @Order(106)
     void unEmpleadoNoPuedeAnadirFestivos_devuelve403() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario/festivos"),
@@ -1586,7 +1782,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(77)
+    @Order(107)
     void pedirElEquipoSinPoderVerlo_devuelveLoPropioSinFallar() throws Exception {
         // Un 403 obligaría al cliente a saber su propio rol antes de
         // pedir el mes; el campo "incluyeEquipo" le dice lo que ha
@@ -1611,7 +1807,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(78)
+    @Order(108)
     void unMesFueraDeRango_devuelve400YNoUn500() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario?anio=2030&mes=13"),
@@ -1624,7 +1820,7 @@ class ApiContractTest {
     }
 
     @Test
-    @Order(79)
+    @Order(109)
     void elGestorPuedeBorrarElFestivoDeSuEmpresa() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/calendario/festivos/" + festivoId),
