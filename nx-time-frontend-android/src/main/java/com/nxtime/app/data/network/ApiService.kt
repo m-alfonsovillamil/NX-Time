@@ -243,6 +243,34 @@ interface ApiService {
     @DELETE("api/v1/perfil/adjuntos/{id}")
     suspend fun borrarAdjunto(@Path("id") adjuntoId: Long): Response<Unit>
 
+    /*  Endpoints de CALENDARIO (Fase C) */
+
+    /**
+     * Un mes de calendario. Sin `anio`/`mes` devuelve el actual.
+     *
+     * `equipo` se atiende solo si el rol lo permite; sin permiso la
+     * respuesta llega igual, con las ausencias propias y con
+     * `incluyeEquipo` a false. No es un 403.
+     */
+    @GET("api/v1/calendario")
+    suspend fun getCalendario(
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int,
+        @Query("equipo") equipo: Boolean
+    ): Response<CalendarioDTO>
+
+    @POST("api/v1/calendario/festivos")
+    suspend fun crearFestivo(@Body peticion: FestivoRequest): Response<FestivoDTO>
+
+    @PATCH("api/v1/calendario/festivos/{id}")
+    suspend fun editarFestivo(
+        @Path("id") id: Long,
+        @Body peticion: FestivoRequest
+    ): Response<FestivoDTO>
+
+    @DELETE("api/v1/calendario/festivos/{id}")
+    suspend fun borrarFestivo(@Path("id") id: Long): Response<Unit>
+
 
     /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */
 

@@ -45,6 +45,13 @@ import java.util.Set;
  * razón: el informe mensual es el documento que se entrega ante una
  * inspección, y abarca a toda la empresa, no solo al equipo de un
  * gestor.
+ * "calendario:leer" (Fase C) la tiene todo el mundo -- saber qué días
+ * son festivos no es un privilegio -- y "calendario:gestionar" empieza
+ * en GESTOR: quien ya decide si tus vacaciones se aprueban es quien
+ * sabe qué días de convenio cierra el centro. Nótese que la authority
+ * NO alcanza a los festivos nacionales: esos son una fila compartida
+ * por todas las empresas y los siembra el sistema, así que el límite
+ * ahí no lo pone el rol sino el ámbito (ver HolidayScope).
  */
 public final class RoleAuthorities {
 
@@ -56,7 +63,8 @@ public final class RoleAuthorities {
             "fichaje:escribir",
             "ausencia:leer",
             "ausencia:escribir",
-            "adjunto:subir"
+            "adjunto:subir",
+            "calendario:leer"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -64,7 +72,8 @@ public final class RoleAuthorities {
             "ausencia:aprobar",
             "ausencia:leer:equipo",
             "empleado:crear",
-            "empleado:leer"
+            "empleado:leer",
+            "calendario:gestionar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

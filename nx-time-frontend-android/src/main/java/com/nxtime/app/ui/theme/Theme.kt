@@ -43,7 +43,13 @@ private val EsquemaClaro = lightColorScheme(
     outline = LightOutline,
     outlineVariant = LightOutlineVariant,
     surfaceContainer = LightSurfaceContainer,
-    surfaceContainerHigh = LightSurfaceContainerHigh
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    // Los tres que faltaban. Sin ellos, los componentes que los usan por
+    // su cuenta (Card sin color, el fondo de un Switch apagado) cogían la
+    // paleta morada base de Material -- ver Color.kt.
+    surfaceContainerLowest = LightSurfaceContainerLowest,
+    surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainerHighest = LightSurfaceContainerHighest
 )
 
 private val EsquemaOscuro = darkColorScheme(
@@ -72,7 +78,10 @@ private val EsquemaOscuro = darkColorScheme(
     outline = DarkOutline,
     outlineVariant = DarkOutlineVariant,
     surfaceContainer = DarkSurfaceContainer,
-    surfaceContainerHigh = DarkSurfaceContainerHigh
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerLowest = DarkSurfaceContainerLowest,
+    surfaceContainerLow = DarkSurfaceContainerLow,
+    surfaceContainerHighest = DarkSurfaceContainerHighest
 )
 
 /**

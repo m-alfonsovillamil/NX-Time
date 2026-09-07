@@ -242,6 +242,22 @@ class AuthRepositoryImpl(
         return apiService.borrarAdjunto(adjuntoId)
     }
 
+    override suspend fun getCalendario(anio: Int, mes: Int, equipo: Boolean): Response<CalendarioDTO> {
+        return apiService.getCalendario(anio, mes, equipo)
+    }
+
+    override suspend fun crearFestivo(peticion: FestivoRequest): Response<FestivoDTO> {
+        return apiService.crearFestivo(peticion)
+    }
+
+    override suspend fun editarFestivo(id: Long, peticion: FestivoRequest): Response<FestivoDTO> {
+        return apiService.editarFestivo(id, peticion)
+    }
+
+    override suspend fun borrarFestivo(id: Long): Response<Unit> {
+        return apiService.borrarFestivo(id)
+    }
+
     override suspend fun getAvisos(): Response<List<AvisoDTO>> {
         return apiService.getAvisos()
     }

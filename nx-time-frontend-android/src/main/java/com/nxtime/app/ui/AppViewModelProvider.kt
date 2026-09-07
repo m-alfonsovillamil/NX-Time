@@ -15,6 +15,7 @@ import com.nxtime.app.ui.acceso.RegistroEmpresaViewModel
 import com.nxtime.app.ui.ausencias.AusenciasViewModel
 import com.nxtime.app.ui.ausencias.SolicitudViewModel
 import com.nxtime.app.ui.avisos.AvisosViewModel
+import com.nxtime.app.ui.calendario.CalendarioViewModel
 import com.nxtime.app.ui.fichar.FicharViewModel
 import com.nxtime.app.ui.gestion.AltaUsuarioViewModel
 import com.nxtime.app.ui.gestion.AusenciasEquipoViewModel
@@ -52,6 +53,7 @@ object AppViewModelProvider {
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }
         initializer { PanelEmpresaViewModel(app().authRepository) }
+        initializer { CalendarioViewModel(app().authRepository) }
 
         /*
          * Este se pide desde el cuerpo de NxTimeNavHost, fuera de los

@@ -39,6 +39,31 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("hasta") LocalDate hasta);
 
     /**
+     * Lo mismo que {@link #findSolapadas}, pero para toda la empresa:
+     * es lo que pinta el calendario del equipo (Fase C).
+     *
+     * Deja fuera las RECHAZADAS por la misma razón que allí -- una
+     * ausencia denegada no ocupa el calendario de nadie -- y mantiene
+     * las PENDIENTES, que son justo las que un gestor necesita ver
+     * antes de aprobar otra que se solape.
+     *
+     * El {@code JOIN FETCH} no es un adorno: el nombre de cada persona
+     * se pinta en su banda, y {@code @ManyToOne} es EAGER por defecto,
+     * así que sin él cada fila dispararía su propio SELECT sobre
+     * usuarios -- el mismo N+1 que la Fase 10 tuvo que arreglar en los
+     * festivos.
+     */
+    @Query("SELECT a FROM peticiones_ausencia a JOIN FETCH a.usuario "
+            + "WHERE a.empresa.id = :empresaId "
+            + "AND a.estado <> com.nxtime.nxtime.domain.AbsenceStatus.RECHAZADA "
+            + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde "
+            + "ORDER BY a.fechaInicio")
+    List<AbsenceRequest> findSolapadasDeEmpresa(
+            @Param("empresaId") long empresaId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
      * Vacaciones ya APROBADAS que caen (aunque sea parcialmente) dentro
      * del año indicado. Base del cálculo de días consumidos: el saldo no
      * guarda un contador, se deriva de aquí (ver VacationBalance).

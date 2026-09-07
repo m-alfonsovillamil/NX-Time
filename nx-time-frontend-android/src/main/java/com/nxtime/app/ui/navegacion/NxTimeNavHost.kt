@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Schedule
@@ -50,6 +51,7 @@ import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
+import com.nxtime.app.ui.calendario.CalendarioScreen
 import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
 import com.nxtime.app.ui.gestion.AusenciasEquipoScreen
@@ -80,6 +82,7 @@ enum class Pantalla(val ruta: String) {
     REGISTRO_EMPRESA("registro"),
     FICHAR("fichar"),
     HISTORIAL("historial"),
+    CALENDARIO("calendario"),
     AUSENCIAS("ausencias"),
     AVISOS("avisos"),
     PERFIL("perfil"),
@@ -145,14 +148,20 @@ const val ARG_SALIDA = "salida"
 /**
  * Los destinos que salen en la barra de navegación.
  *
- * Son las cuatro zonas entre las que se salta constantemente. El resto
- * de pantallas (solicitar, cambiar contraseña, alta de usuario...) son
- * hojas: se entra desde una de estas cuatro y se vuelve con "atrás", así
- * que ocupar una pestaña con ellas solo restaría sitio.
+ * Son las zonas entre las que se salta constantemente. El resto de
+ * pantallas (solicitar, cambiar contraseña, alta de usuario, el perfil...)
+ * son hojas: se entra desde una de estas y se vuelve con "atrás", así que
+ * ocupar una pestaña con ellas solo restaría sitio.
  *
  * Sustituye al menú de tres puntos y al muro de botones que había al pie
  * de "Mi jornada": llegar al historial son ahora cero pasos en vez de
  * uno, y se ve de un vistazo qué zonas tiene la aplicación.
+ *
+ * **Son cinco y no pueden ser más.** Material 3 fija cinco como máximo en
+ * una barra de navegación, y aquí el quinto es "Gestión", que solo existe
+ * para los roles que lo pueden ver: un empleado ve cuatro. Por eso el
+ * perfil vive detrás del avatar de la barra superior y no en una pestaña
+ * -- este es el sitio que ocupa el calendario.
  */
 enum class DestinoPrincipal(
     val pantalla: Pantalla,
@@ -161,6 +170,10 @@ enum class DestinoPrincipal(
 ) {
     JORNADA(Pantalla.FICHAR, Icons.Default.Schedule, R.string.barra_jornada),
     HISTORIAL(Pantalla.HISTORIAL, Icons.AutoMirrored.Filled.ListAlt, R.string.barra_historial),
+    // Entre el historial y las ausencias a propósito: el calendario es lo
+    // que se mira ANTES de pedir una ausencia ("¿qué días son festivos?"),
+    // así que va justo delante de donde se pide.
+    CALENDARIO(Pantalla.CALENDARIO, Icons.Default.CalendarMonth, R.string.barra_calendario),
     AUSENCIAS(Pantalla.AUSENCIAS, Icons.Default.EventBusy, R.string.barra_ausencias),
     GESTION(Pantalla.GESTION, Icons.Default.Groups, R.string.barra_gestion)
 }
@@ -404,6 +417,23 @@ fun NxTimeNavHost(
                     onIrAvisos = irAAvisos,
                     iniciales = iniciales,
                     onIrPerfil = irAPerfil
+                )
+            }
+
+            composable(Pantalla.CALENDARIO.ruta) {
+                CalendarioScreen(
+                    contadorAvisos = estadoAvisos.noLeidos,
+                    onIrAvisos = irAAvisos,
+                    iniciales = iniciales,
+                    onIrPerfil = irAPerfil,
+                    // Añadir y quitar festivos es `calendario:gestionar`.
+                    // Aun teniéndola, los festivos nacionales no se tocan:
+                    // eso lo decide el campo `editable` de cada festivo.
+                    puedeGestionar = Permisos.puedeGestionarCalendario(rol),
+                    // Y ver las ausencias de los compañeros es otra
+                    // authority distinta (`ausencia:leer:equipo`), que es
+                    // la que decide si sale el interruptor "ver al equipo".
+                    puedeVerEquipo = Permisos.puedeVerAusenciasDelEquipo(rol)
                 )
             }
 

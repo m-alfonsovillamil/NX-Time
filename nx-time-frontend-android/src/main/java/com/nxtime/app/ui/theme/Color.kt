@@ -68,6 +68,27 @@ val LightSurfaceContainer = Color(0xFFFFFFFF)
 val LightSurfaceContainerHigh = Color(0xFFF4FAFB)
 
 /**
+ * Los tres escalones que faltaban de la escala de superficies.
+ *
+ * No son un capricho de completitud: Material 3 tiene **cinco**
+ * `surfaceContainer*`, y esta paleta solo definía dos. Los otros tres se
+ * quedaban con el valor por defecto de `lightColorScheme()`, que es la
+ * paleta morada base de Material —nada que ver con este tema— y salían
+ * en pantalla en cuanto un componente los usaba sin que nadie los
+ * pidiera: un `Card` sin `containerColor` explícito coge
+ * `surfaceContainerLow`, y el fondo de un `Switch` apagado coge
+ * `surfaceContainerHighest`. El calendario de la fase C fue lo primero
+ * que usó los dos, y la rejilla apareció **sobre un rosa** que no está
+ * en ninguna parte de la línea visual.
+ *
+ * Siguen la dirección que ya marcaban los dos existentes: en tema claro,
+ * cuanto más "alto" el contenedor, un punto más oscuro.
+ */
+val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
+val LightSurfaceContainerLow = Color(0xFFFFFFFF)
+val LightSurfaceContainerHighest = Color(0xFFE9F3F5)
+
+/**
  * Los dos extremos del degradado del fondo.
  *
  * El salto es deliberadamente visible. La primera versión iba de
@@ -125,6 +146,11 @@ val DarkOutline = Color(0xFF869899)
 val DarkOutlineVariant = Color(0xFF3E4E50)
 val DarkSurfaceContainer = Color(0xFF182325)
 val DarkSurfaceContainerHigh = Color(0xFF1F2C2E)
+
+/** Los mismos tres escalones que en claro, pero aclarando hacia arriba. */
+val DarkSurfaceContainerLowest = Color(0xFF0A1113)
+val DarkSurfaceContainerLow = Color(0xFF131E20)
+val DarkSurfaceContainerHighest = Color(0xFF283A3C)
 
 /**
  * El degradado oscuro va al revés que el claro -- de más oscuro arriba a

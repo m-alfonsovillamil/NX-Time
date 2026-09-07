@@ -160,6 +160,8 @@ class ApiContractTest {
     private long peticionAusenciaId;
     private long departamentoId;
     private long adjuntoId;
+    private long festivoId;
+    private long festivoNacionalId;
 
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -1625,6 +1627,202 @@ class ApiContractTest {
                 url("/api/v1/perfil/adjuntos/" + adjuntoId),
                 HttpMethod.DELETE,
                 new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    // ------------------------------------------------------------------
+    // 5b. CALENDARIO LABORAL (Fase C)
+    // ------------------------------------------------------------------
+    // Van sobre 2030, un año que ningún otro test toca: así se prueba de
+    // verdad la siembra bajo demanda (la tabla "festivos" empieza vacía,
+    // porque DemoDataSeeder solo corre con el perfil "demo") sin que el
+    // resultado dependa de en qué año se ejecute la suite.
+
+    @Test
+    @Order(100)
+    void mirarUnAnioPorPrimeraVez_siembraSusFestivosNacionales() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario?anio=2030&mes=12"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        // Diciembre trae tres nacionales: Constitución, Inmaculada y
+        // Navidad. Nadie los ha dado de alta: los ha calculado el
+        // servidor al recibir esta petición.
+        assertThat(body.get("festivos")).hasSize(3);
+        assertThat(body.get("incluyeEquipo").asBoolean()).isFalse();
+
+        JsonNode navidad = body.get("festivos").get(2);
+        assertThat(navidad.get("fecha").asText()).isEqualTo("2030-12-25");
+        assertThat(navidad.get("ambito").asText()).isEqualTo("NACIONAL");
+        // Un nacional es una fila compartida por todas las empresas.
+        assertThat(navidad.get("editable").asBoolean()).isFalse();
+        festivoNacionalId = navidad.get("id").asLong();
+    }
+
+    @Test
+    @Order(101)
+    void unGestorNoPuedeBorrarUnFestivoNacional_devuelve403() throws Exception {
+        // Es la regla que protege a las demás empresas: borrar Navidad
+        // desde una se la quitaría del calendario a todas.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos/" + festivoNacionalId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(bodyOf(response).get("detail").asText()).contains("nacionales");
+    }
+
+    @Test
+    @Order(102)
+    void gestorAnadeUnFestivoLocalYApareceEnSuMes() throws Exception {
+        ResponseEntity<String> creado = rest.exchange(
+                url("/api/v1/calendario/festivos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "fecha", "2030-05-15",
+                        "descripcion", "San Isidro",
+                        "ambito", "LOCAL")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(creado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode festivo = bodyOf(creado);
+        assertThat(festivo.get("editable").asBoolean()).isTrue();
+        festivoId = festivo.get("id").asLong();
+
+        // Y lo ve el empleado de la misma empresa, junto al nacional del
+        // 1 de mayo.
+        ResponseEntity<String> mayo = rest.exchange(
+                url("/api/v1/calendario?anio=2030&mes=5"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(mayo).get("festivos")).hasSize(2);
+    }
+
+    @Test
+    @Order(103)
+    void dosFestivosDeEmpresaElMismoDia_devuelve409() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "fecha", "2030-05-15",
+                        "descripcion", "Otra cosa",
+                        "ambito", "EMPRESA")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(response).get("detail").asText()).contains("San Isidro");
+    }
+
+    @Test
+    @Order(104)
+    void crearUnFestivoConAmbitoNacional_devuelve400() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "fecha", "2030-06-11",
+                        "descripcion", "Mi fiesta nacional",
+                        "ambito", "NACIONAL")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        // 400 y no 409: no hay conflicto de estado, es un valor que este
+        // endpoint no acepta.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @Order(105)
+    void unGestorDeOtraEmpresaNoPuedeTocarNuestrosFestivos_devuelve403() throws Exception {
+        // ADR 006: no hay filtro multi-tenant automático, así que esto
+        // solo pasa si el endpoint compara empresa_id a mano.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos/" + festivoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(106)
+    void unEmpleadoNoPuedeAnadirFestivos_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "fecha", "2030-08-01",
+                        "descripcion", "Me lo pido yo",
+                        "ambito", "EMPRESA")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(107)
+    void pedirElEquipoSinPoderVerlo_devuelveLoPropioSinFallar() throws Exception {
+        // Un 403 obligaría al cliente a saber su propio rol antes de
+        // pedir el mes; el campo "incluyeEquipo" le dice lo que ha
+        // recibido, que es lo que necesita para no enseñar un
+        // interruptor que no hace nada.
+        ResponseEntity<String> delEmpleado = rest.exchange(
+                url("/api/v1/calendario?anio=2030&mes=5&equipo=true"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(delEmpleado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(delEmpleado).get("incluyeEquipo").asBoolean()).isFalse();
+
+        ResponseEntity<String> delGestor = rest.exchange(
+                url("/api/v1/calendario?anio=2030&mes=5&equipo=true"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(bodyOf(delGestor).get("incluyeEquipo").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(108)
+    void unMesFueraDeRango_devuelve400YNoUn500() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario?anio=2030&mes=13"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @Order(109)
+    void elGestorPuedeBorrarElFestivoDeSuEmpresa() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/calendario/festivos/" + festivoId),
+                HttpMethod.DELETE,
+                new HttpEntity<>(authHeaders(gestorToken)),
                 String.class
         );
 

@@ -106,6 +106,12 @@ interface AuthRepository {
     suspend fun descargarAdjunto(adjuntoId: Long): Response<ResponseBody>
     suspend fun borrarAdjunto(adjuntoId: Long): Response<Unit>
 
+    /* Funciones de Calendario (Fase C) */
+    suspend fun getCalendario(anio: Int, mes: Int, equipo: Boolean): Response<CalendarioDTO>
+    suspend fun crearFestivo(peticion: FestivoRequest): Response<FestivoDTO>
+    suspend fun editarFestivo(id: Long, peticion: FestivoRequest): Response<FestivoDTO>
+    suspend fun borrarFestivo(id: Long): Response<Unit>
+
     /* Funciones de Avisos */
     suspend fun getAvisos(): Response<List<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>

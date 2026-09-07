@@ -9,6 +9,7 @@ import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Holiday;
+import com.nxtime.nxtime.domain.HolidayScope;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.Role;
@@ -30,6 +31,7 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import com.nxtime.nxtime.service.NationalHolidayGenerator;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -266,38 +268,45 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Festivos de ejemplo (Fase 9): unos cuantos nacionales fijos, que
-     * caen igual todos los años, y uno propio de la empresa. Sirven para
-     * que el cálculo de días hábiles de las vacaciones (ver
-     * WorkingDayService) tenga algo real que descontar en la demo,
-     * además de los fines de semana.
+     * Festivos de ejemplo: los diez nacionales del año y tres propios de
+     * la empresa, uno de cada ámbito.
+     *
+     * Los nacionales ya no se teclean aquí (Fase C): los da
+     * {@link NationalHolidayGenerator}, el mismo que usa la aplicación
+     * cuando alguien mira un año por primera vez. Mantener dos listas
+     * habría acabado con la demo enseñando festivos que la aplicación no
+     * calcula, o al revés -- y siete de los diez es justo lo que había.
+     *
+     * Los tres de empresa son distintos a propósito: sin un autonómico y
+     * un local, el calendario de la demo no enseñaría más que un color y
+     * la distinción de ámbitos parecería decorativa.
      */
     private void sembrarFestivos(Company empresa) {
         int anio = LocalDate.now(MADRID_ZONE).getYear();
 
-        // Nacionales: se guardan SIN empresa (empresa == null), así
+        // Los nacionales se guardan SIN empresa (empresa == null), así
         // aplican a todas -- ver Holiday. Solo los siembra la primera
         // empresa; para la segunda ya existen (uq_festivos_nacional_fecha).
         if (holidayRepository.count() == 0) {
-            crearFestivoNacional(LocalDate.of(anio, 1, 1), "Año Nuevo");
-            crearFestivoNacional(LocalDate.of(anio, 5, 1), "Día del Trabajador");
-            crearFestivoNacional(LocalDate.of(anio, 8, 15), "Asunción de la Virgen");
-            crearFestivoNacional(LocalDate.of(anio, 10, 12), "Fiesta Nacional de España");
-            crearFestivoNacional(LocalDate.of(anio, 11, 1), "Todos los Santos");
-            crearFestivoNacional(LocalDate.of(anio, 12, 6), "Día de la Constitución");
-            crearFestivoNacional(LocalDate.of(anio, 12, 25), "Navidad");
+            holidayRepository.saveAll(NationalHolidayGenerator.delAnio(anio));
         }
 
-        // Propio de esta empresa (día de convenio, puente...).
-        holidayRepository.save(Holiday.builder()
-                .empresa(empresa)
-                .fecha(LocalDate.of(anio, 7, 25))
-                .descripcion("Día de convenio de " + empresa.getNombre())
-                .build());
+        crearFestivoDeEmpresa(empresa, LocalDate.of(anio, 5, 2),
+                "Fiesta de la Comunidad de Madrid", HolidayScope.AUTONOMICO);
+        crearFestivoDeEmpresa(empresa, LocalDate.of(anio, 5, 15),
+                "San Isidro", HolidayScope.LOCAL);
+        crearFestivoDeEmpresa(empresa, LocalDate.of(anio, 7, 25),
+                "Día de convenio de " + empresa.getNombre(), HolidayScope.EMPRESA);
     }
 
-    private void crearFestivoNacional(LocalDate fecha, String descripcion) {
-        holidayRepository.save(Holiday.builder().fecha(fecha).descripcion(descripcion).build());
+    private void crearFestivoDeEmpresa(
+            Company empresa, LocalDate fecha, String descripcion, HolidayScope ambito) {
+        holidayRepository.save(Holiday.builder()
+                .empresa(empresa)
+                .fecha(fecha)
+                .descripcion(descripcion)
+                .ambito(ambito)
+                .build());
     }
 
     /**

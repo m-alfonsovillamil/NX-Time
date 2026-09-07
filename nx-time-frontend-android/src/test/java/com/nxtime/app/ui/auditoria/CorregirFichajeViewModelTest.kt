@@ -170,6 +170,75 @@ class CorregirFichajeViewModelTest {
         assertFalse(estado.corregido)
     }
 
+    // -----------------------------------------------------------------
+    // Turno de noche (Fase C)
+    // -----------------------------------------------------------------
+    // Antes de esto, una jornada que cruzaba la medianoche NO SE PODÍA
+    // corregir: las dos horas se componían sobre la misma fecha, así que
+    // la salida quedaba veintidós horas antes de la entrada y el
+    // formulario se negaba a enviar. Y es justo la jornada que más falta
+    // hace corregir, porque es la que el cierre nocturno automático deja
+    // marcada como incompleta.
+
+    @Test
+    fun `una jornada que cruza la medianoche llega con el interruptor puesto`() = runTest {
+        val viewModel = viewModel()
+        // 22:52 del 3 de septiembre a 00:29 del 4 (hora española: UTC+2).
+        viewModel.precargar("2026-09-03T20:52:00Z", "2026-09-03T22:29:00Z")
+
+        val estado = viewModel.uiState.value
+        assertTrue(estado.salidaEsOtroDia)
+        assertEquals(22, estado.horaEntrada)
+        assertEquals(0, estado.horaSalida)
+        assertEquals(29, estado.minutoSalida)
+    }
+
+    @Test
+    fun `con el interruptor puesto la salida se manda con la fecha del dia siguiente`() = runTest {
+        whenever(repositorio.corregirFichaje(any(), any()))
+            .thenReturn(Response.success(registro))
+
+        val viewModel = viewModel()
+        viewModel.precargar("2026-09-03T20:52:00Z", "2026-09-03T22:29:00Z")
+        viewModel.cambiarSalida(0, 45)
+        viewModel.cambiarMotivo("La salida real fueron las 00:45")
+        viewModel.guardar()
+        advanceUntilIdle()
+
+        val captor = argumentCaptor<CorreccionFichajeRequest>()
+        verify(repositorio).corregirFichaje(eq(7L), captor.capture())
+        assertEquals("2026-09-03T20:52:00Z", captor.firstValue.horaEntrada)
+        // Las 00:45 del DÍA 4 en hora española son las 22:45Z del día 3.
+        assertEquals("2026-09-03T22:45:00Z", captor.firstValue.horaSalida)
+    }
+
+    @Test
+    fun `sin el interruptor, esa misma salida sigue siendo anterior a la entrada`() = runTest {
+        val viewModel = viewModel()
+        viewModel.precargar("2026-09-03T20:52:00Z", "2026-09-03T22:29:00Z")
+        // Quien desmarque el interruptor con estas horas está diciendo
+        // que la jornada acabó veintidós horas antes de empezar: eso
+        // sigue sin poder enviarse.
+        viewModel.cambiarSalidaEsOtroDia(false)
+        viewModel.cambiarMotivo("Motivo válido")
+        viewModel.guardar()
+        advanceUntilIdle()
+
+        verify(repositorio, never()).corregirFichaje(any(), any())
+        assertEquals(
+            MensajeUi.Recurso(R.string.correccion_salida_anterior),
+            viewModel.uiState.value.error
+        )
+    }
+
+    @Test
+    fun `una jornada normal no marca el interruptor`() = runTest {
+        val viewModel = viewModel()
+        viewModel.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z")
+
+        assertFalse(viewModel.uiState.value.salidaEsOtroDia)
+    }
+
     @Test
     fun `una correccion aceptada marca la pantalla como terminada`() = runTest {
         whenever(repositorio.corregirFichaje(any(), any()))

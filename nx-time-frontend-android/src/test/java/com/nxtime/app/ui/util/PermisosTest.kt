@@ -41,6 +41,7 @@ class PermisosTest {
         assertFalse(Permisos.puedeCrearGestores(null))
         assertFalse(Permisos.puedeExportarInformes(null))
         assertFalse(Permisos.puedeConfigurarEmpleados(null))
+        assertFalse(Permisos.puedeGestionarCalendario(null))
     }
 
     @Test
@@ -54,6 +55,12 @@ class PermisosTest {
         assertFalse(Permisos.puedeExportarInformes(rol))
         assertFalse(Permisos.puedeCrearGestores(rol))
         assertFalse(Permisos.puedeConfigurarEmpleados(rol))
+        // El calendario laboral lo lee todo el mundo, pero solo lo
+        // cambia quien gestiona (`calendario:gestionar`, desde GESTOR).
+        assertFalse(Permisos.puedeGestionarCalendario(rol))
+        // Y las ausencias ajenas tampoco se ven desde una cuenta de
+        // empleado, ni siquiera como bandas en el calendario.
+        assertFalse(Permisos.puedeVerAusenciasDelEquipo(rol))
     }
 
     @Test
@@ -63,6 +70,10 @@ class PermisosTest {
         assertTrue(Permisos.puedeAprobarAusencias(rol))
         assertTrue(Permisos.puedeCrearEmpleados(rol))
         assertTrue(Permisos.puedeVerPanelEmpresa(rol))
+        // Quien decide si tus vacaciones se aprueban es quien sabe qué
+        // días de convenio cierra el centro.
+        assertTrue(Permisos.puedeGestionarCalendario(rol))
+        assertTrue(Permisos.puedeVerAusenciasDelEquipo(rol))
 
         // Corregir un fichaje y exportar el informe mensual son
         // operaciones de cumplimiento (RD-ley 8/2019), reservadas a RRHH.
@@ -116,5 +127,6 @@ class PermisosTest {
         assertTrue(Permisos.puedeExportarInformes(rol))
         assertTrue(Permisos.puedeCrearGestores(rol))
         assertTrue(Permisos.puedeVerPanelEmpresa(rol))
+        assertTrue(Permisos.puedeGestionarCalendario(rol))
     }
 }

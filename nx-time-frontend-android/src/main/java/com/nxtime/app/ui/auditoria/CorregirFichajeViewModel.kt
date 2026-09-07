@@ -21,6 +21,18 @@ data class CorregirFichajeUiState(
     val minutoEntrada: Int = 0,
     val horaSalida: Int = 18,
     val minutoSalida: Int = 0,
+    /**
+     * Si la salida es del día siguiente al de la entrada (turno de noche).
+     *
+     * Sin esto, corregir una jornada de 22:52 a 00:29 era **imposible**:
+     * las dos horas se componían sobre la misma fecha, así que la salida
+     * quedaba a las 00:29 de ESE día -- veintidós horas antes de la
+     * entrada -- y el formulario se negaba a enviar con "la salida es
+     * anterior a la entrada". La jornada que más falta hace corregir,
+     * porque es la que el cierre nocturno automático deja incompleta, era
+     * justo la única que no se podía tocar.
+     */
+    val salidaEsOtroDia: Boolean = false,
     val motivo: String = "",
     val enviando: Boolean = false,
     val corregido: Boolean = false,
@@ -63,7 +75,12 @@ class CorregirFichajeViewModel(
                 horaEntrada = entrada?.first ?: it.horaEntrada,
                 minutoEntrada = entrada?.second ?: it.minutoEntrada,
                 horaSalida = salida?.first ?: it.horaSalida,
-                minutoSalida = salida?.second ?: it.minutoSalida
+                minutoSalida = salida?.second ?: it.minutoSalida,
+                // Si la jornada original ya cruzaba la medianoche, el
+                // interruptor llega puesto: quien solo venía a arreglar
+                // los minutos de la entrada no tiene que acordarse de
+                // marcarlo para no romper la salida.
+                salidaEsOtroDia = DateFormats.diasDeDiferencia(entradaIso, salidaIso) > 0
             )
         }
     }
@@ -73,6 +90,9 @@ class CorregirFichajeViewModel(
 
     fun cambiarSalida(hora: Int, minuto: Int) =
         _uiState.update { it.copy(horaSalida = hora, minutoSalida = minuto, error = null) }
+
+    fun cambiarSalidaEsOtroDia(esOtroDia: Boolean) =
+        _uiState.update { it.copy(salidaEsOtroDia = esOtroDia, error = null) }
 
     fun cambiarMotivo(motivo: String) =
         _uiState.update { it.copy(motivo = motivo, error = null) }
@@ -88,13 +108,20 @@ class CorregirFichajeViewModel(
         }
 
         val entrada = DateFormats.aInstanteIso(estado.fecha, estado.horaEntrada, estado.minutoEntrada)
-        val salida = DateFormats.aInstanteIso(estado.fecha, estado.horaSalida, estado.minutoSalida)
+        // La fecha de la salida puede ser la del día siguiente: es lo que
+        // hace corregible un turno de noche (ver `salidaEsOtroDia`).
+        val diaDeSalida = if (estado.salidaEsOtroDia) estado.fecha.plusDays(1) else estado.fecha
+        val salida = DateFormats.aInstanteIso(diaDeSalida, estado.horaSalida, estado.minutoSalida)
 
         /*
          * Se comprueba aquí y no solo en el servidor porque la pantalla
          * ya tiene los dos valores delante: el usuario recibe la
          * respuesta al instante en vez de tras una ida y vuelta. El
          * backend lo valida igualmente, que es lo que manda.
+         *
+         * Sigue haciendo falta con el interruptor puesto: marcar "otro
+         * día" y poner la salida a las 23:00 de una entrada de las 22:52
+         * es correcto, pero desmarcarlo con esas mismas horas no lo es.
          */
         if (salida <= entrada) {
             _uiState.update {

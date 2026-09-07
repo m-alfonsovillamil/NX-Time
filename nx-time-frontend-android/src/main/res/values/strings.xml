@@ -416,4 +416,62 @@
     <string name="error_demasiados_intentos">Demasiados intentos. Espera un momento y vuelve a probar.</string>
     <string name="error_servidor">El servidor no está disponible. Inténtalo más tarde.</string>
     <string name="error_inesperado">Se ha producido un error inesperado.</string>
+
+    <!-- Calendario laboral (Fase C) -->
+    <string name="calendario_titulo">Calendario</string>
+    <string name="calendario_mes_anterior">Mes anterior</string>
+    <string name="calendario_mes_siguiente">Mes siguiente</string>
+    <string name="calendario_hoy">Hoy</string>
+    <string name="calendario_leyenda_festivo">Festivo</string>
+    <string name="calendario_leyenda_ausencia">Ausencia</string>
+    <string name="calendario_ver_equipo">Ver también al equipo</string>
+    <string name="calendario_festivos_del_mes">Festivos del mes</string>
+    <string name="calendario_sin_festivos">Este mes no tiene ningún festivo.</string>
+    <string name="calendario_dia_sin_ausencias">Nadie está ausente este día.</string>
+    <string name="calendario_ausencia_propia">Tú</string>
+    <string name="calendario_ausencia_rango">Del %1$s al %2$s</string>
+    <string name="calendario_marcar_festivo">Marcar como festivo</string>
+    <string name="calendario_quitar_festivo">Quitar el festivo</string>
+    <string name="calendario_quitar">Quitar</string>
+    <string name="calendario_quitar_festivo_aviso">Si quitas «%1$s», ese día vuelve a contar como laborable para toda la empresa y cambia el saldo de vacaciones de cada persona.</string>
+    <string name="calendario_nuevo_festivo">Nuevo festivo</string>
+    <string name="calendario_festivo_descripcion">Descripción</string>
+    <string name="calendario_anadir">Añadir</string>
+    <string name="calendario_festivo_creado">Festivo añadido.</string>
+    <string name="calendario_festivo_borrado">Festivo quitado.</string>
+    <string name="calendario_ambito_nacional">Nacional</string>
+    <string name="calendario_ambito_autonomico">Autonómico</string>
+    <string name="calendario_ambito_local">Local</string>
+    <!--
+        "Empresa", no "De la empresa": en el diálogo de alta los tres
+        ámbitos van en una fila de chips y el largo se partía en tres
+        líneas ("De la / empres / a"). El contexto ya dice de qué se
+        habla, tanto en el chip como en la lista de festivos.
+    -->
+    <string name="calendario_ambito_empresa">Empresa</string>
+    <!--
+        Lo que el calendario NO puede saber, dicho en la pantalla.
+
+        Los festivos nacionales se calculan, pero el traslado de uno que
+        cae en domingo lo decide el BOE cada año, y los autonómicos y
+        locales los fija cada comunidad y cada ayuntamiento. Prometer
+        "todos los festivos" sería falso, y alguien plantearía sus
+        vacaciones contando con ello.
+    -->
+    <string name="calendario_nota_festivos">Los festivos nacionales los calcula la aplicación. Los autonómicos y locales, y el traslado de un festivo que cae en domingo, los publica cada año el BOE o tu comunidad: los añade quien gestiona el calendario.</string>
+    <!--
+        "many" por el mismo motivo que en ausencias_dias_habiles.
+    -->
+    <plurals name="calendario_ausencias_cuantas">
+        <item quantity="one">%d persona ausente</item>
+        <item quantity="many">%d personas ausentes</item>
+        <item quantity="other">%d personas ausentes</item>
+    </plurals>
+
+    <!-- Turno de noche: la jornada que cruza la medianoche (Fase C) -->
+    <string name="historial_salida_otro_dia">%1$s (+%2$d d)</string>
+    <string name="correccion_salida_otro_dia">La salida es del día siguiente</string>
+
+    <!-- Barra de navegación -->
+    <string name="barra_calendario">Calendario</string>
 </resources>
