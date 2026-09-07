@@ -13,8 +13,15 @@ name: CI
 on:
   push:
     branches: [main]
+  # Cualquier pull request, no solo los que apuntan a main.
+  #
+  # Estaba limitado a `branches: [main]`, y eso dejaba SIN CI a un PR
+  # encadenado sobre otra rama -- que es como entran las fases del plan
+  # cuando una depende de la anterior (las migraciones de Flyway obligan a
+  # un orden de merge). Un PR sin CI no es "un PR con el CI en verde": es
+  # un PR sin verificar, y se descubre al mirar por qué no aparecen los
+  # checks.
   pull_request:
-    branches: [main]
 
 jobs:
   build:
