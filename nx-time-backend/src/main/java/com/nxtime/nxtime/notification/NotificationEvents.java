@@ -3,6 +3,8 @@ package com.nxtime.nxtime.notification;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
+import com.nxtime.nxtime.domain.JobApplication;
+import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.User;
 import java.util.List;
@@ -148,5 +150,49 @@ public final class NotificationEvents {
      */
     public record ComplaintUpdated(
             Complaint denuncia, List<User> destinatarios, String novedad) {
+    }
+
+    // ------------------------------------------------------------------
+    // Fase H: ofertas internas y candidaturas
+    // ------------------------------------------------------------------
+
+    /**
+     * Se ha publicado una vacante interna. Va a <b>toda la plantilla</b>.
+     *
+     * Es la única notificación masiva del proyecto, y contradice a
+     * propósito lo que decidió la fase F sobre no avisar de cada hecho
+     * detectado. La diferencia es la frecuencia: los excesos de jornada
+     * salen a decenas al mes y una vacante interna a unas pocas al año.
+     * Con esa frecuencia, avisar es lo que hace que el tablón funcione —
+     * uno que nadie sabe que existe deja fuera justo a quien podría dar
+     * el paso.
+     *
+     * Se excluye a quien la publica: nadie necesita que le avisen de lo
+     * que acaba de hacer. Aquí sí se puede excluir, al revés que en las
+     * denuncias, porque quién publica una oferta es público.
+     */
+    public record JobPostingPublished(JobPosting oferta, List<User> destinatarios) {
+    }
+
+    /**
+     * Alguien se ha presentado. Va a <b>quien publicó la oferta</b>, no
+     * a todo el que pueda valorar candidaturas.
+     *
+     * La vacante es de alguien concreto, y mandarle a cada gestor de la
+     * empresa un correo por cada persona que opta a un puesto que no es
+     * suyo es la forma de que dejen de leerlos. El resto llega igual a
+     * la lista de candidatos cuando entra a mirarla.
+     */
+    public record JobApplicationReceived(JobApplication candidatura, List<User> destinatarios) {
+    }
+
+    /**
+     * Han movido una candidatura. Va al candidato.
+     *
+     * Lleva el comentario aparte y no dentro de la entidad porque es lo
+     * único que el correo tiene que contar además del estado, y en un
+     * descarte es la mitad del mensaje.
+     */
+    public record JobApplicationUpdated(JobApplication candidatura, List<User> destinatarios) {
     }
 }

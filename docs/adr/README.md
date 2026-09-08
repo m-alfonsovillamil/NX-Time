@@ -22,3 +22,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [010](010-correcciones-con-aprobacion.md) | Ninguna corrección de fichaje se aplica sola |
 | [011](011-horas-extra-detectadas-no-imputadas.md) | Las horas extra se detectan, no se imputan |
 | [012](012-anonimato-estructural-en-el-canal-de-denuncias.md) | El anonimato del canal de denuncias es estructural, no una promesa |
+| [013](013-la-candidatura-congela-el-cv.md) | La candidatura congela el CV que se presentó |

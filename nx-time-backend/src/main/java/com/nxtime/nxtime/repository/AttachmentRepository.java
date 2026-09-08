@@ -9,7 +9,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
-    Optional<Attachment> findByUsuarioAndTipo(User usuario, AttachmentType tipo);
+    /**
+     * El adjunto VIGENTE de una persona para un tipo.
+     *
+     * Desde la fase H puede haber varios del mismo tipo: los que alguna
+     * candidatura congeló siguen en la tabla, marcados como no vigentes.
+     * Sin el filtro, esto devolvería uno cualquiera de ellos.
+     */
+    Optional<Attachment> findByUsuarioAndTipoAndVigenteTrue(User usuario, AttachmentType tipo);
 
-    List<Attachment> findByUsuario(User usuario);
+    /** Los vigentes de una persona: lo que se enseña en su perfil. */
+    List<Attachment> findByUsuarioAndVigenteTrue(User usuario);
 }

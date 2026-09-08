@@ -69,6 +69,23 @@ public class Attachment {
 
     private Instant subidoEn;
 
+    /**
+     * Si es el vigente de esta persona para este tipo (Fase H).
+     *
+     * Hasta la fase H no hacía falta: subir un CV nuevo BORRABA el
+     * anterior, y el {@code UNIQUE (usuario_id, tipo)} bastaba. Con
+     * candidaturas de por medio ese borrado destruiría lo que un gestor
+     * leyó en enero, así que el CV viejo referenciado por una
+     * candidatura <b>sigue existiendo y deja de estar vigente</b>.
+     *
+     * Un adjunto no vigente no se lista en el perfil ni se puede volver
+     * a elegir; solo se llega a él desde la candidatura que lo congeló.
+     * El índice único pasó a ser parcial ({@code WHERE vigente}) en la
+     * V14 justamente para esto.
+     */
+    @Builder.Default
+    private boolean vigente = true;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

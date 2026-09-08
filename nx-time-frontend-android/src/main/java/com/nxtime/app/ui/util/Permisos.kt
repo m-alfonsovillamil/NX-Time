@@ -149,6 +149,31 @@ object Permisos {
      */
     fun puedeInstruirDenuncias(rol: Rol?): Boolean = alMenos(rol, Rol.ADMIN)
 
+    /**
+     * Publica y cierra vacantes internas (`oferta:publicar`).
+     *
+     * LEERLAS y presentarse no pide nada (`oferta:leer`,
+     * `candidatura:crear`): un tablón de vacantes internas al que no
+     * llega la plantilla no es un tablón, así que no hay función para
+     * eso.
+     */
+    fun puedePublicarOfertas(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
+    /**
+     * Decide sobre quien opta a una vacante (`candidatura:gestionar`).
+     *
+     * Aparte de [puedePublicarOfertas] aunque hoy coincidan, por el
+     * motivo de siempre: anunciar una vacante y decidir sobre las
+     * personas que se presentan son operaciones distintas.
+     *
+     * **Ojo**: esto no alcanza a la candidatura de uno mismo. Ni con la
+     * authority se puede valorar la propia — un GESTOR puede optar a una
+     * vacante como cualquiera —, y no es una regla que la app pueda
+     * comprobar con el rol: la aplica el servidor y viaja resuelta en
+     * `puedoValorar`.
+     */
+    fun puedeValorarCandidaturas(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
     private fun alMenos(rol: Rol?, minimo: Rol): Boolean =
         rol != null && rol.ordinal >= minimo.ordinal
 }

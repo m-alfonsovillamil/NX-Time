@@ -28,6 +28,9 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_HORAS_EXTRA -> Pantalla.HORAS_EXTRA.ruta
     DESTINO_CANAL_DENUNCIAS -> Pantalla.CANAL_DENUNCIAS.ruta
     DESTINO_DENUNCIAS -> Pantalla.DENUNCIAS.ruta
+    DESTINO_OFERTAS -> Pantalla.OFERTAS.ruta
+    DESTINO_MIS_CANDIDATURAS -> Pantalla.OFERTAS.ruta
+    DESTINO_GESTION_OFERTAS -> Pantalla.GESTION_OFERTAS.ruta
     else -> null
 }
 
@@ -53,3 +56,12 @@ const val DESTINO_HORAS_EXTRA = "horas-extra"
 // asi que aqui no hay que mirar el rol.
 const val DESTINO_CANAL_DENUNCIAS = "canal-denuncias"
 const val DESTINO_DENUNCIAS = "denuncias"
+
+// Fase H. Los dos primeros llevan a la MISMA pantalla y no es un
+// descuido: el tablon y "mis candidaturas" son dos secciones de
+// OfertasScreen, asi que tanto el aviso de vacante nueva como el de
+// "han movido tu candidatura" acaban donde el usuario puede actuar. El
+// tercero es la vista de quien publica, que es otra cosa.
+const val DESTINO_OFERTAS = "ofertas"
+const val DESTINO_MIS_CANDIDATURAS = "mis-candidaturas"
+const val DESTINO_GESTION_OFERTAS = "gestion-ofertas"

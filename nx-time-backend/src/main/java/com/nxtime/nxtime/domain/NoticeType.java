@@ -68,7 +68,27 @@ public enum NoticeType {
      * denunciante anónimo no hay a quién avisar, y esa es exactamente la
      * contrapartida del anonimato.
      */
-    DENUNCIA_ACTUALIZADA("denuncias");
+    DENUNCIA_ACTUALIZADA("denuncias"),
+
+    // Fase H.
+
+    /**
+     * Hay una vacante interna nueva. Va a TODA la plantilla.
+     *
+     * Es la excepción a lo que decidió la fase F —que un aviso por cada
+     * hecho detectado es spam por diseño— y la diferencia es el volumen:
+     * los excesos de jornada salen a decenas al mes, y una vacante
+     * interna a unas pocas al año. Con esa frecuencia, avisar es lo que
+     * hace que el tablón exista: uno que nadie sabe que está ahí no
+     * sirve para nada, y quien podría dar el paso no se entera.
+     */
+    OFERTA_PUBLICADA("ofertas"),
+
+    /** Alguien se ha presentado a una oferta tuya. */
+    CANDIDATURA_RECIBIDA("gestion-ofertas"),
+
+    /** Han movido tu candidatura. */
+    CANDIDATURA_ACTUALIZADA("mis-candidaturas");
 
     private final String rutaDestinoPorDefecto;
 

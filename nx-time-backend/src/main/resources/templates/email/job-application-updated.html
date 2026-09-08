@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--/*
+  Han movido una candidatura (Fase H).
+
+  Los tres desenlaces se cuentan distinto porque no son lo mismo, y el
+  correo que menos puede ser genérico es el del descarte: lo lee un
+  compañero, sobre sí mismo, en la empresa en la que sigue trabajando
+  mañana. Por eso el comentario es obligatorio al descartar y aquí sale
+  destacado, no en una línea de detalle.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Novedad en tu candidatura', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${seleccionada}">
+        Te han seleccionado para <strong th:text="${oferta}">Título del puesto</strong>.
+        Enhorabuena.
+    </p>
+    <p th:if="${descartada}">
+        Tu candidatura a <strong th:text="${oferta}">Título del puesto</strong> no
+        sigue adelante.
+    </p>
+    <p th:unless="${seleccionada} or ${descartada}">
+        Tu candidatura a <strong th:text="${oferta}">Título del puesto</strong> está
+        en proceso de valoración.
+    </p>
+
+    <p style="margin-top: 20px;" th:if="${comentario}" th:text="${comentario}">
+        Comentario de quien la ha valorado.
+    </p>
+
+    <p style="margin-top: 20px;" th:if="${descartada}">
+        Puedes seguir optando a otras vacantes internas desde NX Time.
+    </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+  Hay una vacante interna nueva (Fase H).
+
+  Es el único correo del proyecto que va a TODA la plantilla, y contradice
+  a propósito lo que decidió la fase F sobre no avisar de cada hecho: la
+  diferencia es la frecuencia. Un exceso de jornada sale a decenas al mes;
+  una vacante interna, a unas pocas al año. Con esa frecuencia el aviso es
+  lo que hace que el tablón exista.
+
+  Por eso lleva lo justo para decidir si merece la pena entrar -- puesto,
+  departamento y plazo -- y no la descripción entera.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Nueva vacante interna', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        Se ha publicado una vacante interna:
+        <strong th:text="${titulo}">Título del puesto</strong><span
+            th:if="${departamento}" th:text="', en ' + ${departamento}"> , en Ingeniería</span>.
+    </p>
+
+    <p style="margin-top: 20px;" th:if="${fechaCierre}">
+        Se puede optar hasta el
+        <strong th:text="${#temporals.format(fechaCierre, 'dd/MM/yyyy')}">30/06/2026</strong>.
+    </p>
+    <p style="margin-top: 20px;" th:unless="${fechaCierre}">
+        No tiene fecha de cierre: se cerrará cuando se cubra.
+    </p>
+
+    <p style="margin-top: 20px;">
+        Entra en NX Time, en Ofertas internas, para leerla y presentar tu
+        candidatura. Se adjunta el CV que tengas subido en tu perfil.
+    </p>
+</div>
+</body>
+</html>

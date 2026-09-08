@@ -172,6 +172,12 @@ class ApiContractTest {
     // que le pasa a quien denuncia de verdad.
     private String codigoDenunciaAnonima;
     private long denunciaAnonimaId;
+    private long ofertaId;
+    private long candidaturaId;
+    // Fase H. El adjunto que la candidatura congela: el test 149 es
+    // exactamente comprobar que sigue existiendo cuando su dueño sube
+    // otro CV encima.
+    private long cvCongeladoId;
 
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -2481,6 +2487,329 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ------------------------------------------------------------------
+    // 5f. OFERTAS INTERNAS Y CANDIDATURAS (Fase H)
+    // ------------------------------------------------------------------
+    // Lo que se fija aqui, por encima del reparto de permisos, es LA
+    // decision de la fase: la candidatura congela el CV. El test 149 es
+    // el que la comprueba de verdad -- se sube otro CV DESPUES de
+    // presentarse y el congelado sigue ahi, descargable y con el mismo
+    // id. Hasta la fase B2 ese fichero se borraba.
+    //
+    // Ojo al orden: en el 77 el empleado borro su CV, asi que llega aqui
+    // sin ninguno. Eso es lo que hace honesto al 144.
+
+    @Test
+    @Order(140)
+    void unEmpleadoNoPuedePublicarOfertas_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ofertas"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "titulo", "Puesto inventado",
+                        "descripcion", "No deberia crearse.")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(141)
+    void seCreaUnaOfertaYNaceEnBorrador() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ofertas"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "titulo", "Backend senior",
+                        "descripcion", "Java 21, Spring Boot y PostgreSQL.",
+                        "puesto", "Desarrollador/a senior")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode body = bodyOf(response);
+        // Nace en BORRADOR aunque nadie lo pida: publicar avisa a toda la
+        // plantilla, y eso no puede ser el efecto colateral de guardar.
+        assertThat(body.get("estado").asText()).isEqualTo("BORRADOR");
+        assertThat(body.get("fechaPublicacion").isNull()).isTrue();
+        assertThat(body.get("admiteCandidaturas").asBoolean()).isFalse();
+
+        ofertaId = body.get("id").asLong();
+    }
+
+    @Test
+    @Order(142)
+    void unBorradorNoSaleEnElTablonNiSePuedeAbrir() throws Exception {
+        ResponseEntity<String> tablon = rest.exchange(
+                url("/api/v1/ofertas"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(tablon.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(tablon)).isEmpty();
+
+        // Y por id tampoco: un borrador no existe para la plantilla, en
+        // vez de existir y estar prohibido.
+        ResponseEntity<String> porId = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(porId.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @Order(143)
+    void alPublicarlaAparecenLaFechaYElTablon() throws Exception {
+        ResponseEntity<String> publicada = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "ABIERTA")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(publicada.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(publicada).get("estado").asText()).isEqualTo("ABIERTA");
+        assertThat(bodyOf(publicada).get("fechaPublicacion").isNull()).isFalse();
+
+        ResponseEntity<String> tablon = rest.exchange(
+                url("/api/v1/ofertas"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(tablon)).hasSize(1);
+        JsonNode fila = bodyOf(tablon).get(0);
+        assertThat(fila.get("admiteCandidaturas").asBoolean()).isTrue();
+        assertThat(fila.get("yaMePresente").asBoolean()).isFalse();
+        // El contador de candidaturas NO viaja a quien no las valora.
+        assertThat(fila.get("candidaturas").isNull()).isTrue();
+    }
+
+    @Test
+    @Order(144)
+    void presentarseSinCvDevuelve400() throws Exception {
+        // El empleado borro su CV en el Order 77. Presentarse sin CV
+        // dejaria al gestor una candidatura vacia, asi que se corta aqui
+        // -- y la app lo dice antes de dejar pulsar el boton.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/candidaturas"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("carta", "Me presento.")),
+                        authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(response).get("detail").asText()).contains("CV");
+    }
+
+    @Test
+    @Order(145)
+    void conCvSubidoSePresentaYElCvQuedaCongelado() throws Exception {
+        ResponseEntity<String> subida = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.POST,
+                multipart(empleadoToken, "cv-candidatura.pdf", "CV", pdfDePrueba()),
+                String.class
+        );
+        assertThat(subida.getStatusCode()).isEqualTo(HttpStatus.OK);
+        cvCongeladoId = bodyOf(subida).get("id").asLong();
+
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/candidaturas"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("carta", "Llevo dos anios en el equipo.")),
+                        authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("estado").asText()).isEqualTo("RECIBIDA");
+        // El CV que viaja es el ADJUNTO concreto, no una referencia a la
+        // persona: es lo que define la fase.
+        assertThat(body.get("cvAdjuntoId").asLong()).isEqualTo(cvCongeladoId);
+        assertThat(body.get("puedoValorar").asBoolean()).isFalse();
+
+        candidaturaId = body.get("id").asLong();
+    }
+
+    @Test
+    @Order(146)
+    void presentarseDosVecesALaMismaOferta_devuelve409() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/candidaturas"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("carta", "Otra vez.")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(147)
+    void quienValoraVeLaCandidaturaYElContador() throws Exception {
+        ResponseEntity<String> candidaturas = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/candidaturas"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(candidaturas.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(candidaturas)).hasSize(1);
+        assertThat(bodyOf(candidaturas).get(0).get("puedoValorar").asBoolean()).isTrue();
+
+        ResponseEntity<String> gestion = rest.exchange(
+                url("/api/v1/ofertas/gestion"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(gestion.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(gestion).get(0).get("candidaturas").asInt()).isEqualTo(1);
+
+        // Y el empleado ve que ya se presento, que es lo que convierte su
+        // boton en "ver mi candidatura".
+        ResponseEntity<String> tablon = rest.exchange(
+                url("/api/v1/ofertas"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(tablon).get(0).get("yaMePresente").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(148)
+    void unEmpleadoNoPuedeValorarCandidaturas_devuelve403() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/candidaturas/" + candidaturaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "SELECCIONADA")),
+                        authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(149)
+    void subirOtroCvNoDestruyeElQueCongeloLaCandidatura() throws Exception {
+        // 🚨 ESTE es el test de la fase, y el que habria fallado antes de
+        // la V14: hasta ahora subir un CV nuevo BORRABA el anterior, asi
+        // que el gestor se quedaba sin el documento sobre el que iba a
+        // decidir -- o peor, con otro distinto sin enterarse.
+        ResponseEntity<String> nuevo = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.POST,
+                multipart(empleadoToken, "cv v3.pdf", "CV", pdfDePrueba()),
+                String.class
+        );
+        assertThat(nuevo.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(nuevo).get("id").asLong()).isNotEqualTo(cvCongeladoId);
+
+        // El congelado sigue existiendo y se puede descargar.
+        ResponseEntity<String> descarga = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + cvCongeladoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(descarga.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Y la candidatura sigue apuntando a EL MISMO, no al nuevo.
+        ResponseEntity<String> candidaturas = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/candidaturas"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(bodyOf(candidaturas).get(0).get("cvAdjuntoId").asLong())
+                .isEqualTo(cvCongeladoId);
+
+        // En el perfil, en cambio, solo esta el vigente: el congelado no
+        // se lista ni se puede volver a elegir.
+        ResponseEntity<String> lista = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(bodyOf(lista)).hasSize(1);
+        assertThat(bodyOf(lista).get(0).get("id").asLong()).isNotEqualTo(cvCongeladoId);
+    }
+
+    @Test
+    @Order(150)
+    void descartarSinComentario_devuelve400() throws Exception {
+        // Lo lee un companiero, sobre si mismo, en la empresa en la que
+        // sigue trabajando maniana.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/candidaturas/" + candidaturaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "DESCARTADA")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @Order(151)
+    void conComentarioSiSeDescarta_yDespuesYaNoSeMueve() throws Exception {
+        ResponseEntity<String> descarte = rest.exchange(
+                url("/api/v1/candidaturas/" + candidaturaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf(
+                        "estado", "DESCARTADA",
+                        "comentario", "Buen perfil, buscamos mas recorrido en auditoria.")),
+                        authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(descarte.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(descarte);
+        assertThat(body.get("estado").asText()).isEqualTo("DESCARTADA");
+        assertThat(body.get("resueltaPor").isNull()).isFalse();
+        assertThat(body.get("fechaResolucion").isNull()).isFalse();
+
+        ResponseEntity<String> otraVez = rest.exchange(
+                url("/api/v1/candidaturas/" + candidaturaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "EN_PROCESO")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(otraVez.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(152)
+    void unaOfertaCerradaNoSeReabre_devuelve409() throws Exception {
+        ResponseEntity<String> cierre = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "CERRADA")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(cierre.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> reapertura = rest.exchange(
+                url("/api/v1/ofertas/" + ofertaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "ABIERTA")), authHeaders(gestorToken)),
+                String.class
+        );
+        // Reabrirla dejaria a quien ya se presento sin saber si su
+        // candidatura sigue contando. Se publica otra.
+        assertThat(reapertura.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
     // ------------------------------------------------------------------

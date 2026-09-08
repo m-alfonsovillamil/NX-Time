@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.HowToReg
@@ -65,6 +66,8 @@ fun PanelGestionScreen(
     onIrHorasExtra: () -> Unit,
     puedeInstruirDenuncias: Boolean,
     onIrCanalDenuncias: () -> Unit,
+    puedePublicarOfertas: Boolean,
+    onIrGestionOfertas: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -140,6 +143,13 @@ fun PanelGestionScreen(
             // ser sobre el GESTOR que está mirando esta misma pantalla,
             // así que ni siquiera la entrada debe aparecerle -- saber que
             // el canal tiene expedientes ya es información.
+            if (puedePublicarOfertas) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_ofertas),
+                    icono = Icons.Default.Campaign,
+                    onClick = onIrGestionOfertas
+                )
+            }
             if (puedeInstruirDenuncias) {
                 OpcionGestion(
                     texto = stringResource(R.string.gestion_canal_denuncias),

@@ -134,6 +134,23 @@ class PermisosTest {
         assertTrue(Permisos.puedeGestionarCalendario(rol))
         assertTrue(Permisos.puedeGestionarProyectos(rol))
         assertTrue(Permisos.puedeInstruirDenuncias(rol))
+        assertTrue(Permisos.puedePublicarOfertas(rol))
+        assertTrue(Permisos.puedeValorarCandidaturas(rol))
+    }
+
+    /**
+     * Publicar vacantes y valorar a quien opta empiezan en GESTOR
+     * (Fase H). LEERLAS no pide nada, y por eso no hay funcion:
+     * un tablon de vacantes internas al que no llega la plantilla
+     * no es un tablon.
+     */
+    @Test
+    fun `las ofertas internas se publican desde gestor, pero las lee todo el mundo`() {
+        assertFalse(Permisos.puedePublicarOfertas(Rol.EMPLEADO))
+        assertFalse(Permisos.puedeValorarCandidaturas(Rol.EMPLEADO))
+        assertTrue(Permisos.puedePublicarOfertas(Rol.GESTOR))
+        assertTrue(Permisos.puedeValorarCandidaturas(Rol.GESTOR))
+        assertFalse(Permisos.puedePublicarOfertas(Rol.de("DESCONOCIDO")))
     }
 
     /**

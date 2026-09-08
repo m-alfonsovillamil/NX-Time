@@ -10,11 +10,11 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
 import com.nxtime.nxtime.repository.AttachmentRepository;
+import com.nxtime.nxtime.repository.JobApplicationRepository;
 import com.nxtime.nxtime.service.AttachmentService;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -37,10 +37,20 @@ public class AttachmentServiceImpl implements AttachmentService {
     private final AttachmentRepository attachmentRepository;
     private final AttachmentDataRepository attachmentDataRepository;
 
+    /**
+     * Solo para saber si un adjunto está congelado por una candidatura
+     * (Fase H). Es la única dependencia que este servicio tiene de otra
+     * fase, y va aquí y no al revés porque quien no puede borrar es
+     * este: la regla la impone la candidatura.
+     */
+    private final JobApplicationRepository jobApplicationRepository;
+
     public AttachmentServiceImpl(AttachmentRepository attachmentRepository,
-                                 AttachmentDataRepository attachmentDataRepository) {
+                                 AttachmentDataRepository attachmentDataRepository,
+                                 JobApplicationRepository jobApplicationRepository) {
         this.attachmentRepository = attachmentRepository;
         this.attachmentDataRepository = attachmentDataRepository;
+        this.jobApplicationRepository = jobApplicationRepository;
     }
 
     @Override
@@ -80,13 +90,11 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
 
         // Un CV y una foto VIGENTES por persona: subir otro reemplaza al
-        // anterior. Se borra primero para respetar el UNIQUE, y los
-        // bytes se van solos con el ON DELETE CASCADE.
-        Optional<Attachment> anterior = attachmentRepository.findByUsuarioAndTipo(actor, tipo);
-        anterior.ifPresent(viejo -> {
-            attachmentRepository.delete(viejo);
-            attachmentRepository.flush();
-        });
+        // anterior. Se retira primero para respetar el índice único
+        // parcial (WHERE vigente).
+        attachmentRepository.findByUsuarioAndTipoAndVigenteTrue(actor, tipo)
+                .ifPresent(this::retirar);
+        attachmentRepository.flush();
 
         Attachment adjunto = attachmentRepository.save(Attachment.builder()
                 .empresa(actor.getEmpresa())
@@ -110,7 +118,10 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     @Override
     public List<AttachmentResponse> listar(User usuario) {
-        return attachmentRepository.findByUsuario(usuario).stream()
+        // Solo los vigentes: los que congeló una candidatura siguen en
+        // la tabla, pero en el perfil no pintan nada -- ahí se enseña lo
+        // que la persona tiene ahora, no su historial de currículums.
+        return attachmentRepository.findByUsuarioAndVigenteTrue(usuario).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -141,8 +152,36 @@ public class AttachmentServiceImpl implements AttachmentService {
             throw new TenantAccessException("Solo puedes borrar tus propios adjuntos.");
         }
 
+        retirar(adjunto);
+        log.info("{} ha retirado su {}", actor.getEmail(), adjunto.getTipo());
+    }
+
+    /**
+     * Quita un adjunto de en medio: lo borra si nadie lo referencia, y
+     * si alguien lo referencia lo deja de vigente (Fase H).
+     *
+     * <b>Un CV que una candidatura congeló no se puede destruir.</b> Lo
+     * impide la propia base ({@code fk_candidaturas_cv ... RESTRICT}),
+     * y hacerlo sería borrar lo que un gestor leyó en enero: el
+     * expediente de esa candidatura se quedaría sin el documento sobre
+     * el que se decidió.
+     *
+     * El resultado de cara a quien lo pide es el mismo en los dos casos
+     * — deja de estar en su perfil y no se puede volver a descargar
+     * desde ahí —, y por eso no hay un 409 aquí: negarle borrar su
+     * propio CV por algo que hizo el mes pasado sería incomprensible
+     * desde la pantalla. Lo que no se puede es fingir que los bytes
+     * desaparecen, y eso lo dice la documentación del endpoint.
+     */
+    private void retirar(Attachment adjunto) {
+        if (jobApplicationRepository.existsByCv_Id(adjunto.getId())) {
+            adjunto.setVigente(false);
+            attachmentRepository.save(adjunto);
+            return;
+        }
+        // Sin candidaturas detrás no hay nada que conservar: los bytes se
+        // van solos con el ON DELETE CASCADE de adjunto_datos.
         attachmentRepository.delete(adjunto);
-        log.info("{} ha borrado su {}", actor.getEmail(), adjunto.getTipo());
     }
 
     /**

@@ -89,6 +89,16 @@ excluir al autor de la lista de avisados (un avisado de menos le delata), el
 guarda el hash, así que no hay endpoint que lo reenvíe *y no se puede escribir*
 ([ADR](docs/adr/012-anonimato-estructural-en-el-canal-de-denuncias.md)).
 
+**La candidatura congela el CV que se presentó.** Una vacante interna se valora
+leyendo un currículum, y entre presentarla y decidirla pasan semanas: si la
+candidatura apuntara a *"el CV de esta persona"*, subir una versión nueva en
+marzo cambiaría **solo** el expediente que el gestor leyó en enero. Así que
+guarda el `adjunto_id` concreto, y de ahí sale lo demás — `adjuntos` gana una
+columna `vigente`, su índice único se vuelve parcial, y un CV congelado deja de
+estar vigente pero ya **no se puede destruir**: lo impide un `RESTRICT` en la
+base, no la disciplina de quien escriba el próximo endpoint
+([ADR](docs/adr/013-la-candidatura-congela-el-cv.md)).
+
 ---
 
 ## Probarlo en vivo
@@ -342,17 +352,17 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 
 | Rol | Además de lo anterior, puede |
 |---|---|
-| **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias |
-| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario y los proyectos, aprobar correcciones, revisar horas extra |
+| **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias, optar a vacantes internas |
+| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario y los proyectos, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
 | **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
 Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
 reparte el poder de gestión.
 
-Dos permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
-corrección que pidió él mismo, ni revisa sus propias horas extra**, tenga el rol
-que tenga. Eso no lo puede aplicar un `@PreAuthorize` —quien revisa tiene la
+Tres permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
+corrección que pidió él mismo, ni revisa sus propias horas extra, ni valora su
+propia candidatura**, tenga el rol que tenga. Eso no lo puede aplicar un `@PreAuthorize` —quien revisa tiene la
 authority, justamente— así que lo comprueba el servicio.
 
 Y una capacidad no baja de ADMIN **porque ese es el requisito**, no por
@@ -457,6 +467,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 10. [Ninguna corrección de fichaje se aplica sola](docs/adr/010-correcciones-con-aprobacion.md)
 11. [Las horas extra se detectan, no se imputan](docs/adr/011-horas-extra-detectadas-no-imputadas.md)
 12. [El anonimato del canal de denuncias es estructural, no una promesa](docs/adr/012-anonimato-estructural-en-el-canal-de-denuncias.md)
+13. [La candidatura congela el CV que se presentó](docs/adr/013-la-candidatura-congela-el-cv.md)
 
 ---
 

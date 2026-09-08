@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--/*
+  Alguien se ha presentado a una oferta (Fase H).
+
+  Va SOLO a quien publicó la vacante, no a todo el que pueda valorar
+  candidaturas: la vacante es de alguien concreto, y un correo por cada
+  persona que opta a un puesto ajeno es la forma de que dejen de leerse.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Nueva candidatura', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${candidato}">Nombre del candidato</strong> se ha
+        presentado a <strong th:text="${oferta}">Título del puesto</strong>.
+    </p>
+
+    <p style="margin-top: 20px;" th:if="${carta}">
+        Su carta de presentación:
+    </p>
+    <p style="margin: 4px 0 0; font-style: italic;" th:if="${carta}" th:text="${carta}">
+        Texto de la carta.
+    </p>
+
+    <p style="margin-top: 20px;">
+        El CV va adjunto a la candidatura, tal como estaba al presentarse.
+        Entra en NX Time para leerlo y valorarla.
+    </p>
+</div>
+</body>
+</html>

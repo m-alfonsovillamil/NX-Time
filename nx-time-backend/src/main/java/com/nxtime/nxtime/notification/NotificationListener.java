@@ -3,6 +3,9 @@ package com.nxtime.nxtime.notification;
 import com.nxtime.nxtime.config.AsyncConfig;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
+import com.nxtime.nxtime.domain.ApplicationStatus;
+import com.nxtime.nxtime.domain.JobApplication;
+import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
@@ -430,6 +433,112 @@ public class NotificationListener {
                     variables(
                             "nombreDestinatario", destinatario.getNombre(),
                             "novedad", evento.novedad()));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Fase H: ofertas internas y candidaturas
+    // ------------------------------------------------------------------
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onJobPostingPublished(NotificationEvents.JobPostingPublished evento) {
+        JobPosting oferta = evento.oferta();
+        String titulo = "Nueva vacante interna: " + oferta.getTitulo();
+        String plazo = oferta.getFechaCierre() != null
+                ? "Se puede optar hasta el " + FECHA.format(oferta.getFechaCierre()) + "."
+                : "Sin fecha de cierre.";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    oferta.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.OFERTA_PUBLICADA,
+                    titulo,
+                    plazo,
+                    NoticeType.OFERTA_PUBLICADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "job-posting-published",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "titulo", oferta.getTitulo(),
+                            "departamento", oferta.getDepartamento() != null
+                                    ? oferta.getDepartamento().getNombre() : null,
+                            "fechaCierre", oferta.getFechaCierre()));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onJobApplicationReceived(NotificationEvents.JobApplicationReceived evento) {
+        JobApplication candidatura = evento.candidatura();
+        String titulo = candidatura.getUsuario().getNombre()
+                + " se ha presentado a " + candidatura.getOferta().getTitulo();
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    candidatura.getOferta().getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.CANDIDATURA_RECIBIDA,
+                    titulo,
+                    "Con su CV adjunto. Pendiente de valorar.",
+                    NoticeType.CANDIDATURA_RECIBIDA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "job-application-received",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "candidato", candidatura.getUsuario().getNombre(),
+                            "oferta", candidatura.getOferta().getTitulo(),
+                            "carta", candidatura.getCarta()));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onJobApplicationUpdated(NotificationEvents.JobApplicationUpdated evento) {
+        JobApplication candidatura = evento.candidatura();
+        boolean seleccionada = candidatura.getEstado() == ApplicationStatus.SELECCIONADA;
+        boolean descartada = candidatura.getEstado() == ApplicationStatus.DESCARTADA;
+
+        // El titular cambia con el desenlace. "Tu candidatura ha
+        // cambiado de estado" es correcto y no dice nada: quien lo lee en
+        // la lista de avisos quiere saber ya si sigue o no.
+        String titulo;
+        if (seleccionada) {
+            titulo = "Te han seleccionado para " + candidatura.getOferta().getTitulo();
+        } else if (descartada) {
+            titulo = "Tu candidatura a " + candidatura.getOferta().getTitulo()
+                    + " no sigue adelante";
+        } else {
+            titulo = "Tu candidatura a " + candidatura.getOferta().getTitulo()
+                    + " está en proceso";
+        }
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    candidatura.getOferta().getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.CANDIDATURA_ACTUALIZADA,
+                    titulo,
+                    candidatura.getComentario(),
+                    NoticeType.CANDIDATURA_ACTUALIZADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "job-application-updated",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "oferta", candidatura.getOferta().getTitulo(),
+                            "seleccionada", seleccionada,
+                            "descartada", descartada,
+                            "comentario", candidatura.getComentario()));
         }
     }
 

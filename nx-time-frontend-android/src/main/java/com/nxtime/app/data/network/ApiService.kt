@@ -16,6 +16,7 @@ import retrofit2.http.Multipart
 import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.PUT
 import retrofit2.http.Query
 import retrofit2.http.Streaming
 
@@ -216,6 +217,65 @@ interface ApiService {
         @Path("id") denunciaId: Long,
         @Body peticion: CambiarEstadoDenunciaRequest
     ): Response<DenunciaDTO>
+
+    /*  Ofertas internas y candidaturas (Fase H)  */
+
+    /** El tablon: las ABIERTAS de mi empresa. Lo ve toda la plantilla. */
+    @GET("api/v1/ofertas")
+    suspend fun getOfertas(): Response<List<OfertaDTO>>
+
+    /** Todas, borradores incluidos. Pide `oferta:publicar`. */
+    @GET("api/v1/ofertas/gestion")
+    suspend fun getOfertasDeGestion(): Response<List<OfertaDTO>>
+
+    @GET("api/v1/ofertas/{id}")
+    suspend fun getOferta(@Path("id") ofertaId: Long): Response<OfertaDTO>
+
+    /** Nace en BORRADOR: publicarla es un gesto aparte. */
+    @POST("api/v1/ofertas")
+    suspend fun crearOferta(@Body peticion: OfertaRequest): Response<OfertaDTO>
+
+    @PUT("api/v1/ofertas/{id}")
+    suspend fun editarOferta(
+        @Path("id") ofertaId: Long,
+        @Body peticion: OfertaRequest
+    ): Response<OfertaDTO>
+
+    @PATCH("api/v1/ofertas/{id}/estado")
+    suspend fun cambiarEstadoOferta(
+        @Path("id") ofertaId: Long,
+        @Body peticion: CambiarEstadoOfertaRequest
+    ): Response<OfertaDTO>
+
+    /**
+     * Presentarse. El CV lo pone el SERVIDOR -- el vigente de quien se
+     * presenta -- y queda congelado en la candidatura: si esa persona
+     * sube otro despues, este no se destruye.
+     */
+    @POST("api/v1/ofertas/{id}/candidaturas")
+    suspend fun presentarCandidatura(
+        @Path("id") ofertaId: Long,
+        @Body peticion: CandidaturaRequest
+    ): Response<CandidaturaDTO>
+
+    /** Las candidaturas de una oferta. Pide `candidatura:gestionar`. */
+    @GET("api/v1/ofertas/{id}/candidaturas")
+    suspend fun getCandidaturasDeOferta(
+        @Path("id") ofertaId: Long
+    ): Response<List<CandidaturaDTO>>
+
+    @GET("api/v1/candidaturas/mias")
+    suspend fun getMisCandidaturas(): Response<List<CandidaturaDTO>>
+
+    /**
+     * Valorar. Descartar exige comentario, y nadie valora la suya
+     * propia: las dos las rechaza el servidor.
+     */
+    @PATCH("api/v1/candidaturas/{id}/estado")
+    suspend fun valorarCandidatura(
+        @Path("id") candidaturaId: Long,
+        @Body peticion: ValorarCandidaturaRequest
+    ): Response<CandidaturaDTO>
 
     @GET("api/v1/auditoria/fichaje/{id}")
     suspend fun getAuditoriaFichaje(

@@ -180,6 +180,62 @@ class AuthRepositoryImpl(
             denunciaId, CambiarEstadoDenunciaRequest(estado, conclusion))
     }
 
+    override suspend fun getOfertas(): Response<List<OfertaDTO>> {
+        return apiService.getOfertas()
+    }
+
+    override suspend fun getOfertasDeGestion(): Response<List<OfertaDTO>> {
+        return apiService.getOfertasDeGestion()
+    }
+
+    override suspend fun getOferta(ofertaId: Long): Response<OfertaDTO> {
+        return apiService.getOferta(ofertaId)
+    }
+
+    override suspend fun crearOferta(
+        titulo: String,
+        descripcion: String,
+        puesto: String?,
+        fechaCierre: String?
+    ): Response<OfertaDTO> {
+        return apiService.crearOferta(
+            OfertaRequest(titulo.trim(), descripcion.trim(), puesto?.trim(), null, fechaCierre))
+    }
+
+    override suspend fun cambiarEstadoOferta(
+        ofertaId: Long,
+        estado: String
+    ): Response<OfertaDTO> {
+        return apiService.cambiarEstadoOferta(ofertaId, CambiarEstadoOfertaRequest(estado))
+    }
+
+    override suspend fun presentarCandidatura(
+        ofertaId: Long,
+        carta: String?
+    ): Response<CandidaturaDTO> {
+        // El CV no viaja: lo adjunta el servidor, y es el vigente.
+        return apiService.presentarCandidatura(ofertaId, CandidaturaRequest(carta?.trim()))
+    }
+
+    override suspend fun getCandidaturasDeOferta(
+        ofertaId: Long
+    ): Response<List<CandidaturaDTO>> {
+        return apiService.getCandidaturasDeOferta(ofertaId)
+    }
+
+    override suspend fun getMisCandidaturas(): Response<List<CandidaturaDTO>> {
+        return apiService.getMisCandidaturas()
+    }
+
+    override suspend fun valorarCandidatura(
+        candidaturaId: Long,
+        estado: String,
+        comentario: String?
+    ): Response<CandidaturaDTO> {
+        return apiService.valorarCandidatura(
+            candidaturaId, ValorarCandidaturaRequest(estado, comentario?.trim()))
+    }
+
     override suspend fun getAuditoriaFichaje(
         fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>> {
