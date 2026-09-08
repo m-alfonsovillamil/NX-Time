@@ -15,7 +15,11 @@ import com.nxtime.nxtime.domain.ComplaintStatus;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.Department;
+import com.nxtime.nxtime.domain.ApplicationStatus;
 import com.nxtime.nxtime.domain.Holiday;
+import com.nxtime.nxtime.domain.JobApplication;
+import com.nxtime.nxtime.domain.JobPosting;
+import com.nxtime.nxtime.domain.JobPostingStatus;
 import com.nxtime.nxtime.domain.HolidayScope;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
@@ -36,6 +40,8 @@ import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
+import com.nxtime.nxtime.repository.JobApplicationRepository;
+import com.nxtime.nxtime.repository.JobPostingRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
 import com.nxtime.nxtime.repository.ProjectRepository;
@@ -109,6 +115,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final CorrectionRequestRepository correctionRequestRepository;
     private final ProjectRepository projectRepository;
     private final ProjectAssignmentRepository projectAssignmentRepository;
+    private final JobPostingRepository jobPostingRepository;
+    private final JobApplicationRepository jobApplicationRepository;
     private final ComplaintRepository complaintRepository;
     private final ComplaintMessageRepository complaintMessageRepository;
     private final OvertimeService overtimeService;
@@ -128,6 +136,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             CorrectionRequestRepository correctionRequestRepository,
             ProjectRepository projectRepository,
             ProjectAssignmentRepository projectAssignmentRepository,
+            JobPostingRepository jobPostingRepository,
+            JobApplicationRepository jobApplicationRepository,
             ComplaintRepository complaintRepository,
             ComplaintMessageRepository complaintMessageRepository,
             OvertimeService overtimeService,
@@ -146,6 +156,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.correctionRequestRepository = correctionRequestRepository;
         this.projectRepository = projectRepository;
         this.projectAssignmentRepository = projectAssignmentRepository;
+        this.jobPostingRepository = jobPostingRepository;
+        this.jobApplicationRepository = jobApplicationRepository;
         this.complaintRepository = complaintRepository;
         this.complaintMessageRepository = complaintMessageRepository;
         this.overtimeService = overtimeService;
@@ -255,6 +267,11 @@ public class DemoDataSeeder implements CommandLineRunner {
         // con ADMIN: sin alguien que pueda instruirlas, la bandeja del
         // canal no la vería nadie y las denuncias quedarían de adorno.
         sembrarDenuncias(empleadosTech, adminTech);
+
+        // Fase H. Va DESPUÉS de sembrarAdjuntos: una candidatura congela
+        // el CV de quien se presenta, así que sin adjuntos sembrados no
+        // habría a qué apuntar y la demo saldría sin candidaturas.
+        sembrarOfertas(empleadosTech, gestorTech, techCorp);
 
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
@@ -924,6 +941,111 @@ public class DemoDataSeeder implements CommandLineRunner {
                 .autor(rol == ComplaintAuthor.DENUNCIANTE && denuncia.esAnonima() ? null : autor)
                 .texto(texto)
                 .creadoEn(creadoEn)
+                .build());
+    }
+
+    /**
+     * Ofertas internas y candidaturas de la demo (Fase H).
+     *
+     * Tres ofertas, y cada una enseña un estado del tablón: una abierta
+     * con candidatos, una en borrador (que la plantilla NO ve) y una
+     * cerrada. Con una sola, la pantalla de gestión parecería una lista
+     * de cosas publicadas y no un sitio donde se trabaja.
+     *
+     * Las candidaturas van sobre la abierta y en tres estados distintos,
+     * porque lo que distingue esta fase —que la candidatura congela el
+     * CV y que descartar exige explicación— solo se ve comparándolas.
+     */
+    private void sembrarOfertas(List<User> empleados, User gestor, Company empresa) {
+        Instant ahora = Instant.now();
+        LocalDate hoy = LocalDate.now(MADRID_ZONE);
+
+        JobPosting abierta = crearOferta(empresa, gestor,
+                "Desarrollador/a backend sénior",
+                "Buscamos reforzar el equipo de plataforma. Java 21, Spring Boot y "
+                        + "PostgreSQL. Se valora experiencia en sistemas con requisitos de "
+                        + "auditoría y trazabilidad.",
+                "Desarrollador/a sénior", JobPostingStatus.ABIERTA,
+                ahora.minus(12, ChronoUnit.DAYS), hoy.plusDays(18));
+
+        crearOferta(empresa, gestor,
+                "Responsable de producto",
+                "Vacante en preparación: todavía se están cerrando las condiciones.",
+                "Product owner", JobPostingStatus.BORRADOR, null, null);
+
+        crearOferta(empresa, gestor,
+                "Técnico/a de soporte",
+                "Atención a usuarios internos y gestión del inventario de equipos.",
+                "Soporte", JobPostingStatus.CERRADA,
+                ahora.minus(90, ChronoUnit.DAYS), hoy.minusDays(40));
+
+        // Solo se presenta quien tiene CV: sembrarAdjuntos se lo da a la
+        // mitad de la plantilla, y presentarse sin CV es justamente lo
+        // que el servicio impide.
+        int estado = 0;
+        for (User empleado : empleados) {
+            Attachment cv = attachmentRepository
+                    .findByUsuarioAndTipoAndVigenteTrue(empleado, AttachmentType.CV)
+                    .orElse(null);
+            if (cv == null) {
+                continue;
+            }
+            crearCandidatura(abierta, empleado, cv, gestor, estado++, ahora);
+        }
+    }
+
+    private JobPosting crearOferta(
+            Company empresa, User gestor, String titulo, String descripcion, String puesto,
+            JobPostingStatus estado, Instant fechaPublicacion, LocalDate fechaCierre) {
+        return jobPostingRepository.save(JobPosting.builder()
+                .empresa(empresa)
+                .titulo(titulo)
+                .descripcion(descripcion)
+                .puesto(puesto)
+                .publicadaPor(gestor)
+                .estado(estado)
+                // Publicada = con fecha de publicación, lo exige
+                // ck_ofertas_publicacion_coherente. Un borrador va sin
+                // ella a propósito: todavía no ha salido a ninguna parte.
+                .fechaPublicacion(fechaPublicacion)
+                .fechaCierre(fechaCierre)
+                .creadoEn(fechaPublicacion != null ? fechaPublicacion : Instant.now())
+                .build());
+    }
+
+    /**
+     * Una candidatura por empleado con CV, rotando el estado: recibida,
+     * en proceso y descartada.
+     *
+     * La descartada lleva comentario porque el servicio lo exige y
+     * porque es lo que hay que enseñar: a un compañero se le dice por
+     * qué no sigue adelante.
+     */
+    private void crearCandidatura(
+            JobPosting oferta, User empleado, Attachment cv, User gestor, int indice,
+            Instant ahora) {
+        ApplicationStatus estado = switch (indice % 3) {
+            case 1 -> ApplicationStatus.EN_PROCESO;
+            case 2 -> ApplicationStatus.DESCARTADA;
+            default -> ApplicationStatus.RECIBIDA;
+        };
+        boolean resuelta = estado != ApplicationStatus.RECIBIDA;
+
+        jobApplicationRepository.save(JobApplication.builder()
+                .oferta(oferta)
+                .usuario(empleado)
+                // El adjunto CONCRETO: si el empleado sube otro CV
+                // mañana, esta candidatura sigue apuntando a este.
+                .cv(cv)
+                .carta("Llevo dos años en el equipo y me gustaría dar el paso al puesto.")
+                .estado(estado)
+                .resueltaPor(resuelta ? gestor : null)
+                .fechaResolucion(resuelta ? ahora.minus(3, ChronoUnit.DAYS) : null)
+                .comentario(estado == ApplicationStatus.DESCARTADA
+                        ? "Buen perfil, pero buscamos más recorrido en sistemas con auditoría. "
+                                + "Te avisamos en la próxima vacante del equipo."
+                        : null)
+                .creadoEn(ahora.minus(8L - indice, ChronoUnit.DAYS))
                 .build());
     }
 

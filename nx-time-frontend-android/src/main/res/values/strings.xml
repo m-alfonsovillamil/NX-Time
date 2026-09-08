@@ -714,4 +714,72 @@
     <!-- Entradas desde el perfil y desde el panel de gestión -->
     <string name="denuncias_ver">Canal de denuncias</string>
     <string name="gestion_canal_denuncias">Canal de denuncias</string>
+
+    <!-- ============================================================
+         Ofertas internas y candidaturas (Fase H)
+         ============================================================ -->
+    <string name="ofertas_titulo">Ofertas internas</string>
+    <string name="ofertas_abiertas">Vacantes abiertas</string>
+    <string name="ofertas_vacio">Ahora mismo no hay ninguna vacante interna publicada. Cuando se publique una, te avisaremos.</string>
+    <string name="ofertas_mis_candidaturas">Mis candidaturas</string>
+    <string name="candidaturas_vacio">Todavía no te has presentado a ninguna vacante.</string>
+
+    <string name="oferta_estado_borrador">Borrador</string>
+    <string name="oferta_estado_abierta">Abierta</string>
+    <string name="oferta_estado_cerrada">Cerrada</string>
+
+    <string name="oferta_plazo_hasta">Se puede optar hasta el %1$s</string>
+    <string name="oferta_plazo_terminado">El plazo ya ha terminado</string>
+    <string name="oferta_sin_plazo">Sin fecha de cierre</string>
+    <string name="oferta_ya_presentado">Presentada</string>
+    <!-- Por qué NO se puede optar. Un botón gris sin explicación se lee
+         como una aplicación rota. -->
+    <string name="oferta_ya_presentado_detalle">Ya te has presentado a esta vacante. Puedes seguir su estado en «Mis candidaturas».</string>
+    <string name="oferta_no_admite">Esta vacante ya no admite candidaturas.</string>
+
+    <string name="candidatura_carta">Por qué te presentas (opcional)</string>
+    <!-- Que el CV lo pone el servidor hay que decirlo: si no, la gente
+         busca dónde adjuntarlo y no lo encuentra. -->
+    <string name="candidatura_cv_automatico">Se adjunta el CV que tengas subido en tu perfil, tal como está ahora. Si luego subes otro, esta candidatura seguirá con el de hoy.</string>
+    <string name="candidatura_presentar">Presentar candidatura</string>
+    <string name="candidatura_presentada">Candidatura presentada.</string>
+    <string name="candidatura_presentada_el">Presentada el %1$s</string>
+    <string name="candidatura_cv_adjunto">CV adjunto: %1$s</string>
+
+    <string name="candidatura_estado_recibida">Recibida</string>
+    <string name="candidatura_estado_en_proceso">En proceso</string>
+    <string name="candidatura_estado_descartada">Descartada</string>
+    <string name="candidatura_estado_seleccionada">Seleccionada</string>
+
+    <!-- Gestión (desde GESTOR) -->
+    <string name="gestion_ofertas_titulo">Ofertas internas</string>
+    <string name="gestion_ofertas_vacio">Todavía no hay ninguna oferta. Crea la primera y publícala cuando esté lista.</string>
+    <string name="oferta_nueva">Nueva oferta</string>
+    <string name="oferta_titulo_campo">Título</string>
+    <string name="oferta_puesto_campo">Puesto (opcional)</string>
+    <string name="oferta_descripcion_campo">Descripción</string>
+    <!-- Se dice ANTES de guardar: publicar avisa a toda la plantilla, y
+         no puede ser el efecto colateral de guardar un formulario. -->
+    <string name="oferta_nace_en_borrador">Se guarda como borrador: no la verá nadie hasta que la publiques.</string>
+    <string name="oferta_guardar_borrador">Guardar borrador</string>
+    <string name="oferta_publicar">Publicar</string>
+    <string name="oferta_cerrar">Cerrar vacante</string>
+    <string name="oferta_ver_candidaturas">Candidaturas</string>
+    <string name="oferta_candidaturas_cuenta">%1$d candidaturas</string>
+    <string name="oferta_sin_candidaturas">Todavía no se ha presentado nadie.</string>
+    <string name="oferta_creada">Oferta guardada como borrador.</string>
+    <string name="oferta_publicada">Oferta publicada. Se ha avisado a la plantilla.</string>
+    <string name="oferta_estado_actualizado">Oferta actualizada.</string>
+    <string name="oferta_error_incompleta">La oferta necesita un título y una descripción.</string>
+
+    <string name="candidatura_comentario">Comentario para la persona</string>
+    <string name="candidatura_comentario_ayuda">Obligatorio para descartar: lo lee un compañero, sobre sí mismo.</string>
+    <string name="candidatura_a_proceso">Pasar a proceso</string>
+    <string name="candidatura_seleccionar">Seleccionar</string>
+    <string name="candidatura_descartar">Descartar</string>
+    <string name="candidatura_valorada">Candidatura actualizada.</string>
+
+    <!-- Entradas desde el perfil y desde el panel de gestión -->
+    <string name="ofertas_ver">Ofertas internas</string>
+    <string name="gestion_ofertas">Ofertas internas</string>
 </resources>

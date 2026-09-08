@@ -86,6 +86,7 @@ fun PerfilScreen(
     onIrContrasena: () -> Unit,
     onIrHorasExtra: () -> Unit,
     onIrDenuncias: () -> Unit,
+    onIrOfertas: () -> Unit,
     onCerrarSesion: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -200,6 +201,15 @@ fun PerfilScreen(
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onIrDenuncias, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.denuncias_ver))
+                    }
+
+                    // Fase H. Tampoco se gatea por rol: optar a una
+                    // vacante interna lo puede todo el mundo, y quien
+                    // ademas las publica llega a eso por el panel de
+                    // gestion, no por aqui.
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onIrOfertas, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.ofertas_ver))
                     }
 
                     Spacer(Modifier.height(24.dp))

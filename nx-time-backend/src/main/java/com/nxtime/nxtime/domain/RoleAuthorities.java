@@ -87,6 +87,15 @@ import java.util.Set;
  * falta un responsable que no administre la empresa, lo correcto es un
  * rol dedicado (RESPONSABLE_CANAL) y no repartir esta authority hacia
  * abajo.
+ * "oferta:leer" y "candidatura:crear" (Fase H) las tiene todo el mundo:
+ * un tablón de vacantes internas al que no llega la plantilla no es un
+ * tablón. "oferta:publicar" y "candidatura:gestionar" empiezan en
+ * GESTOR, que es quien tiene la vacante. Son dos y no una, otra vez, por
+ * el motivo de siempre: publicar una oferta y decidir sobre las personas
+ * que se presentan son operaciones distintas, y el día que un GESTOR
+ * pueda anunciar su vacante sin valorar a quien opta —porque lo valore
+ * RRHH— ese cambio es una línea aquí. Y como en la fase F, la authority
+ * NO alcanza a la candidatura de uno mismo: eso lo corta el servicio.
  */
 public final class RoleAuthorities {
 
@@ -102,7 +111,9 @@ public final class RoleAuthorities {
             "calendario:leer",
             "proyecto:leer",
             "correccion:solicitar",
-            "denuncia:crear"
+            "denuncia:crear",
+            "oferta:leer",
+            "candidatura:crear"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -114,7 +125,9 @@ public final class RoleAuthorities {
             "calendario:gestionar",
             "proyecto:gestionar",
             "correccion:aprobar",
-            "horasextra:revisar"
+            "horasextra:revisar",
+            "oferta:publicar",
+            "candidatura:gestionar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

@@ -19,6 +19,7 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
 import com.nxtime.nxtime.repository.AttachmentRepository;
+import com.nxtime.nxtime.repository.JobApplicationRepository;
 import com.nxtime.nxtime.service.AttachmentService;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -55,6 +56,15 @@ class AttachmentServiceImplTest {
     @Mock
     private AttachmentDataRepository attachmentDataRepository;
 
+    /**
+     * Desde la fase H el servicio pregunta si alguna candidatura ha
+     * congelado el adjunto antes de borrarlo. Aquí devuelve false por
+     * defecto: estos tests son los del reemplazo normal, sin
+     * candidaturas de por medio.
+     */
+    @Mock
+    private JobApplicationRepository jobApplicationRepository;
+
     private AttachmentServiceImpl service;
 
     private Company empresa;
@@ -64,7 +74,8 @@ class AttachmentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new AttachmentServiceImpl(attachmentRepository, attachmentDataRepository);
+        service = new AttachmentServiceImpl(
+                attachmentRepository, attachmentDataRepository, jobApplicationRepository);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         empleado = User.builder().id(10L).email("ana@nxtime.test").nombre("Ana")
@@ -101,7 +112,7 @@ class AttachmentServiceImplTest {
     }
 
     private void sinAdjuntoPrevio() {
-        when(attachmentRepository.findByUsuarioAndTipo(any(), any())).thenReturn(Optional.empty());
+        when(attachmentRepository.findByUsuarioAndTipoAndVigenteTrue(any(), any())).thenReturn(Optional.empty());
         when(attachmentRepository.save(any())).thenAnswer(i -> {
             Attachment a = i.getArgument(0);
             a.setId(99L);
@@ -244,7 +255,7 @@ class AttachmentServiceImplTest {
                 .id(5L).empresa(empresa).usuario(empleado).tipo(AttachmentType.CV)
                 .nombreOriginal("viejo.pdf").mime("application/pdf")
                 .tamanoBytes(10).subidoEn(Instant.now()).build();
-        when(attachmentRepository.findByUsuarioAndTipo(empleado, AttachmentType.CV))
+        when(attachmentRepository.findByUsuarioAndTipoAndVigenteTrue(empleado, AttachmentType.CV))
                 .thenReturn(Optional.of(viejo));
         when(attachmentRepository.save(any())).thenAnswer(i -> {
             Attachment a = i.getArgument(0);
@@ -366,7 +377,7 @@ class AttachmentServiceImplTest {
     @Test
     @DisplayName("Listar no toca los bytes: por eso están en otra tabla")
     void listar_noLeeElContenido() {
-        when(attachmentRepository.findByUsuario(empleado)).thenReturn(java.util.List.of(
+        when(attachmentRepository.findByUsuarioAndVigenteTrue(empleado)).thenReturn(java.util.List.of(
                 Attachment.builder().id(5L).empresa(empresa).usuario(empleado)
                         .tipo(AttachmentType.CV).nombreOriginal("cv.pdf")
                         .mime("application/pdf").tamanoBytes(1024).subidoEn(Instant.now()).build()));

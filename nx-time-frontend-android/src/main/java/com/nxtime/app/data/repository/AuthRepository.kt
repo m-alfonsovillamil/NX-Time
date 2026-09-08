@@ -71,6 +71,26 @@ interface AuthRepository {
         conclusion: String? = null
     ): Response<DenunciaDTO>
 
+    /* Ofertas internas y candidaturas (Fase H) */
+    suspend fun getOfertas(): Response<List<OfertaDTO>>
+    suspend fun getOfertasDeGestion(): Response<List<OfertaDTO>>
+    suspend fun getOferta(ofertaId: Long): Response<OfertaDTO>
+    suspend fun crearOferta(
+        titulo: String,
+        descripcion: String,
+        puesto: String? = null,
+        fechaCierre: String? = null
+    ): Response<OfertaDTO>
+    suspend fun cambiarEstadoOferta(ofertaId: Long, estado: String): Response<OfertaDTO>
+    suspend fun presentarCandidatura(ofertaId: Long, carta: String?): Response<CandidaturaDTO>
+    suspend fun getCandidaturasDeOferta(ofertaId: Long): Response<List<CandidaturaDTO>>
+    suspend fun getMisCandidaturas(): Response<List<CandidaturaDTO>>
+    suspend fun valorarCandidatura(
+        candidaturaId: Long,
+        estado: String,
+        comentario: String? = null
+    ): Response<CandidaturaDTO>
+
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
 
     /* Panel de empresa, altas/bajas e informes */

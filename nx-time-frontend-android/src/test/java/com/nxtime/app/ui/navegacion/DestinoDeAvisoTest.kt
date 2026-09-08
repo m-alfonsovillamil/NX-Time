@@ -37,8 +37,8 @@ class DestinoDeAvisoTest {
         // el caso que este test describia. Se sustituyen por otros que
         // siguen sin existir.
         assertNull(rutaDeAviso("correccion/42"))
-        assertNull(rutaDeAviso("ofertas-internas"))
-        assertNull(rutaDeAviso("candidaturas/pendientes"))
+        assertNull(rutaDeAviso("evaluaciones"))
+        assertNull(rutaDeAviso("formacion/cursos"))
     }
 
     @Test
@@ -57,6 +57,17 @@ class DestinoDeAvisoTest {
         // pantalla dejaria a un empleado en una lista que no puede ver.
         assertEquals(Pantalla.CANAL_DENUNCIAS.ruta, rutaDeAviso(DESTINO_CANAL_DENUNCIAS))
         assertEquals(Pantalla.DENUNCIAS.ruta, rutaDeAviso(DESTINO_DENUNCIAS))
+    }
+
+    @Test
+    fun `los avisos de ofertas llevan a donde se puede actuar (Fase H)`() {
+        // El tablon y "mis candidaturas" son dos secciones de la MISMA
+        // pantalla, asi que el aviso de vacante nueva y el de "han
+        // movido tu candidatura" acaban en el mismo sitio. El de quien
+        // publica es otra cosa y va a otra pantalla.
+        assertEquals(Pantalla.OFERTAS.ruta, rutaDeAviso(DESTINO_OFERTAS))
+        assertEquals(Pantalla.OFERTAS.ruta, rutaDeAviso(DESTINO_MIS_CANDIDATURAS))
+        assertEquals(Pantalla.GESTION_OFERTAS.ruta, rutaDeAviso(DESTINO_GESTION_OFERTAS))
     }
 
     @Test
