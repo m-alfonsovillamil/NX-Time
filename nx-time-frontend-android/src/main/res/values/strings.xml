@@ -575,4 +575,57 @@
     <string name="auditoria_accion_solicitud_correccion">Corrección solicitada</string>
     <string name="auditoria_accion_rechazo_correccion">Corrección rechazada</string>
     <string name="auditoria_accion_disputa">Corrección no aceptada</string>
+
+    <!-- Horas extra (Fase F) -->
+    <string name="horas_extra_titulo">Horas extra</string>
+    <string name="horas_extra_mios">Mis excesos de jornada</string>
+    <string name="horas_extra_del_equipo">Pendientes de revisar</string>
+    <!--
+        El texto insiste en el criterio, no solo en el hecho: lo que se
+        detecta es un exceso de jornada, y que cuente como horas extra lo
+        decide una persona después. Sin eso, un empleado leería el aviso
+        como una acusación.
+    -->
+    <string name="horas_extra_vacio_texto">No se ha detectado ninguna jornada por encima del límite en tus fichajes.</string>
+    <string name="horas_extra_equipo_vacio_texto">No hay excesos de jornada esperando una decisión.</string>
+
+    <string name="horas_extra_bolsa">Bolsa de %1$d</string>
+    <!--
+        Los avisos abiertos van junto a lo que queda porque cambian su
+        significado: 20 h libres con quince avisos sin revisar no es lo
+        mismo que 20 h libres sin ninguno.
+    -->
+    <string name="horas_extra_bolsa_detalle">Quedan %1$s de las 80 h del año. %2$d sin revisar.</string>
+
+    <string name="horas_extra_periodo_dia">El %1$s</string>
+    <!--
+        Un aviso semanal guarda el LUNES en su fecha, así que enseñarla
+        sola se leería como si el exceso fuera de ese día.
+    -->
+    <string name="horas_extra_periodo_semana">Semana del %1$s al %2$s</string>
+    <!--
+        El exceso NUNCA va solo: sin el listón al lado, "3 h de más" no se
+        puede juzgar. En una semana con un puente el listón son 30 h y no
+        37,5, y esa es justo la parte que no se ve.
+    -->
+    <string name="horas_extra_exceso">%1$s por encima de %2$s</string>
+    <string name="horas_extra_justificacion">Justificación: %1$s</string>
+    <string name="horas_extra_revisado_por">Revisado por %1$s</string>
+
+    <string name="horas_extra_tipo_diaria">Jornada</string>
+    <string name="horas_extra_tipo_semanal">Semana</string>
+    <string name="horas_extra_estado_abierto">Sin revisar</string>
+    <string name="horas_extra_estado_justificado">No computa</string>
+    <string name="horas_extra_estado_aceptado">Horas extra</string>
+
+    <string name="horas_extra_aceptar">Son horas extra</string>
+    <string name="horas_extra_justificar">No computan</string>
+    <string name="horas_extra_justificar_ayuda">El exceso se archiva y no consume bolsa anual. Hace falta explicar por qué: una jornada intensiva pactada, un turno partido mal fichado, una guardia…</string>
+    <string name="horas_extra_justificacion_etiqueta">Motivo</string>
+    <string name="horas_extra_aceptada">Contabilizadas como horas extra.</string>
+    <string name="horas_extra_justificada">Archivado sin computar.</string>
+
+    <!-- Entrada desde el perfil y desde el panel de gestión -->
+    <string name="horas_extra_ver">Ver mis horas extra</string>
+    <string name="gestion_horas_extra">Horas extra</string>
 </resources>

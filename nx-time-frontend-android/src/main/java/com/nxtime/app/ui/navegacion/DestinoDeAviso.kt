@@ -25,6 +25,7 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_AUSENCIAS_EQUIPO_RESUELTAS -> Pantalla.ausenciasEquipo(resueltas = true)
     DESTINO_CORRECCIONES_PENDIENTES -> Pantalla.CORRECCIONES.ruta
     DESTINO_HISTORIAL -> Pantalla.HISTORIAL.ruta
+    DESTINO_HORAS_EXTRA -> Pantalla.HORAS_EXTRA.ruta
     else -> null
 }
 
@@ -37,3 +38,7 @@ const val DESTINO_AUSENCIAS_EQUIPO_RESUELTAS = "ausencias-equipo/resueltas"
 // correcciones (ver NoticeType).
 const val DESTINO_CORRECCIONES_PENDIENTES = "correcciones/pendientes"
 const val DESTINO_HISTORIAL = "historial"
+
+// Fase F. Lo mandan tanto el aviso de exceso detectado como el de
+// bolsa al limite: los dos llevan a la misma pantalla.
+const val DESTINO_HORAS_EXTRA = "horas-extra"

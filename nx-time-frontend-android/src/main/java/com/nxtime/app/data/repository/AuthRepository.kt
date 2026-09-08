@@ -38,6 +38,16 @@ interface AuthRepository {
     ): Response<CorreccionDTO>
     suspend fun disputarCorreccion(correccionId: Long, motivo: String): Response<CorreccionDTO>
 
+    /* Horas extra (Fase F) */
+    suspend fun getMisHorasExtra(anio: Int? = null): Response<List<HorasExtraDTO>>
+    suspend fun getHorasExtraDelEquipo(anio: Int? = null): Response<List<HorasExtraDTO>>
+    suspend fun revisarHorasExtra(
+        avisoId: Long,
+        aceptar: Boolean,
+        justificacion: String? = null
+    ): Response<HorasExtraDTO>
+    suspend fun getBolsaHorasExtra(usuarioId: Long? = null, anio: Int? = null): Response<BolsaHorasExtraDTO>
+
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
 
     /* Panel de empresa, altas/bajas e informes */

@@ -77,6 +77,28 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("inicioDeAnio") LocalDate inicioDeAnio,
             @Param("finDeAnio") LocalDate finDeAnio);
 
+    /**
+     * Todas las ausencias APROBADAS que tocan el rango, de cualquier
+     * persona (Fase F).
+     *
+     * El detector de horas extra las necesita para prorratear la jornada
+     * semanal: una semana con dos días de vacaciones tiene tres días
+     * hábiles, no cinco, y medirla contra 37,5 h haría saltar un aviso a
+     * cualquiera que recupere un poco de trabajo.
+     *
+     * Va sin filtro de empresa a propósito: el proceso nocturno recorre
+     * todas de una pasada, y filtrar por cada una convertiría una
+     * consulta en tantas como empresas haya. Es el único sitio del
+     * proyecto donde eso es correcto -- aquí no hay usuario autenticado
+     * de quien deducir un tenant.
+     */
+    @Query("SELECT a FROM peticiones_ausencia a "
+            + "WHERE a.estado = com.nxtime.nxtime.domain.AbsenceStatus.APROBADA "
+            + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde")
+    List<AbsenceRequest> findAprobadasEnRango(
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
     // Agregados del dashboard (Fase 10): contar en la base de datos, no
     // traerse las filas para hacer size() sobre la lista.
     long countByUsuarioAndEstado(User usuario, AbsenceStatus estado);

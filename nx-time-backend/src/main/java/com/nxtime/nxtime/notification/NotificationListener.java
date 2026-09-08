@@ -6,6 +6,8 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.NoticeType;
+import com.nxtime.nxtime.domain.OvertimeAlert;
+import com.nxtime.nxtime.domain.OvertimeType;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
 import com.nxtime.nxtime.service.NoticeService;
@@ -283,6 +285,116 @@ public class NotificationListener {
                             "motivoCorreccion", solicitud.getMotivo(),
                             "motivoDisputa", solicitud.getMotivoDisputa()));
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Fase F: horas extra
+    // ------------------------------------------------------------------
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOvertimeDetected(NotificationEvents.OvertimeDetected evento) {
+        OvertimeAlert aviso = evento.aviso();
+        String periodo = periodo(aviso);
+        String exceso = duracion(aviso.getMinutosExtra());
+        String trabajado = duracion(aviso.getMinutosEsperados() + aviso.getMinutosExtra());
+        String esperado = duracion(aviso.getMinutosEsperados());
+
+        for (User destinatario : evento.destinatarios()) {
+            // El mismo hecho se cuenta distinto según a quién: al que
+            // hizo las horas en segunda persona, a quien revisa con el
+            // nombre delante. Mandar el texto de gestor a quien las hizo
+            // se lee como una acusación.
+            boolean propio = destinatario.getId() == aviso.getUsuario().getId();
+            String titulo = propio
+                    ? "Exceso de jornada " + periodo
+                    : aviso.getUsuario().getNombre() + ": exceso de jornada " + periodo;
+
+            avisar(new CreateNoticeCommand(
+                    aviso.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.HORAS_EXTRA_DETECTADAS,
+                    titulo,
+                    exceso + " por encima de " + esperado + ". Pendiente de revisar.",
+                    NoticeType.HORAS_EXTRA_DETECTADAS.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "overtime-detected",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "propio", propio,
+                            "empleado", aviso.getUsuario().getNombre(),
+                            "periodo", periodo,
+                            "trabajado", trabajado,
+                            "esperado", esperado,
+                            "exceso", exceso));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOvertimeBalanceNearLimit(NotificationEvents.OvertimeBalanceNearLimit evento) {
+        User empleado = evento.empleado();
+        String consumido = duracion(evento.minutosConsumidos());
+        String disponible = duracion(evento.minutosDisponibles());
+
+        for (User destinatario : evento.destinatarios()) {
+            boolean propio = destinatario.getId() == empleado.getId();
+            String titulo = propio
+                    ? "Tu bolsa de horas extra se está agotando"
+                    : "La bolsa de horas extra de " + empleado.getNombre() + " se está agotando";
+
+            avisar(new CreateNoticeCommand(
+                    empleado.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.BOLSA_HORAS_EXTRA_AL_LIMITE,
+                    titulo,
+                    consumido + " de las 80 h del año. Quedan " + disponible + ".",
+                    NoticeType.BOLSA_HORAS_EXTRA_AL_LIMITE.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "overtime-balance-near-limit",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "propio", propio,
+                            "empleado", empleado.getNombre(),
+                            "anio", evento.anio(),
+                            "consumido", consumido,
+                            "disponible", disponible));
+        }
+    }
+
+    /**
+     * "el martes 3 de marzo" o "la semana del 2 al 8 de marzo".
+     *
+     * Se compone aquí y no en la plantilla porque las dos plantillas y
+     * el aviso in-app necesitan la misma frase, y Thymeleaf no es sitio
+     * para una condición sobre el tipo de aviso.
+     */
+    private String periodo(OvertimeAlert aviso) {
+        if (aviso.getTipo() == OvertimeType.SEMANAL) {
+            return "de la semana del " + FECHA.format(aviso.getFecha())
+                    + " al " + FECHA.format(aviso.getFecha().plusDays(6));
+        }
+        return "del " + FECHA.format(aviso.getFecha());
+    }
+
+    /**
+     * Minutos a "10 h 30 min". Se formatea para leer, no para calcular:
+     * "10,5 h" obliga a quien lo lee a traducir la parte decimal a
+     * minutos, y es justo la clase de cuenta que se hace mal de cabeza.
+     */
+    private String duracion(int minutos) {
+        int horas = minutos / 60;
+        int resto = minutos % 60;
+        if (horas == 0) {
+            return resto + " min";
+        }
+        return resto == 0 ? horas + " h" : horas + " h " + resto + " min";
     }
 
     /**

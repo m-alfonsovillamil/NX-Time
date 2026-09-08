@@ -44,7 +44,15 @@ public enum NoticeType {
     CORRECCION_RESUELTA("historial"),
 
     /** Una corrección ha acabado en disputa y la resuelve RRHH. */
-    CORRECCION_EN_DISPUTA("correcciones/pendientes");
+    CORRECCION_EN_DISPUTA("correcciones/pendientes"),
+
+    // Fase F.
+
+    /** Una jornada o una semana se ha pasado del umbral. */
+    HORAS_EXTRA_DETECTADAS("horas-extra"),
+
+    /** La bolsa anual de 80 h (art. 35.2 ET) se está agotando. */
+    BOLSA_HORAS_EXTRA_AL_LIMITE("horas-extra");
 
     private final String rutaDestinoPorDefecto;
 

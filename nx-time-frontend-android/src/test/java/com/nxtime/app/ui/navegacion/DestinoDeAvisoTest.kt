@@ -31,8 +31,21 @@ class DestinoDeAvisoTest {
 
     @Test
     fun `un destino de una version mas nueva del backend no navega, pero tampoco revienta`() {
+        // "horas-extra" estaba aqui hasta la Fase F, como ejemplo de
+        // destino que el backend podria mandar y la app no conocer. Ha
+        // dejado de servir de ejemplo porque ahora existe -- que es
+        // exactamente el caso que este test describia -- y se sustituye
+        // por otros dos que siguen sin existir.
         assertNull(rutaDeAviso("correccion/42"))
-        assertNull(rutaDeAviso("horas-extra"))
+        assertNull(rutaDeAviso("canal-denuncias"))
+        assertNull(rutaDeAviso("ofertas-internas"))
+    }
+
+    @Test
+    fun `los dos avisos de horas extra llevan a la misma pantalla (Fase F)`() {
+        // El de exceso detectado y el de bolsa al limite comparten
+        // destino: los dos se resuelven mirando la misma lista.
+        assertEquals(Pantalla.HORAS_EXTRA.ruta, rutaDeAviso(DESTINO_HORAS_EXTRA))
     }
 
     @Test

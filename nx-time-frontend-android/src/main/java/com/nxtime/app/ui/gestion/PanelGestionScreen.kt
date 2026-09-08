@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.WorkOutline
@@ -60,6 +61,7 @@ fun PanelGestionScreen(
     onIrPanelEmpresa: () -> Unit,
     onIrProyectos: () -> Unit,
     onIrCorrecciones: () -> Unit,
+    onIrHorasExtra: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -115,6 +117,15 @@ fun PanelGestionScreen(
                 texto = stringResource(R.string.correcciones_titulo),
                 icono = Icons.Default.EditNote,
                 onClick = onIrCorrecciones
+            )
+            // Las horas extra igual: la bandeja la ve cualquier rol de
+            // gestion, y sobre los avisos PROPIOS no puede decidir
+            // ninguno -- eso lo aplica el servidor, que ni siquiera los
+            // manda en esta lista.
+            OpcionGestion(
+                texto = stringResource(R.string.gestion_horas_extra),
+                icono = Icons.Default.MoreTime,
+                onClick = onIrHorasExtra
             )
             OpcionGestion(
                 texto = stringResource(R.string.proyectos_titulo),

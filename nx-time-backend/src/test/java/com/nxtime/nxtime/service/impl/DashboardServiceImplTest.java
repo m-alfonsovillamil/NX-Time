@@ -20,6 +20,7 @@ import com.nxtime.nxtime.dto.PersonalDashboardResponse;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.VacationBalanceService;
@@ -52,6 +53,8 @@ class DashboardServiceImplTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private OvertimeAlertRepository overtimeAlertRepository;
+    @Mock
     private VacationBalanceService vacationBalanceService;
 
     private DashboardServiceImpl service;
@@ -62,7 +65,8 @@ class DashboardServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new DashboardServiceImpl(
-                timeEntryRepository, absenceRequestRepository, userRepository, vacationBalanceService);
+                timeEntryRepository, absenceRequestRepository, userRepository,
+                overtimeAlertRepository, vacationBalanceService);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado")
                 .empresa(empresa).activo(true).build();

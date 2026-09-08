@@ -115,6 +115,23 @@ object Permisos {
      */
     fun puedeGestionarProyectos(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
+    /**
+     * Decide si un exceso de jornada cuenta como horas extra
+     * (`horasextra:revisar`).
+     *
+     * VER los propios no pide nada — son tus horas, y el aviso te llega a
+     * ti antes que a nadie —, así que no hay función para eso. Lo que
+     * empieza en GESTOR es decidir, porque saber si las once horas del
+     * martes fueron una intensiva pactada es conocimiento de quien lleva
+     * el equipo.
+     *
+     * **Ojo**: esto no alcanza a los avisos de uno mismo. Ni con la
+     * authority se pueden revisar los propios, y no es una regla que la
+     * app pueda comprobar con el rol: la aplica el servidor, que además
+     * ya los deja fuera de la bandeja del equipo.
+     */
+    fun puedeRevisarHorasExtra(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
+
     private fun alMenos(rol: Rol?, minimo: Rol): Boolean =
         rol != null && rol.ordinal >= minimo.ordinal
 }

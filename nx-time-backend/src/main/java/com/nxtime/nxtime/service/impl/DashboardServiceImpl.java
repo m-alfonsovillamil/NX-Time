@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.config.CacheConfig;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.OvertimeStatus;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
@@ -12,6 +13,7 @@ import com.nxtime.nxtime.dto.EmployeeHoursDTO;
 import com.nxtime.nxtime.dto.PersonalDashboardResponse;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.DashboardService;
@@ -56,17 +58,20 @@ public class DashboardServiceImpl implements DashboardService {
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
+    private final OvertimeAlertRepository overtimeAlertRepository;
     private final VacationBalanceService vacationBalanceService;
 
     public DashboardServiceImpl(
             TimeEntryRepository timeEntryRepository,
             AbsenceRequestRepository absenceRequestRepository,
             UserRepository userRepository,
+            OvertimeAlertRepository overtimeAlertRepository,
             VacationBalanceService vacationBalanceService
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRequestRepository = absenceRequestRepository;
         this.userRepository = userRepository;
+        this.overtimeAlertRepository = overtimeAlertRepository;
         this.vacationBalanceService = vacationBalanceService;
     }
 
@@ -130,6 +135,7 @@ public class DashboardServiceImpl implements DashboardService {
                 aMinutos(segundosMes),
                 absenceRequestRepository.countByEmpresa_IdAndEstado(empresa.getId(), AbsenceStatus.PENDIENTE),
                 timeEntryRepository.contarIncidenciasAbiertas(empresa),
+                overtimeAlertRepository.countByEmpresa_IdAndEstado(empresa.getId(), OvertimeStatus.ABIERTO),
                 horasPorEmpleado);
     }
 
