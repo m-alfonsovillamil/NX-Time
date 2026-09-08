@@ -3,6 +3,7 @@ package com.nxtime.nxtime.notification;
 import com.nxtime.nxtime.config.AsyncConfig;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
+import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.NoticeType;
@@ -365,6 +366,70 @@ public class NotificationListener {
                             "anio", evento.anio(),
                             "consumido", consumido,
                             "disponible", disponible));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Fase G: canal de denuncias
+    // ------------------------------------------------------------------
+    // Los dos métodos de aquí son deliberadamente los más pobres del
+    // fichero: dicen QUE ha pasado algo y en qué expediente, y ni una
+    // palabra de lo que la denuncia cuenta ni de quién la puso. El resto
+    // de la fase se ha ocupado de que la identidad no esté guardada; de
+    // poco serviría si el correo la sacara del sistema por la puerta de
+    // atrás.
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onComplaintReceived(NotificationEvents.ComplaintReceived evento) {
+        Complaint denuncia = evento.denuncia();
+        String titulo = "Nueva denuncia en el canal interno";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    denuncia.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.DENUNCIA_RECIBIDA,
+                    titulo,
+                    // La categoría sí: es lo mínimo para priorizar la
+                    // bandeja y no dice nada de nadie.
+                    denuncia.getCategoria().getEtiqueta()
+                            + ". Hay 7 días naturales para acusar recibo.",
+                    NoticeType.DENUNCIA_RECIBIDA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "complaint-received",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "categoria", denuncia.getCategoria().getEtiqueta(),
+                            "fecha", denuncia.getCreadoEn()));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onComplaintUpdated(NotificationEvents.ComplaintUpdated evento) {
+        Complaint denuncia = evento.denuncia();
+        String titulo = "Novedad en una denuncia";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    denuncia.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.DENUNCIA_ACTUALIZADA,
+                    titulo,
+                    evento.novedad(),
+                    NoticeType.DENUNCIA_ACTUALIZADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "complaint-updated",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "novedad", evento.novedad()));
         }
     }
 

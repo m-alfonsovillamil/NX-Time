@@ -31,14 +31,14 @@ class DestinoDeAvisoTest {
 
     @Test
     fun `un destino de una version mas nueva del backend no navega, pero tampoco revienta`() {
-        // "horas-extra" estaba aqui hasta la Fase F, como ejemplo de
-        // destino que el backend podria mandar y la app no conocer. Ha
-        // dejado de servir de ejemplo porque ahora existe -- que es
-        // exactamente el caso que este test describia -- y se sustituye
-        // por otros dos que siguen sin existir.
+        // "horas-extra" estaba aqui hasta la Fase F y "canal-denuncias"
+        // hasta la G: los dos han dejado de servir de ejemplo por el
+        // mejor motivo posible -- que ahora existen, que es exactamente
+        // el caso que este test describia. Se sustituyen por otros que
+        // siguen sin existir.
         assertNull(rutaDeAviso("correccion/42"))
-        assertNull(rutaDeAviso("canal-denuncias"))
         assertNull(rutaDeAviso("ofertas-internas"))
+        assertNull(rutaDeAviso("candidaturas/pendientes"))
     }
 
     @Test
@@ -46,6 +46,17 @@ class DestinoDeAvisoTest {
         // El de exceso detectado y el de bolsa al limite comparten
         // destino: los dos se resuelven mirando la misma lista.
         assertEquals(Pantalla.HORAS_EXTRA.ruta, rutaDeAviso(DESTINO_HORAS_EXTRA))
+    }
+
+    @Test
+    fun `los dos avisos del canal llevan a pantallas DISTINTAS (Fase G)`() {
+        // Es lo contrario que en horas extra, y a proposito: "denuncia
+        // recibida" solo le llega a quien instruye y le lleva a la
+        // bandeja; "denuncia actualizada" solo le llega a quien denuncio
+        // identificandose y le lleva a la suya. Mandarlos a la misma
+        // pantalla dejaria a un empleado en una lista que no puede ver.
+        assertEquals(Pantalla.CANAL_DENUNCIAS.ruta, rutaDeAviso(DESTINO_CANAL_DENUNCIAS))
+        assertEquals(Pantalla.DENUNCIAS.ruta, rutaDeAviso(DESTINO_DENUNCIAS))
     }
 
     @Test

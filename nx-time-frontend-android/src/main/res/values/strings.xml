@@ -628,4 +628,90 @@
     <!-- Entrada desde el perfil y desde el panel de gestión -->
     <string name="horas_extra_ver">Ver mis horas extra</string>
     <string name="gestion_horas_extra">Horas extra</string>
+
+    <!-- ============================================================
+         Canal de denuncias (Fase G, Ley 2/2023)
+         ============================================================ -->
+    <string name="denuncias_titulo">Canal de denuncias</string>
+    <string name="denuncia_cerrar_dialogo">Cerrar</string>
+
+    <string name="denuncias_que_es_titulo">Canal interno de información</string>
+    <string name="denuncias_que_es_texto">Aquí puedes comunicar irregularidades. La empresa tiene 7 días naturales para acusar recibo y 3 meses para responder. Puedes hacerlo con tu nombre o de forma anónima.</string>
+
+    <string name="denuncias_presentar">Presentar una denuncia</string>
+    <string name="denuncia_categoria">Categoría</string>
+    <string name="denuncia_descripcion">Qué ha pasado</string>
+    <string name="denuncia_descripcion_ayuda">Cuenta los hechos con fechas y lugares si los recuerdas. Cuanto más concreto, más se puede investigar.</string>
+    <string name="denuncia_anonima">Enviar de forma anónima</string>
+    <!-- Los dos textos del interruptor dicen qué va a pasar con ESTA
+         denuncia, no qué es el anonimato en abstracto. El de "sí" avisa
+         de la contrapartida antes de enviar, no después. -->
+    <string name="denuncia_anonima_si">No se guardará quién eres. Recibirás un código: es la única forma de volver a tu denuncia, y no se puede recuperar.</string>
+    <string name="denuncia_anonima_no">Se guardará tu nombre. Podrás seguirla desde aquí y recibirás avisos cuando haya novedades.</string>
+    <string name="denuncia_enviar">Enviar denuncia</string>
+
+    <string name="denuncia_codigo_titulo">Tu código de seguimiento</string>
+    <string name="denuncia_codigo_guardado">Ya lo he guardado</string>
+
+    <string name="denuncias_seguir">Seguir una denuncia</string>
+    <string name="denuncias_seguir_ayuda">Con el código que recibiste al enviarla. Es la única vía para una denuncia anónima.</string>
+    <string name="denuncia_codigo">Código de seguimiento</string>
+    <string name="denuncia_buscar">Buscar</string>
+
+    <string name="denuncias_mias">Mis denuncias</string>
+    <string name="denuncias_mias_vacio">Aquí solo salen las que enviaste con tu nombre. Las anónimas no aparecen: no hay ningún dato que las relacione contigo, y a esas se llega con su código.</string>
+
+    <string name="denuncia_estado_recibida">Recibida</string>
+    <string name="denuncia_estado_en_investigacion">En investigación</string>
+    <string name="denuncia_estado_resuelta">Resuelta</string>
+    <string name="denuncia_estado_archivada">Archivada</string>
+
+    <string name="denuncia_categoria_acoso">Acoso laboral o sexual</string>
+    <string name="denuncia_categoria_discriminacion">Discriminación</string>
+    <string name="denuncia_categoria_fraude">Fraude o irregularidad contable</string>
+    <string name="denuncia_categoria_seguridad">Seguridad y salud en el trabajo</string>
+    <string name="denuncia_categoria_corrupcion">Corrupción o soborno</string>
+    <string name="denuncia_categoria_proteccion_datos">Protección de datos</string>
+    <string name="denuncia_categoria_otra">Otra</string>
+
+    <string name="denuncia_presentada_anonima">Anónima · %1$s</string>
+    <string name="denuncia_presentada_identificada">Con tu nombre · %1$s</string>
+    <string name="denuncia_mensajes_cuenta">%1$d mensajes en el expediente</string>
+
+    <!-- Los plazos del art. 9.2. Los vencidos llevan texto propio y no
+         un número negativo suelto: "-2 días" hay que traducirlo de
+         cabeza, y "hace 2 días" no. -->
+    <string name="denuncia_plazo_acuse">Quedan %1$d días para acusar recibo</string>
+    <string name="denuncia_plazo_acuse_vencido">Sin acuse de recibo desde hace %1$d días</string>
+    <string name="denuncia_plazo_respuesta">Quedan %1$d días para responder</string>
+    <string name="denuncia_plazo_respuesta_vencido">Sin respuesta desde hace %1$d días</string>
+
+    <string name="denuncia_autor_denunciante">Denunciante</string>
+    <string name="denuncia_autor_instructor">Instrucción</string>
+    <string name="denuncia_responder">Escribir un mensaje</string>
+    <string name="denuncia_enviar_mensaje">Enviar</string>
+    <string name="denuncia_mensaje_enviado">Mensaje enviado.</string>
+    <string name="denuncia_conclusion">Conclusión</string>
+
+    <string name="denuncia_error_sin_descripcion">Hay que describir los hechos que se denuncian.</string>
+    <string name="denuncia_error_sin_codigo">Escribe el código de seguimiento.</string>
+
+    <!-- Bandeja de quien instruye (solo ADMIN) -->
+    <string name="canal_denuncias_titulo">Canal interno</string>
+    <string name="canal_denuncias_vacio_titulo">Ninguna denuncia</string>
+    <string name="canal_denuncias_vacio_texto">Cuando alguien use el canal, su expediente aparecerá aquí con los plazos legales contando.</string>
+    <string name="denuncia_es_anonima">Denuncia anónima</string>
+    <string name="denuncia_la_puso">La presentó %1$s</string>
+    <string name="denuncia_responder_instructor">Responder al denunciante</string>
+    <string name="denuncia_responder_acusa">El primer mensaje cuenta como acuse de recibo.</string>
+    <string name="denuncia_conclusion_ayuda">Obligatoria para cerrar el expediente, tanto si se resuelve como si se archiva.</string>
+    <string name="denuncia_pasar_a_investigacion">Pasar a investigación</string>
+    <string name="denuncia_cerrar_resuelta">Cerrar como resuelta</string>
+    <string name="denuncia_cerrar_archivada">Cerrar y archivar</string>
+    <string name="denuncia_estado_actualizado">Expediente actualizado.</string>
+    <string name="denuncia_cerrada">Expediente cerrado con su conclusión.</string>
+
+    <!-- Entradas desde el perfil y desde el panel de gestión -->
+    <string name="denuncias_ver">Canal de denuncias</string>
+    <string name="gestion_canal_denuncias">Canal de denuncias</string>
 </resources>

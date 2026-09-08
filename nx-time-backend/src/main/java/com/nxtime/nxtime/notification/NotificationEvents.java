@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.notification;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.User;
@@ -104,5 +105,48 @@ public final class NotificationEvents {
             int minutosConsumidos,
             int minutosDisponibles,
             List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
+    // Fase G: canal de denuncias
+    // ------------------------------------------------------------------
+    // Los dos llevan la {@link Complaint} entera y aun así el listener
+    // NO puede volcar su contenido en el mensaje: ver más abajo.
+
+    /**
+     * Ha entrado una denuncia. Va a quien la instruye.
+     *
+     * <b>El aviso dice que hay una denuncia, nunca de qué va ni de
+     * quién.</b> El destino de esto es un correo — texto plano por una
+     * red que no controlamos, guardado después en un buzón personal y en
+     * el de un servidor ajeno —, y el relato de un acoso no tiene nada
+     * que hacer ahí. Para leerlo hay que entrar en la aplicación, que es
+     * donde el acceso está limitado a quien tiene {@code
+     * denuncia:instruir} y donde queda registrado.
+     *
+     * La lista de destinatarios llega ya resuelta y <b>sin excluir a
+     * nadie</b>, ni siquiera a quien acaba de presentarla: el servicio
+     * explica por qué (un avisado de menos delata al denunciante).
+     */
+    public record ComplaintReceived(Complaint denuncia, List<User> destinatarios) {
+    }
+
+    /**
+     * Se ha movido algo en una denuncia: un mensaje o un cambio de
+     * estado.
+     *
+     * {@code novedad} es una frase corta y genérica que compone el
+     * servicio ("Han respondido en tu denuncia"). El listener no la
+     * deduce del expediente por lo mismo de arriba: cuanto menos sepa el
+     * canal de salida, menos hay que revisar cuando alguien añada un
+     * caso nuevo.
+     *
+     * Puede venir con la lista <b>vacía</b>, y no es un error: si la
+     * denuncia es anónima no hay a quién avisar. El servicio ni siquiera
+     * publica el evento en ese caso, pero el listener no da nada por
+     * supuesto.
+     */
+    public record ComplaintUpdated(
+            Complaint denuncia, List<User> destinatarios, String novedad) {
     }
 }

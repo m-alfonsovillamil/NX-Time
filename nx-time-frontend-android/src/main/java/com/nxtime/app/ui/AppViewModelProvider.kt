@@ -16,6 +16,8 @@ import com.nxtime.app.ui.ausencias.AusenciasViewModel
 import com.nxtime.app.ui.ausencias.SolicitudViewModel
 import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.correcciones.CorreccionesViewModel
+import com.nxtime.app.ui.denuncias.CanalDenunciasViewModel
+import com.nxtime.app.ui.denuncias.DenunciasViewModel
 import com.nxtime.app.ui.horasextra.HorasExtraViewModel
 import com.nxtime.app.ui.calendario.CalendarioViewModel
 import com.nxtime.app.ui.fichar.FicharViewModel
@@ -60,6 +62,8 @@ object AppViewModelProvider {
         initializer { ProyectosViewModel(app().authRepository) }
         initializer { CorreccionesViewModel(app().authRepository) }
         initializer { HorasExtraViewModel(app().authRepository, app().sessionManager) }
+        initializer { DenunciasViewModel(app().authRepository) }
+        initializer { CanalDenunciasViewModel(app().authRepository) }
 
         /*
          * Este se pide desde el cuerpo de NxTimeNavHost, fuera de los

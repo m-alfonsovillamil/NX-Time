@@ -133,5 +133,26 @@ class PermisosTest {
         assertTrue(Permisos.puedeVerPanelEmpresa(rol))
         assertTrue(Permisos.puedeGestionarCalendario(rol))
         assertTrue(Permisos.puedeGestionarProyectos(rol))
+        assertTrue(Permisos.puedeInstruirDenuncias(rol))
+    }
+
+    /**
+     * El canal de denuncias no lo lee nadie más que el ADMIN (Fase G).
+     *
+     * Es la única capacidad del proyecto en la que "que no baje" es el
+     * requisito y no un reparto conservador: la Ley 2/2023 obliga a
+     * designar un Responsable del Sistema Interno de Información, y
+     * dársela también a un GESTOR haría que la denuncia sobre un GESTOR
+     * la leyera él. Que RRHH tampoco la tenga no es un olvido.
+     */
+    @Test
+    fun `solo el admin instruye denuncias`() {
+        assertFalse(Permisos.puedeInstruirDenuncias(Rol.EMPLEADO))
+        assertFalse(Permisos.puedeInstruirDenuncias(Rol.GESTOR))
+        assertFalse(Permisos.puedeInstruirDenuncias(Rol.RRHH))
+        assertTrue(Permisos.puedeInstruirDenuncias(Rol.ADMIN))
+        // Un rol que esta version no conozca se trata como "sin
+        // permisos", nunca como "todos".
+        assertFalse(Permisos.puedeInstruirDenuncias(Rol.de("RESPONSABLE_CANAL")))
     }
 }

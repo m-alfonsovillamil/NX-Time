@@ -167,6 +167,11 @@ class ApiContractTest {
     private long proyectoId;
     private long otroProyectoId;
     private long asignacionId;
+    // Fase G. El código se guarda aquí porque el servidor NO lo puede
+    // volver a dar: es la única copia que existe fuera del hash, igual
+    // que le pasa a quien denuncia de verdad.
+    private String codigoDenunciaAnonima;
+    private long denunciaAnonimaId;
 
     private String url(String path) {
         return "http://localhost:" + port + path;
@@ -2215,6 +2220,267 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ------------------------------------------------------------------
+    // 5e. CANAL DE DENUNCIAS (Fase G)
+    // ------------------------------------------------------------------
+    // Lo que se fija aqui son las dos cosas que un cliente puede romper
+    // sin enterarse, y que no son "que el endpoint responda":
+    //
+    //  1. El ANONIMATO end to end. El expediente de una denuncia anonima
+    //     no dice quien la puso ni siquiera al ADMIN que la instruye, y
+    //     no aparece en "mis denuncias" ni para su propio autor.
+    //  2. Que "denuncia:instruir" NO baja de ADMIN. Se comprueba con un
+    //     GESTOR real (gestor2Token, Order 28), no con un empleado: el
+    //     error facil es dar por hecho que la jerarquia de roles la
+    //     reparte hacia abajo como al resto de authorities de gestion.
+
+    @Test
+    @Order(120)
+    void unEmpleadoPresentaUnaDenunciaAnonimaYRecibeSuCodigo() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "categoria", "SEGURIDAD",
+                        "descripcion", "Las salidas de emergencia del almacen llevan semanas bloqueadas.",
+                        "anonima", true)), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("codigoSeguimiento").asText()).isNotBlank();
+        assertThat(body.get("anonima").asBoolean()).isTrue();
+        // El aviso de "guardalo, no se puede recuperar" viaja desde el
+        // servidor: si dependiera de que el cliente se acuerde de
+        // enseñarlo, el primero que lo olvide deja a alguien sin acceso
+        // a su propio expediente para siempre.
+        assertThat(body.get("avisoImportante").asText()).isNotBlank();
+
+        codigoDenunciaAnonima = body.get("codigoSeguimiento").asText();
+    }
+
+    @Test
+    @Order(121)
+    void elCodigoAbreElExpedienteYNoDiceQuienLaPuso() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("anonima").asBoolean()).isTrue();
+        assertThat(body.get("denunciante").isNull()).isTrue();
+        assertThat(body.get("estado").asText()).isEqualTo("RECIBIDA");
+        // Recien presentada: quedan 7 dias naturales para acusar recibo.
+        assertThat(body.get("diasHastaAcuse").asInt()).isEqualTo(7);
+
+        denunciaAnonimaId = body.get("id").asLong();
+    }
+
+    @Test
+    @Order(122)
+    void unaDenunciaAnonimaNoSaleEnMisDenunciasNiParaSuAutor() throws Exception {
+        // Es la contrapartida del anonimato, no un fallo: no hay ningun
+        // dato que relacione la denuncia con quien la puso, asi que no
+        // se puede listar ni para el. A ella se llega solo con el codigo.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias/mias"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(response).isArray()).isTrue();
+        assertThat(bodyOf(response)).isEmpty();
+    }
+
+    @Test
+    @Order(123)
+    void unGestorNoVeLaBandejaDelCanal_devuelve403() throws Exception {
+        // Con un GESTOR de verdad, no con un empleado: la denuncia puede
+        // ser SOBRE el gestor, asi que aqui la jerarquia de roles no
+        // reparte la authority hacia abajo como en el resto de la app.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestor2Token)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(124)
+    void elAdminSiVeLaBandeja_yLaDenunciaAnonimaSigueSinAutor() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode bandeja = bodyOf(response);
+        assertThat(bandeja).isNotEmpty();
+        assertThat(bandeja.get(0).get("anonima").asBoolean()).isTrue();
+        // La fila de la bandeja NO lleva la descripcion: una lista se
+        // mira de refilon, y el relato de un acoso no es algo que deba
+        // aparecer en una vista de conjunto.
+        assertThat(bandeja.get(0).has("descripcion")).isFalse();
+    }
+
+    @Test
+    @Order(125)
+    void unEmpleadoNoPuedeAbrirUnaDenunciaPorId_devuelve403() throws Exception {
+        // A lo suyo se llega por codigo. Si el id valiera, bastaria con
+        // ir probando numeros para leer las denuncias de la empresa.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias/" + denunciaAnonimaId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @Order(126)
+    void unCodigoDeOtraEmpresaDaElMismo404QueUnoInventado() throws Exception {
+        // Un 403 aqui confirmaria que el codigo es valido en algun sitio,
+        // que es la mitad de lo que necesita quien va probando.
+        ResponseEntity<String> ajena = rest.exchange(
+                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                String.class
+        );
+        ResponseEntity<String> inventado = rest.exchange(
+                url("/api/v1/denuncias/seguimiento/no-existe-este-codigo"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(ajena.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(inventado.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @Order(127)
+    void elAdminAcusaReciboAlPasarlaAInvestigacion() throws Exception {
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias/" + denunciaAnonimaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "EN_INVESTIGACION")),
+                        authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(response);
+        assertThat(body.get("estado").asText()).isEqualTo("EN_INVESTIGACION");
+        assertThat(body.get("acuseReciboEn").isNull()).isFalse();
+        // Dado el acuse, su plazo se apaga; el de los 3 meses sigue.
+        assertThat(body.get("diasHastaAcuse").isNull()).isTrue();
+        assertThat(body.get("diasHastaRespuesta").asInt()).isPositive();
+    }
+
+    @Test
+    @Order(128)
+    void cerrarUnaDenunciaSinConclusion_devuelve400() throws Exception {
+        // La Ley 2/2023 obliga a RESPONDER, no a dar la razon: archivar
+        // sin decir en que quedo es exactamente lo que no vale.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias/" + denunciaAnonimaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf("estado", "ARCHIVADA")), authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @Order(129)
+    void conConclusionSiSeCierra_yDespuesYaNoAdmiteMensajes() throws Exception {
+        ResponseEntity<String> cierre = rest.exchange(
+                url("/api/v1/denuncias/" + denunciaAnonimaId + "/estado"),
+                HttpMethod.PATCH,
+                new HttpEntity<>(toJson(mapOf(
+                        "estado", "RESUELTA",
+                        "conclusion", "Comprobado y despejadas las salidas. Se instruye al almacen.")),
+                        authHeaders(gestorToken)),
+                String.class
+        );
+
+        assertThat(cierre.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(cierre).get("resueltaEn").isNull()).isFalse();
+        assertThat(bodyOf(cierre).get("diasHastaRespuesta").isNull()).isTrue();
+
+        ResponseEntity<String> mensajeTardio = rest.exchange(
+                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima + "/mensajes"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("texto", "Una cosa mas.")),
+                        authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(mensajeTardio.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(130)
+    void unaDenunciaIDENTIFICADA_siSaleEnMisDenuncias() throws Exception {
+        ResponseEntity<String> creada = rest.exchange(
+                url("/api/v1/denuncias"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "categoria", "FRAUDE",
+                        "descripcion", "Creo que se imputan horas a un proyecto ya cerrado.",
+                        "anonima", false)), authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(creada.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(bodyOf(creada).get("anonima").asBoolean()).isFalse();
+
+        ResponseEntity<String> mias = rest.exchange(
+                url("/api/v1/denuncias/mias"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(mias.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // Una, no dos: la anonima de antes sigue sin poder listarse.
+        assertThat(bodyOf(mias)).hasSize(1);
+        assertThat(bodyOf(mias).get(0).get("categoria").asText()).isEqualTo("FRAUDE");
+    }
+
+    @Test
+    @Order(131)
+    void presentarUnaDenunciaSinDecirSiEsAnonima_devuelve400() throws Exception {
+        // Sin defecto a proposito: un false implicito convertiria en
+        // delator a quien solo se dejo un campo, y el anonimato no se
+        // puede deshacer despues.
+        ResponseEntity<String> response = rest.exchange(
+                url("/api/v1/denuncias"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "categoria", "ACOSO",
+                        "descripcion", "Los hechos.")), authHeaders(empleadoToken)),
+                String.class
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     // ------------------------------------------------------------------

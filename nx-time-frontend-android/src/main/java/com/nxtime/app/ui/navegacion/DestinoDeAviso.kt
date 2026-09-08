@@ -26,6 +26,8 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_CORRECCIONES_PENDIENTES -> Pantalla.CORRECCIONES.ruta
     DESTINO_HISTORIAL -> Pantalla.HISTORIAL.ruta
     DESTINO_HORAS_EXTRA -> Pantalla.HORAS_EXTRA.ruta
+    DESTINO_CANAL_DENUNCIAS -> Pantalla.CANAL_DENUNCIAS.ruta
+    DESTINO_DENUNCIAS -> Pantalla.DENUNCIAS.ruta
     else -> null
 }
 
@@ -42,3 +44,12 @@ const val DESTINO_HISTORIAL = "historial"
 // Fase F. Lo mandan tanto el aviso de exceso detectado como el de
 // bolsa al limite: los dos llevan a la misma pantalla.
 const val DESTINO_HORAS_EXTRA = "horas-extra"
+
+// Fase G. Los dos avisos del canal van a pantallas DISTINTAS, y es lo
+// unico del proyecto donde el destino depende de quien recibe el aviso:
+// "denuncia recibida" solo le llega a quien instruye y le lleva a la
+// bandeja; "denuncia actualizada" solo le llega a quien denuncio
+// identificandose y le lleva a la suya. El backend ya manda uno u otro,
+// asi que aqui no hay que mirar el rol.
+const val DESTINO_CANAL_DENUNCIAS = "canal-denuncias"
+const val DESTINO_DENUNCIAS = "denuncias"

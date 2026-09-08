@@ -16,6 +16,12 @@ import java.util.List;
  * -- una empresa mediana genera decenas al mes --, así que quien revisa
  * trabaja desde ESTE contador y la bandeja que hay detrás. Ver
  * NotificationEvents.OvertimeDetected.
+ *
+ * "denunciasAbiertas" (Fase G) es el único contador que puede llegar
+ * NULL, y por eso es un Long y no un long: solo lo ve quien tiene
+ * "denuncia:instruir". A los demás no se les manda un cero -- que ya
+ * sería decir algo, y a veces mentira -- sino nada, porque el canal de
+ * denuncias no forma parte de su panel. Ver DashboardServiceImpl.
  */
 public record CompanyDashboardResponse(
         int empleadosActivos,
@@ -23,6 +29,10 @@ public record CompanyDashboardResponse(
         long ausenciasPendientes,
         long incidenciasAbiertas,
         long horasExtraAbiertas,
+
+        /** Denuncias sin cerrar, o null si quien mira no las instruye. */
+        Long denunciasAbiertas,
+
         List<EmployeeHoursDTO> horasPorEmpleado
 ) {
 }

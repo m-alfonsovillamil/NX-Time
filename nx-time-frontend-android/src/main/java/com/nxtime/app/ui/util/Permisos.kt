@@ -132,6 +132,23 @@ object Permisos {
      */
     fun puedeRevisarHorasExtra(rol: Rol?): Boolean = alMenos(rol, Rol.GESTOR)
 
+    /**
+     * Lee e instruye las denuncias del canal interno
+     * (`denuncia:instruir`).
+     *
+     * **Solo ADMIN, y aquí eso es el requisito y no un reparto
+     * conservador.** La Ley 2/2023 obliga a designar un Responsable del
+     * Sistema Interno de Información; darle esta lectura también a un
+     * GESTOR haría que la denuncia sobre un GESTOR la leyera él. Es la
+     * única capacidad del proyecto en la que "que no baje de ADMIN" es
+     * el motivo de existir, y no un efecto de dónde se escribió la línea.
+     *
+     * PRESENTAR una denuncia no tiene función aquí porque la puede todo
+     * el mundo (`denuncia:crear`): un canal al que no llega todo el
+     * mundo no es un canal.
+     */
+    fun puedeInstruirDenuncias(rol: Rol?): Boolean = alMenos(rol, Rol.ADMIN)
+
     private fun alMenos(rol: Rol?, minimo: Rol): Boolean =
         rol != null && rol.ordinal >= minimo.ordinal
 }
