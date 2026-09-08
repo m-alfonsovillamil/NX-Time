@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.nxtime.nxtime.domain.AbsenceStatus;
@@ -20,6 +22,7 @@ import com.nxtime.nxtime.dto.PersonalDashboardResponse;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -55,6 +58,8 @@ class DashboardServiceImplTest {
     @Mock
     private OvertimeAlertRepository overtimeAlertRepository;
     @Mock
+    private ComplaintRepository complaintRepository;
+    @Mock
     private VacationBalanceService vacationBalanceService;
 
     private DashboardServiceImpl service;
@@ -66,7 +71,7 @@ class DashboardServiceImplTest {
     void setUp() {
         service = new DashboardServiceImpl(
                 timeEntryRepository, absenceRequestRepository, userRepository,
-                overtimeAlertRepository, vacationBalanceService);
+                overtimeAlertRepository, complaintRepository, vacationBalanceService);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado")
                 .empresa(empresa).activo(true).build();
@@ -213,7 +218,10 @@ class DashboardServiceImplTest {
     @Test
     @DisplayName("El panel de empresa solo cuenta como activos a los empleados dados de alta")
     void getCompanyDashboard_soloCuentaEmpleadosActivos() {
-        User gestor = User.builder().id(20L).email("gestor@nxtime.test").empresa(empresa).build();
+        // El rol es obligatorio desde la Fase G: el panel decide con él
+        // si enseña el contador del canal de denuncias.
+        User gestor = User.builder().id(20L).email("gestor@nxtime.test")
+                .rol(Role.GESTOR).empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of(
                 User.builder().id(1L).activo(true).build(),
@@ -229,7 +237,10 @@ class DashboardServiceImplTest {
     @Test
     @DisplayName("El panel de empresa expone las incidencias de fichaje sin corregir")
     void getCompanyDashboard_exponeIncidenciasAbiertas() {
-        User gestor = User.builder().id(20L).email("gestor@nxtime.test").empresa(empresa).build();
+        // El rol es obligatorio desde la Fase G: el panel decide con él
+        // si enseña el contador del canal de denuncias.
+        User gestor = User.builder().id(20L).email("gestor@nxtime.test")
+                .rol(Role.GESTOR).empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
         when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
@@ -241,5 +252,38 @@ class DashboardServiceImplTest {
 
         assertThat(resumen.incidenciasAbiertas()).isEqualTo(4);
         assertThat(resumen.ausenciasPendientes()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("El contador de denuncias llega NULO a quien no instruye el canal, y ni se consulta")
+    void getCompanyDashboard_gestorNoVeElContadorDeDenuncias() {
+        // Null y no cero: un cero AFIRMA que no hay ninguna denuncia
+        // abierta, y afirmarlo ante quien no tiene derecho a saberlo ya
+        // es información -- a veces falsa (Fase G).
+        User gestor = User.builder().id(20L).email("gestor@nxtime.test")
+                .rol(Role.GESTOR).empresa(empresa).build();
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
+        when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
+
+        CompanyDashboardResponse resumen = service.getCompanyDashboard(gestor.getEmail());
+
+        assertThat(resumen.denunciasAbiertas()).isNull();
+        verify(complaintRepository, never()).contarAbiertas(anyLong());
+    }
+
+    @Test
+    @DisplayName("Un ADMIN sí ve cuántas denuncias hay abiertas")
+    void getCompanyDashboard_adminVeElContadorDeDenuncias() {
+        User admin = User.builder().id(21L).email("admin@nxtime.test")
+                .rol(Role.ADMIN).empresa(empresa).build();
+        when(userRepository.findByEmail(admin.getEmail())).thenReturn(Optional.of(admin));
+        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
+        when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
+        when(complaintRepository.contarAbiertas(empresa.getId())).thenReturn(3L);
+
+        CompanyDashboardResponse resumen = service.getCompanyDashboard(admin.getEmail());
+
+        assertThat(resumen.denunciasAbiertas()).isEqualTo(3L);
     }
 }

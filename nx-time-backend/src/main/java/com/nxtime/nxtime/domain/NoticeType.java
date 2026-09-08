@@ -52,7 +52,23 @@ public enum NoticeType {
     HORAS_EXTRA_DETECTADAS("horas-extra"),
 
     /** La bolsa anual de 80 h (art. 35.2 ET) se está agotando. */
-    BOLSA_HORAS_EXTRA_AL_LIMITE("horas-extra");
+    BOLSA_HORAS_EXTRA_AL_LIMITE("horas-extra"),
+
+    // Fase G. Los dos llevan un título genérico y un cuerpo sin
+    // contenido: un aviso de denuncia dice QUE hay algo, nunca QUÉ. Ver
+    // ComplaintServiceImpl.
+
+    /** Ha entrado una denuncia en el canal. Solo la ve quien instruye. */
+    DENUNCIA_RECIBIDA("canal-denuncias"),
+
+    /**
+     * Se ha movido algo en una denuncia tuya.
+     *
+     * Solo puede llegar si te identificaste al presentarla: a un
+     * denunciante anónimo no hay a quién avisar, y esa es exactamente la
+     * contrapartida del anonimato.
+     */
+    DENUNCIA_ACTUALIZADA("denuncias");
 
     private final String rutaDestinoPorDefecto;
 

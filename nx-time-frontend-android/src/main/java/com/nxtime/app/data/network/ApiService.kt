@@ -143,6 +143,80 @@ interface ApiService {
         @Query("anio") anio: Int? = null
     ): Response<BolsaHorasExtraDTO>
 
+    /*  Canal de denuncias (Fase G)  */
+
+    /**
+     * Presentar una denuncia. Devuelve el codigo de seguimiento UNA sola
+     * vez: el servidor guarda solo su hash y no hay endpoint que lo
+     * reenvie, porque poder recuperarlo seria poder demostrar que una
+     * denuncia anonima es tuya.
+     */
+    @POST("api/v1/denuncias")
+    suspend fun presentarDenuncia(
+        @Body peticion: CrearDenunciaRequest
+    ): Response<DenunciaCreadaDTO>
+
+    /**
+     * Seguir una denuncia con su codigo. Va autenticado (el canal es
+     * interno) pero el servidor NO comprueba quien lo trae: el codigo es
+     * la credencial, y comprobar la identidad seria negar el anonimato.
+     */
+    @GET("api/v1/denuncias/seguimiento/{codigo}")
+    suspend fun getDenunciaPorCodigo(
+        @Path("codigo") codigo: String
+    ): Response<DenunciaDTO>
+
+    /** Contestar como denunciante, con el codigo. */
+    @POST("api/v1/denuncias/seguimiento/{codigo}/mensajes")
+    suspend fun responderDenunciaPorCodigo(
+        @Path("codigo") codigo: String,
+        @Body peticion: MensajeDenunciaRequest
+    ): Response<DenunciaDTO>
+
+    /**
+     * Las que presente identificandome. Las anonimas NO salen aqui y no
+     * pueden salir: no hay ningun dato que las relacione conmigo.
+     */
+    @GET("api/v1/denuncias/mias")
+    suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>>
+
+    /**
+     * Un expediente propio, sin el codigo. Solo vale para las que
+     * presente IDENTIFICANDOME: sobre una anonima da 404 aunque sea mia,
+     * porque el sistema no sabe que lo es.
+     */
+    @GET("api/v1/denuncias/mias/{id}")
+    suspend fun getMiDenuncia(@Path("id") denunciaId: Long): Response<DenunciaDTO>
+
+    /** Responder en un expediente propio identificado. */
+    @POST("api/v1/denuncias/mias/{id}/mensajes")
+    suspend fun responderMiDenuncia(
+        @Path("id") denunciaId: Long,
+        @Body peticion: MensajeDenunciaRequest
+    ): Response<DenunciaDTO>
+
+    /** La bandeja de quien instruye. Solo ADMIN (`denuncia:instruir`). */
+    @GET("api/v1/denuncias")
+    suspend fun getBandejaDenuncias(): Response<List<ResumenDenunciaDTO>>
+
+    /** Un expediente por id. Solo ADMIN. */
+    @GET("api/v1/denuncias/{id}")
+    suspend fun getDenuncia(@Path("id") denunciaId: Long): Response<DenunciaDTO>
+
+    /** Contestar como instructor. Vale como acuse de recibo si no lo habia. */
+    @POST("api/v1/denuncias/{id}/mensajes")
+    suspend fun responderDenunciaComoInstructor(
+        @Path("id") denunciaId: Long,
+        @Body peticion: MensajeDenunciaRequest
+    ): Response<DenunciaDTO>
+
+    /** Mover de estado. Cerrarla exige conclusion. */
+    @PATCH("api/v1/denuncias/{id}/estado")
+    suspend fun cambiarEstadoDenuncia(
+        @Path("id") denunciaId: Long,
+        @Body peticion: CambiarEstadoDenunciaRequest
+    ): Response<DenunciaDTO>
+
     @GET("api/v1/auditoria/fichaje/{id}")
     suspend fun getAuditoriaFichaje(
         @Path("id") fichajeId: Long

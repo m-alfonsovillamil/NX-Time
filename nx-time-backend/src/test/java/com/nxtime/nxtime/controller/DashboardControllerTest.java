@@ -63,13 +63,20 @@ class DashboardControllerTest {
     @DisplayName("GET /dashboard/empresa con 'fichaje:leer:equipo' devuelve 200")
     void getCompanyDashboard_conAuthority_devuelve200() throws Exception {
         when(dashboardService.getCompanyDashboard("gestor@nxtime.test"))
-                .thenReturn(new CompanyDashboardResponse(4, 12000, 3, 1, 2, List.of()));
+                // denunciasAbiertas a null: este gestor no instruye el
+                // canal, y el panel no le manda ni siquiera un cero
+                // (Fase G).
+                .thenReturn(new CompanyDashboardResponse(4, 12000, 3, 1, 2, null, List.of()));
 
         mockMvc.perform(get("/api/v1/dashboard/empresa"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.empleadosActivos").value(4))
                 .andExpect(jsonPath("$.incidenciasAbiertas").value(1))
-                .andExpect(jsonPath("$.horasExtraAbiertas").value(2));
+                .andExpect(jsonPath("$.horasExtraAbiertas").value(2))
+                // isEmpty() y no doesNotExist(): el campo VIAJA, con
+                // valor null. Que llegue nulo es la diferencia entre
+                // "no puedes saberlo" y "no hay ninguna".
+                .andExpect(jsonPath("$.denunciasAbiertas").isEmpty());
     }
 
     @Test

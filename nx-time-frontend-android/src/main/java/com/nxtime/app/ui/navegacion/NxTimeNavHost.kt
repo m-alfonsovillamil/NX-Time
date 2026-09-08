@@ -52,6 +52,8 @@ import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.correcciones.CorreccionesScreen
+import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
+import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
 import com.nxtime.app.ui.calendario.CalendarioScreen
 import com.nxtime.app.ui.fichar.FicharScreen
@@ -104,6 +106,11 @@ enum class Pantalla(val ruta: String) {
     // misma pantalla porque para quien la abre es la misma cosa; lo que
     // cambia es cuanto de ella se le ensena.
     HORAS_EXTRA("horas-extra"),
+    // Fase G. Dos hojas y no una: presentar/seguir una denuncia y
+    // instruir el canal son dos trabajos distintos con dos permisos
+    // distintos, y la segunda solo la abre un ADMIN.
+    DENUNCIAS("denuncias"),
+    CANAL_DENUNCIAS("canal-denuncias"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
     EMPRESA("empresa"),
@@ -486,6 +493,7 @@ fun NxTimeNavHost(
                     onVolver = navController::navigateUp,
                     onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
+                    onIrDenuncias = { navController.navigate(Pantalla.DENUNCIAS.ruta) },
                     onCerrarSesion = {
                         perfilViewModel.cerrarSesion()
                         entrarA(Pantalla.LOGIN)
@@ -535,6 +543,10 @@ fun NxTimeNavHost(
                     onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
                     onIrCorrecciones = { navController.navigate(Pantalla.CORRECCIONES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
+                    // Solo ADMIN: la denuncia puede ser sobre el gestor
+                    // que estuviera mirando esta pantalla.
+                    puedeInstruirDenuncias = Permisos.puedeInstruirDenuncias(rol),
+                    onIrCanalDenuncias = { navController.navigate(Pantalla.CANAL_DENUNCIAS.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
                         navController.navigate(Pantalla.ausenciasEquipo(resueltas = false))
@@ -561,6 +573,17 @@ fun NxTimeNavHost(
                 // entra desde dos sitios distintos y pasarlo por los dos
                 // caminos era garantizar que uno se quedara atras.
                 HorasExtraScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(Pantalla.DENUNCIAS.ruta) {
+                DenunciasScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(Pantalla.CANAL_DENUNCIAS.ruta) {
+                // Se entra desde el panel de gestion, que ya solo ofrece
+                // la opcion a un ADMIN; el servidor lo vuelve a exigir
+                // con `denuncia:instruir` en cada endpoint.
+                CanalDenunciasScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.PROYECTOS.ruta) {

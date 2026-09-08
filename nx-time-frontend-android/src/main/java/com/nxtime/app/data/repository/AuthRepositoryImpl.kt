@@ -117,6 +117,69 @@ class AuthRepositoryImpl(
         return apiService.getBolsaHorasExtra(usuarioId, anio)
     }
 
+    override suspend fun presentarDenuncia(
+        categoria: String,
+        descripcion: String,
+        anonima: Boolean
+    ): Response<DenunciaCreadaDTO> {
+        return apiService.presentarDenuncia(
+            CrearDenunciaRequest(categoria, descripcion, anonima))
+    }
+
+    override suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO> {
+        // Se recorta aquí y no en la pantalla: el código se copia y se
+        // pega, y un espacio de más al final no es un código distinto.
+        return apiService.getDenunciaPorCodigo(codigo.trim())
+    }
+
+    override suspend fun responderDenunciaPorCodigo(
+        codigo: String,
+        texto: String
+    ): Response<DenunciaDTO> {
+        return apiService.responderDenunciaPorCodigo(
+            codigo.trim(), MensajeDenunciaRequest(texto))
+    }
+
+    override suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>> {
+        return apiService.getMisDenuncias()
+    }
+
+    override suspend fun getMiDenuncia(denunciaId: Long): Response<DenunciaDTO> {
+        return apiService.getMiDenuncia(denunciaId)
+    }
+
+    override suspend fun responderMiDenuncia(
+        denunciaId: Long,
+        texto: String
+    ): Response<DenunciaDTO> {
+        return apiService.responderMiDenuncia(denunciaId, MensajeDenunciaRequest(texto))
+    }
+
+    override suspend fun getBandejaDenuncias(): Response<List<ResumenDenunciaDTO>> {
+        return apiService.getBandejaDenuncias()
+    }
+
+    override suspend fun getDenuncia(denunciaId: Long): Response<DenunciaDTO> {
+        return apiService.getDenuncia(denunciaId)
+    }
+
+    override suspend fun responderDenunciaComoInstructor(
+        denunciaId: Long,
+        texto: String
+    ): Response<DenunciaDTO> {
+        return apiService.responderDenunciaComoInstructor(
+            denunciaId, MensajeDenunciaRequest(texto))
+    }
+
+    override suspend fun cambiarEstadoDenuncia(
+        denunciaId: Long,
+        estado: String,
+        conclusion: String?
+    ): Response<DenunciaDTO> {
+        return apiService.cambiarEstadoDenuncia(
+            denunciaId, CambiarEstadoDenunciaRequest(estado, conclusion))
+    }
+
     override suspend fun getAuditoriaFichaje(
         fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>> {

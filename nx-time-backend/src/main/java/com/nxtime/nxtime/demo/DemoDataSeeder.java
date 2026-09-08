@@ -7,6 +7,11 @@ import com.nxtime.nxtime.domain.Attachment;
 import com.nxtime.nxtime.domain.AttachmentData;
 import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Complaint;
+import com.nxtime.nxtime.domain.ComplaintAuthor;
+import com.nxtime.nxtime.domain.ComplaintCategory;
+import com.nxtime.nxtime.domain.ComplaintMessage;
+import com.nxtime.nxtime.domain.ComplaintStatus;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.Department;
@@ -26,6 +31,8 @@ import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
 import com.nxtime.nxtime.repository.AttachmentRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.ComplaintMessageRepository;
+import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
@@ -42,6 +49,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import com.nxtime.nxtime.service.NationalHolidayGenerator;
 import com.nxtime.nxtime.service.OvertimeService;
+import com.nxtime.nxtime.service.TrackingCode;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -101,6 +109,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final CorrectionRequestRepository correctionRequestRepository;
     private final ProjectRepository projectRepository;
     private final ProjectAssignmentRepository projectAssignmentRepository;
+    private final ComplaintRepository complaintRepository;
+    private final ComplaintMessageRepository complaintMessageRepository;
     private final OvertimeService overtimeService;
     private final PasswordEncoder passwordEncoder;
 
@@ -118,6 +128,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             CorrectionRequestRepository correctionRequestRepository,
             ProjectRepository projectRepository,
             ProjectAssignmentRepository projectAssignmentRepository,
+            ComplaintRepository complaintRepository,
+            ComplaintMessageRepository complaintMessageRepository,
             OvertimeService overtimeService,
             PasswordEncoder passwordEncoder
     ) {
@@ -134,6 +146,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.correctionRequestRepository = correctionRequestRepository;
         this.projectRepository = projectRepository;
         this.projectAssignmentRepository = projectAssignmentRepository;
+        this.complaintRepository = complaintRepository;
+        this.complaintMessageRepository = complaintMessageRepository;
         this.overtimeService = overtimeService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -155,7 +169,10 @@ public class DemoDataSeeder implements CommandLineRunner {
         // distingue: los informes mensuales, la corrección de fichajes y
         // la línea temporal de auditoría son de RRHH/ADMIN, no de GESTOR.
         User rrhhTech = crearUsuario("Elena", "Ríos Bravo", "elena.rios@techcorp.demo", Role.RRHH, techCorp);
-        crearUsuario("Raúl", "Ortega Lima", "raul.ortega@techcorp.demo", Role.ADMIN, techCorp);
+        // Desde la Fase G el ADMIN deja de ser decorativo: es el único
+        // que puede leer el canal de denuncias, en su papel de
+        // Responsable del Sistema Interno de Información (Ley 2/2023).
+        User adminTech = crearUsuario("Raúl", "Ortega Lima", "raul.ortega@techcorp.demo", Role.ADMIN, techCorp);
         List<User> empleadosTech = List.of(
                 crearUsuario("Javier", "López Serna", "javier.lopez@techcorp.demo", Role.EMPLEADO, techCorp),
                 crearUsuario("Ana", "Fernández Gil", "ana.fernandez@techcorp.demo", Role.EMPLEADO, techCorp),
@@ -234,14 +251,21 @@ public class DemoDataSeeder implements CommandLineRunner {
         // demo es una prueba de humo del proceso nocturno.
         sembrarHorasExtra(gestorTech, gestorIberica);
 
+        // Fase G. Solo en TechCorp, que es la única empresa de la demo
+        // con ADMIN: sin alguien que pueda instruirlas, la bandeja del
+        // canal no la vería nadie y las denuncias quedarían de adorno.
+        sembrarDenuncias(empleadosTech, adminTech);
+
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
 
         log.info(
                 "Datos de demo listos: 2 empresas, {} usuarios (contraseña '{}'). "
-                        + "Gestores: {} / {}. RRHH (informes, correcciones y auditoría): {}.",
+                        + "Gestores: {} / {}. RRHH (informes, correcciones y auditoría): {}. "
+                        + "ADMIN (canal de denuncias): {}.",
                 userRepository.count(), DEMO_PASSWORD,
-                gestorTech.getEmail(), gestorIberica.getEmail(), rrhhTech.getEmail()
+                gestorTech.getEmail(), gestorIberica.getEmail(), rrhhTech.getEmail(),
+                adminTech.getEmail()
         );
     }
 
@@ -788,6 +812,118 @@ public class DemoDataSeeder implements CommandLineRunner {
                 .estado(estado)
                 .motivoDisputa(motivoDisputa)
                 .creadoEn(Instant.now().minus(1, ChronoUnit.DAYS))
+                .build());
+    }
+
+    /**
+     * El canal de denuncias de la demo (Fase G).
+     *
+     * Son tres porque una sola no enseña la fase. Lo que distingue a
+     * este canal de un buzón cualquiera son los plazos legales y el
+     * anonimato, y las dos cosas solo se ven comparando filas:
+     *
+     * <ol>
+     *   <li>Anónima y presentada hace <b>nueve</b> días sin acuse de
+     *       recibo, así que el plazo de 7 días del art. 9.2 ya está
+     *       vencido y la bandeja la enseña en negativo. Es la fila que
+     *       hace entender para qué sirve el contador.</li>
+     *   <li>Identificada y en investigación, con conversación: es la
+     *       única que puede llegar a "Mis denuncias" y la única cuyo
+     *       autor recibe avisos.</li>
+     *   <li>Anónima y archivada con su conclusión: archivar también es
+     *       responder.</li>
+     * </ol>
+     *
+     * <b>Los códigos de seguimiento se generan y se tiran.</b> Sería
+     * cómodo escribir uno en el log para poder probar la pantalla de
+     * seguimiento sin crear una denuncia — y sería exactamente la fuga
+     * que toda la fase se ha dedicado a cerrar. Para probar esa pantalla
+     * se presenta una denuncia desde la app, que devuelve su código una
+     * vez.
+     */
+    private void sembrarDenuncias(List<User> empleados, User admin) {
+        if (empleados.isEmpty()) {
+            return;
+        }
+        Company empresa = admin.getEmpresa();
+        Instant ahora = Instant.now();
+
+        crearDenuncia(empresa, null, ComplaintCategory.SEGURIDAD,
+                "En el almacén de la segunda planta las salidas de emergencia llevan "
+                        + "semanas bloqueadas con palés. Lo he comentado dos veces y siguen igual.",
+                ComplaintStatus.RECIBIDA, ahora.minus(9, ChronoUnit.DAYS), null, null);
+
+        Complaint enCurso = crearDenuncia(empresa, empleados.get(0), ComplaintCategory.ACOSO,
+                "Un responsable de otro equipo hace comentarios sobre mi aspecto delante "
+                        + "de compañeros. Tengo mensajes guardados.",
+                ComplaintStatus.EN_INVESTIGACION, ahora.minus(20, ChronoUnit.DAYS),
+                ahora.minus(18, ChronoUnit.DAYS), null);
+        crearMensaje(enCurso, ComplaintAuthor.INSTRUCTOR, admin,
+                "Hemos recibido tu denuncia y ya está en investigación. ¿Puedes indicar "
+                        + "fechas aproximadas de los mensajes que mencionas?",
+                ahora.minus(18, ChronoUnit.DAYS));
+        crearMensaje(enCurso, ComplaintAuthor.DENUNCIANTE, empleados.get(0),
+                "Los tengo desde marzo. Puedo aportarlos en cuanto me digáis cómo.",
+                ahora.minus(17, ChronoUnit.DAYS));
+
+        Complaint archivada = crearDenuncia(empresa, null, ComplaintCategory.FRAUDE,
+                "Creo que se están imputando horas a un proyecto que ya estaba cerrado.",
+                ComplaintStatus.ARCHIVADA, ahora.minus(60, ChronoUnit.DAYS),
+                ahora.minus(58, ChronoUnit.DAYS), ahora.minus(30, ChronoUnit.DAYS));
+        crearMensaje(archivada, ComplaintAuthor.INSTRUCTOR, admin,
+                "Revisadas las imputaciones del periodo con el responsable de proyectos.",
+                ahora.minus(40, ChronoUnit.DAYS));
+
+        // La campana del ADMIN con algo dentro: sin esto, el aviso de
+        // denuncia recibida no se ve en la demo (los avisos de verdad los
+        // publica el listener, y el seeder no dispara eventos).
+        crearAviso(admin, NoticeType.DENUNCIA_RECIBIDA,
+                "Nueva denuncia en el canal interno",
+                ComplaintCategory.SEGURIDAD.getEtiqueta()
+                        + ". Hay 7 días naturales para acusar recibo.",
+                ahora.minus(9, ChronoUnit.DAYS), false);
+    }
+
+    /**
+     * Una denuncia de ejemplo. {@code denunciante} a null la hace
+     * anónima, igual que en el servicio.
+     *
+     * El código se genera aquí y solo se guarda su hash: ni el seeder
+     * tiene forma de recuperarlo después.
+     */
+    private Complaint crearDenuncia(
+            Company empresa, User denunciante, ComplaintCategory categoria, String descripcion,
+            ComplaintStatus estado, Instant creadoEn, Instant acuseReciboEn, Instant resueltaEn) {
+        return complaintRepository.save(Complaint.builder()
+                .empresa(empresa)
+                .codigoHash(TrackingCode.hash(TrackingCode.generar()))
+                .denunciante(denunciante)
+                .categoria(categoria)
+                .descripcion(descripcion)
+                .estado(estado)
+                .creadoEn(creadoEn)
+                .acuseReciboEn(acuseReciboEn)
+                .resueltaEn(resueltaEn)
+                // Cerrada SIEMPRE con conclusión: lo exige
+                // ck_denuncias_cierre_coherente, y sin ella el seeder
+                // reventaría al arrancar la demo.
+                .conclusion(resueltaEn == null ? null
+                        : "Revisadas las imputaciones del periodo, no se ha encontrado ninguna "
+                                + "irregularidad. Se archiva y se comunica la conclusión.")
+                .build());
+    }
+
+    private void crearMensaje(
+            Complaint denuncia, ComplaintAuthor rol, User autor, String texto, Instant creadoEn) {
+        complaintMessageRepository.save(ComplaintMessage.builder()
+                .denuncia(denuncia)
+                .autorRol(rol)
+                // Lo mismo que hace el servicio: en una denuncia anónima
+                // el mensaje del denunciante va SIN autor, aunque aquí
+                // tengamos el objeto delante.
+                .autor(rol == ComplaintAuthor.DENUNCIANTE && denuncia.esAnonima() ? null : autor)
+                .texto(texto)
+                .creadoEn(creadoEn)
                 .build());
     }
 

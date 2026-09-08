@@ -79,6 +79,16 @@ la bolsa anual de 80 h (art. 35.2 ET) cuando una persona lo acepta, y esa bolsa
 pasado no la deje mintiendo
 ([ADR](docs/adr/011-horas-extra-detectadas-no-imputadas.md)).
 
+**Canal de denuncias con anonimato estructural.** El canal interno que obliga la
+Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
+leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
+no guarda quién la puso en ninguna parte**, y las fugas que se cerraron son las
+que en cualquier otra fase serían buenas prácticas — el `log.info` con el email,
+excluir al autor de la lista de avisados (un avisado de menos le delata), el
+`autor_id` de sus mensajes "por trazabilidad". Del código de seguimiento solo se
+guarda el hash, así que no hay endpoint que lo reenvíe *y no se puede escribir*
+([ADR](docs/adr/012-anonimato-estructural-en-el-canal-de-denuncias.md)).
+
 ---
 
 ## Probarlo en vivo
@@ -332,10 +342,10 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 
 | Rol | Además de lo anterior, puede |
 |---|---|
-| **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias |
+| **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias |
 | **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario y los proyectos, aprobar correcciones, revisar horas extra |
 | **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
-| **ADMIN** | crear otros gestores |
+| **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
 Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
 reparte el poder de gestión.
@@ -344,6 +354,12 @@ Dos permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
 corrección que pidió él mismo, ni revisa sus propias horas extra**, tenga el rol
 que tenga. Eso no lo puede aplicar un `@PreAuthorize` —quien revisa tiene la
 authority, justamente— así que lo comprueba el servicio.
+
+Y una capacidad no baja de ADMIN **porque ese es el requisito**, no por
+prudencia: leer las denuncias del canal interno. La Ley 2/2023 obliga a designar
+un Responsable del Sistema Interno de Información, y dársela también a un GESTOR
+haría que la denuncia sobre un GESTOR la leyera él. Que RRHH tampoco la tenga no
+es un olvido de reparto.
 
 ---
 
@@ -440,6 +456,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 9. [Asignaciones a proyecto con vigencia, y el solape impedido por la base](docs/adr/009-asignaciones-con-vigencia.md)
 10. [Ninguna corrección de fichaje se aplica sola](docs/adr/010-correcciones-con-aprobacion.md)
 11. [Las horas extra se detectan, no se imputan](docs/adr/011-horas-extra-detectadas-no-imputadas.md)
+12. [El anonimato del canal de denuncias es estructural, no una promesa](docs/adr/012-anonimato-estructural-en-el-canal-de-denuncias.md)
 
 ---
 

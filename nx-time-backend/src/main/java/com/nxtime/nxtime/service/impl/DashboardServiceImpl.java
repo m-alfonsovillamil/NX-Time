@@ -5,6 +5,7 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.OvertimeStatus;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.WorkStatus;
@@ -13,6 +14,7 @@ import com.nxtime.nxtime.dto.EmployeeHoursDTO;
 import com.nxtime.nxtime.dto.PersonalDashboardResponse;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -59,6 +61,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
     private final OvertimeAlertRepository overtimeAlertRepository;
+    private final ComplaintRepository complaintRepository;
     private final VacationBalanceService vacationBalanceService;
 
     public DashboardServiceImpl(
@@ -66,12 +69,14 @@ public class DashboardServiceImpl implements DashboardService {
             AbsenceRequestRepository absenceRequestRepository,
             UserRepository userRepository,
             OvertimeAlertRepository overtimeAlertRepository,
+            ComplaintRepository complaintRepository,
             VacationBalanceService vacationBalanceService
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRequestRepository = absenceRequestRepository;
         this.userRepository = userRepository;
         this.overtimeAlertRepository = overtimeAlertRepository;
+        this.complaintRepository = complaintRepository;
         this.vacationBalanceService = vacationBalanceService;
     }
 
@@ -136,7 +141,28 @@ public class DashboardServiceImpl implements DashboardService {
                 absenceRequestRepository.countByEmpresa_IdAndEstado(empresa.getId(), AbsenceStatus.PENDIENTE),
                 timeEntryRepository.contarIncidenciasAbiertas(empresa),
                 overtimeAlertRepository.countByEmpresa_IdAndEstado(empresa.getId(), OvertimeStatus.ABIERTO),
+                denunciasAbiertas(manager),
                 horasPorEmpleado);
+    }
+
+    /**
+     * El contador del canal de denuncias, o null si quien mira el panel
+     * no lo instruye (Fase G).
+     *
+     * Un GESTOR ve el resto del panel y no ve esta cifra, que es lo
+     * coherente con que tampoco pueda leer ninguna denuncia: saber que
+     * "hay 3 abiertas" el mismo día que despidió a alguien ya es
+     * información sobre quién ha denunciado.
+     *
+     * Se devuelve null y no 0 justamente por eso: un cero afirma que no
+     * hay ninguna, y afirmarlo sin permiso para saberlo es peor que
+     * callar. La consulta no se hace siquiera.
+     */
+    private Long denunciasAbiertas(User manager) {
+        if (!RoleAuthorities.forRole(manager.getRol()).contains("denuncia:instruir")) {
+            return null;
+        }
+        return complaintRepository.contarAbiertas(manager.getEmpresa().getId());
     }
 
     /**

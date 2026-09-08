@@ -48,6 +48,29 @@ interface AuthRepository {
     ): Response<HorasExtraDTO>
     suspend fun getBolsaHorasExtra(usuarioId: Long? = null, anio: Int? = null): Response<BolsaHorasExtraDTO>
 
+    /* Canal de denuncias (Fase G) */
+    suspend fun presentarDenuncia(
+        categoria: String,
+        descripcion: String,
+        anonima: Boolean
+    ): Response<DenunciaCreadaDTO>
+    suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO>
+    suspend fun responderDenunciaPorCodigo(codigo: String, texto: String): Response<DenunciaDTO>
+    suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>>
+    suspend fun getMiDenuncia(denunciaId: Long): Response<DenunciaDTO>
+    suspend fun responderMiDenuncia(denunciaId: Long, texto: String): Response<DenunciaDTO>
+    suspend fun getBandejaDenuncias(): Response<List<ResumenDenunciaDTO>>
+    suspend fun getDenuncia(denunciaId: Long): Response<DenunciaDTO>
+    suspend fun responderDenunciaComoInstructor(
+        denunciaId: Long,
+        texto: String
+    ): Response<DenunciaDTO>
+    suspend fun cambiarEstadoDenuncia(
+        denunciaId: Long,
+        estado: String,
+        conclusion: String? = null
+    ): Response<DenunciaDTO>
+
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
 
     /* Panel de empresa, altas/bajas e informes */

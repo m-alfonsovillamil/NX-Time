@@ -85,6 +85,7 @@ fun PerfilScreen(
     onVolver: () -> Unit,
     onIrContrasena: () -> Unit,
     onIrHorasExtra: () -> Unit,
+    onIrDenuncias: () -> Unit,
     onCerrarSesion: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -189,6 +190,16 @@ fun PerfilScreen(
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(onClick = onIrHorasExtra, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.horas_extra_ver))
+                    }
+
+                    // Fase G. Sin gatear por rol, y a propósito: el canal
+                    // interno de la Ley 2/2023 lo puede usar todo el
+                    // mundo, y uno al que no llega todo el mundo no es un
+                    // canal. Lo que sí pide permiso es INSTRUIRLO, y eso
+                    // vive en el panel de gestión.
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onIrDenuncias, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.denuncias_ver))
                     }
 
                     Spacer(Modifier.height(24.dp))

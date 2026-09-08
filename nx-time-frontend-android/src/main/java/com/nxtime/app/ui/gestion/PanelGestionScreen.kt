@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreTime
 import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WorkOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,6 +63,8 @@ fun PanelGestionScreen(
     onIrProyectos: () -> Unit,
     onIrCorrecciones: () -> Unit,
     onIrHorasExtra: () -> Unit,
+    puedeInstruirDenuncias: Boolean,
+    onIrCanalDenuncias: () -> Unit,
     onIrHistorialEquipo: () -> Unit,
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
@@ -132,6 +135,18 @@ fun PanelGestionScreen(
                 icono = Icons.Default.WorkOutline,
                 onClick = onIrProyectos
             )
+            // El canal de denuncias NO sigue la regla de los anteriores:
+            // aquí sí se gatea, y solo lo ve un ADMIN. La denuncia puede
+            // ser sobre el GESTOR que está mirando esta misma pantalla,
+            // así que ni siquiera la entrada debe aparecerle -- saber que
+            // el canal tiene expedientes ya es información.
+            if (puedeInstruirDenuncias) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_canal_denuncias),
+                    icono = Icons.Default.Shield,
+                    onClick = onIrCanalDenuncias
+                )
+            }
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_resueltas),
                 icono = Icons.Default.EventAvailable,

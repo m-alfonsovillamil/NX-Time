@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!--/*
+  Novedad en una denuncia (Fase G).
+
+  Mismas reglas que complaint-received: la novedad es una frase genérica
+  que compone el servicio, sin contenido del expediente.
+
+  Solo llega a quien se identificó al denunciar. A un denunciante anónimo
+  no hay dirección a la que escribirle, y esa es la contrapartida exacta
+  del anonimato: vuelve con su código cuando quiera saber cómo va.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Novedad en una denuncia', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:text="${novedad}">Han respondido en tu denuncia.</p>
+
+    <p style="margin-top: 20px;">
+        Entra en NX Time, en el canal de denuncias, para verlo.
+    </p>
+</div>
+</body>
+</html>

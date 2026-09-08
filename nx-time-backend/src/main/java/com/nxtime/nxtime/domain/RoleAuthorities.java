@@ -76,6 +76,17 @@ import java.util.Set;
  * es revisar lo de uno mismo -- eso lo prohíbe el servicio aunque el rol
  * dé el permiso, por el mismo conflicto de interés que ya obligó a
  * separarlo en las correcciones de la Fase E.
+ * "denuncia:crear" (Fase G) la tiene todo el mundo, porque un canal de
+ * denuncias al que no llega todo el mundo no es un canal.
+ * "denuncia:instruir" es la ÚNICA authority del proyecto que empieza en
+ * ADMIN y no baja de ahí, y no es un descuido de reparto: la Ley 2/2023
+ * obliga a designar un Responsable del Sistema Interno de Información, y
+ * darle esa lectura también a un GESTOR haría que la denuncia sobre un
+ * GESTOR la leyera él. Que la jerarquía de roles solo la conceda arriba
+ * es aquí el requisito, no un efecto colateral. Si algún día hiciera
+ * falta un responsable que no administre la empresa, lo correcto es un
+ * rol dedicado (RESPONSABLE_CANAL) y no repartir esta authority hacia
+ * abajo.
  */
 public final class RoleAuthorities {
 
@@ -90,7 +101,8 @@ public final class RoleAuthorities {
             "adjunto:subir",
             "calendario:leer",
             "proyecto:leer",
-            "correccion:solicitar"
+            "correccion:solicitar",
+            "denuncia:crear"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -116,7 +128,8 @@ public final class RoleAuthorities {
     ));
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(
-            "gestor:crear"
+            "gestor:crear",
+            "denuncia:instruir"
     ));
 
     public static Set<String> forRole(Role role) {

@@ -20,3 +20,5 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [008](008-festivos-calculados-y-compartidos.md) | Festivos nacionales calculados, compartidos y no editables |
 | [009](009-asignaciones-con-vigencia.md) | Asignaciones a proyecto con vigencia, y el solape impedido por la base |
 | [010](010-correcciones-con-aprobacion.md) | Ninguna corrección de fichaje se aplica sola |
+| [011](011-horas-extra-detectadas-no-imputadas.md) | Las horas extra se detectan, no se imputan |
+| [012](012-anonimato-estructural-en-el-canal-de-denuncias.md) | El anonimato del canal de denuncias es estructural, no una promesa |

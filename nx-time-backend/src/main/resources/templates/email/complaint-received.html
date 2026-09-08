@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--/*
+  Ha entrado una denuncia en el canal interno (Fase G).
+
+  Este correo es corto a propósito, y es el único del proyecto donde eso
+  no es un descuido sino el requisito: dice QUE hay una denuncia y de qué
+  categoría, y nada más. Ni el relato ni el nombre de quien la presenta
+  salen nunca por correo -- texto plano, por una red que no controlamos,
+  que acaba guardado en un buzón personal y en el de un servidor ajeno.
+
+  Para leerla hay que entrar en la aplicación, que es donde el acceso
+  está limitado a quien tiene 'denuncia:instruir'.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Nueva denuncia en el canal interno', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        Se ha presentado una denuncia en el canal interno de información,
+        en la categoría <strong th:text="${categoria}">Categoría</strong>.
+    </p>
+
+    <p style="margin-top: 20px;">
+        La Ley 2/2023 da <strong>7 días naturales</strong> para acusar recibo y
+        <strong>3 meses</strong> para responder. Los dos plazos cuentan desde
+        que se presentó.
+    </p>
+
+    <p style="margin-top: 20px;">
+        El contenido de la denuncia no viaja por correo: entra en NX Time,
+        en el canal de denuncias, para leerla y tramitarla.
+    </p>
+</div>
+</body>
+</html>
