@@ -17,13 +17,19 @@ import org.thymeleaf.context.Context;
  * Renderiza una plantilla Thymeleaf y la envía como correo HTML
  * (Fase 10).
  *
- * **No propaga los fallos de envío**: los registra y sigue. Es
- * deliberado y va de la mano de que las notificaciones se disparen
- * después del commit (ver {@link NotificationListener}): si el servidor
- * SMTP está caído, el empleado ya tiene su ausencia aprobada en la base
- * de datos y lo último que queremos es que un fallo de correo haga
- * parecer que la operación falló. El correo es un aviso, no parte de la
- * operación de negocio.
+ * Hay dos formas de enviar, y la diferencia es a propósito:
+ *
+ * - {@link #enviar} **no propaga los fallos de envío**: los registra y
+ *   sigue. Va de la mano de que las notificaciones se disparen después del
+ *   commit (ver {@link NotificationListener}): si el servidor SMTP está
+ *   caído, el empleado ya tiene su ausencia aprobada en la base de datos y
+ *   lo último que queremos es que un fallo de correo haga parecer que la
+ *   operación falló. Ese correo es un aviso, no parte de la operación.
+ *
+ * - {@link #enviarObligatorio} (09/2026) **sí los propaga**. Es la del
+ *   código de acceso (ver ADR 014): si ese correo no sale, su destinatario
+ *   no puede entrar, y quien da el alta tiene que enterarse en ese momento
+ *   en vez de dejar creada una cuenta en la que nadie puede entrar.
  *
  * El contrapunto está en la auditoría de fichajes, que sí corre ANTES
  * del commit y sí tumba la operación si falla: allí la traza es un
@@ -47,6 +53,22 @@ public class EmailSender {
 
     public void enviar(String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
         try {
+            enviarObligatorio(destinatario, asunto, plantilla, variables);
+        } catch (EmailNotSentException e) {
+            // A propósito no se relanza: ver el Javadoc de la clase.
+            log.error("No se pudo enviar el correo '{}' a {}: {}",
+                    plantilla, destinatario, e.getCause().getMessage());
+        }
+    }
+
+    /**
+     * Como {@link #enviar}, pero si el correo no sale lo dice.
+     *
+     * @throws EmailNotSentException si el servidor de correo lo rechaza o no responde
+     */
+    public void enviarObligatorio(
+            String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
+        try {
             Context contexto = new Context();
             contexto.setVariables(variables);
             String cuerpo = templateEngine.process("email/" + plantilla, contexto);
@@ -62,8 +84,7 @@ public class EmailSender {
             mailSender.send(mensaje);
             log.info("Correo '{}' enviado a {}", plantilla, destinatario);
         } catch (MailException | jakarta.mail.MessagingException e) {
-            // A propósito no se relanza: ver el Javadoc de la clase.
-            log.error("No se pudo enviar el correo '{}' a {}: {}", plantilla, destinatario, e.getMessage());
+            throw new EmailNotSentException("No se pudo enviar el correo '" + plantilla + "'", e);
         }
     }
 }

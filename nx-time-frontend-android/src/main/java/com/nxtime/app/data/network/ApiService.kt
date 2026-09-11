@@ -47,6 +47,21 @@ interface ApiService {
         @Body peticion: RefreshTokenRequest
     ): Response<Unit>
 
+    /*
+     * Códigos de acceso (ADR 014). Públicos, como el login: sirven justo a
+     * quien no puede entrar. El primero responde 202 tenga cuenta el correo
+     * o no, así que un éxito NO significa que el código vaya a llegar.
+     */
+    @POST("auth/recuperar")
+    suspend fun solicitarCodigoAcceso(
+        @Body peticion: SolicitarCodigoRequest
+    ): Response<Unit>
+
+    @POST("auth/recuperar/confirmar")
+    suspend fun restablecerContrasena(
+        @Body peticion: RestablecerContrasenaRequest
+    ): Response<Unit>
+
 
     /*  Endpoints de Fichaje (Empleado)  */
 

@@ -2,6 +2,8 @@ package com.nxtime.app.ui.gestion
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,7 +17,6 @@ import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.BotonPrincipal
-import com.nxtime.app.ui.components.CampoContrasena
 import com.nxtime.app.ui.components.CampoTexto
 import com.nxtime.app.ui.components.ColumnaFormulario
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -59,11 +60,13 @@ fun AltaUsuarioScreen(
                 etiqueta = stringResource(R.string.alta_email),
                 tipoTeclado = KeyboardType.Email
             )
-            CampoContrasena(
-                valor = estado.contrasena,
-                onCambia = viewModel::onContrasenaCambia,
-                etiqueta = stringResource(R.string.alta_contrasena),
-                ultimo = true
+
+            // Sin campo de contraseña (ADR 014): se explica qué va a pasar,
+            // porque quien estaba acostumbrado a ponerla la echará de menos.
+            Text(
+                text = stringResource(R.string.alta_explicacion),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             BotonPrincipal(

@@ -2,10 +2,11 @@ package com.nxtime.nxtime.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /**
- * DTO para recibir la petición de que un gestor cree otro gestor.
+ * DTO para recibir la petición de que un administrador cree un gestor.
+ *
+ * Sin contraseña, por lo mismo que {@link CreateEmployeeRequest} (ver ADR 014).
  */
 public record CreateManagerRequest(
 
@@ -14,10 +15,6 @@ public record CreateManagerRequest(
 
         @NotBlank(message = "El email es obligatorio.")
         @Email(message = "El email no tiene un formato válido.")
-        String email,
-
-        @NotBlank(message = "La contraseña es obligatoria.")
-        @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres.")
-        String contrasena
+        String email
 ) {
 }

@@ -89,6 +89,16 @@ retornos de carro, que no son base64 válidos. La aplicación falla al arrancar 
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` |
 | `MAIL_FROM` | remitente en un **dominio verificado**, o los correos irán a spam |
 
+> 🚨 **Desde el 09/2026 el correo es obligatorio** (ADR 014). Dar de alta a un
+> empleado o a un gestor le manda el código con el que elige su contraseña, y si
+> ese correo no sale **el alta falla con un 503** en vez de dejar una cuenta en la
+> que nadie puede entrar. Sin SMTP no se pueden dar altas ni recuperar contraseñas.
+>
+> Para un piloto basta con una **contraseña de aplicación de Gmail**
+> (`MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, verificación en dos pasos
+> activada, y `MAIL_FROM` igual a esa dirección de Gmail) o con el plan gratuito
+> de **Brevo**.
+
 ### CORS
 
 | Variable | Valor |

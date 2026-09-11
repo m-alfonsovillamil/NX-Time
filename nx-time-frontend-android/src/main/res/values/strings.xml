@@ -35,6 +35,31 @@
     <string name="login_ocultar_contrasena">Ocultar contraseña</string>
     <string name="login_email_vacio">Escribe tu correo electrónico.</string>
     <string name="login_contrasena_vacia">Escribe tu contraseña.</string>
+    <string name="login_recuperar">¿Has olvidado tu contraseña o es tu primera vez?</string>
+
+    <!--
+        Elegir contraseña con un código (ADR 014). Sirve para recuperarla y
+        para entrar por primera vez: el correo de bienvenida manda aquí y
+        pide pulsar "Ya tengo un código", porque pedir otro anularía el suyo.
+    -->
+    <string name="recuperar_titulo">Elegir contraseña</string>
+    <string name="recuperar_explicacion">Escribe tu correo y te mandaremos un código para elegir una contraseña nueva. Si acabas de recibir el correo de bienvenida, pulsa «Ya tengo un código».</string>
+    <string name="recuperar_enviar_codigo">Enviarme un código</string>
+    <string name="recuperar_ya_tengo_codigo">Ya tengo un código</string>
+    <!--
+        "Si ... tiene una cuenta": el servidor responde igual exista o no,
+        para no revelar qué correos la tienen, así que la app no puede
+        prometer que el código vaya a llegar.
+    -->
+    <string name="recuperar_codigo_enviado">Si %1$s tiene una cuenta, le hemos enviado un código. Caduca en 15 minutos.</string>
+    <string name="recuperar_codigo_explicacion">Escribe el código que te llegó por correo y elige tu contraseña.</string>
+    <string name="recuperar_codigo">Código de 6 dígitos</string>
+    <string name="recuperar_codigo_incompleto">El código son 6 dígitos.</string>
+    <string name="recuperar_guardar">Guardar contraseña</string>
+    <string name="recuperar_pedir_otro">No me ha llegado: pedir otro código</string>
+    <string name="recuperar_hecho_titulo">Contraseña guardada</string>
+    <string name="recuperar_hecho_texto">Ya puedes entrar con tu correo y la contraseña nueva. Por seguridad, se han cerrado las sesiones que tuvieras abiertas en otros dispositivos.</string>
+    <string name="recuperar_ir_a_login">Ir a iniciar sesión</string>
 
     <!-- Registro de empresa -->
     <string name="registro_titulo">Registrar empresa</string>
@@ -295,7 +320,7 @@
     <string name="alta_gestor_titulo">Nuevo gestor</string>
     <string name="alta_nombre">Nombre completo</string>
     <string name="alta_email">Correo electrónico</string>
-    <string name="alta_contrasena">Contraseña provisional</string>
+    <string name="alta_explicacion">Le llegará un correo con un código para que elija su propia contraseña. Nadie más la conocerá, tampoco quien da el alta.</string>
     <string name="alta_crear">Crear</string>
 
     <!-- Estados compartidos -->

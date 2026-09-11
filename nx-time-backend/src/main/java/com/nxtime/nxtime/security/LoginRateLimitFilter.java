@@ -19,13 +19,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Limita los intentos a /auth/login y /auth/register-manager por IP:
- * antes la fuerza bruta contra el login era libre (ver auditoría,
- * defectos de diseño), y /auth/register-manager es público -- cualquiera
- * en internet puede crear una empresa nueva sin ningún control (ver
- * plan, Fase 4: "decisión consciente" documentada en ese punto en vez
+ * Limita los intentos a /auth/login, /auth/register-manager y los códigos
+ * de acceso por IP: antes la fuerza bruta contra el login era libre (ver
+ * auditoría, defectos de diseño), y /auth/register-manager es público --
+ * cualquiera en internet puede crear una empresa nueva sin ningún control
+ * (ver plan, Fase 4: "decisión consciente" documentada en ese punto en vez
  * de cerrarlo del todo, ya que aún no hay verificación por email --
  * Fase 10 -- ni códigos de invitación).
+ *
+ * Desde el 09/2026 también /auth/recuperar y /auth/recuperar/confirmar
+ * (ADR 014). Este límite frena a quien prueba códigos contra muchas
+ * cuentas desde una IP; contra una cuenta concreta lo frenan los 5
+ * intentos de cada código y los 3 códigos por hora.
  *
  * 10 peticiones por minuto y por IP, en memoria (un Map, no Redis):
  * suficiente para un servicio con una sola instancia como este. Si
@@ -36,7 +41,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class LoginRateLimitFilter extends OncePerRequestFilter {
 
-    private static final Set<String> RUTAS_LIMITADAS = Set.of("/auth/login", "/auth/register-manager");
+    private static final Set<String> RUTAS_LIMITADAS = Set.of(
+            "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar");
     private static final int PETICIONES_POR_MINUTO = 10;
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();

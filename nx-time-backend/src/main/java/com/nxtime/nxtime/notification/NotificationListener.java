@@ -138,6 +138,16 @@ public class NotificationListener {
                         "comentario", peticion.getComentarioResolucion()));
     }
 
+    /**
+     * Solo el aviso dentro de la aplicación.
+     *
+     * El correo de bienvenida de la Fase 10 ya no sale de aquí desde el
+     * 09/2026 (ADR 014): lo sustituye el del código de alta, que manda
+     * AccessCodeService en el momento y dentro de la transacción del alta.
+     * Habrían llegado dos correos seguidos, y uno de ellos diciendo "la
+     * contraseña te la facilitará quien ha creado tu cuenta", que ya no es
+     * verdad.
+     */
     @Async(AsyncConfig.EMAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onEmployeeCreated(NotificationEvents.EmployeeCreated evento) {
@@ -150,15 +160,6 @@ public class NotificationListener {
                 "Bienvenido a " + evento.nombreEmpresa(),
                 "Tu cuenta ya está activa. Desde aquí puedes fichar tu jornada y pedir ausencias.",
                 NoticeType.BIENVENIDA.getRutaDestinoPorDefecto()));
-
-        emailSender.enviar(
-                empleado.getEmail(),
-                "Bienvenido a NX Time",
-                "employee-welcome",
-                variables(
-                        "nombreEmpleado", empleado.getNombre(),
-                        "nombreEmpresa", evento.nombreEmpresa(),
-                        "email", empleado.getEmail()));
     }
 
     /** "Vacaciones, del 01/03/2027 al 03/03/2027". */

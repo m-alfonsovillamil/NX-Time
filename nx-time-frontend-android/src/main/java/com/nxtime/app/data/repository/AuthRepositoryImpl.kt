@@ -42,6 +42,18 @@ class AuthRepositoryImpl(
         )
     }
 
+    override suspend fun solicitarCodigoAcceso(email: String): Response<Unit> {
+        return apiService.solicitarCodigoAcceso(SolicitarCodigoRequest(email))
+    }
+
+    override suspend fun restablecerContrasena(
+        email: String,
+        codigo: String,
+        contrasenaNueva: String
+    ): Response<Unit> {
+        return apiService.restablecerContrasena(RestablecerContrasenaRequest(email, codigo, contrasenaNueva))
+    }
+
     /*  Implementación de Fichaje (Empleado) */
 
     override suspend fun getRegistroActivo(): Response<Registro?> {

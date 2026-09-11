@@ -26,6 +26,7 @@ import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
+import com.nxtime.nxtime.service.AccessCodeService;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +64,8 @@ class AuthServiceImplTest {
     private AuthenticationManager authenticationManager;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private AccessCodeService accessCodeService;
 
     private AuthServiceImpl service;
 
@@ -70,7 +73,7 @@ class AuthServiceImplTest {
     void setUp() {
         service = new AuthServiceImpl(
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
-                authenticationManager, eventPublisher);
+                authenticationManager, eventPublisher, accessCodeService);
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
@@ -205,38 +208,75 @@ class AuthServiceImplTest {
     // ---- createEmployee / createManager ----
 
     @Test
-    @DisplayName("createEmployee con email ya registrado lanza BusinessException")
+    @DisplayName("createEmployee con email ya registrado lanza BusinessException, sin crear nada ni mandar código")
     void createEmployee_emailYaRegistrado_lanzaBusinessException() {
         User manager = User.builder().id(1L).empresa(Company.builder().id(1L).build()).build();
-        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test", "password1");
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
         assertThatThrownBy(() -> service.createEmployee(request, manager)).isInstanceOf(BusinessException.class);
         verify(userRepository, never()).save(any());
+        verify(accessCodeService, never()).emitirCodigoDeAlta(any(), any());
     }
 
     @Test
-    @DisplayName("createEmployee con email libre crea al empleado en la empresa del gestor")
-    void createEmployee_emailLibre_creaEmpleado() {
-        Company empresa = Company.builder().id(1L).build();
+    @DisplayName("createEmployee crea al empleado sin una contraseña que nadie conozca y le manda el código de alta")
+    void createEmployee_emailLibre_creaEmpleadoYEmiteCodigoDeAlta() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         User manager = User.builder().id(1L).empresa(empresa).build();
-        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test", "password1");
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(passwordEncoder.encode(request.contrasena())).thenReturn("hash");
+        // Lo que se cifra es azar: ninguna contraseña viaja en la petición.
+        when(passwordEncoder.encode(any())).thenReturn("hash-de-azar");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.createEmployee(request, manager);
 
-        verify(userRepository).save(argThat(u -> u.getRol() == Role.EMPLEADO && u.getEmpresa() == empresa));
+        verify(userRepository).save(argThat(u -> u.getRol() == Role.EMPLEADO && u.getEmpresa() == empresa
+                && "hash-de-azar".equals(u.getContrasena())));
+        verify(accessCodeService).emitirCodigoDeAlta(
+                argThat(u -> "nuevo@nxtime.test".equals(u.getEmail())), argThat("Empresa Test"::equals));
+        verify(eventPublisher).publishEvent(any(com.nxtime.nxtime.notification.NotificationEvents.EmployeeCreated.class));
+    }
+
+    @Test
+    @DisplayName("createEmployee: si el código de alta no sale, el error sube (para deshacer el alta) y no se anuncia la bienvenida")
+    void createEmployee_siElCodigoNoSale_lanzaYNoPublicaLaBienvenida() {
+        User manager = User.builder().id(1L).empresa(Company.builder().id(1L).nombre("Empresa Test").build()).build();
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        org.mockito.Mockito.doThrow(new BusinessException("Sin correo",
+                        org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
+                .when(accessCodeService).emitirCodigoDeAlta(any(), any());
+
+        assertThatThrownBy(() -> service.createEmployee(request, manager)).isInstanceOf(BusinessException.class);
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
     @DisplayName("createManager con email ya registrado lanza BusinessException")
     void createManager_emailYaRegistrado_lanzaBusinessException() {
         User admin = User.builder().id(1L).empresa(Company.builder().id(1L).build()).build();
-        CreateManagerRequest request = new CreateManagerRequest("Nuevo Gestor", "gestor2@nxtime.test", "password1");
+        CreateManagerRequest request = new CreateManagerRequest("Nuevo Gestor", "gestor2@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
         assertThatThrownBy(() -> service.createManager(request, admin)).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("createManager crea al gestor y le manda el código de alta, igual que a un empleado")
+    void createManager_emailLibre_creaGestorYEmiteCodigoDeAlta() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa Test").build();
+        User admin = User.builder().id(1L).empresa(empresa).build();
+        CreateManagerRequest request = new CreateManagerRequest("Nuevo Gestor", "gestor2@nxtime.test");
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.createManager(request, admin);
+
+        verify(userRepository).save(argThat(u -> u.getRol() == Role.GESTOR && u.getEmpresa() == empresa));
+        verify(accessCodeService).emitirCodigoDeAlta(
+                argThat(u -> "gestor2@nxtime.test".equals(u.getEmail())), argThat("Empresa Test"::equals));
     }
 
     // ---- changePassword ----

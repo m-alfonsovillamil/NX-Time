@@ -19,6 +19,7 @@ import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.SecurityUser;
+import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -43,6 +44,10 @@ import org.springframework.transaction.annotation.Transactional;
  * después GESTOR/RRHH/otros ADMIN (ver RoleAuthorities, "gestor:crear").
  * Antes cualquier GESTOR podía crear otro GESTOR sin límite (ver
  * auditoría, defectos de diseño).
+ *
+ * Desde el 09/2026 (ADR 014), quien da un alta ya no pone la contraseña
+ * de nadie: la cuenta nace sin contraseña utilizable y su dueño elige la
+ * suya con el código que le llega por correo.
  */
 @Service
 @Transactional(readOnly = true)
@@ -57,6 +62,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final ApplicationEventPublisher eventPublisher;
+    private final AccessCodeService accessCodeService;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -68,7 +74,8 @@ public class AuthServiceImpl implements AuthService {
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
             AuthenticationManager authenticationManager,
-            ApplicationEventPublisher eventPublisher
+            ApplicationEventPublisher eventPublisher,
+            AccessCodeService accessCodeService
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -77,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.eventPublisher = eventPublisher;
+        this.accessCodeService = accessCodeService;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -161,14 +169,19 @@ public class AuthServiceImpl implements AuthService {
         User newEmployee = User.builder()
                 .nombre(request.nombre())
                 .email(request.email())
-                .contrasena(passwordEncoder.encode(request.contrasena()))
+                .contrasena(contrasenaInutilizable())
                 .rol(Role.EMPLEADO)
                 .empresa(managerCompany)
                 .build();
 
         User savedEmployee = userRepository.save(newEmployee);
-        // Correo de bienvenida (Fase 10). Sin la contraseña dentro: la
-        // comunica quien da el alta por otro canal (ver la plantilla).
+
+        // El código de acceso, en el momento y DENTRO de esta transacción:
+        // si el correo no sale, lanza y el alta se deshace (ver AccessCodeService).
+        accessCodeService.emitirCodigoDeAlta(savedEmployee, managerCompany.getNombre());
+
+        // Aviso de bienvenida dentro de la aplicación (Fase A). El correo de
+        // bienvenida de la Fase 10 ya no existe: es el del código de alta.
         eventPublisher.publishEvent(
                 new NotificationEvents.EmployeeCreated(savedEmployee, managerCompany.getNombre()));
 
@@ -187,12 +200,13 @@ public class AuthServiceImpl implements AuthService {
         User newManager = User.builder()
                 .nombre(request.nombre())
                 .email(request.email())
-                .contrasena(passwordEncoder.encode(request.contrasena()))
+                .contrasena(contrasenaInutilizable())
                 .rol(Role.GESTOR)
                 .empresa(company)
                 .build();
 
-        userRepository.save(newManager);
+        User savedManager = userRepository.save(newManager);
+        accessCodeService.emitirCodigoDeAlta(savedManager, company.getNombre());
         log.info("Administrador {} ha creado al gestor {}", admin.getEmail(), newManager.getEmail());
     }
 
@@ -223,6 +237,18 @@ public class AuthServiceImpl implements AuthService {
         employee.setFechaBaja(activo ? null : Instant.now());
         userRepository.save(employee);
         log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getEmail(), actingManager.getEmail());
+    }
+
+    /**
+     * La contraseña de una cuenta recién creada, hasta que su dueño elija
+     * la suya con el código de alta.
+     *
+     * No puede ir vacía (la columna es NOT NULL) ni ser una que alguien
+     * conozca: es el hash de 122 bits de azar que no se guardan en ningún
+     * sitio, así que no existe contraseña con la que entrar.
+     */
+    private String contrasenaInutilizable() {
+        return passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     private AuthenticationResponse buildAuthResponse(User user) {

@@ -16,6 +16,14 @@ interface AuthRepository {
     suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RespuestaAutenticacion>
     fun procesarLoginExitoso(authResponse: RespuestaAutenticacion)
 
+    /* Códigos de acceso (ADR 014): recuperar la contraseña o elegirla la primera vez */
+    suspend fun solicitarCodigoAcceso(email: String): Response<Unit>
+    suspend fun restablecerContrasena(
+        email: String,
+        codigo: String,
+        contrasenaNueva: String
+    ): Response<Unit>
+
     /* Funciones de Fichaje (Empleado) */
     suspend fun getRegistroActivo(): Response<Registro?>
     suspend fun registrarFichaje(peticion: PeticionFichaje): Response<Registro>
