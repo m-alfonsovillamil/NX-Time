@@ -57,6 +57,14 @@ dependencies {
     // que sí importan datos internos y no deben quedar públicos.
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // Sentry (paso 5 del piloto): los errores del backend a un sitio que
+    // sobreviva a los 7 días de logs de Render. Es el starter de Spring
+    // Boot 3 ("-jakarta"); con Boot 4 sería sentry-spring-boot-4. Con
+    // sentry-logback, cada log.error se convierte en un evento. Sin DSN
+    // (SENTRY_DSN vacía, como en local y en los tests) no envía nada.
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:8.56.0")
+    implementation("io.sentry:sentry-logback:8.56.0")
+
     // Documentación de la API (Swagger UI / OpenAPI), Fase 6. 2.8.17 (no
     // la 2.6.0 fijada desde la Fase 0): esa version es anterior al
     // soporte de Spring Boot 3.4+/Spring Framework 6.2 y el arranque

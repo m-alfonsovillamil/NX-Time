@@ -68,6 +68,10 @@ public class SecurityConfig {
                         // Health check (Fase 7): lo usan Docker/Render para saber si el
                         // contenedor está vivo, antes de que exista ningún token posible.
                         .requestMatchers("/actuator/health").permitAll()
+                        // Estado de las tareas nocturnas (paso 5 del piloto): lo consulta
+                        // un workflow de GitHub sin sesión. No lleva datos de ninguna
+                        // empresa, solo si cada tarea corrió y cómo acabó.
+                        .requestMatchers("/estado/tareas").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

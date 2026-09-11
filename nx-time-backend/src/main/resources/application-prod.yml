@@ -84,6 +84,11 @@ management:
       probes:
         enabled: true
 
+# Para distinguir en Sentry los errores de producción de los de una prueba
+# local con el DSN puesto.
+sentry:
+  environment: produccion
+
 application:
   mail:
     # En producción tiene que ser un dominio verificado en el proveedor

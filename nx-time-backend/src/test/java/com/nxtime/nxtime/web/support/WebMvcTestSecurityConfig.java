@@ -31,6 +31,8 @@ public class WebMvcTestSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        // Igual que en producción: lo consulta un workflow sin sesión.
+                        .requestMatchers("/estado/tareas").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }

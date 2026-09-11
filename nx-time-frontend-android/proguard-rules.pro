@@ -63,6 +63,17 @@
 -dontwarn org.openjsse.**
 
 # ---------------------------------------------------------------------
+# Trazas de los cierres (paso 5 del piloto, Sentry)
+# ---------------------------------------------------------------------
+# Sin esto R8 borra el número de línea de cada método, y un cierre que
+# llega a Sentry dice en qué método ofuscado reventó pero no dónde. Con
+# las líneas y el mapping.txt de ESE build, `retrace` devuelve la traza
+# real (ver docs/DESPLIEGUE.md). El nombre del fichero fuente se sustituye
+# por "SourceFile" para no regalar la estructura del código en el APK.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# ---------------------------------------------------------------------
 # Enums del contrato con el backend
 # ---------------------------------------------------------------------
 # Gson serializa los enums por el NOMBRE de la constante ("VACACIONES",

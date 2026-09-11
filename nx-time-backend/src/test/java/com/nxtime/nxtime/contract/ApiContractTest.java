@@ -2926,6 +2926,28 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 7b. ESTADO DE LAS TAREAS NOCTURNAS (paso 5 del piloto)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(85)
+    void estadoDeLasTareas_esPublico_yEnUnaBaseRecienCreadaAvisaDeQueNoHanCorrido() throws Exception {
+        // Sin token: lo consulta un workflow de GitHub, que no tiene sesión.
+        // La base de este test acaba de crearse y las tareas nocturnas no
+        // han corrido nunca, así que la respuesta honesta es 503. Un 200
+        // aquí querría decir que la comprobación da por buenas tareas que
+        // no han existido.
+        ResponseEntity<String> respuesta = rest.getForEntity(url("/estado/tareas"), String.class);
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        JsonNode cuerpo = bodyOf(respuesta);
+        assertThat(cuerpo.get("ok").asBoolean()).isFalse();
+        assertThat(cuerpo.get("tareas")).hasSize(2);
+        assertThat(cuerpo.get("tareas").get(0).get("ok").asBoolean()).isFalse();
+        assertThat(cuerpo.get("tareas").get(0).has("detalle")).isFalse();
+    }
+
+    // ------------------------------------------------------------------
     // 8. BAJA DE EMPLEADOS (Fase 4)
     // ------------------------------------------------------------------
 

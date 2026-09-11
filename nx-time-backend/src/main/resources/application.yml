@@ -72,6 +72,29 @@ logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %msg%n"
 
+# Sentry (paso 5 del piloto): los errores, a un sitio que sobreviva a los
+# 7 días de logs de Render. Sin SENTRY_DSN -- en local, en los tests y en
+# el CI -- el SDK queda desactivado y no envía nada.
+#
+# Solo el nivel ERROR crea un evento, y es a propósito: cada log.error del
+# proyecto (el 500 de GlobalExceptionHandler, un correo que no sale, una
+# tarea nocturna que falla) es justo lo que hay que saber. Por eso NO se
+# usa sentry.exception-resolver-order, que mandaría también los 400, 403 y
+# 404 que GlobalExceptionHandler ya resuelve y agotaría la cuota gratuita
+# en ruido. INFO y WARN viajan como migas de pan dentro del evento.
+#
+# send-default-pii en false: ni la IP ni las cabeceras, y en una de ellas
+# viaja el token JWT. Los MENSAJES de log sí pueden llevar un correo
+# electrónico (ver docs/DESPLIEGUE.md).
+sentry:
+  dsn: "${SENTRY_DSN:}"
+  environment: "${SENTRY_ENVIRONMENT:desarrollo}"
+  send-default-pii: false
+  in-app-includes: com.nxtime
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+
 # Actuator (Fase 7): solo se expone "health" -- ni "info" ni el resto
 # (env, beans, threaddump...), que exponen detalles internos y no
 # tienen por qué ser públicos. Es el endpoint que usa el HEALTHCHECK

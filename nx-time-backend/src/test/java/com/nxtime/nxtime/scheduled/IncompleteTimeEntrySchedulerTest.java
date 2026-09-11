@@ -2,6 +2,7 @@ package com.nxtime.nxtime.scheduled;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,9 +16,11 @@ import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
+import com.nxtime.nxtime.service.TaskMonitorService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Unitarios del cierre automático de jornadas olvidadas (Fase 9).
@@ -41,6 +46,10 @@ class IncompleteTimeEntrySchedulerTest {
     private TimeEntryRepository timeEntryRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private TaskMonitorService taskMonitor;
+    @Mock
+    private PlatformTransactionManager transactionManager;
 
     private IncompleteTimeEntryScheduler scheduler;
     private User empleado;
@@ -49,7 +58,12 @@ class IncompleteTimeEntrySchedulerTest {
     void setUp() {
         TimeEntrySnapshotSerializer serializer = new TimeEntrySnapshotSerializer(
                 new ObjectMapper().registerModule(new JavaTimeModule()));
-        scheduler = new IncompleteTimeEntryScheduler(timeEntryRepository, eventPublisher, serializer);
+        // El registro de la ejecución se prueba en TaskMonitorServiceImplTest
+        // y ScheduledTaskMonitorIT: aquí solo tiene que dejar correr el trabajo.
+        doAnswer(invocacion -> invocacion.<Supplier<String>>getArgument(1).get())
+                .when(taskMonitor).ejecutar(any(), any());
+        scheduler = new IncompleteTimeEntryScheduler(timeEntryRepository, eventPublisher, serializer,
+                taskMonitor, new TransactionTemplate(transactionManager));
         Company empresa = Company.builder().id(1L).build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").empresa(empresa).build();
     }

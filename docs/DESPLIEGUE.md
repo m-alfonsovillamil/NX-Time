@@ -257,7 +257,88 @@ de la base no puede asignárselas). Después, apuntar `DATABASE_URL` y las
 `SPRING_FLYWAY_*` de Render a la base nueva y comprobar con los mismos cinco
 puntos de arriba.
 
-## 6. Estado actual
+## 6. Monitorización
+
+El valor de un piloto es descubrir qué se rompe, y hasta el 11/09/2026 los
+fallos eran invisibles: un error solo existía en los logs de Render, que duran
+**7 días**, y nada decía si las tareas nocturnas habían corrido.
+
+| Qué | Cómo te enteras | Qué hay que configurar |
+|---|---|---|
+| Un error del backend: un 500, un correo que no sale, una tarea que falla | correo de Sentry | `SENTRY_DSN` en el panel de Render |
+| Un cierre de la app Android | correo de Sentry | `nxtime.sentry.dsn` en `~/.gradle/gradle.properties` al compilar |
+| Que las tareas de las 3:00 y las 3:30 no hayan corrido | correo de GitHub (workflow en rojo) | nada: `.github/workflows/tareas-nocturnas.yml` |
+
+### Sentry
+
+Plan gratuito: 5.000 errores al mes, 30 días de historial y un usuario. Hacen
+falta **dos proyectos**, uno Spring Boot y otro Android.
+
+- **Backend**: `SENTRY_DSN` en *Environment* del servicio de Render (el
+  blueprint ya la declara, pero en un servicio creado antes hay que añadirla a
+  mano). Sin ella la aplicación arranca igual y no envía nada. **Solo el nivel
+  ERROR crea un evento**: cada `log.error` del proyecto es algo que hay que
+  saber. No se usa `sentry.exception-resolver-order`, que mandaría también los
+  400, 403 y 404 que ya resuelve `GlobalExceptionHandler` y gastaría la cuota
+  en ruido.
+- **Android**, en `~/.gradle/gradle.properties`:
+
+  ```properties
+  nxtime.sentry.dsn=https://...@....ingest.de.sentry.io/...
+  ```
+
+  Sin DSN la app no inicializa Sentry. Va con `sentry-android-core` y **sin**
+  la integración nativa (NDK): la app no tiene código nativo, y esa parte
+  subía el APK de 2,5 a 6,2 MB.
+
+  **Los cierres del APK de release llegan ofuscados** (`f8.r0`), con los números
+  de línea conservados. Se descifran con el `mapping.txt` de **ese mismo
+  build**, así que hay que guardarlo junto a cada APK que se instale:
+
+  ```bash
+  # build/outputs/mapping/prodRelease/mapping.txt -> guardarlo con el APK
+  "$ANDROID_HOME/cmdline-tools/latest/bin/retrace" mapping.txt traza.txt
+  ```
+
+  > El plugin de Gradle de Sentry, que sube el mapping solo, **se probó y se
+  > quitó**: lanza `sentry-cli` por `cmd` sin entrecomillar la ruta, y con el
+  > proyecto en una carpeta con espacios (`NX Time`) rompe el build de release
+  > incluso sin token.
+
+> ⚠️ **Datos personales.** `send-default-pii` está desactivado en los dos
+> lados (ni IP, ni cabeceras, ni usuario), pero algunos mensajes de log llevan
+> un correo electrónico — el de un envío que ha fallado, por ejemplo. Para un
+> piloto con datos propios es aceptable; **antes de que la use otra persona**,
+> Sentry pasa a ser encargado del tratamiento y hay que revisarlo.
+
+### Tareas nocturnas
+
+Las dos tareas programadas corren **dentro del proceso**. Si a su hora el
+servicio está dormido, reiniciándose o desplegándose, no corren y nada lo dice.
+Antes del keep-alive, lo más probable es que casi nunca hubieran corrido.
+
+- Cada ejecución deja una fila en `ejecuciones_tarea` (V15): `EN_CURSO` al
+  empezar, `OK` o `ERROR` al terminar. Una que se queda `EN_CURSO` es un proceso
+  que murió a mitad.
+- `GET /estado/tareas` es **público** y responde **200** si cada tarea terminó
+  bien después de la última vez que le tocaba (con 15 minutos de margen), y
+  **503** si alguna no. No lleva datos de ninguna empresa.
+- **No es un indicador de `/actuator/health`**, que habría sido lo obvio: ese
+  es el health check de Render, y una tarea perdida lo pondría en 503 y Render
+  reiniciaría un servicio que funciona.
+- `tareas-nocturnas.yml` lo consulta cada día a las 3:15 UTC y se pone en rojo
+  con un 503.
+
+El historial, desde la base:
+
+```sql
+SELECT tarea, inicio, fin, resultado, detalle
+FROM ejecuciones_tarea
+ORDER BY inicio DESC
+LIMIT 20;
+```
+
+## 7. Estado actual
 
 - ✅ Esquema creado en Neon: las 5 migraciones aplicadas (PostgreSQL 18).
 - ✅ Rol `nxtime_app` creado y garantía append-only de la auditoría verificada

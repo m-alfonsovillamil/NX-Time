@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.scheduled;
 
+import com.nxtime.nxtime.domain.ScheduledTask;
 import com.nxtime.nxtime.service.OvertimeService;
+import com.nxtime.nxtime.service.TaskMonitorService;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import org.slf4j.Logger;
@@ -39,33 +41,42 @@ public class OvertimeScheduler {
     /** Ver el Javadoc de la clase. */
     private static final int DIAS_HACIA_ATRAS = 14;
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
+    private static final ZoneId MADRID = ZoneId.of(ScheduledTask.ZONA);
 
     private final OvertimeService overtimeService;
+    private final TaskMonitorService taskMonitor;
 
-    public OvertimeScheduler(OvertimeService overtimeService) {
+    public OvertimeScheduler(OvertimeService overtimeService, TaskMonitorService taskMonitor) {
         this.overtimeService = overtimeService;
+        this.taskMonitor = taskMonitor;
     }
 
-    @Scheduled(cron = "0 30 3 * * *", zone = "Europe/Madrid")
+    /*
+     * Hasta el paso 5 del piloto esto se tragaba cualquier excepción, con
+     * la idea de que si no, Spring dejaría de reprogramar la tarea. No es
+     * así: a una tarea con cron, Spring le registra el fallo en el log y la
+     * vuelve a lanzar a su hora siguiente. Y tragársela tenía un coste: con
+     * el registro de ejecuciones, un barrido fallido habría quedado
+     * anotado como correcto.
+     *
+     * Ahora el fallo sube: TaskMonitorService lo anota como ERROR, Spring
+     * lo escribe a nivel ERROR (y de ahí llega a Sentry), y la noche
+     * siguiente se reintenta. La ventana de catorce días sigue siendo lo
+     * que recupera el barrido perdido.
+     */
+    @Scheduled(cron = ScheduledTask.CRON_HORAS_EXTRA, zone = ScheduledTask.ZONA)
     public void detectarHorasExtra() {
-        LocalDate hoy = LocalDate.now(MADRID);
-        // Hasta AYER: el día en curso está a medias y una jornada sin
-        // cerrar no tiene horas que contar.
-        LocalDate hasta = hoy.minusDays(1);
-        LocalDate desde = hoy.minusDays(DIAS_HACIA_ATRAS);
+        taskMonitor.ejecutar(ScheduledTask.HORAS_EXTRA, () -> {
+            LocalDate hoy = LocalDate.now(MADRID);
+            // Hasta AYER: el día en curso está a medias y una jornada sin
+            // cerrar no tiene horas que contar.
+            LocalDate hasta = hoy.minusDays(1);
+            LocalDate desde = hoy.minusDays(DIAS_HACIA_ATRAS);
 
-        try {
             int tocados = overtimeService.detectar(desde, hasta);
             log.info("Revisión de horas extra {} .. {}: {} avisos nuevos o actualizados.",
                     desde, hasta, tocados);
-        } catch (RuntimeException e) {
-            // Se traga el fallo a propósito: si esto revienta, el
-            // scheduler de Spring deja de reintentar el método pero la
-            // aplicación sigue en pie. Un barrido perdido se recupera
-            // solo la noche siguiente -- la ventana de catorce días
-            // existe también para esto.
-            log.error("Falló el barrido de horas extra {} .. {}: {}", desde, hasta, e.getMessage(), e);
-        }
+            return "Revisados del " + desde + " al " + hasta + ": " + tocados + " avisos nuevos o actualizados.";
+        });
     }
 }
