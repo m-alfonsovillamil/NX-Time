@@ -165,7 +165,99 @@ Se ataca por dos lados, y hacen falta los dos:
    conexión, 30 s de lectura). Antes usaba los 10 s por defecto de OkHttp, así
    que la primera petición de cada mañana fallaba siempre.
 
-## 5. Estado actual
+## 5. Copias de seguridad
+
+**Neon no es una copia de seguridad en el plan gratuito.** Comprobado el
+11/09/2026: la restauración instantánea solo llega **6 horas** atrás, hay **un
+único snapshot manual** y **no hay copias programadas**. Sirve para "acabo de
+romper algo", no para "esto se borró la semana pasada" ni para perder el acceso
+a la cuenta.
+
+Por eso hay dos capas:
+
+| Capa | Cubre | Dónde |
+|---|---|---|
+| Restauración instantánea de Neon | las últimas 6 horas | consola de Neon → *Branches* → `production` → *Restore* (sobrescribe la rama y guarda el estado anterior en una rama de respaldo) |
+| Copia diaria propia | 30 días, y nunca menos de 7 copias | `scripts/copia-neon.ps1` → `OneDrive\Copias NX Time` |
+
+### La copia diaria
+
+`scripts/copia-neon.ps1` hace un `pg_dump` en formato custom con la conexión
+**directa** (`DATABASE_URL_UNPOOLED` de `.env.local`: PgBouncer no admite el
+estado de sesión que usa `pg_dump`), comprueba que el fichero se puede leer y
+trae los datos de las tablas clave **antes** de darlo por bueno, y aplica la
+retención. Deja `copias.log` en la carpeta de destino y, si falla, un
+`ULTIMA-COPIA-FALLIDA.txt` que desaparece con la siguiente copia buena.
+
+Corre como tarea programada de Windows, todos los días a las 14:00 y, si el PC
+estaba apagado a esa hora, en cuanto se enciende:
+
+```powershell
+$script = "C:\ruta\al\repo\scripts\copia-neon.ps1"
+Register-ScheduledTask -TaskName "NX Time - copia de Neon" `
+  -Action (New-ScheduledTaskAction -Execute "powershell.exe" `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`"") `
+  -Trigger (New-ScheduledTaskTrigger -Daily -At 14:00) `
+  -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 15))
+```
+
+Necesita el cliente de **PostgreSQL 18**: `pg_dump` no puede copiar un servidor
+de una versión mayor más nueva que él.
+
+> ⚠️ El script **tiene que guardarse en UTF-8 con BOM**. PowerShell 5.1 lee un
+> `.ps1` sin BOM como ANSI, y todas las tildes de los mensajes salían rotas.
+
+### Probar la restauración
+
+Una copia que nunca se ha restaurado no es una copia. `scripts/probar-restauracion.sh`
+(Git Bash, con Docker) la restaura en un PostgreSQL 18 desechable en el puerto
+5434 — no toca la base de desarrollo — y comprueba:
+
+1. que `pg_restore` termina **sin errores**;
+2. las mismas filas por tabla que producción (si se lanza sin argumento, copia
+   producción en ese momento y compara);
+3. las migraciones de Flyway, todas con éxito;
+4. que ninguna secuencia va por detrás de su id máximo;
+5. que la auditoría sigue siendo append-only: los dos triggers de V5 **disparan
+   de verdad** contra un `DELETE` y un `TRUNCATE`, y `nxtime_app` sigue sin
+   `UPDATE` ni `DELETE`.
+
+```bash
+scripts/probar-restauracion.sh                                   # copia nueva de producción
+scripts/probar-restauracion.sh "/c/Users/.../nxtime-AAAA-MM-DD_HHMMSS.dump"   # una copia hecha
+```
+
+**Verificado el 11/09/2026** con las dos formas: `RESTAURACIÓN VERIFICADA`.
+Conviene repetirlo de vez en cuando, y siempre después de una migración nueva.
+
+Lo que costó llegar ahí, para no repetirlo:
+
+- La copia nombra roles internos de Neon (`neon_auth`, `neon_superuser` y
+  `cloud_admin`, dueño de unos `DEFAULT PRIVILEGES`). Fuera de Neon hay que
+  crearlos antes de restaurar, o `pg_restore` da errores que no afectan a los
+  datos pero **tapan los que sí importan**.
+- `psql` en Windows manda las tildes de una consulta en la codificación de la
+  consola: el script fuerza `PGCLIENTENCODING=UTF8`. La primera versión dio las
+  secuencias por buenas porque su consulta había muerto por eso y la salida
+  vacía parecía "ninguna atrasada". Ahora una consulta fallida cuenta como fallo.
+
+### Restaurar de verdad en Neon
+
+**Sin probar contra Neon** — lo probado es la restauración en PostgreSQL 18
+local. Si hiciera falta: crear en la consola una base vacía en la rama, con
+`neondb_owner` como propietario, y restaurar con la conexión directa a ella:
+
+```bash
+pg_restore --dbname="postgresql://neondb_owner:...@HOST-DIRECTO/nxtime_restaurada?sslmode=require" copia.dump
+```
+
+Cabe esperar errores en las líneas de `neon_auth` y `cloud_admin` (el propietario
+de la base no puede asignárselas). Después, apuntar `DATABASE_URL` y las
+`SPRING_FLYWAY_*` de Render a la base nueva y comprobar con los mismos cinco
+puntos de arriba.
+
+## 6. Estado actual
 
 - ✅ Esquema creado en Neon: las 5 migraciones aplicadas (PostgreSQL 18).
 - ✅ Rol `nxtime_app` creado y garantía append-only de la auditoría verificada
