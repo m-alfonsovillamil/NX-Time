@@ -27,7 +27,13 @@ name: Keep-alive
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    # Cada 10 minutos, pero en los minutos 7, 17, 27... y no en los 0, 10,
+    # 20... que da `*/10`. Con `*/10` GitHub no lanzó NI UNA ejecución en
+    # las dos primeras horas (11/09/2026), y su documentación lo explica:
+    # "High load times include the start of every hour. If the load is
+    # sufficiently high enough, some queued jobs may be dropped." Los
+    # minutos redondos son los que usa todo el mundo.
+    - cron: '7,17,27,37,47,57 * * * *'
   # Para lanzarlo a mano desde la pestaña Actions (y para comprobar que
   # funciona sin esperar al siguiente múltiplo de diez).
   workflow_dispatch:
