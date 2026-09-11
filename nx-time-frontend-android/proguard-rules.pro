@@ -39,6 +39,22 @@
 # parámetro; Retrofit lo detecta por la firma.
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 
+# R8 en modo completo -- el de serie desde AGP 8 -- BORRA la firma genérica
+# de las clases que ninguna regla conserva. Retrofit lee de esa firma el
+# `Response<RespuestaAutenticacion>` de cada endpoint, y sin ella revienta
+# al primer uso de ApiService, antes de mandar nada.
+#
+# Retrofit trae estas reglas dentro del jar desde la 2.10.0; la 2.9.0 que
+# usa el proyecto no, así que van aquí. Se descubrió el 11/09/2026 al
+# instalar por primera vez un APK de release firmado: el login respondía
+# "No se ha podido conectar con el servidor" al instante, porque
+# ApiErrorParser.mensajeDeRed traduce cualquier excepción a eso. En debug
+# no hay minificación y nunca falló.
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowoptimization,allowshrinking,allowobfuscation class <3>
+
 # Avisos de dependencias opcionales que no usamos (OkHttp las declara
 # para entornos donde sí están disponibles).
 -dontwarn okhttp3.internal.platform.**

@@ -114,15 +114,56 @@ La URL del backend sale de `BuildConfig` según el sabor de compilación:
 Sin `-Pnxtime.prod.url` queda un marcador inválido a propósito: así un APK mal
 construido falla en vez de apuntar en silencio a un sitio equivocado.
 
-## 4. Dos avisos del plan gratuito
+### Firma del APK
 
-- **Render duerme el servicio** tras 15 minutos sin tráfico: la primera petición
-  tarda unos 50 segundos. Conviene saberlo antes de enseñarlo en una entrevista.
+Android **no instala un APK sin firmar**, y el repositorio es público, así que
+la clave no puede vivir en él. Se genera una vez:
+
+```bash
+keytool -genkeypair -keystore nxtime-release.jks -storetype PKCS12 \
+  -alias nxtime -keyalg RSA -keysize 4096 -validity 10000
+```
+
+y se declara, **fuera del repositorio**, en `~/.gradle/gradle.properties`:
+
+```properties
+nxtime.release.storeFile=C:/ruta/fuera/del/repo/nxtime-release.jks
+nxtime.release.storePassword=...
+nxtime.release.keyAlias=nxtime
+nxtime.release.keyPassword=...
+nxtime.prod.url=https://nxtime-backend.onrender.com/
+```
+
+Con eso, `assembleProdRelease` ya no necesita `-P`. Sin esas propiedades el
+release compila igual, pero sin firmar (es lo que pasa en el CI).
+
+> 🚨 **Copia de seguridad del `.jks` y de su contraseña.** Si se pierde
+> cualquiera de los dos, la app instalada **no se puede volver a actualizar
+> nunca**: Android exige que cada versión venga firmada con la misma clave.
+
+## 4. El arranque en frío
+
+- **Render duerme el servicio** tras 15 minutos sin tráfico. Medido el
+  09/09/2026: `/actuator/health` en caliente 0,3 s, login en caliente 0,8 s y
+  **login en frío 160 s**. El 11/09/2026, desde el APK de release, el frío
+  **pasó de 180 s** (entre 180 y ~210 s): no es una cifra fija.
 - **Neon suspende la base de datos** por inactividad. Por eso
   `application-prod.yml` sube el `connection-timeout` de HikariCP a 45 s.
 
-Un cron gratuito (cron-job.org, UptimeRobot) llamando a `/actuator/health` cada
-10 minutos mantiene ambos despiertos.
+Se ataca por dos lados, y hacen falta los dos:
+
+1. **`.github/workflows/keep-alive.yml`** llama a `/actuator/health` cada 10
+   minutos. Tres pegas: GitHub retrasa los `schedule` con carga (a veces más de
+   15 minutos), **desactiva los workflows programados tras 60 días sin actividad
+   en el repositorio**, y tener el servicio despierto 24/7 gasta ~730 de las
+   **750 horas** mensuales de Render — no cabe un segundo servicio gratuito en
+   la misma cuenta.
+2. **La app espera al servidor cuando puede estar dormido**
+   (`ArranqueEnFrio.kt`): si no ha tenido respuesta en 10 minutos, la petición
+   espera hasta 300 s y, pasados 3 s, la app avisa de que el servidor está
+   despertando. Si hay respuesta reciente, rigen tiempos cortos (15 s de
+   conexión, 30 s de lectura). Antes usaba los 10 s por defecto de OkHttp, así
+   que la primera petición de cada mañana fallaba siempre.
 
 ## 5. Estado actual
 

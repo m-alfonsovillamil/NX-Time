@@ -2,6 +2,7 @@ package com.nxtime.app
 
 import android.app.Application
 import com.nxtime.app.data.network.ApiService
+import com.nxtime.app.data.network.ArranqueEnFrio
 import com.nxtime.app.data.network.RetrofitClient
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.repository.AuthRepositoryImpl
@@ -21,6 +22,9 @@ class NxTimeApplication : Application() {
     lateinit var apiService: ApiService
     lateinit var authRepository: AuthRepository
 
+    /** Lo lee MainActivity para avisar de que el servidor está despertando. */
+    lateinit var arranqueEnFrio: ArranqueEnFrio
+
     /**
      * Esta función se ejecuta 1 sola vez cuando la app arranca. Es el lugar perfecto para configurar nuestras herramientas.
      */
@@ -31,8 +35,10 @@ class NxTimeApplication : Application() {
         // 1. Creamos el gestor de sesión (guarda el token).
         sessionManager = SessionManager(this)
 
-        // 2. Creamos RetrofitClient y le pasamos el sessionManager
-        val retrofitClient = RetrofitClient(sessionManager)
+        // 2. Creamos RetrofitClient y le pasamos el sessionManager, y el
+        //    vigilante del arranque en frío que decide cuánto esperar.
+        arranqueEnFrio = ArranqueEnFrio()
+        val retrofitClient = RetrofitClient(sessionManager, arranqueEnFrio)
 
         // 3. Obtenemos la instancia de ApiService
         apiService = retrofitClient.instance

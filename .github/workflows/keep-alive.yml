@@ -1,0 +1,62 @@
+# Mantener despierto el backend de Render (piloto, 09/2026).
+#
+# Render, en el plan gratuito, apaga el servicio tras 15 minutos sin
+# tráfico, y despertarlo tarda: medido el 09/09/2026, un login en frío
+# llevó 160 s. Un ping cada 10 minutos lo mantiene levantado.
+#
+# Va aquí y no en un servicio externo (cron-job.org, UptimeRobot) porque el
+# repositorio es público -- los minutos de Actions no cuestan -- y así queda
+# versionado junto al código.
+#
+# Tres cosas que hay que saber antes de fiarse de esto:
+#
+#  1. GitHub RETRASA los `schedule` cuando tiene carga: diez minutos pueden
+#     ser veinte, y Render se duerme a los quince. Por eso la app no se fía
+#     de que el servidor esté despierto (ver `ArranqueEnFrio.kt`).
+#  2. GitHub DESACTIVA los workflows programados de un repositorio sin
+#     actividad en 60 días. Si se deja de tocar el repo, el ping muere en
+#     silencio: hay que reactivarlo desde la pestaña Actions.
+#  3. Render da 750 horas de instancia al mes y un mes tiene unas 730. Tener
+#     este servicio despierto 24/7 gasta casi toda la cuota: un segundo
+#     servicio gratuito en la misma cuenta se quedaría sin horas a mitad de
+#     mes.
+#
+# /actuator/health no toca la base, así que Neon sigue suspendiéndose; eso
+# lo cubre el connection-timeout de 45 s de HikariCP en application-prod.yml.
+name: Keep-alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  # Para lanzarlo a mano desde la pestaña Actions (y para comprobar que
+  # funciona sin esperar al siguiente múltiplo de diez).
+  workflow_dispatch:
+
+# Si un ping se queda esperando a un arranque en frío, el siguiente no se
+# amontona detrás.
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  ping:
+    name: Ping a /actuator/health
+    runs-on: ubuntu-latest
+    # Tres intentos de hasta 330 s más las pausas: unos 17 minutos en el
+    # peor caso. Con menos, GitHub cortaría el ping antes de que se rinda.
+    timeout-minutes: 20
+    steps:
+      # --fail hace que un servidor caído ponga la ejecución en rojo, y
+      # GitHub avisa por correo de un workflow programado que falla: es la
+      # alarma más barata que hay mientras no exista monitorización de
+      # verdad. --max-time 330 cubre un arranque en frío completo, que se
+      # ha medido entre 160 s y más de 180 s.
+      - name: Llamar al backend
+        run: |
+          curl --fail --silent --show-error \
+            --max-time 330 --retry 2 --retry-delay 15 \
+            --output /dev/null \
+            --write-out "HTTP %{http_code} en %{time_total} s\n" \
+            https://nxtime-backend.onrender.com/actuator/health

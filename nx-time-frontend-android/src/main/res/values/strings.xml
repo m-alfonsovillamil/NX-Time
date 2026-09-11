@@ -424,6 +424,15 @@
     <string name="error_servidor">El servidor no está disponible. Inténtalo más tarde.</string>
     <string name="error_inesperado">Se ha producido un error inesperado.</string>
 
+    <!--
+        Arranque en frío (piloto). Render duerme el servidor tras 15 min sin
+        tráfico y despertarlo tarda entre dos y cuatro minutos (medido): sin
+        este aviso, la espera parece una app colgada y se cierra antes de
+        que responda. No se promete una cifra porque no es fija.
+    -->
+    <string name="servidor_despertando_titulo">Despertando el servidor…</string>
+    <string name="servidor_despertando_texto">Tras un rato sin uso, la primera conexión puede tardar unos minutos. No cierres la app.</string>
+
     <!-- Calendario laboral (Fase C) -->
     <string name="calendario_titulo">Calendario</string>
     <string name="calendario_mes_anterior">Mes anterior</string>

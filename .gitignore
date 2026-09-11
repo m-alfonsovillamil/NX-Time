@@ -25,6 +25,10 @@ local.properties
 captures/
 .cxx/
 nx-time-frontend-android/release/
+# La clave de firma del release vive FUERA del repo (ver docs/DESPLIEGUE.md);
+# esto es la red por si alguien la copia dentro: el repositorio es público.
+*.jks
+*.keystore
 
 # --- Datos locales / secretos ---
 *.db
