@@ -6,7 +6,6 @@ import com.nxtime.app.data.session.SessionManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Interceptor
-import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
@@ -17,7 +16,8 @@ import retrofit2.converter.gson.GsonConverterFactory
  * Prepara todo lo necesario para que Retrofit funcione.
  */
 class RetrofitClient(
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val arranqueEnFrio: ArranqueEnFrio
 ) {
 
     /*
@@ -83,7 +83,7 @@ class RetrofitClient(
      */
     private val refreshRetrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
-        .client(OkHttpClient.Builder().addInterceptor(loggingInterceptor).build())
+        .client(arranqueEnFrio.clienteBase().addInterceptor(loggingInterceptor).build())
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
@@ -143,9 +143,11 @@ class RetrofitClient(
     }
 
     /*
-     * Aquí construimos el "motor" HTTP
+     * Aquí construimos el "motor" HTTP. Parte de `clienteBase()`, que pone
+     * los tiempos de espera y el interceptor del arranque en frío por
+     * delante de los demás (ver ArranqueEnFrio).
      */
-    private val okHttpClient = OkHttpClient.Builder()
+    private val okHttpClient = arranqueEnFrio.clienteBase()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingSalvoDescargas)
         .authenticator(tokenAuthenticator)

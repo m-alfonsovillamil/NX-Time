@@ -5,6 +5,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nxtime.app.ui.components.AvisoServidorDespertando
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
 import com.nxtime.app.ui.theme.NxTimeTheme
 import com.nxtime.app.ui.util.enEspanol
@@ -52,15 +67,37 @@ class MainActivity : ComponentActivity() {
          * motivo: quien ya tiene sesión no debe ver pasar la pantalla de
          * login.
          */
-        val sessionManager = (application as NxTimeApplication).sessionManager
+        val aplicacion = application as NxTimeApplication
+        val sessionManager = aplicacion.sessionManager
         val sesionIniciada = sessionManager.fetchAuthToken() != null
 
         setContent {
             NxTimeTheme {
-                NxTimeNavHost(
-                    sesionIniciada = sesionIniciada,
-                    sessionManager = sessionManager
-                )
+                val despertando by aplicacion.arranqueEnFrio.despertando
+                    .collectAsStateWithLifecycle()
+
+                Box(Modifier.fillMaxSize()) {
+                    NxTimeNavHost(
+                        sesionIniciada = sesionIniciada,
+                        sessionManager = sessionManager
+                    )
+                    /*
+                     * Por encima del grafo y no dentro de una pantalla: la
+                     * primera petición del día puede salir de cualquiera.
+                     * Tapa la barra superior mientras dura, y es a propósito:
+                     * mientras el servidor no responde, nada de ahí funciona.
+                     */
+                    AnimatedVisibility(
+                        visible = despertando,
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically(),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                    ) {
+                        AvisoServidorDespertando()
+                    }
+                }
             }
         }
     }

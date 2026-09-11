@@ -41,6 +41,29 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    /*
+     * Firma del APK de release (piloto, 09/2026).
+     *
+     * Sin esto el APK de release salía SIN FIRMAR y Android se niega a
+     * instalarlo, así que la app nunca se había podido usar fuera del
+     * emulador. El keystore y su contraseña NO están en el repositorio, que
+     * es público: se leen de `~/.gradle/gradle.properties` (ver
+     * docs/DESPLIEGUE.md). Si faltan -- en el CI o en otra máquina -- el
+     * release sigue compilando, pero sin firmar: el CI solo construye debug
+     * y no tiene por qué conocer la clave.
+     *
+     * Perder el keystore o la contraseña significa no poder volver a
+     * actualizar la app nunca, ni con el mismo código.
+     */
+    val firmaRelease = (project.findProperty("nxtime.release.storeFile") as String?)?.let { ruta ->
+        signingConfigs.create("release") {
+            storeFile = file(ruta)
+            storePassword = project.property("nxtime.release.storePassword") as String
+            keyAlias = project.property("nxtime.release.keyAlias") as String
+            keyPassword = project.property("nxtime.release.keyPassword") as String
+        }
+    }
+
     buildTypes {
         release {
             // Se activa la minificación (Fase 11): hasta ahora estaba a
@@ -49,6 +72,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = firmaRelease
         }
     }
 
