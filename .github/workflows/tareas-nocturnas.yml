@@ -1,0 +1,46 @@
+# ¿Han corrido las tareas nocturnas? (paso 5 del piloto, 09/2026)
+#
+# Las dos tareas programadas del backend -- el cierre de jornadas olvidadas
+# a las 3:00 y el barrido de horas extra a las 3:30, hora española -- corren
+# dentro del proceso. Si a esa hora Render tiene el servicio dormido, se
+# está reiniciando o se está desplegando, no corren, y nada lo dice: te
+# enterarías semanas después, al echar de menos un aviso.
+#
+# Cada mañana esto pregunta a /estado/tareas si cada tarea terminó bien
+# después de la última vez que le tocaba. Si alguna no, el endpoint responde
+# 503, la ejecución se pone en rojo y GitHub avisa por correo de un workflow
+# programado que falla.
+#
+# A las 3:15 UTC: las 5:15 en verano y las 4:15 en invierno en España, en
+# los dos casos después de las dos tareas y de su margen de 15 minutos. El
+# endpoint calcula él mismo la última hora programada, así que no importa a
+# qué hora exacta se consulte.
+#
+# Las mismas pegas que keep-alive.yml: GitHub puede retrasar el `schedule`,
+# y desactiva los workflows programados tras 60 días sin actividad en el
+# repositorio.
+name: Tareas nocturnas
+
+on:
+  schedule:
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  comprobar:
+    name: Comprobar /estado/tareas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: ¿Terminaron bien las de esta noche?
+        run: |
+          # Sin --fail: con un 503 hay que imprimir el cuerpo, que dice
+          # CUÁL no corrió. --max-time 330 cubre un arranque en frío.
+          codigo=$(curl --silent --show-error --max-time 330 \
+            --output respuesta.json --write-out "%{http_code}" \
+            https://nxtime-backend.onrender.com/estado/tareas) || codigo="sin respuesta"
+          jq . respuesta.json 2>/dev/null || cat respuesta.json 2>/dev/null || true
+          echo "HTTP $codigo"
+          test "$codigo" = "200"

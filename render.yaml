@@ -110,18 +110,26 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 
+      # Sentry (paso 5 del piloto): adónde van los errores del backend.
+      # Vacía, la aplicación arranca igual y no envía nada. El DSN no da
+      # acceso a leer nada -- solo identifica adónde mandar los errores --,
+      # pero no pinta nada en un repositorio público.
+      - key: SENTRY_DSN
+        sync: false
+
 # ---------------------------------------------------------------------
 # Dos avisos del plan gratuito, que conviene saber ANTES de enseñar
 # esto en una entrevista:
 #
-#  1. Render DUERME el servicio tras 15 minutos sin tráfico. La primera
-#     petición después tarda ~50 s en despertarlo. No es un fallo del
-#     proyecto, pero da mala impresión si se descubre en directo.
+#  1. Render DUERME el servicio tras 15 minutos sin tráfico, y despertarlo
+#     tarda: medido entre 160 y 193 s (09-11/09/2026). Lo mantiene
+#     despierto .github/workflows/keep-alive.yml, y la app espera hasta
+#     300 s cuando puede estar dormido (ver docs/DESPLIEGUE.md).
 #
 #  2. Neon SUSPENDE la base de datos por inactividad. El primer acceso
 #     tras la pausa tarda varios segundos; por eso application-prod.yml
 #     sube el connection-timeout de HikariCP a 45 s.
 #
-# Si molesta, un cron gratuito (cron-job.org, UptimeRobot) que llame a
-# /actuator/health cada 10 minutos mantiene ambos despiertos.
+#  3. Dormido, el servicio tampoco ejecuta las tareas nocturnas de las 3:00
+#     y las 3:30. Lo vigila .github/workflows/tareas-nocturnas.yml.
 # ---------------------------------------------------------------------

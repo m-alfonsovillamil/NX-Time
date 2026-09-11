@@ -39,6 +39,17 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        /*
+         * DSN de Sentry (paso 5 del piloto). Se lee igual que la URL de
+         * producción: de ~/.gradle/gradle.properties, fuera del
+         * repositorio. Vacío -- en el CI o en otra máquina -- la app no
+         * inicializa Sentry y no envía nada (ver NxTimeApplication).
+         */
+        buildConfigField(
+            "String", "SENTRY_DSN",
+            "\"${project.findProperty("nxtime.sentry.dsn") as String? ?: ""}\""
+        )
     }
 
     /*
@@ -217,6 +228,16 @@ dependencies {
      * plataforma, así que nada del proyecto la usaba ya.
      */
     implementation("androidx.core:core-ktx:1.17.0")
+
+    /*
+     * Sentry (paso 5 del piloto): los cierres de la app, con la misma
+     * versión que el SDK del backend.
+     *
+     * "-core" y no "sentry-android": este último arrastra la integración
+     * nativa (NDK), dos librerías .so que subían el APK de 2,5 a 6,2 MB
+     * para capturar cierres de un código nativo que la app no tiene.
+     */
+    implementation("io.sentry:sentry-android-core:8.56.0")
 
     /*
      * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo
