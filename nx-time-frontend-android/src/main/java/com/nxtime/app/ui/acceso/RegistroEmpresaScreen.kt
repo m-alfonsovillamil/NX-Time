@@ -69,6 +69,11 @@ fun RegistroEmpresaScreen(
                 etiqueta = stringResource(R.string.registro_nombre)
             )
             CampoTexto(
+                valor = estado.apellidos,
+                onCambia = viewModel::onApellidosCambia,
+                etiqueta = stringResource(R.string.registro_apellidos)
+            )
+            CampoTexto(
                 valor = estado.email,
                 onCambia = viewModel::onEmailCambia,
                 etiqueta = stringResource(R.string.login_email),

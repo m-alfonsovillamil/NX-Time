@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 data class RegistroEmpresaUiState(
     val empresa: String = "",
     val nombre: String = "",
+    val apellidos: String = "",
     val email: String = "",
     val contrasena: String = "",
     val cargando: Boolean = false,
@@ -32,12 +33,14 @@ class RegistroEmpresaViewModel(
 
     fun onEmpresaCambia(v: String) = _uiState.update { it.copy(empresa = v, error = null) }
     fun onNombreCambia(v: String) = _uiState.update { it.copy(nombre = v, error = null) }
+    fun onApellidosCambia(v: String) = _uiState.update { it.copy(apellidos = v, error = null) }
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
     fun onContrasenaCambia(v: String) = _uiState.update { it.copy(contrasena = v, error = null) }
 
     fun registrar() {
         val e = _uiState.value
-        if (e.empresa.isBlank() || e.nombre.isBlank() || e.email.isBlank() || e.contrasena.isBlank()) {
+        if (e.empresa.isBlank() || e.nombre.isBlank() || e.apellidos.isBlank()
+            || e.email.isBlank() || e.contrasena.isBlank()) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.error_campos_obligatorios)) }
             return
         }
@@ -55,9 +58,10 @@ class RegistroEmpresaViewModel(
                 val respuesta = authRepository.registrarEmpresaGestor(
                     RegistroGestorRequest(
                         nombreEmpresa = e.empresa.trim(),
-                        nombreGestor = e.nombre.trim(),
+                        nombre = e.nombre.trim(),
+                        apellidos = e.apellidos.trim(),
                         email = e.email.trim(),
-                        password = e.contrasena
+                        contrasena = e.contrasena
                     )
                 )
                 val cuerpo = respuesta.body()

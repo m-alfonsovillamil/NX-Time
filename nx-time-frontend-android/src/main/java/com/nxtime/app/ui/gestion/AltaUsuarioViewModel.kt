@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 
 data class AltaUsuarioUiState(
     val nombre: String = "",
+    val apellidos: String = "",
     val email: String = "",
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
@@ -42,12 +43,13 @@ class AltaUsuarioViewModel(
     val uiState: StateFlow<AltaUsuarioUiState> = _uiState.asStateFlow()
 
     fun onNombreCambia(v: String) = _uiState.update { it.copy(nombre = v, error = null) }
+    fun onApellidosCambia(v: String) = _uiState.update { it.copy(apellidos = v, error = null) }
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
 
     fun crear(esGestor: Boolean) {
         val e = _uiState.value
 
-        if (e.nombre.isBlank() || e.email.isBlank()) {
+        if (e.nombre.isBlank() || e.apellidos.isBlank() || e.email.isBlank()) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.error_campos_obligatorios)) }
             return
         }
@@ -56,11 +58,12 @@ class AltaUsuarioViewModel(
         viewModelScope.launch {
             try {
                 val nombre = e.nombre.trim()
+                val apellidos = e.apellidos.trim()
                 val email = e.email.trim()
                 val respuesta = if (esGestor) {
-                    authRepository.crearGestor(CrearGestorRequest(nombre, email))
+                    authRepository.crearGestor(CrearGestorRequest(nombre, apellidos, email))
                 } else {
-                    authRepository.crearEmpleado(CrearEmpleadoRequest(nombre, email))
+                    authRepository.crearEmpleado(CrearEmpleadoRequest(nombre, apellidos, email))
                 }
 
                 if (respuesta.isSuccessful) {

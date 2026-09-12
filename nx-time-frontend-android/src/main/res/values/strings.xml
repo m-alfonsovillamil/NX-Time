@@ -65,7 +65,8 @@
     <string name="registro_titulo">Registrar empresa</string>
     <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador.</string>
     <string name="registro_empresa">Nombre de la empresa</string>
-    <string name="registro_nombre">Tu nombre completo</string>
+    <string name="registro_nombre">Tu nombre</string>
+    <string name="registro_apellidos">Tus apellidos</string>
     <string name="registro_crear">Crear empresa</string>
 
     <!-- Fichar -->
@@ -318,7 +319,8 @@
 
     <string name="alta_empleado_titulo">Nuevo empleado</string>
     <string name="alta_gestor_titulo">Nuevo gestor</string>
-    <string name="alta_nombre">Nombre completo</string>
+    <string name="alta_nombre">Nombre</string>
+    <string name="alta_apellidos">Apellidos</string>
     <string name="alta_email">Correo electrónico</string>
     <string name="alta_explicacion">Le llegará un correo con un código para que elija su propia contraseña. Nadie más la conocerá, tampoco quien da el alta.</string>
     <string name="alta_crear">Crear</string>

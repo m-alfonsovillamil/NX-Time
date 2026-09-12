@@ -60,7 +60,8 @@ class ManagerControllerTest {
     void createEmployee_comoGestor_devuelve200() throws Exception {
         mockMvc.perform(post("/api/v1/gestor/empleados")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombre\":\"Nuevo\",\"email\":\"nuevo@nxtime.test\"}"))
+                        .content("{\"nombre\":\"Nuevo\",\"apellidos\":\"Empleado\","
+                                + "\"email\":\"nuevo@nxtime.test\"}"))
                 .andExpect(status().isOk());
         verify(authService).createEmployee(any(), any());
     }
@@ -71,7 +72,8 @@ class ManagerControllerTest {
     void createEmployee_comoEmpleado_devuelve403() throws Exception {
         mockMvc.perform(post("/api/v1/gestor/empleados")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombre\":\"Nuevo\",\"email\":\"nuevo@nxtime.test\"}"))
+                        .content("{\"nombre\":\"Nuevo\",\"apellidos\":\"Empleado\","
+                                + "\"email\":\"nuevo@nxtime.test\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -81,7 +83,8 @@ class ManagerControllerTest {
     void createManager_comoAdmin_devuelve200() throws Exception {
         mockMvc.perform(post("/api/v1/gestor/gestores")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombre\":\"Nuevo Gestor\",\"email\":\"gestor2@nxtime.test\"}"))
+                        .content("{\"nombre\":\"Nuevo\",\"apellidos\":\"Gestor\","
+                                + "\"email\":\"gestor2@nxtime.test\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -91,7 +94,8 @@ class ManagerControllerTest {
     void createManager_comoGestor_devuelve403() throws Exception {
         mockMvc.perform(post("/api/v1/gestor/gestores")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombre\":\"Nuevo Gestor\",\"email\":\"gestor2@nxtime.test\"}"))
+                        .content("{\"nombre\":\"Nuevo\",\"apellidos\":\"Gestor\","
+                                + "\"email\":\"gestor2@nxtime.test\"}"))
                 .andExpect(status().isForbidden());
     }
 

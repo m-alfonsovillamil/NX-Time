@@ -99,9 +99,10 @@ public class AuthServiceImpl implements AuthService {
         Company company = companyRepository.save(Company.builder().nombre(request.nombreEmpresa()).build());
 
         User user = User.builder()
-                .nombre(request.nombreGestor())
+                .nombre(request.nombre())
+                .apellidos(request.apellidos())
                 .email(request.email())
-                .contrasena(passwordEncoder.encode(request.password()))
+                .contrasena(passwordEncoder.encode(request.contrasena()))
                 .rol(Role.ADMIN)
                 .empresa(company)
                 .build();
@@ -168,6 +169,7 @@ public class AuthServiceImpl implements AuthService {
 
         User newEmployee = User.builder()
                 .nombre(request.nombre())
+                .apellidos(request.apellidos())
                 .email(request.email())
                 .contrasena(contrasenaInutilizable())
                 .rol(Role.EMPLEADO)
@@ -199,6 +201,7 @@ public class AuthServiceImpl implements AuthService {
 
         User newManager = User.builder()
                 .nombre(request.nombre())
+                .apellidos(request.apellidos())
                 .email(request.email())
                 .contrasena(contrasenaInutilizable())
                 .rol(Role.GESTOR)

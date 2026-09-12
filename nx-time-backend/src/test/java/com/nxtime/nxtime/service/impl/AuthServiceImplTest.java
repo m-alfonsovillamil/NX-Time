@@ -86,11 +86,12 @@ class AuthServiceImplTest {
     @DisplayName("registerManager con empresa nueva crea la empresa y un ADMIN (no un GESTOR)")
     void registerManager_empresaNueva_creaEmpresaYAdmin() {
         RegisterManagerRequest request =
-                new RegisterManagerRequest("Empresa Nueva SL", "Ada", "ada@nxtime.test", "password123");
+                new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace",
+                        "ada@nxtime.test", "password123");
         when(companyRepository.findByNombre(request.nombreEmpresa())).thenReturn(Optional.empty());
         when(companyRepository.save(any(Company.class)))
                 .thenReturn(Company.builder().id(1L).nombre(request.nombreEmpresa()).build());
-        when(passwordEncoder.encode(request.password())).thenReturn("hash");
+        when(passwordEncoder.encode(request.contrasena())).thenReturn("hash");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AuthenticationResponse response = service.registerManager(request);
@@ -105,7 +106,8 @@ class AuthServiceImplTest {
     @DisplayName("registerManager con una empresa ya existente lanza BusinessException")
     void registerManager_empresaYaExiste_lanzaBusinessException() {
         RegisterManagerRequest request =
-                new RegisterManagerRequest("Empresa Repetida SL", "Ada", "ada@nxtime.test", "password123");
+                new RegisterManagerRequest("Empresa Repetida SL", "Ada", "Lovelace",
+                        "ada@nxtime.test", "password123");
         when(companyRepository.findByNombre(request.nombreEmpresa()))
                 .thenReturn(Optional.of(Company.builder().id(1L).nombre(request.nombreEmpresa()).build()));
 
@@ -211,7 +213,7 @@ class AuthServiceImplTest {
     @DisplayName("createEmployee con email ya registrado lanza BusinessException, sin crear nada ni mandar código")
     void createEmployee_emailYaRegistrado_lanzaBusinessException() {
         User manager = User.builder().id(1L).empresa(Company.builder().id(1L).build()).build();
-        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "Empleado", "nuevo@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
         assertThatThrownBy(() -> service.createEmployee(request, manager)).isInstanceOf(BusinessException.class);
@@ -224,7 +226,7 @@ class AuthServiceImplTest {
     void createEmployee_emailLibre_creaEmpleadoYEmiteCodigoDeAlta() {
         Company empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         User manager = User.builder().id(1L).empresa(empresa).build();
-        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "Empleado", "nuevo@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         // Lo que se cifra es azar: ninguna contraseña viaja en la petición.
         when(passwordEncoder.encode(any())).thenReturn("hash-de-azar");
@@ -243,7 +245,7 @@ class AuthServiceImplTest {
     @DisplayName("createEmployee: si el código de alta no sale, el error sube (para deshacer el alta) y no se anuncia la bienvenida")
     void createEmployee_siElCodigoNoSale_lanzaYNoPublicaLaBienvenida() {
         User manager = User.builder().id(1L).empresa(Company.builder().id(1L).nombre("Empresa Test").build()).build();
-        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "nuevo@nxtime.test");
+        CreateEmployeeRequest request = new CreateEmployeeRequest("Nuevo", "Empleado", "nuevo@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         org.mockito.Mockito.doThrow(new BusinessException("Sin correo",
                         org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE))
@@ -257,7 +259,7 @@ class AuthServiceImplTest {
     @DisplayName("createManager con email ya registrado lanza BusinessException")
     void createManager_emailYaRegistrado_lanzaBusinessException() {
         User admin = User.builder().id(1L).empresa(Company.builder().id(1L).build()).build();
-        CreateManagerRequest request = new CreateManagerRequest("Nuevo Gestor", "gestor2@nxtime.test");
+        CreateManagerRequest request = new CreateManagerRequest("Nuevo", "Gestor", "gestor2@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
         assertThatThrownBy(() -> service.createManager(request, admin)).isInstanceOf(BusinessException.class);
@@ -268,7 +270,7 @@ class AuthServiceImplTest {
     void createManager_emailLibre_creaGestorYEmiteCodigoDeAlta() {
         Company empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         User admin = User.builder().id(1L).empresa(empresa).build();
-        CreateManagerRequest request = new CreateManagerRequest("Nuevo Gestor", "gestor2@nxtime.test");
+        CreateManagerRequest request = new CreateManagerRequest("Nuevo", "Gestor", "gestor2@nxtime.test");
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
