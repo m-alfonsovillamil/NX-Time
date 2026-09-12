@@ -257,13 +257,12 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
 
     /*
-     * Cifrado en reposo del almacén de sesión. Va con la huella pero **no
-     * es la huella**: su clave no exige autenticación del usuario, así que
-     * protege frente a `adb backup` o a leer el fichero con root, no
-     * frente a alguien con el móvil desbloqueado. Se dice así en el PR
-     * para no vender una cosa por otra.
+     * NO se añade androidx.security:security-crypto. Llegó a estar aquí
+     * "para cifrar el almacén de sesión", pero **nada lo usaba**: una
+     * dependencia que no se llama no cifra nada, y su comentario prometía
+     * una protección inexistente. Si algún día se cifra de verdad, entra
+     * con el código que la use, no antes.
      */
-    implementation("androidx.security:security-crypto:1.1.0")
 
     /*
      * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo
