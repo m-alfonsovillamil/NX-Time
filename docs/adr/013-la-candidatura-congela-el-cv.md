@@ -107,6 +107,33 @@ candidatura concreta la decide otro. Es la misma regla que la fase F aplicó a l
 horas extra y, como allí, **no la puede poner un `@PreAuthorize`**: quien valora
 tiene la authority; lo que falla es que el expediente sea suyo.
 
+### Quién puede leer un CV ajeno (corregido en septiembre de 2026)
+
+La fase B2 dejó que **descargar un adjunto fuera cosa de empresa**, con este
+razonamiento escrito en el propio controlador: «un gestor necesita poder leer el
+CV de su equipo». El razonamiento era correcto y la regla, demasiado ancha. Los
+identificadores son números corridos, así que **cualquiera con sesión podía
+bajarse el currículum de todos sus compañeros probando números**, sin que nada
+en el sistema dijera por qué lo hacía.
+
+Leer el CV de otra persona solo tiene un motivo legítimo en esta aplicación, y
+esta fase lo nombra: **valorar a quien se ha presentado a una vacante**. Así que
+eso es exactamente lo que se exige ahora:
+
+- **su dueño**, siempre; o
+- quien tiene `candidatura:gestionar` **y** el adjunto es el CV congelado de una
+  candidatura de una oferta **de su empresa** (las dos cosas, en la misma
+  consulta: que exista la candidatura no basta si es de otra empresa).
+
+Tiene una consecuencia que conviene ver como lo que es —una mejora, no un
+efecto colateral—: un gestor puede abrir **el CV que se le presentó**, y no el
+que esa persona tenga hoy en su perfil. Es la misma idea que congelar el
+adjunto, aplicada al permiso.
+
+Y la foto queda, por el mismo camino, solo para su dueño: es lo único que la
+aplicación pide hoy. Si algún día hay avatares en un listado de equipo, será una
+decisión que se tome entonces y con su regla, no algo heredado.
+
 ### Descartar exige comentario
 
 La asimetría es la de las correcciones de la fase E, con una vuelta de tuerca:

@@ -31,8 +31,14 @@ public interface AttachmentService {
     /**
      * Los bytes, para descargarlos. Es la ÚNICA operación que los lee.
      *
+     * Solo para <b>su dueño</b>, o para quien valora una candidatura que
+     * congeló ese CV. Ser de la misma empresa <b>no</b> basta: el id es
+     * un número corrido y eso dejaba leer el currículum de cualquier
+     * compañero probando números.
+     *
      * @throws com.nxtime.nxtime.exception.ResourceNotFoundException si no existe
-     * @throws com.nxtime.nxtime.exception.TenantAccessException si es de otra empresa
+     * @throws com.nxtime.nxtime.exception.TenantAccessException si es de otra empresa, o si es de
+     *     otra persona y no hay una candidatura que lo justifique
      */
     ContenidoDeAdjunto descargar(long adjuntoId, User actor);
 

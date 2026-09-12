@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.ofertas
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 
 data class GestionOfertasUiState(
     val cargando: Boolean = false,
@@ -21,6 +23,8 @@ data class GestionOfertasUiState(
     /** La oferta cuyas candidaturas se están mirando. */
     val seleccionada: OfertaDTO? = null,
     val candidaturas: List<CandidaturaDTO> = emptyList(),
+    /** La candidatura cuyo CV se está bajando, para no pedirlo dos veces. */
+    val cvDescargandose: Long? = null,
     val enviando: Boolean = false,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
@@ -144,6 +148,41 @@ class GestionOfertasViewModel(
 
     fun cerrarCandidaturas() =
         _uiState.update { it.copy(seleccionada = null, candidaturas = emptyList()) }
+
+    /**
+     * Baja el CV con el que alguien se presentó y devuelve el cuerpo a la
+     * pantalla, que es quien tiene el Context para escribirlo — el mismo
+     * reparto que en el perfil y en los informes.
+     *
+     * Se pide **`cvAdjuntoId`**, que es el adjunto congelado: si esa
+     * persona ha subido otro currículum desde entonces, lo que se valora
+     * sigue siendo el que presentó.
+     */
+    fun descargarCv(candidatura: CandidaturaDTO, alTener: (ResponseBody, String) -> Unit) {
+        if (_uiState.value.cvDescargandose != null) return
+        _uiState.update { it.copy(cvDescargandose = candidatura.id, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.descargarAdjunto(candidatura.cvAdjuntoId)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    alTener(cuerpo, candidatura.cvNombre)
+                    _uiState.update { it.copy(cvDescargandose = null) }
+                } else {
+                    _uiState.update {
+                        it.copy(cvDescargandose = null, error = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                // La excepción real al log: mensajeDeRed la traduce a "no
+                // hay conexión" y taparía la causa.
+                Log.w("NxTimeOfertas", "Fallo al descargar el CV de una candidatura", e)
+                _uiState.update {
+                    it.copy(cvDescargandose = null, error = ApiErrorParser.mensajeDeRed(e))
+                }
+            }
+        }
+    }
 
     /**
      * Valorar una candidatura.

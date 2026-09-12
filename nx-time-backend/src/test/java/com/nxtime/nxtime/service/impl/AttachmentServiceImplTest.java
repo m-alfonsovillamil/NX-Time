@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -306,22 +307,70 @@ class AttachmentServiceImplTest {
         assertThat(respuesta.nombreOriginal()).isEqualTo("cv.pdf");
     }
 
-    @Test
-    @DisplayName("Un compañero de la misma empresa SÍ puede descargar tu CV")
-    void descargar_companeroDeEmpresa_puede() {
+    /** El CV de Ana, que es lo que los tres tests de abajo intentan leer. */
+    private Attachment cvDeAna() {
         Attachment adjunto = Attachment.builder()
                 .id(5L).empresa(empresa).usuario(empleado).tipo(AttachmentType.CV)
                 .nombreOriginal("cv.pdf").mime("application/pdf").build();
         when(attachmentRepository.findById(5L)).thenReturn(Optional.of(adjunto));
+        return adjunto;
+    }
+
+    @Test
+    @DisplayName("🚨 Un compañero NO puede descargar tu CV solo por ser de la empresa")
+    void descargar_companeroSinCandidatura_lanzaTenantAccess() {
+        cvDeAna();
+
+        // Este test es el arreglo: antes bastaba con compartir empresa, y
+        // como el id es un número corrido, cualquiera con sesión podía
+        // ir probando números hasta llevarse el currículum de todos.
+        assertThatThrownBy(() -> service.descargar(5L, companero))
+                .isInstanceOf(TenantAccessException.class)
+                .hasMessageContaining("no es tuyo");
+
+        verify(attachmentDataRepository, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Quien valora una candidatura SÍ lee el CV que esa candidatura congeló")
+    void descargar_gestorConCandidatura_puede() {
+        cvDeAna();
+        User gestora = User.builder().id(12L).email("marta@nxtime.test").nombre("Marta")
+                .rol(Role.GESTOR).empresa(empresa).build();
+        when(jobApplicationRepository.esCvDeCandidaturaDeEmpresa(5L, 1L)).thenReturn(true);
         when(attachmentDataRepository.findById(5L)).thenReturn(Optional.of(
                 AttachmentData.builder().adjuntoId(5L).contenido(pdf()).build()));
 
-        // Un gestor necesita leer el CV de su equipo: descargar es de
-        // empresa, no de persona.
-        AttachmentService.ContenidoDeAdjunto contenido = service.descargar(5L, companero);
+        AttachmentService.ContenidoDeAdjunto contenido = service.descargar(5L, gestora);
 
         assertThat(contenido.nombreOriginal()).isEqualTo("cv.pdf");
         assertThat(contenido.tipo()).isEqualTo(AttachmentType.CV);
+    }
+
+    @Test
+    @DisplayName("Una gestora sin candidatura detrás tampoco lo lee: el rol solo no basta")
+    void descargar_gestorSinCandidatura_lanzaTenantAccess() {
+        cvDeAna();
+        User gestora = User.builder().id(12L).email("marta@nxtime.test").nombre("Marta")
+                .rol(Role.GESTOR).empresa(empresa).build();
+        when(jobApplicationRepository.esCvDeCandidaturaDeEmpresa(5L, 1L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.descargar(5L, gestora))
+                .isInstanceOf(TenantAccessException.class);
+    }
+
+    @Test
+    @DisplayName("El dueño descarga el suyo sin más")
+    void descargar_propio_puede() {
+        cvDeAna();
+        when(attachmentDataRepository.findById(5L)).thenReturn(Optional.of(
+                AttachmentData.builder().adjuntoId(5L).contenido(pdf()).build()));
+
+        AttachmentService.ContenidoDeAdjunto contenido = service.descargar(5L, empleado);
+
+        assertThat(contenido.nombreOriginal()).isEqualTo("cv.pdf");
+        // Ni se pregunta por candidaturas: es suyo.
+        verify(jobApplicationRepository, never()).esCvDeCandidaturaDeEmpresa(anyLong(), anyLong());
     }
 
     @Test
@@ -344,8 +393,9 @@ class AttachmentServiceImplTest {
                 .id(5L).empresa(empresa).usuario(empleado).tipo(AttachmentType.CV).build();
         when(attachmentRepository.findById(5L)).thenReturn(Optional.of(adjunto));
 
-        // La asimetría del servicio: leer es de empresa, borrar es de
-        // persona.
+        // Leer y borrar siguen sin ser lo mismo: quien valora una
+        // candidatura puede abrir ese CV, pero borrarlo no lo puede nadie
+        // más que su dueño.
         assertThatThrownBy(() -> service.borrar(5L, companero))
                 .isInstanceOf(TenantAccessException.class)
                 .hasMessageContaining("tus propios");

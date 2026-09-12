@@ -779,6 +779,10 @@
     <string name="candidatura_presentada">Candidatura presentada.</string>
     <string name="candidatura_presentada_el">Presentada el %1$s</string>
     <string name="candidatura_cv_adjunto">CV adjunto: %1$s</string>
+    <!-- Quien valora tiene que poder leer el CV sin salir de la pantalla:
+         decidir sobre alguien sin abrir lo que presentó no es valorar. -->
+    <string name="candidatura_ver_cv">Ver el CV</string>
+    <string name="candidatura_cv_abriendo">Abriendo…</string>
 
     <string name="candidatura_estado_recibida">Recibida</string>
     <string name="candidatura_estado_en_proceso">En proceso</string>
