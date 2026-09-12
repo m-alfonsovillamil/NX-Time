@@ -463,6 +463,30 @@
     <string name="ajustes_huella_confirmar_detalle">Para activar la huella, escribe tu contraseña.</string>
     <string name="ajustes_huella_activada">Huella activada.</string>
 
+    <!--
+        Recordatorio de fichar. Avisa solo si hace falta: a la hora de
+        entrada, si no has fichado; a la de salida, si sigues con la
+        jornada abierta. Un aviso que llega cuando ya has fichado enseña a
+        ignorarlos.
+    -->
+    <!-- El TÍTULO de la sección, como "Apariencia" o "Seguridad". Va aparte
+         de la etiqueta del interruptor: usar el mismo texto para los dos
+         dejaba "Recordarme fichar" repetido dentro de la misma tarjeta. -->
+    <string name="ajustes_recordatorio_seccion">Recordatorio</string>
+    <string name="ajustes_recordatorio">Recordarme fichar</string>
+    <string name="ajustes_recordatorio_detalle">Te avisamos a la hora de entrada si no has fichado, y a la de salida si te dejaste la jornada abierta. De lunes a viernes.</string>
+    <string name="ajustes_recordatorio_entrada">Hora de entrada</string>
+    <string name="ajustes_recordatorio_salida">Hora de salida</string>
+    <string name="ajustes_recordatorio_sin_permiso">Sin permiso para notificar no se puede avisar. Actívalo cuando el sistema lo pida.</string>
+    <string name="ajustes_recordatorio_hora_invalida">La hora tiene que ir en formato HH:mm.</string>
+
+    <string name="recordatorio_canal">Recordatorios de fichaje</string>
+    <string name="recordatorio_canal_detalle">Avisos a la hora de entrada y de salida.</string>
+    <string name="recordatorio_entrada_titulo">¿Has fichado?</string>
+    <string name="recordatorio_entrada_texto">No tienes ninguna jornada iniciada. Toca para fichar.</string>
+    <string name="recordatorio_salida_titulo">Tienes la jornada abierta</string>
+    <string name="recordatorio_salida_texto">Sigue contando desde que entraste. Toca para cerrarla.</string>
+
     <string name="huella_bloqueada">Desbloquea NX Time con tu huella para continuar.</string>
     <string name="huella_reintentar">Usar la huella</string>
     <string name="huella_usar_contrasena">Entrar con mi contraseña</string>

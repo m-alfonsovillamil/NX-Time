@@ -36,8 +36,17 @@ android {
         applicationId = "com.nxtime.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        /*
+         * Sube en CADA APK que se entrega. No es burocracia: Sentry agrupa
+         * los fallos por release (`APPLICATION_ID@VERSION_NAME+VERSION_CODE`),
+         * así que dos APK distintos con el mismo número mezclarían sus
+         * errores y no habría forma de saber cuál los produjo.
+         *
+         * 2 = piloto del 12/09/2026: recuperación de contraseña, CV en
+         * candidaturas, nombre y apellidos, Ajustes, huella y recordatorio.
+         */
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
@@ -255,6 +264,17 @@ dependencies {
      * 24: androidx cubre ese hueco con el diálogo antiguo.
      */
     implementation("androidx.biometric:biometric:1.1.0")
+
+    /*
+     * Recordatorio de fichar (paso 7).
+     *
+     * WorkManager y no AlarmManager: el aviso no necesita puntualidad al
+     * segundo -- si llega cinco minutos tarde da igual --, y a cambio
+     * sobrevive a reinicios del móvil y respeta la batería. AlarmManager
+     * exacto pediría permiso aparte desde Android 12 para una precisión
+     * que aquí no aporta nada.
+     */
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     /*
      * NO se añade androidx.security:security-crypto. Llegó a estar aquí
