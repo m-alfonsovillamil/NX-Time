@@ -332,7 +332,7 @@ private fun Recordatorio(
     onCambiarActivo: (Boolean) -> Unit,
     onCambiarHoras: (String, String) -> Unit
 ) {
-    Tarjeta(stringResource(R.string.ajustes_recordatorio)) {
+    Tarjeta(stringResource(R.string.ajustes_recordatorio_seccion)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.ajustes_recordatorio),

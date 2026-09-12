@@ -469,6 +469,10 @@
         jornada abierta. Un aviso que llega cuando ya has fichado enseña a
         ignorarlos.
     -->
+    <!-- El TÍTULO de la sección, como "Apariencia" o "Seguridad". Va aparte
+         de la etiqueta del interruptor: usar el mismo texto para los dos
+         dejaba "Recordarme fichar" repetido dentro de la misma tarjeta. -->
+    <string name="ajustes_recordatorio_seccion">Recordatorio</string>
     <string name="ajustes_recordatorio">Recordarme fichar</string>
     <string name="ajustes_recordatorio_detalle">Te avisamos a la hora de entrada si no has fichado, y a la de salida si te dejaste la jornada abierta. De lunes a viernes.</string>
     <string name="ajustes_recordatorio_entrada">Hora de entrada</string>
