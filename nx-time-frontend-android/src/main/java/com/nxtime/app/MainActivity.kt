@@ -2,7 +2,6 @@ package com.nxtime.app
 
 import android.content.Context
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -16,9 +15,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nxtime.app.ui.ajustes.EstadoDeLaHuella
+import com.nxtime.app.ui.ajustes.PantallaBloqueada
+import com.nxtime.app.ui.ajustes.estadoDeLaHuella
+import com.nxtime.app.ui.ajustes.pedirHuella
 import com.nxtime.app.ui.components.AvisoServidorDespertando
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
 import com.nxtime.app.data.session.Tema
@@ -33,11 +40,16 @@ import com.nxtime.app.ui.util.enEspanol
  * observando su LiveData. Ahora esta solo monta el tema y el grafo de
  * navegación; las pantallas son funciones `@Composable`.
  *
- * Hereda de `ComponentActivity` y ya no de `AppCompatActivity`: sin
+ * Hereda de `FragmentActivity` y **no** de `AppCompatActivity`: sin
  * layouts XML ni menús de la barra de acción, lo único que aportaba
  * AppCompat era peso.
+ *
+ * Era `ComponentActivity` hasta el paso 6: `BiometricPrompt` exige una
+ * `FragmentActivity`. No es una vuelta atrás — `FragmentActivity` vive en
+ * androidx.fragment, que ya arrastra androidx.biometric, y **extiende
+ * ComponentActivity**, así que `setContent` y el resto siguen igual.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     /**
      * Se fija el idioma antes de que exista nada de interfaz: todo lo que
@@ -88,6 +100,50 @@ class MainActivity : ComponentActivity() {
             }
 
             NxTimeTheme(darkTheme = oscuro) {
+                /*
+                 * La huella es una PUERTA AL ARRANCAR, no un candado sobre
+                 * el token: quien lo lee es el Authenticator de OkHttp, en
+                 * un hilo de fondo y sin Activity, así que allí no se puede
+                 * pedir biometría (y haría falta cada 15 min).
+                 *
+                 * Solo se pide si hay sesión guardada, el ajuste está
+                 * activo y el móvil puede: si alguien borró sus huellas, la
+                 * aplicación no puede quedarse cerrada para siempre.
+                 */
+                var desbloqueada by remember {
+                    mutableStateOf(
+                        !(sesionIniciada &&
+                                aplicacion.ajustes.huella.value &&
+                                estadoDeLaHuella(this@MainActivity) == EstadoDeLaHuella.DISPONIBLE)
+                    )
+                }
+
+                if (!desbloqueada) {
+                    PantallaBloqueada(
+                        onPedirHuella = {
+                            pedirHuella(
+                                activity = this@MainActivity,
+                                titulo = getString(R.string.huella_titulo),
+                                subtitulo = getString(R.string.huella_subtitulo),
+                                textoCancelar = getString(R.string.cancelar),
+                                alAcertar = { desbloqueada = true },
+                                // Cancelar no entra ni cierra nada: se
+                                // queda en la pantalla, que ofrece
+                                // reintentar o tirar de contraseña.
+                                alRendirse = {}
+                            )
+                        },
+                        onEntrarConContrasena = {
+                            // La salida de emergencia: se cierra la sesión
+                            // local y se vuelve a empezar por el login, que
+                            // es lo único que no depende del sensor.
+                            sessionManager.clearAuthData()
+                            recreate()
+                        }
+                    )
+                    return@NxTimeTheme
+                }
+
                 val despertando by aplicacion.arranqueEnFrio.despertando
                     .collectAsStateWithLifecycle()
 

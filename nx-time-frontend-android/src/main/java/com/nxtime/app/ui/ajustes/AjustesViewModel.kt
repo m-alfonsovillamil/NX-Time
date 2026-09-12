@@ -3,6 +3,7 @@ package com.nxtime.app.ui.ajustes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.PeticionLogin
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.Ajustes
@@ -18,6 +19,10 @@ import kotlinx.coroutines.launch
 data class AjustesUiState(
     val tema: Tema = Tema.SISTEMA,
     val informesDeErrores: Boolean = true,
+    val huella: Boolean = false,
+    /** Se está pidiendo la contraseña para activar la huella. */
+    val confirmandoHuella: Boolean = false,
+    val verificandoContrasena: Boolean = false,
     val cerrandoSesiones: Boolean = false,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
@@ -39,10 +44,78 @@ class AjustesViewModel(
     private val _uiState = MutableStateFlow(
         AjustesUiState(
             tema = ajustes.tema.value,
-            informesDeErrores = ajustes.informesDeErrores.value
+            informesDeErrores = ajustes.informesDeErrores.value,
+            huella = ajustes.huella.value
         )
     )
     val uiState: StateFlow<AjustesUiState> = _uiState.asStateFlow()
+
+    /**
+     * Activar la huella **exige la contraseña**; desactivarla, no.
+     *
+     * La asimetría es deliberada: a quien cogiera el móvil ya desbloqueado
+     * le bastaría con activar la huella y poner la suya para quedarse con
+     * la cuenta de otra persona. Quitarla, en cambio, solo deja las cosas
+     * como estaban -- y bloquear esa salida sería encerrar a alguien.
+     */
+    fun cambiarHuella(activa: Boolean) {
+        if (!activa) {
+            ajustes.cambiarHuella(false)
+            _uiState.update { it.copy(huella = false, confirmandoHuella = false) }
+            return
+        }
+        _uiState.update { it.copy(confirmandoHuella = true, error = null) }
+    }
+
+    fun cancelarActivacionDeHuella() =
+        _uiState.update { it.copy(confirmandoHuella = false, error = null) }
+
+    /**
+     * Comprueba la contraseña contra el servidor y, si es la suya, activa
+     * la huella.
+     *
+     * El correo sale del perfil y no de la sesión guardada: `SessionManager`
+     * guarda el nombre y el rol, pero no el correo.
+     */
+    fun confirmarHuellaCon(contrasena: String) {
+        if (contrasena.isBlank() || _uiState.value.verificandoContrasena) return
+        _uiState.update { it.copy(verificandoContrasena = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val perfil = authRepository.getMiPerfil()
+                val correo = perfil.body()?.email
+                if (!perfil.isSuccessful || correo == null) {
+                    _uiState.update {
+                        it.copy(verificandoContrasena = false, error = ApiErrorParser.mensajeDe(perfil))
+                    }
+                    return@launch
+                }
+
+                val respuesta = authRepository.login(PeticionLogin(correo, contrasena))
+                if (respuesta.isSuccessful) {
+                    ajustes.cambiarHuella(true)
+                    _uiState.update {
+                        it.copy(
+                            huella = true,
+                            confirmandoHuella = false,
+                            verificandoContrasena = false,
+                            aviso = MensajeUi.Recurso(R.string.ajustes_huella_activada)
+                        )
+                    }
+                } else {
+                    // El 401 de una contraseña que no es la suya se explica
+                    // con el mensaje del servidor, como en el login.
+                    _uiState.update {
+                        it.copy(verificandoContrasena = false, error = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(verificandoContrasena = false, error = ApiErrorParser.mensajeDeRed(e))
+                }
+            }
+        }
+    }
 
     fun cambiarTema(nuevo: Tema) {
         ajustes.cambiarTema(nuevo)
