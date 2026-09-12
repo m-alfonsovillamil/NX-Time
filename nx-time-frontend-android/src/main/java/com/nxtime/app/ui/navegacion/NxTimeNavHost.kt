@@ -66,6 +66,7 @@ import com.nxtime.app.ui.gestion.HistorialEquipoScreen
 import com.nxtime.app.ui.gestion.PanelEmpresaScreen
 import com.nxtime.app.ui.gestion.PanelGestionScreen
 import com.nxtime.app.ui.historial.HistorialScreen
+import com.nxtime.app.ui.ajustes.AjustesScreen
 import com.nxtime.app.ui.perfil.PerfilScreen
 import com.nxtime.app.ui.perfil.PerfilViewModel
 import com.nxtime.app.ui.proyectos.ProyectosScreen
@@ -97,6 +98,9 @@ enum class Pantalla(val ruta: String) {
     AUSENCIAS("ausencias"),
     AVISOS("avisos"),
     PERFIL("perfil"),
+    // Hoja del perfil: la tarjeta "Cuenta" se mudó aquí y se le sumaron
+    // el tema, los informes de errores y "Acerca de".
+    AJUSTES("ajustes"),
     SOLICITUD("solicitud"),
     CONTRASENA("contrasena"),
     GESTION("gestion"),
@@ -506,15 +510,22 @@ fun NxTimeNavHost(
                 }
                 PerfilScreen(
                     onVolver = navController::navigateUp,
-                    onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
+                    onIrAjustes = { navController.navigate(Pantalla.AJUSTES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     onIrDenuncias = { navController.navigate(Pantalla.DENUNCIAS.ruta) },
                     onIrOfertas = { navController.navigate(Pantalla.OFERTAS.ruta) },
+                    viewModel = perfilViewModel
+                )
+            }
+
+            composable(Pantalla.AJUSTES.ruta) {
+                AjustesScreen(
+                    onVolver = navController::navigateUp,
+                    onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
                     onCerrarSesion = {
                         perfilViewModel.cerrarSesion()
                         entrarA(Pantalla.LOGIN)
-                    },
-                    viewModel = perfilViewModel
+                    }
                 )
             }
 

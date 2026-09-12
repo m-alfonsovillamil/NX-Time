@@ -228,6 +228,18 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public void cerrarTodasLasSesiones(User user) {
+        // Es la misma revocación que hace elegir contraseña con un código
+        // (ver AccessCodeServiceImpl), y por el mismo motivo: si alguien
+        // pudo entrar con tu cuenta, lo que hay que cortar es su capacidad
+        // de RENOVAR el acceso, que es lo que la hace duradera.
+        int cerradas = refreshTokenRepository.revocarTodasLasDe(user);
+        log.info("{} ha cerrado la sesión en todos sus dispositivos ({} revocadas)",
+                user.getEmail(), cerradas);
+    }
+
+    @Override
+    @Transactional
     public void setEmployeeActive(long employeeId, boolean activo, User actingManager) {
         User employee = userRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));

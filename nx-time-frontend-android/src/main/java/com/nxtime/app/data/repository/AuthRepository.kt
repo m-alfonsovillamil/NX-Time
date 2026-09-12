@@ -137,6 +137,9 @@ interface AuthRepository {
     suspend fun crearEmpleado(peticion: CrearEmpleadoRequest): Response<Unit>
     suspend fun cambiarContrasena(peticion: CambiarContrasenaRequest): Response<Unit>
 
+    /** Cierra la sesión en todos los dispositivos, incluido este. */
+    suspend fun cerrarTodasLasSesiones(): Response<Unit>
+
 
     /**
      * Llama al ApiService para crear un nuevo co-gestor.

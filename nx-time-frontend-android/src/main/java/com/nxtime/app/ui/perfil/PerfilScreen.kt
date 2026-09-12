@@ -83,11 +83,10 @@ import com.nxtime.app.ui.util.resolver
 @Composable
 fun PerfilScreen(
     onVolver: () -> Unit,
-    onIrContrasena: () -> Unit,
+    onIrAjustes: () -> Unit,
     onIrHorasExtra: () -> Unit,
     onIrDenuncias: () -> Unit,
     onIrOfertas: () -> Unit,
-    onCerrarSesion: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -212,8 +211,13 @@ fun PerfilScreen(
                         Text(stringResource(R.string.ofertas_ver))
                     }
 
+                    // La tarjeta "Cuenta" se mudó a Ajustes: cambiar la
+                    // contraseña y cerrar sesión son ajustes de la cuenta,
+                    // no datos de la ficha.
                     Spacer(Modifier.height(24.dp))
-                    Cuenta(onIrContrasena = onIrContrasena, onCerrarSesion = onCerrarSesion)
+                    OutlinedButton(onClick = onIrAjustes, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.ajustes_abrir))
+                    }
                     Spacer(Modifier.height(24.dp))
                 }
             }
@@ -335,27 +339,6 @@ private fun DatosLaborales(perfil: PerfilDTO, proyecto: AsignacionProyectoDTO?) 
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun Cuenta(onIrContrasena: () -> Unit, onCerrarSesion: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = elevacionDeTarjeta(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.perfil_cuenta), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onIrContrasena, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.nav_contrasena))
-            }
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.nav_cerrar_sesion))
-            }
         }
     }
 }

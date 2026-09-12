@@ -2932,6 +2932,55 @@ class ApiContractTest {
         assertThat(suyo.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    @Order(154)
+    void cerrarSesionesRevocaLosRefreshTokens_peroNoElAccessTokenYaEmitido() throws Exception {
+        // Login fresco, y del GESTOR a proposito: este test revoca TODO lo
+        // de la cuenta que use, asi que no puede reutilizar un refresh
+        // token del que dependa otro test.
+        //
+        // 🚨 Y no vale el empleado: el Order 90 lo da de baja y nadie lo
+        // reactiva, asi que a esta altura su login responde 401 -- que es
+        // lo correcto. (Aqui se perdio un ciclo: el test fallaba por su
+        // propia premisa, no por el codigo.)
+        ResponseEntity<String> login = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR, "contrasena", "password123")),
+                        jsonHeaders()),
+                String.class
+        );
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String acceso = bodyOf(login).get("token").asText();
+        String refresco = bodyOf(login).get("refreshToken").asText();
+
+        ResponseEntity<String> cierre = rest.exchange(
+                url("/api/v1/usuario/cerrar-sesiones"),
+                HttpMethod.POST,
+                new HttpEntity<>(authHeaders(acceso)),
+                String.class
+        );
+        assertThat(cierre.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // El refresh token deja de valer: eso es lo que se corta.
+        ResponseEntity<String> refresh = rest.postForEntity(
+                url("/auth/refresh"),
+                new HttpEntity<>(toJson(mapOf("refreshToken", refresco)), jsonHeaders()),
+                String.class
+        );
+        assertThat(refresh.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // Y el access token YA EMITIDO sigue valiendo hasta que caduque:
+        // es un JWT y no se consulta en base. Es la contrapartida asumida,
+        // y por eso la pantalla no promete un corte inmediato.
+        ResponseEntity<String> perfil = rest.exchange(
+                url("/api/v1/perfil"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(acceso)),
+                String.class
+        );
+        assertThat(perfil.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
     // ------------------------------------------------------------------
     // 6. TOKEN INVÁLIDO
     // ------------------------------------------------------------------

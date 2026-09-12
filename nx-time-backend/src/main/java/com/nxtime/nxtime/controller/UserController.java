@@ -51,4 +51,21 @@ public class UserController {
         authService.changePassword(request, user.getUser());
         return ResponseEntity.ok().build();
     }
+
+    @Operation(summary = "Cerrar la sesión en todos los dispositivos",
+            description = "Revoca todos los refresh tokens del usuario, incluido el del dispositivo "
+                    + "desde el que se pide. El access token ya emitido sigue valiendo hasta que "
+                    + "caduque (15 min): es un JWT y no se consulta en base, así que lo que se corta "
+                    + "es la capacidad de renovarlo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Sesiones cerradas"),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/cerrar-sesiones")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> cerrarSesiones(@AuthenticationPrincipal SecurityUser user) {
+        authService.cerrarTodasLasSesiones(user.getUser());
+        return ResponseEntity.ok().build();
+    }
 }
