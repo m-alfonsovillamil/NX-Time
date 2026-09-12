@@ -282,6 +282,9 @@ private fun DatosPersonales(perfil: PerfilDTO, onEditar: () -> Unit) {
                 TextButton(onClick = onEditar) { Text(stringResource(R.string.perfil_editar)) }
             }
             Spacer(Modifier.height(8.dp))
+            // El Nombre iba en el formulario de edición pero no en la ficha:
+            // se podía cambiar y no se veía.
+            Dato(stringResource(R.string.perfil_nombre), perfil.nombre)
             Dato(stringResource(R.string.perfil_apellidos), perfil.apellidos)
             Dato(
                 stringResource(R.string.perfil_fecha_nacimiento),

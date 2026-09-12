@@ -167,7 +167,7 @@ class AccessCodeIT {
                 .when(emailSender).enviarObligatorio(eq("sin.correo@nxtime.test"), anyString(), anyString(), anyMap());
 
         assertThatThrownBy(() -> authService.createEmployee(
-                new CreateEmployeeRequest("Sin Correo", "sin.correo@nxtime.test"), gestor))
+                new CreateEmployeeRequest("Sin", "Correo", "sin.correo@nxtime.test"), gestor))
                 .isInstanceOf(BusinessException.class);
 
         assertThat(userRepository.existsByEmail("sin.correo@nxtime.test")).isFalse();
@@ -178,7 +178,8 @@ class AccessCodeIT {
     void unAltaConCorreo_seActivaConElCodigo() {
         User gestor = crearUsuario("gestor.activa@nxtime.test", Role.GESTOR, "gestor12345");
 
-        authService.createEmployee(new CreateEmployeeRequest("Nueva", "nueva@nxtime.test"), gestor);
+        authService.createEmployee(
+                new CreateEmployeeRequest("Nueva", "Empleada", "nueva@nxtime.test"), gestor);
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("nueva@nxtime.test", "cualquiera123")))
                 .isInstanceOf(BadCredentialsException.class);

@@ -8,5 +8,6 @@ package com.nxtime.app.data.dto
  */
 data class CrearEmpleadoRequest(
     val nombre: String,
+    val apellidos: String,
     val email: String
 )

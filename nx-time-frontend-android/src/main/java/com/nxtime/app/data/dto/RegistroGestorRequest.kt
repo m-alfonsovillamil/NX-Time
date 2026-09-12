@@ -5,7 +5,8 @@ package com.nxtime.app.data.dto
  */
 data class RegistroGestorRequest(
     val nombreEmpresa: String,
-    val nombreGestor: String,
+    val nombre: String,
+    val apellidos: String,
     val email: String,
-    val password: String
+    val contrasena: String
 )

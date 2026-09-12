@@ -54,6 +54,14 @@ fun AltaUsuarioScreen(
                 onCambia = viewModel::onNombreCambia,
                 etiqueta = stringResource(R.string.alta_nombre)
             )
+            // Nombre y apellidos separados desde el alta: la ficha los
+            // guarda en dos campos, y pidiéndolos juntos acababan los dos
+            // dentro de "nombre" y sin forma de repartirlos después.
+            CampoTexto(
+                valor = estado.apellidos,
+                onCambia = viewModel::onApellidosCambia,
+                etiqueta = stringResource(R.string.alta_apellidos)
+            )
             CampoTexto(
                 valor = estado.email,
                 onCambia = viewModel::onEmailCambia,

@@ -53,8 +53,9 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombreGestor\":\"Ada\","
-                                + "\"email\":\"ada@nxtime.test\",\"password\":\"password123\"}"))
+                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                                + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
+                                + "\"contrasena\":\"password123\"}"))
                 .andExpect(status().isOk());
     }
 
@@ -63,8 +64,9 @@ class AuthControllerTest {
     void registerManager_emailInvalido_devuelve400() throws Exception {
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombreGestor\":\"Ada\","
-                                + "\"email\":\"no-es-un-email\",\"password\":\"password123\"}"))
+                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                                + "\"apellidos\":\"Lovelace\",\"email\":\"no-es-un-email\","
+                                + "\"contrasena\":\"password123\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -73,8 +75,9 @@ class AuthControllerTest {
     void registerManager_contrasenaCorta_devuelve400() throws Exception {
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombreGestor\":\"Ada\","
-                                + "\"email\":\"ada@nxtime.test\",\"password\":\"abc\"}"))
+                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                                + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
+                                + "\"contrasena\":\"abc\"}"))
                 .andExpect(status().isBadRequest());
     }
 

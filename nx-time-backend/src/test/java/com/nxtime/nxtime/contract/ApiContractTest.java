@@ -229,9 +229,10 @@ class ApiContractTest {
     void registrarGestor_datosValidos_devuelve200ConTokenNombreYRol() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA,
-                "nombreGestor", "Gestor Contract",
+                "nombre", "Gestor",
+                "apellidos", "Contract",
                 "email", EMAIL_GESTOR,
-                "password", "password123"
+                "contrasena", "password123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -247,7 +248,10 @@ class ApiContractTest {
         // GESTOR -- es quien administra el tenant, y es el único rol con
         // "gestor:crear" (ver RoleAuthorities). Antes cualquier GESTOR
         // podía crear otro GESTOR sin límite (ver auditoría).
-        assertThat(body.get("nombre").asText()).isEqualTo("Gestor Contract");
+        // Desde el 09/2026 el registro pide nombre y apellidos por separado,
+        // asi que lo que viaja aqui es el NOMBRE -- que es con lo que la app
+        // saluda ("Hola, Gestor"), no la ficha completa.
+        assertThat(body.get("nombre").asText()).isEqualTo("Gestor");
         assertThat(body.get("rol").asText()).isEqualTo("ADMIN");
         // NUEVO EN FASE 4: refresh token de larga duración, para pedir
         // un access token nuevo sin volver a pedir contraseña.
@@ -269,9 +273,10 @@ class ApiContractTest {
         // tal cual, con un cuerpo ProblemDetail real.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA, // misma empresa que en el test anterior
-                "nombreGestor", "Otro Gestor",
+                "nombre", "Otro",
+                "apellidos", "Gestor",
                 "email", "otro.gestor@nxtime.test",
-                "password", "password123"
+                "contrasena", "password123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -360,9 +365,10 @@ class ApiContractTest {
         // usuario tal cual.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", "",
-                "nombreGestor", "",
+                "nombre", "",
+                "apellidos", "",
                 "email", "esto-no-es-un-email",
-                "password", "123" // menos de 6 caracteres
+                "contrasena", "123" // menos de 8 caracteres
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -382,9 +388,10 @@ class ApiContractTest {
         // debe poder ver ni tocar nada de EMPRESA.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA_OTRA,
-                "nombreGestor", "Gestor Otra Empresa",
+                "nombre", "Gestor",
+                "apellidos", "Otra Empresa",
                 "email", EMAIL_GESTOR_OTRA_EMPRESA,
-                "password", "password123"
+                "contrasena", "password123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -438,7 +445,8 @@ class ApiContractTest {
     @Order(10)
     void gestorCreaEmpleadoSinContrasena_yElEmpleadoLaEligeConElCodigo() throws Exception {
         Map<String, Object> peticion = mapOf(
-                "nombre", "Empleado Contract",
+                "nombre", "Empleado",
+                "apellidos", "Contract",
                 "email", EMAIL_EMPLEADO
         );
 
@@ -459,7 +467,8 @@ class ApiContractTest {
     @Order(11)
     void gestorCreaOtroGestorSinContrasena_yLaEligeConElCodigo() throws Exception {
         Map<String, Object> peticion = mapOf(
-                "nombre", "Gestor Contract 2",
+                "nombre", "Gestor",
+                "apellidos", "Contract 2",
                 "email", EMAIL_GESTOR2
         );
 
@@ -1420,11 +1429,19 @@ class ApiContractTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         JsonNode body = bodyOf(response);
         assertThat(body.get("email").asText()).isEqualTo(EMAIL_EMPLEADO);
-        // Sin apellidos todavía: el nombre completo es solo el nombre,
-        // sin espacio suelto detrás, y las iniciales son DOS letras.
-        assertThat(body.get("apellidos").isNull()).isTrue();
-        assertThat(body.get("nombreCompleto").asText()).isEqualTo(body.get("nombre").asText());
-        assertThat(body.get("iniciales").asText()).hasSize(2);
+        // CAMBIADO EN 09/2026: el alta ya pide nombre y apellidos por
+        // separado, asi que aqui ya NO se llega sin apellidos -- antes se
+        // creaba con un unico campo y este test fijaba ese caso.
+        //
+        // El caso "sin apellidos" sigue existiendo (una cuenta antigua, o
+        // unos apellidos borrados desde el perfil) y lo cubre el unitario
+        // de EmployeeProfileServiceImpl; aqui se comprueba lo que pasa de
+        // verdad por la API hoy: los dos campos, unidos por el servidor.
+        assertThat(body.get("apellidos").asText()).isEqualTo("Contract");
+        assertThat(body.get("nombreCompleto").asText()).isEqualTo("Empleado Contract");
+        // Inicial del nombre + inicial del apellido, calculadas en el
+        // servidor para que cada cliente no invente su propia regla.
+        assertThat(body.get("iniciales").asText()).isEqualTo("EC");
     }
 
     @Test
@@ -3064,9 +3081,10 @@ class ApiContractTest {
                 url("/auth/register-manager"),
                 new HttpEntity<>(toJson(mapOf(
                         "nombreEmpresa", "Recupera Contract SL",
-                        "nombreGestor", "Rita",
+                        "nombre", "Rita",
+                        "apellidos", "Levi",
                         "email", email,
-                        "password", "olvidada12345")), registroHeaders),
+                        "contrasena", "olvidada12345")), registroHeaders),
                 String.class
         );
         assertThat(registro.getStatusCode()).isEqualTo(HttpStatus.OK);

@@ -38,7 +38,7 @@ class AltaUsuarioViewModelTest {
     private val viewModel by lazy { AltaUsuarioViewModel(repositorio) }
 
     @Test
-    fun `sin nombre o sin correo no se envia nada`() = runTest {
+    fun `sin apellidos o sin correo no se envia nada`() = runTest {
         viewModel.onNombreCambia("Ana")
         viewModel.crear(esGestor = false)
         advanceUntilIdle()
@@ -48,15 +48,19 @@ class AltaUsuarioViewModelTest {
     }
 
     @Test
-    fun `un empleado se crea solo con nombre y correo, sin contrasena`() = runTest {
+    fun `un empleado se crea con nombre, apellidos y correo, sin contrasena`() = runTest {
         whenever(repositorio.crearEmpleado(any())).thenReturn(Response.success(Unit))
 
         viewModel.onNombreCambia(" Ana ")
+        viewModel.onApellidosCambia(" Fernández Ruiz ")
         viewModel.onEmailCambia(" ana@nxtime.com ")
         viewModel.crear(esGestor = false)
         advanceUntilIdle()
 
-        verify(repositorio).crearEmpleado(CrearEmpleadoRequest("Ana", "ana@nxtime.com"))
+        // Nombre y apellidos viajan separados: la ficha los guarda en dos
+        // campos y pedirlos juntos acababa con los dos dentro de "nombre".
+        verify(repositorio).crearEmpleado(
+            CrearEmpleadoRequest("Ana", "Fernández Ruiz", "ana@nxtime.com"))
         assertTrue(viewModel.uiState.value.creado)
     }
 
@@ -65,11 +69,12 @@ class AltaUsuarioViewModelTest {
         whenever(repositorio.crearGestor(any())).thenReturn(Response.success(Unit))
 
         viewModel.onNombreCambia("Marta")
+        viewModel.onApellidosCambia("Sánchez")
         viewModel.onEmailCambia("marta@nxtime.com")
         viewModel.crear(esGestor = true)
         advanceUntilIdle()
 
-        verify(repositorio).crearGestor(CrearGestorRequest("Marta", "marta@nxtime.com"))
+        verify(repositorio).crearGestor(CrearGestorRequest("Marta", "Sánchez", "marta@nxtime.com"))
         verify(repositorio, never()).crearEmpleado(any())
     }
 
@@ -84,6 +89,7 @@ class AltaUsuarioViewModelTest {
         )
 
         viewModel.onNombreCambia("Ana")
+        viewModel.onApellidosCambia("Fernández")
         viewModel.onEmailCambia("ana@nxtime.com")
         viewModel.crear(esGestor = false)
         advanceUntilIdle()
