@@ -36,8 +36,17 @@ android {
         applicationId = "com.nxtime.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        /*
+         * Sube en CADA APK que se entrega. No es burocracia: Sentry agrupa
+         * los fallos por release (`APPLICATION_ID@VERSION_NAME+VERSION_CODE`),
+         * así que dos APK distintos con el mismo número mezclarían sus
+         * errores y no habría forma de saber cuál los produjo.
+         *
+         * 2 = piloto del 12/09/2026: recuperación de contraseña, CV en
+         * candidaturas, nombre y apellidos, Ajustes, huella y recordatorio.
+         */
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
