@@ -52,9 +52,13 @@ class AjustesViewModelTest {
     ): AjustesViewModel {
         whenever(ajustes.tema).thenReturn(MutableStateFlow(tema))
         whenever(ajustes.informesDeErrores).thenReturn(MutableStateFlow(informes))
-        // El ViewModel lee las tres al construirse: si alguna se queda sin
-        // simular, revienta antes del primer assert.
+        // El ViewModel las lee TODAS al construirse: si alguna se queda sin
+        // simular, revienta antes del primer assert. Ya pasó al añadir la
+        // huella, y otra vez al añadir el recordatorio.
         whenever(ajustes.huella).thenReturn(MutableStateFlow(huella))
+        whenever(ajustes.recordatorio).thenReturn(MutableStateFlow(false))
+        whenever(ajustes.horaEntrada).thenReturn(MutableStateFlow("09:30"))
+        whenever(ajustes.horaSalida).thenReturn(MutableStateFlow("18:30"))
         return AjustesViewModel(repositorio, ajustes)
     }
 
@@ -158,6 +162,39 @@ class AjustesViewModelTest {
         verify(ajustes).cambiarHuella(false)
         verify(repositorio, never()).login(any())
         assertFalse(vm.uiState.value.huella)
+    }
+
+    @Test
+    fun `encender el recordatorio lo guarda en los ajustes`() = runTest {
+        val vm = viewModel()
+
+        vm.cambiarRecordatorio(true)
+
+        verify(ajustes).cambiarRecordatorio(true)
+        assertTrue(vm.uiState.value.recordatorio)
+    }
+
+    @Test
+    fun `una hora mal escrita no se guarda y se explica`() = runTest {
+        val vm = viewModel()
+
+        vm.cambiarHoras("25:70", "18:30")
+
+        // Guardarla dejaría el trabajo programado a una hora que no existe:
+        // no avisaría nunca y no habría forma de saber por qué.
+        verify(ajustes, never()).cambiarHoras(any(), any())
+        assertNotNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `unas horas correctas se guardan`() = runTest {
+        val vm = viewModel()
+
+        vm.cambiarHoras("08:00", "17:15")
+
+        verify(ajustes).cambiarHoras("08:00", "17:15")
+        assertEquals("08:00", vm.uiState.value.horaEntrada)
+        assertEquals("17:15", vm.uiState.value.horaSalida)
     }
 
     @Test

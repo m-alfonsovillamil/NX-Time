@@ -8,6 +8,7 @@ import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.Tema
+import com.nxtime.app.recordatorio.ReglaDelRecordatorio
 import com.nxtime.app.ui.util.MensajeUi
 import io.sentry.Sentry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,9 @@ data class AjustesUiState(
     val tema: Tema = Tema.SISTEMA,
     val informesDeErrores: Boolean = true,
     val huella: Boolean = false,
+    val recordatorio: Boolean = false,
+    val horaEntrada: String = Ajustes.HORA_ENTRADA_POR_DEFECTO,
+    val horaSalida: String = Ajustes.HORA_SALIDA_POR_DEFECTO,
     /** Se está pidiendo la contraseña para activar la huella. */
     val confirmandoHuella: Boolean = false,
     val verificandoContrasena: Boolean = false,
@@ -45,10 +49,44 @@ class AjustesViewModel(
         AjustesUiState(
             tema = ajustes.tema.value,
             informesDeErrores = ajustes.informesDeErrores.value,
-            huella = ajustes.huella.value
+            huella = ajustes.huella.value,
+            recordatorio = ajustes.recordatorio.value,
+            horaEntrada = ajustes.horaEntrada.value,
+            horaSalida = ajustes.horaSalida.value
         )
     )
     val uiState: StateFlow<AjustesUiState> = _uiState.asStateFlow()
+
+    /**
+     * Enciende o apaga el recordatorio de fichar.
+     *
+     * Aquí solo se guarda la preferencia: **programar el trabajo periódico
+     * lo hace la pantalla**, que es quien tiene el Context. Es el mismo
+     * reparto que en la descarga del CV, y evita meter un Context en el
+     * ViewModel solo para llamar a WorkManager.
+     */
+    fun cambiarRecordatorio(activo: Boolean) {
+        ajustes.cambiarRecordatorio(activo)
+        _uiState.update { it.copy(recordatorio = activo, error = null) }
+    }
+
+    /**
+     * Cambia las horas de aviso, si son horas.
+     *
+     * Se valida antes de guardar porque un "25:70" guardado no avisaría
+     * nunca y no habría forma de saber por qué: el trabajo se programaría
+     * en silencio con una hora que no existe.
+     */
+    fun cambiarHoras(entrada: String, salida: String) {
+        if (!ReglaDelRecordatorio.esHoraValida(entrada) || !ReglaDelRecordatorio.esHoraValida(salida)) {
+            _uiState.update {
+                it.copy(error = MensajeUi.Recurso(R.string.ajustes_recordatorio_hora_invalida))
+            }
+            return
+        }
+        ajustes.cambiarHoras(entrada, salida)
+        _uiState.update { it.copy(horaEntrada = entrada, horaSalida = salida, error = null) }
+    }
 
     /**
      * Activar la huella **exige la contraseña**; desactivarla, no.

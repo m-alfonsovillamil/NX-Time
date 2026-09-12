@@ -257,6 +257,17 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
 
     /*
+     * Recordatorio de fichar (paso 7).
+     *
+     * WorkManager y no AlarmManager: el aviso no necesita puntualidad al
+     * segundo -- si llega cinco minutos tarde da igual --, y a cambio
+     * sobrevive a reinicios del móvil y respeta la batería. AlarmManager
+     * exacto pediría permiso aparte desde Android 12 para una precisión
+     * que aquí no aporta nada.
+     */
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    /*
      * NO se añade androidx.security:security-crypto. Llegó a estar aquí
      * "para cifrar el almacén de sesión", pero **nada lo usaba**: una
      * dependencia que no se llama no cifra nada, y su comentario prometía

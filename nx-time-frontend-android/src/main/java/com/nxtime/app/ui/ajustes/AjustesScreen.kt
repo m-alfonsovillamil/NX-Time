@@ -1,5 +1,9 @@
 package com.nxtime.app.ui.ajustes
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -37,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.BuildConfig
 import com.nxtime.app.R
 import com.nxtime.app.data.session.Tema
+import com.nxtime.app.recordatorio.RecordatorioDeFichaje
+import com.nxtime.app.recordatorio.ReglaDelRecordatorio
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -58,6 +64,28 @@ fun AjustesScreen(
     viewModel: AjustesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    val contexto = LocalContext.current
+
+    /*
+     * Programar el trabajo periódico necesita un Context, así que lo hace
+     * la pantalla y no el ViewModel -- el mismo reparto que en la descarga
+     * del CV. El ViewModel solo guarda la preferencia.
+     *
+     * Se llama también al cambiar las horas: sin esto el trabajo seguiría
+     * avisando a la hora vieja hasta que alguien apagara y encendiera el
+     * ajuste.
+     */
+    fun programar(activo: Boolean, entrada: String, salida: String) {
+        if (ReglaDelRecordatorio.esHoraValida(entrada) && ReglaDelRecordatorio.esHoraValida(salida)) {
+            RecordatorioDeFichaje.programar(contexto, activo, entrada, salida)
+        }
+    }
+
+    // El resultado no se usa: si lo deniega, el ajuste queda encendido pero
+    // el sistema no dejará notificar, y la propia tarjeta lo explica.
+    val permiso = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
 
     PantallaConBarra(titulo = stringResource(R.string.ajustes_titulo), onVolver = onVolver) { modifier ->
         Column(
@@ -85,6 +113,27 @@ fun AjustesScreen(
                 activa = estado.huella,
                 estadoHuella = estadoDeLaHuella(LocalContext.current),
                 onCambiar = viewModel::cambiarHuella
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Recordatorio(
+                activo = estado.recordatorio,
+                horaEntrada = estado.horaEntrada,
+                horaSalida = estado.horaSalida,
+                onCambiarActivo = { activo ->
+                    // El permiso solo se pide AL ACTIVAR, y solo en 13+:
+                    // pedirlo al arrancar, sin que se vea para qué, es la
+                    // forma más segura de que lo denieguen.
+                    if (activo && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permiso.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    viewModel.cambiarRecordatorio(activo)
+                    programar(activo, estado.horaEntrada, estado.horaSalida)
+                },
+                onCambiarHoras = { entrada, salida ->
+                    viewModel.cambiarHoras(entrada, salida)
+                    programar(estado.recordatorio, entrada, salida)
+                }
             )
 
             Spacer(Modifier.height(16.dp))
@@ -276,6 +325,75 @@ private fun Seguridad(
 }
 
 @Composable
+private fun Recordatorio(
+    activo: Boolean,
+    horaEntrada: String,
+    horaSalida: String,
+    onCambiarActivo: (Boolean) -> Unit,
+    onCambiarHoras: (String, String) -> Unit
+) {
+    Tarjeta(stringResource(R.string.ajustes_recordatorio)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.ajustes_recordatorio),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(checked = activo, onCheckedChange = onCambiarActivo)
+        }
+        Text(
+            text = stringResource(R.string.ajustes_recordatorio_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Las horas solo cuando el recordatorio está encendido: enseñar dos
+        // campos que no hacen nada invita a rellenarlos y a no entender por
+        // qué no llega ningún aviso.
+        if (activo) {
+            /*
+             * 🚨 Estado local, y no el del ViewModel directamente.
+             *
+             * Estos campos son controlados: si su `value` fuera el del
+             * estado, que solo cambia cuando la hora es VÁLIDA, al teclear
+             * "0", "09", "09:"... el campo seguiría enseñando la hora
+             * anterior y parecería que no se puede escribir en él.
+             *
+             * Se guarda cuando el texto está completo (5 caracteres), así
+             * que tampoco salta el error a medio escribir.
+             */
+            var entrada by remember(horaEntrada) { mutableStateOf(horaEntrada) }
+            var salida by remember(horaSalida) { mutableStateOf(horaSalida) }
+
+            Spacer(Modifier.height(8.dp))
+            Row {
+                OutlinedTextField(
+                    value = entrada,
+                    onValueChange = {
+                        entrada = it
+                        if (it.length == LARGO_HORA) onCambiarHoras(it, salida)
+                    },
+                    label = { Text(stringResource(R.string.ajustes_recordatorio_entrada)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                OutlinedTextField(
+                    value = salida,
+                    onValueChange = {
+                        salida = it
+                        if (it.length == LARGO_HORA) onCambiarHoras(entrada, it)
+                    },
+                    label = { Text(stringResource(R.string.ajustes_recordatorio_salida)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun Privacidad(activos: Boolean, onCambiar: (Boolean) -> Unit) {
     Tarjeta(stringResource(R.string.ajustes_privacidad)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -319,3 +437,6 @@ private fun Dato(etiqueta: String, valor: String) {
 }
 
 private const val REPOSITORIO = "github.com/m-alfonsovillamil/NX-Time"
+
+/** "HH:mm". Con menos caracteres, la hora está a medio escribir. */
+private const val LARGO_HORA = 5
