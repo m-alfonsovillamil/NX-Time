@@ -49,6 +49,22 @@ class Ajustes(context: Context) {
      */
     val informesDeErrores: StateFlow<Boolean> = _informesDeErrores.asStateFlow()
 
+    private val _huella = MutableStateFlow(prefs.getBoolean(KEY_HUELLA, false))
+
+    /**
+     * Si al abrir la aplicación con la sesión guardada se pide la huella.
+     *
+     * **Apagado por defecto**, y activarlo exige la contraseña: si no, a
+     * quien cogiera el móvil desbloqueado le bastaría con activarlo y su
+     * propia huella para blindar la cuenta de otra persona.
+     */
+    val huella: StateFlow<Boolean> = _huella.asStateFlow()
+
+    fun cambiarHuella(activa: Boolean) {
+        _huella.value = activa
+        prefs.edit().putBoolean(KEY_HUELLA, activa).apply()
+    }
+
     fun cambiarTema(nuevo: Tema) {
         _tema.value = nuevo
         prefs.edit().putString(KEY_TEMA, nuevo.name).apply()
@@ -63,5 +79,6 @@ class Ajustes(context: Context) {
         const val NOMBRE_PREFS = "NXTIME_AJUSTES"
         private const val KEY_TEMA = "tema"
         private const val KEY_INFORMES = "informes_de_errores"
+        private const val KEY_HUELLA = "entrar_con_huella"
     }
 }

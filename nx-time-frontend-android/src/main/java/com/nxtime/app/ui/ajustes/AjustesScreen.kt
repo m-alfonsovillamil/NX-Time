@@ -11,18 +11,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,6 +81,13 @@ fun AjustesScreen(
             )
 
             Spacer(Modifier.height(16.dp))
+            Seguridad(
+                activa = estado.huella,
+                estadoHuella = estadoDeLaHuella(LocalContext.current),
+                onCambiar = viewModel::cambiarHuella
+            )
+
+            Spacer(Modifier.height(16.dp))
             Privacidad(
                 activos = estado.informesDeErrores,
                 onCambiar = viewModel::cambiarInformesDeErrores
@@ -83,6 +98,62 @@ fun AjustesScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+
+    if (estado.confirmandoHuella) {
+        DialogoContrasena(
+            verificando = estado.verificandoContrasena,
+            onConfirmar = viewModel::confirmarHuellaCon,
+            onCancelar = viewModel::cancelarActivacionDeHuella
+        )
+    }
+}
+
+/**
+ * Pide la contraseña antes de activar la huella.
+ *
+ * No es burocracia: a quien cogiera el móvil ya desbloqueado le bastaría
+ * con activar la huella y poner la suya para quedarse con la cuenta.
+ */
+@Composable
+private fun DialogoContrasena(
+    verificando: Boolean,
+    onConfirmar: (String) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var contrasena by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(stringResource(R.string.ajustes_huella_confirmar)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.ajustes_huella_confirmar_detalle),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = contrasena,
+                    onValueChange = { contrasena = it },
+                    label = { Text(stringResource(R.string.login_contrasena)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmar(contrasena) },
+                enabled = !verificando && contrasena.isNotBlank()
+            ) {
+                Text(stringResource(R.string.aceptar))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
+    )
 }
 
 @Composable
@@ -164,6 +235,40 @@ private fun Cuenta(
         // emitido vale hasta que caduque, así que no es un corte inmediato.
         Text(
             text = stringResource(R.string.ajustes_cerrar_todas_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun Seguridad(
+    activa: Boolean,
+    estadoHuella: EstadoDeLaHuella,
+    onCambiar: (Boolean) -> Unit
+) {
+    Tarjeta(stringResource(R.string.ajustes_seguridad)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.ajustes_huella),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            // Sin sensor o sin huellas dadas de alta, el interruptor se
+            // apaga y se dice POR QUÉ: uno gris sin explicación se lee
+            // como una aplicación rota.
+            Switch(
+                checked = activa,
+                onCheckedChange = onCambiar,
+                enabled = estadoHuella == EstadoDeLaHuella.DISPONIBLE
+            )
+        }
+        Text(
+            text = when (estadoHuella) {
+                EstadoDeLaHuella.DISPONIBLE -> stringResource(R.string.ajustes_huella_detalle)
+                EstadoDeLaHuella.SIN_REGISTRAR -> stringResource(R.string.ajustes_huella_sin_registrar)
+                EstadoDeLaHuella.NO_HAY -> stringResource(R.string.ajustes_huella_no_hay)
+            },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

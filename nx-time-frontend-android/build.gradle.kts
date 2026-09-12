@@ -240,6 +240,31 @@ dependencies {
     implementation("io.sentry:sentry-android-core:8.56.0")
 
     /*
+     * Entrar con huella (paso 6).
+     *
+     * 🚨 `BiometricPrompt` exige una `FragmentActivity`, y MainActivity
+     * heredaba de `ComponentActivity` porque AppCompat se quitó a
+     * propósito. No es una vuelta atrás: `FragmentActivity` vive en
+     * androidx.fragment -- que esta librería ya arrastra -- y **extiende
+     * ComponentActivity**, así que `setContent`, el edge-to-edge y el
+     * grafo de navegación siguen funcionando igual. Lo que NO se
+     * recupera es AppCompat.
+     *
+     * Se usa la de androidx y no la `android.hardware.biometrics` de la
+     * plataforma porque esta última llega en API 28 y el mínimo aquí es
+     * 24: androidx cubre ese hueco con el diálogo antiguo.
+     */
+    implementation("androidx.biometric:biometric:1.1.0")
+
+    /*
+     * NO se añade androidx.security:security-crypto. Llegó a estar aquí
+     * "para cifrar el almacén de sesión", pero **nada lo usaba**: una
+     * dependencia que no se llama no cifra nada, y su comentario prometía
+     * una protección inexistente. Si algún día se cifra de verdad, entra
+     * con el código que la use, no antes.
+     */
+
+    /*
      * Tests unitarios (JVM, sin emulador). JUnit 4 y no 5 porque es lo
      * que trae de serie el plugin de Android; JUnit 5 necesitaría un
      * plugin de terceros para tan poca ganancia aquí.

@@ -446,6 +446,29 @@
     <string name="ajustes_privacidad">Privacidad</string>
     <string name="ajustes_informes_errores">Enviar informes de errores</string>
     <string name="ajustes_informes_errores_detalle">Si la aplicación se cierra sola, se envía el fallo (pantalla, versión y traza) para poder arreglarlo. No incluye tus datos ni lo que escribes.</string>
+    <!--
+        Entrar con huella. Es una puerta al abrir la aplicación, no un
+        candado sobre cada petición: lo que protege es que alguien con tu
+        móvil desbloqueado abra NX Time.
+    -->
+    <string name="ajustes_seguridad">Seguridad</string>
+    <string name="ajustes_huella">Entrar con huella</string>
+    <string name="ajustes_huella_detalle">Al abrir la aplicación se pedirá tu huella. Si el sensor falla o borras tus huellas, siempre podrás entrar con tu contraseña.</string>
+    <string name="ajustes_huella_sin_registrar">No tienes ninguna huella dada de alta en este móvil. Añádela en los ajustes del sistema y vuelve aquí.</string>
+    <string name="ajustes_huella_no_hay">Este móvil no tiene lector de huella.</string>
+    <!-- Activar pide la contraseña: si no, a quien cogiera el móvil
+         desbloqueado le bastaría su propia huella para blindar la cuenta
+         de otra persona. -->
+    <string name="ajustes_huella_confirmar">Confirma tu contraseña</string>
+    <string name="ajustes_huella_confirmar_detalle">Para activar la huella, escribe tu contraseña.</string>
+    <string name="ajustes_huella_activada">Huella activada.</string>
+
+    <string name="huella_bloqueada">Desbloquea NX Time con tu huella para continuar.</string>
+    <string name="huella_reintentar">Usar la huella</string>
+    <string name="huella_usar_contrasena">Entrar con mi contraseña</string>
+    <string name="huella_titulo">Desbloquear NX Time</string>
+    <string name="huella_subtitulo">Usa tu huella para entrar</string>
+
     <string name="ajustes_acerca_de">Acerca de</string>
     <string name="ajustes_version">Versión</string>
     <string name="ajustes_servidor">Servidor</string>
