@@ -49,6 +49,7 @@ import com.nxtime.app.ui.util.resolver
 fun LoginScreen(
     onAccesoConcedido: () -> Unit,
     onIrRegistroEmpresa: () -> Unit,
+    onIrRecuperarAcceso: () -> Unit,
     viewModel: LoginViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -142,7 +143,17 @@ fun LoginScreen(
                 }
             }
 
-            TextButton(onClick = onIrRegistroEmpresa, modifier = Modifier.padding(top = 8.dp)) {
+            // Recuperar y entrar por primera vez son la misma pantalla
+            // (ADR 014): un empleado recién dado de alta no tiene
+            // contraseña todavía, y el correo de bienvenida le manda aquí.
+            TextButton(onClick = onIrRecuperarAcceso, modifier = Modifier.padding(top = 8.dp)) {
+                Text(
+                    text = stringResource(R.string.login_recuperar),
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            TextButton(onClick = onIrRegistroEmpresa) {
                 Text(stringResource(R.string.login_registrar_empresa))
             }
             Spacer(Modifier.height(48.dp))

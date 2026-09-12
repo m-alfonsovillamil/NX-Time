@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nxtime.app.NxTimeApplication
 import com.nxtime.app.ui.acceso.LoginViewModel
+import com.nxtime.app.ui.acceso.RecuperarAccesoViewModel
 import com.nxtime.app.ui.auditoria.AuditoriaViewModel
 import com.nxtime.app.ui.auditoria.CorregirFichajeViewModel
 import com.nxtime.app.ui.navegacion.ARG_FICHAJE_ID
@@ -50,6 +51,7 @@ object AppViewModelProvider {
 
     val Factory: ViewModelProvider.Factory = viewModelFactory {
         initializer { LoginViewModel(app().authRepository) }
+        initializer { RecuperarAccesoViewModel(app().authRepository) }
         initializer { RegistroEmpresaViewModel(app().authRepository) }
         initializer { FicharViewModel(app().authRepository, app().sessionManager) }
         initializer { HistorialViewModel(app().authRepository) }

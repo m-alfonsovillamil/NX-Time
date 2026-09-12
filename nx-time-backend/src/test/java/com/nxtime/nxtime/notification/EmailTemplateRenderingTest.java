@@ -143,30 +143,48 @@ class EmailTemplateRenderingTest {
         // que las notas para quien mantiene la plantilla acababan dentro
         // de cada correo enviado. Se escriben como comentarios de parser
         // (<!--/* ... */-->), que Thymeleaf elimina al renderizar.
-        Map<String, Object> vars = new HashMap<>();
-        vars.put("nombreEmpleado", "Ana");
+        Map<String, Object> vars = variablesDeCodigo();
         vars.put("nombreEmpresa", "TechCorp");
-        vars.put("email", "ana@techcorp.demo");
 
-        String html = render("employee-welcome", vars);
+        String html = render("access-code-welcome", vars);
 
         assertThat(html).doesNotContain("<!--");
-        assertThat(html).doesNotContain("Fase 10");
+        assertThat(html).doesNotContain("ADR 014");
     }
 
     @Test
-    @DisplayName("La bienvenida renderiza y NO contiene ninguna contraseña")
-    void employeeWelcome_renderizaSinContrasena() {
-        Map<String, Object> vars = new HashMap<>();
-        vars.put("nombreEmpleado", "Ana");
+    @DisplayName("El correo de alta renderiza con el código y la empresa, y sin ninguna contraseña")
+    void accessCodeWelcome_renderizaConElCodigo() {
+        Map<String, Object> vars = variablesDeCodigo();
         vars.put("nombreEmpresa", "TechCorp");
-        vars.put("email", "ana@techcorp.demo");
 
-        String html = render("employee-welcome", vars);
+        String html = render("access-code-welcome", vars);
 
         assertThat(html).contains("Ana").contains("TechCorp").contains("ana@techcorp.demo");
-        // La plantilla dice explícitamente que la contraseña llega por
-        // otro canal; que no se cuele nunca es la razón de este test.
+        assertThat(html).contains("012345").contains("24 horas");
+        // Sustituye al correo de bienvenida de la Fase 10 (ADR 014): la
+        // contraseña la elige el propio empleado y no viaja nunca.
         assertThat(html).doesNotContain("contrasena").doesNotContain("password");
+    }
+
+    @Test
+    @DisplayName("El correo de recuperación renderiza con el código y su caducidad")
+    void accessCodeRecovery_renderizaConElCodigo() {
+        Map<String, Object> vars = variablesDeCodigo();
+        vars.put("validez", "15 minutos");
+
+        String html = render("access-code-recovery", vars);
+
+        assertThat(html).contains("Ana").contains("012345").contains("15 minutos");
+        assertThat(html).doesNotContain("<!--");
+    }
+
+    private static Map<String, Object> variablesDeCodigo() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombre", "Ana");
+        vars.put("email", "ana@techcorp.demo");
+        vars.put("codigo", "012345");
+        vars.put("validez", "24 horas");
+        return vars;
     }
 }

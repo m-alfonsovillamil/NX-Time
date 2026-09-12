@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/* "He olvidado mi contraseña" (09/2026, ADR 014). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu código para entrar', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Has pedido un código para elegir una contraseña nueva en NX Time. Escríbelo en la aplicación:</p>
+
+    <p style="font-size: 30px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;"
+       th:text="${codigo}">123456</p>
+
+    <p>Caduca en <span th:text="${validez}">15 minutos</span> y solo sirve una vez.</p>
+
+    <!--/*
+      No se dice "si no has sido tú, cambia tu contraseña": quien no lo ha
+      pedido no tiene que hacer nada, porque sin el código no se puede
+      cambiar, y el código solo ha llegado a este buzón.
+    */-->
+    <p style="color: #6a737d;">
+        Si no lo has pedido tú, no hagas nada: tu contraseña sigue siendo la misma.
+    </p>
+</div>
+</body>
+</html>

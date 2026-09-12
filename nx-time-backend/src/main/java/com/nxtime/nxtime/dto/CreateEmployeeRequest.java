@@ -2,10 +2,13 @@ package com.nxtime.nxtime.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 /**
  * DTO para recibir la petición de crear un nuevo Empleado.
+ *
+ * Sin contraseña desde el 09/2026 (ver ADR 014): antes la tecleaba quien
+ * daba el alta, así que el jefe conocía la contraseña de todos. Ahora la
+ * elige el propio empleado con el código que le llega por correo.
  */
 public record CreateEmployeeRequest(
 
@@ -14,10 +17,6 @@ public record CreateEmployeeRequest(
 
         @NotBlank(message = "El email es obligatorio.")
         @Email(message = "El email no tiene un formato válido.")
-        String email,
-
-        @NotBlank(message = "La contraseña es obligatoria.")
-        @Size(min = 6, message = "La contraseña debe tener al menos 6 caracteres.")
-        String contrasena
+        String email
 ) {
 }

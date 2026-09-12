@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--/*
+  Alta de una cuenta (09/2026, ADR 014): el código con el que su dueño
+  elige la contraseña. Sustituye al antiguo employee-welcome, que decía
+  "la contraseña te la facilitará quien ha creado tu cuenta".
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Te damos la bienvenida', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>
+        Se ha creado tu cuenta en NX Time para
+        <strong th:text="${nombreEmpresa}">Empresa</strong>.
+        Tu usuario es <strong th:text="${email}">correo@empresa.com</strong>.
+    </p>
+
+    <p>
+        Para elegir tu contraseña, abre la aplicación, pulsa
+        <strong>«¿Has olvidado tu contraseña o es tu primera vez?»</strong>,
+        escribe tu correo, pulsa <strong>«Ya tengo un código»</strong> y usa este:
+    </p>
+
+    <p style="font-size: 30px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;"
+       th:text="${codigo}">123456</p>
+
+    <p>
+        Caduca en <span th:text="${validez}">24 horas</span>. Si se te pasa,
+        desde esa misma pantalla puedes pedir otro.
+    </p>
+
+    <p style="color: #6a737d;">
+        Nadie más conoce tu contraseña, tampoco quien ha creado tu cuenta.
+    </p>
+</div>
+</body>
+</html>

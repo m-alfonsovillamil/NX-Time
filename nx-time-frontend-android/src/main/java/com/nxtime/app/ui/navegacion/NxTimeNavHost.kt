@@ -44,6 +44,7 @@ import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.acceso.LoginScreen
+import com.nxtime.app.ui.acceso.RecuperarAccesoScreen
 import com.nxtime.app.ui.acceso.RegistroEmpresaScreen
 import com.nxtime.app.ui.auditoria.AuditoriaScreen
 import com.nxtime.app.ui.auditoria.CorregirFichajeScreen
@@ -87,6 +88,9 @@ import java.nio.charset.StandardCharsets
 enum class Pantalla(val ruta: String) {
     LOGIN("login"),
     REGISTRO_EMPRESA("registro"),
+    // Recuperar la contraseña o elegirla la primera vez (ADR 014). Sin
+    // sesión, como el login: sirve justo a quien no puede entrar.
+    RECUPERAR_ACCESO("recuperar-acceso"),
     FICHAR("fichar"),
     HISTORIAL("historial"),
     CALENDARIO("calendario"),
@@ -410,8 +414,13 @@ fun NxTimeNavHost(
             composable(Pantalla.LOGIN.ruta) {
                 LoginScreen(
                     onAccesoConcedido = { entrarA(Pantalla.FICHAR) },
-                    onIrRegistroEmpresa = { navController.navigate(Pantalla.REGISTRO_EMPRESA.ruta) }
+                    onIrRegistroEmpresa = { navController.navigate(Pantalla.REGISTRO_EMPRESA.ruta) },
+                    onIrRecuperarAcceso = { navController.navigate(Pantalla.RECUPERAR_ACCESO.ruta) }
                 )
+            }
+
+            composable(Pantalla.RECUPERAR_ACCESO.ruta) {
+                RecuperarAccesoScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.REGISTRO_EMPRESA.ruta) {

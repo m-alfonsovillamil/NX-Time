@@ -25,6 +25,10 @@ import org.springframework.util.MultiValueMap;
 
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 
+import com.nxtime.nxtime.notification.EmailSender;
+import org.mockito.ArgumentCaptor;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -35,6 +39,11 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Tests de CONTRATO (Fase 0 del plan de profesionalización).
@@ -392,13 +401,45 @@ class ApiContractTest {
     // 2. GESTIÓN DE EMPLEADOS (rol GESTOR)
     // ------------------------------------------------------------------
 
+    /*
+     * Desde el 09/2026 (ADR 014) un alta no lleva contraseña: la persona la
+     * elige con el código que le llega por correo. El correo es un mock y el
+     * código se lee de lo que se le pasó.
+     *
+     * Ojo: @MockitoBean se reinicia después de CADA test, así que el código
+     * se lee y se usa dentro del mismo test, nunca en el siguiente.
+     */
+    @MockitoBean
+    private EmailSender emailSender;
+
+    private String codigoEnviadoA(String email) {
+        ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
+        verify(emailSender).enviarObligatorio(eq(email), anyString(), anyString(), variables.capture());
+        return (String) variables.getValue().get("codigo");
+    }
+
+    /**
+     * Elegir contraseña con un código. Desde una IP falsa propia, como el
+     * login del Order 28: /auth/recuperar/confirmar comparte el límite por IP
+     * con /auth/login, y no debe gastar el cupo del resto del flujo.
+     */
+    private ResponseEntity<String> elegirContrasena(String email, String codigo, String contrasena, String ip)
+            throws Exception {
+        HttpHeaders headers = jsonHeaders();
+        headers.set("X-Forwarded-For", ip);
+        return rest.postForEntity(
+                url("/auth/recuperar/confirmar"),
+                new HttpEntity<>(toJson(mapOf("email", email, "codigo", codigo, "contrasenaNueva", contrasena)), headers),
+                String.class
+        );
+    }
+
     @Test
     @Order(10)
-    void gestorCreaEmpleado_devuelve200() throws Exception {
+    void gestorCreaEmpleadoSinContrasena_yElEmpleadoLaEligeConElCodigo() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombre", "Empleado Contract",
-                "email", EMAIL_EMPLEADO,
-                "contrasena", "password123"
+                "email", EMAIL_EMPLEADO
         );
 
         ResponseEntity<String> response = rest.exchange(
@@ -407,17 +448,19 @@ class ApiContractTest {
                 new HttpEntity<>(toJson(peticion), authHeaders(gestorToken)),
                 String.class
         );
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> eleccion =
+                elegirContrasena(EMAIL_EMPLEADO, codigoEnviadoA(EMAIL_EMPLEADO), "password123", "203.0.113.60");
+        assertThat(eleccion.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
     @Order(11)
-    void gestorCreaOtroGestor_devuelve200() throws Exception {
+    void gestorCreaOtroGestorSinContrasena_yLaEligeConElCodigo() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombre", "Gestor Contract 2",
-                "email", EMAIL_GESTOR2,
-                "contrasena", "password123"
+                "email", EMAIL_GESTOR2
         );
 
         ResponseEntity<String> response = rest.exchange(
@@ -426,8 +469,11 @@ class ApiContractTest {
                 new HttpEntity<>(toJson(peticion), authHeaders(gestorToken)),
                 String.class
         );
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<String> eleccion =
+                elegirContrasena(EMAIL_GESTOR2, codigoEnviadoA(EMAIL_GESTOR2), "password123", "203.0.113.61");
+        assertThat(eleccion.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -2923,6 +2969,77 @@ class ApiContractTest {
         }
 
         assertThat(ultima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    // ------------------------------------------------------------------
+    // 7a. RECUPERAR LA CONTRASEÑA CON UN CÓDIGO (ADR 014)
+    // ------------------------------------------------------------------
+    // Con una empresa propia y no con las cuentas del flujo: cambiarles la
+    // contraseña aquí rompería cualquier test posterior que entre con ellas.
+    // Cada petición a /auth va desde su propia IP falsa, por el límite por IP.
+
+    @Test
+    @Order(54)
+    void recuperar_conUnCorreoSinCuenta_devuelve202_yNoMandaNada() throws Exception {
+        HttpHeaders headers = jsonHeaders();
+        headers.set("X-Forwarded-For", "203.0.113.62");
+
+        ResponseEntity<String> response = rest.postForEntity(
+                url("/auth/recuperar"),
+                new HttpEntity<>(toJson(mapOf("email", "nadie.contract@nxtime.test")), headers),
+                String.class
+        );
+
+        // El mismo 202 que para un correo con cuenta: si no, bastaría con
+        // probar direcciones para saber quién la tiene.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        verify(emailSender, never()).enviarObligatorio(anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    @Order(55)
+    void recuperar_unCodigoIncorrectoDa400_yConElCorrectoSeEntraConLaContrasenaNueva() throws Exception {
+        String email = "recupera.contract@nxtime.test";
+
+        HttpHeaders registroHeaders = jsonHeaders();
+        registroHeaders.set("X-Forwarded-For", "203.0.113.63");
+        ResponseEntity<String> registro = rest.postForEntity(
+                url("/auth/register-manager"),
+                new HttpEntity<>(toJson(mapOf(
+                        "nombreEmpresa", "Recupera Contract SL",
+                        "nombreGestor", "Rita",
+                        "email", email,
+                        "password", "olvidada12345")), registroHeaders),
+                String.class
+        );
+        assertThat(registro.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        HttpHeaders solicitudHeaders = jsonHeaders();
+        solicitudHeaders.set("X-Forwarded-For", "203.0.113.64");
+        ResponseEntity<String> solicitud = rest.postForEntity(
+                url("/auth/recuperar"),
+                new HttpEntity<>(toJson(mapOf("email", email)), solicitudHeaders),
+                String.class
+        );
+        assertThat(solicitud.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        String codigo = codigoEnviadoA(email);
+
+        String incorrecto = codigo.equals("000000") ? "111111" : "000000";
+        ResponseEntity<String> fallo = elegirContrasena(email, incorrecto, "recordada12345", "203.0.113.65");
+        assertThat(fallo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(fallo).get("detail").asText()).contains("no es válido o ha caducado");
+
+        ResponseEntity<String> acierto = elegirContrasena(email, codigo, "recordada12345", "203.0.113.66");
+        assertThat(acierto.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        HttpHeaders loginHeaders = jsonHeaders();
+        loginHeaders.set("X-Forwarded-For", "203.0.113.67");
+        ResponseEntity<String> login = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", email, "contrasena", "recordada12345")), loginHeaders),
+                String.class
+        );
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     // ------------------------------------------------------------------

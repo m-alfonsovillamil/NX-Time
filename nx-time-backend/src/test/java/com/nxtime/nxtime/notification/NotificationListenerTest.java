@@ -130,28 +130,14 @@ class NotificationListenerTest {
     }
 
     @Test
-    @DisplayName("El correo de bienvenida NO incluye la contraseña")
-    void onEmployeeCreated_noIncluyeLaContrasena() {
-        empleado.setContrasena("hash-super-secreto");
-
+    @DisplayName("El alta ya no manda correo desde el listener: el de bienvenida es el del código de acceso")
+    void onEmployeeCreated_noMandaCorreo() {
         listener.onEmployeeCreated(new NotificationEvents.EmployeeCreated(empleado, "Empresa Test"));
 
-        ArgumentCaptor<Map<String, Object>> vars = ArgumentCaptor.captor();
-        verify(emailSender).enviar(
-                eq(empleado.getEmail()), eq("Bienvenido a NX Time"), eq("employee-welcome"), vars.capture());
-        assertThat(vars.getValue()).containsEntry("nombreEmpresa", "Empresa Test");
-        // Ni la contraseña ni su hash viajan como variable de plantilla.
-        assertThat(vars.getValue().values()).doesNotContain("hash-super-secreto");
-        assertThat(vars.getValue()).doesNotContainKeys("contrasena", "password");
-    }
-
-    @Test
-    @DisplayName("El listener no manda nada por su cuenta más allá del correo esperado")
-    void listener_noMandaCorreosDeMas() {
-        listener.onEmployeeCreated(new NotificationEvents.EmployeeCreated(empleado, "Empresa Test"));
-
-        verify(emailSender).enviar(anyString(), anyString(), anyString(), anyMap());
-        org.mockito.Mockito.verifyNoMoreInteractions(emailSender);
+        // Lo manda AccessCodeService, en el momento y dentro de la
+        // transacción del alta (ADR 014). Dos correos seguidos al mismo
+        // buzón habrían sido contradictorios.
+        org.mockito.Mockito.verifyNoInteractions(emailSender);
     }
 
     // ------------------------------------------------------------------

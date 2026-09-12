@@ -2,8 +2,11 @@ package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.LoginRequest;
+import com.nxtime.nxtime.dto.PasswordRecoveryRequest;
+import com.nxtime.nxtime.dto.PasswordResetRequest;
 import com.nxtime.nxtime.dto.RefreshTokenRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,17 +30,24 @@ import org.springframework.web.bind.annotation.RestController;
  * renovarlo sin volver a pedir contraseña, y revocarlo cierra la
  * sesión de verdad (antes un token robado era válido 24h sin ninguna
  * forma de invalidarlo -- ver auditoría, defectos de diseño).
+ *
+ * /auth/recuperar y /auth/recuperar/confirmar (09/2026, ADR 014): elegir
+ * contraseña con un código que llega por correo, sirva para recuperarla o
+ * para entrar por primera vez.
  */
 @RestController
 @RequestMapping("/auth")
-@Tag(name = "Autenticación", description = "Registro de empresa, login, renovación y cierre de sesión. "
-        + "Público (sin token), pero limitado a 10 peticiones/minuto por IP en login y register-manager.")
+@Tag(name = "Autenticación", description = "Registro de empresa, login, renovación y cierre de sesión, y elegir "
+        + "contraseña con un código. Público (sin token), pero limitado a 10 peticiones/minuto por IP en login, "
+        + "register-manager y recuperar.")
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessCodeService accessCodeService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AccessCodeService accessCodeService) {
         this.authService = authService;
+        this.accessCodeService = accessCodeService;
     }
 
     @Operation(summary = "Registrar una empresa nueva",
@@ -100,5 +110,40 @@ public class AuthController {
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request.refreshToken());
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Pedir un código para elegir contraseña",
+            description = "Para quien la ha olvidado, o no llegó a usar el código de alta. Si el correo tiene una "
+                    + "cuenta activa, le llega un código de 6 dígitos que caduca en 15 minutos. Responde 202 "
+                    + "SIEMPRE, tenga cuenta o no: si no, cualquiera podría averiguar quién la tiene probando "
+                    + "direcciones.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Petición recibida, haya o no una cuenta con ese correo"),
+            @ApiResponse(responseCode = "400", description = "Email en blanco o mal formado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/recuperar")
+    public ResponseEntity<Void> solicitarRecuperacion(@Valid @RequestBody PasswordRecoveryRequest request) {
+        accessCodeService.solicitarRecuperacion(request.email());
+        return ResponseEntity.accepted().build();
+    }
+
+    @Operation(summary = "Elegir contraseña con un código",
+            description = "Vale igual el código de alta que el de recuperación. Cierra todas las sesiones abiertas "
+                    + "de la cuenta. Cada código admite 5 intentos: al quinto fallo se anula.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Contraseña fijada"),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, o un código incorrecto, caducado, "
+                    + "usado o anulado. El mensaje es el mismo en todos los casos, y también si el correo no tiene cuenta.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/recuperar/confirmar")
+    public ResponseEntity<Void> confirmarRecuperacion(@Valid @RequestBody PasswordResetRequest request) {
+        accessCodeService.confirmar(request.email(), request.codigo(), request.contrasenaNueva());
+        return ResponseEntity.noContent().build();
     }
 }

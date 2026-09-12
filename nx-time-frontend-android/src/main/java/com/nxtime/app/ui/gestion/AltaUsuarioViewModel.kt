@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 data class AltaUsuarioUiState(
     val nombre: String = "",
     val email: String = "",
-    val contrasena: String = "",
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
     val creado: Boolean = false
@@ -27,10 +26,13 @@ data class AltaUsuarioUiState(
  * Alta de una cuenta nueva, sea de empleado o de gestor.
  *
  * `CrearEmpleadoActivity` y `CrearGestorActivity` eran el mismo
- * formulario (nombre, correo y contraseña provisional) escrito dos
- * veces, con sus dos ViewModel y sus dos Factory. Lo único que
- * cambiaba de verdad era a qué endpoint se enviaba, y eso es el
- * parámetro [esGestor].
+ * formulario escrito dos veces, con sus dos ViewModel y sus dos Factory.
+ * Lo único que cambiaba de verdad era a qué endpoint se enviaba, y eso es
+ * el parámetro [esGestor].
+ *
+ * Sin contraseña desde el 09/2026 (ADR 014): antes quien daba el alta
+ * tecleaba una "contraseña provisional" y la conocía. Ahora la persona
+ * recibe un código por correo y elige la suya.
  */
 class AltaUsuarioViewModel(
     private val authRepository: AuthRepository
@@ -41,17 +43,12 @@ class AltaUsuarioViewModel(
 
     fun onNombreCambia(v: String) = _uiState.update { it.copy(nombre = v, error = null) }
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
-    fun onContrasenaCambia(v: String) = _uiState.update { it.copy(contrasena = v, error = null) }
 
     fun crear(esGestor: Boolean) {
         val e = _uiState.value
 
-        if (e.nombre.isBlank() || e.email.isBlank() || e.contrasena.isBlank()) {
+        if (e.nombre.isBlank() || e.email.isBlank()) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.error_campos_obligatorios)) }
-            return
-        }
-        if (e.contrasena.length < MINIMO_CONTRASENA) {
-            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.contrasena_corta)) }
             return
         }
 
@@ -61,14 +58,16 @@ class AltaUsuarioViewModel(
                 val nombre = e.nombre.trim()
                 val email = e.email.trim()
                 val respuesta = if (esGestor) {
-                    authRepository.crearGestor(CrearGestorRequest(nombre, email, e.contrasena))
+                    authRepository.crearGestor(CrearGestorRequest(nombre, email))
                 } else {
-                    authRepository.crearEmpleado(CrearEmpleadoRequest(nombre, email, e.contrasena))
+                    authRepository.crearEmpleado(CrearEmpleadoRequest(nombre, email))
                 }
 
                 if (respuesta.isSuccessful) {
                     _uiState.update { it.copy(cargando = false, creado = true) }
                 } else {
+                    // Entre otros, el 503 de "no se ha podido enviar el
+                    // correo": el alta no se ha hecho y el backend lo dice.
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
                     }
@@ -79,9 +78,5 @@ class AltaUsuarioViewModel(
                 }
             }
         }
-    }
-
-    companion object {
-        const val MINIMO_CONTRASENA = 8
     }
 }
