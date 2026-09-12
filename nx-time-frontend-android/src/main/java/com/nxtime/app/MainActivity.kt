@@ -21,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nxtime.app.ui.components.AvisoServidorDespertando
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
+import com.nxtime.app.data.session.Tema
 import com.nxtime.app.ui.theme.NxTimeTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.nxtime.app.ui.util.enEspanol
 
 /**
@@ -72,7 +74,20 @@ class MainActivity : ComponentActivity() {
         val sesionIniciada = sessionManager.fetchAuthToken() != null
 
         setContent {
-            NxTimeTheme {
+            /*
+             * El tema se decide aquí, encima de todo el árbol: cambiarlo
+             * desde Ajustes tiene que repintar la aplicación entera sin
+             * reiniciarla, y eso solo funciona si el StateFlow se lee por
+             * encima de NxTimeTheme.
+             */
+            val tema by aplicacion.ajustes.tema.collectAsStateWithLifecycle()
+            val oscuro = when (tema) {
+                Tema.SISTEMA -> isSystemInDarkTheme()
+                Tema.CLARO -> false
+                Tema.OSCURO -> true
+            }
+
+            NxTimeTheme(darkTheme = oscuro) {
                 val despertando by aplicacion.arranqueEnFrio.despertando
                     .collectAsStateWithLifecycle()
 

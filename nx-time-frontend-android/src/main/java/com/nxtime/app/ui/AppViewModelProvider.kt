@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nxtime.app.NxTimeApplication
 import com.nxtime.app.ui.acceso.LoginViewModel
+import com.nxtime.app.ui.ajustes.AjustesViewModel
 import com.nxtime.app.ui.acceso.RecuperarAccesoViewModel
 import com.nxtime.app.ui.auditoria.AuditoriaViewModel
 import com.nxtime.app.ui.auditoria.CorregirFichajeViewModel
@@ -58,6 +59,7 @@ object AppViewModelProvider {
         initializer { AusenciasViewModel(app().authRepository) }
         initializer { SolicitudViewModel(app().authRepository) }
         initializer { CambiarContrasenaViewModel(app().authRepository) }
+        initializer { AjustesViewModel(app().authRepository, app().ajustes) }
         initializer { HistorialEquipoViewModel(app().authRepository) }
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }

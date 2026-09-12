@@ -403,7 +403,6 @@
     <string name="perfil_abrir">Mi perfil</string>
     <string name="perfil_datos_personales">Datos personales</string>
     <string name="perfil_datos_laborales">Datos laborales</string>
-    <string name="perfil_cuenta">Cuenta</string>
     <string name="perfil_editar">Editar</string>
     <string name="perfil_guardar">Guardar</string>
     <string name="perfil_nombre">Nombre</string>
@@ -422,6 +421,35 @@
     <string name="perfil_nombre_obligatorio">El nombre no puede quedarse vacío.</string>
     <string name="perfil_fecha_invalida">La fecha tiene que ir en formato aaaa-mm-dd.</string>
     <string name="perfil_fecha_futura">La fecha de nacimiento tiene que ser anterior a hoy.</string>
+
+    <!--
+        Ajustes. La tarjeta "Cuenta" del perfil se muda aquí: cambiar la
+        contraseña y cerrar sesión son ajustes de la cuenta, no datos de la
+        ficha.
+    -->
+    <string name="ajustes_titulo">Ajustes</string>
+    <string name="ajustes_abrir">Ajustes</string>
+    <string name="ajustes_apariencia">Apariencia</string>
+    <string name="ajustes_tema">Tema</string>
+    <string name="ajustes_tema_sistema">El del sistema</string>
+    <string name="ajustes_tema_claro">Claro</string>
+    <string name="ajustes_tema_oscuro">Oscuro</string>
+    <string name="ajustes_cuenta">Cuenta</string>
+    <string name="ajustes_cerrar_todas">Cerrar sesión en todos los dispositivos</string>
+    <!--
+        Se dice lo que de verdad pasa: el access token es un JWT y vale
+        hasta que caduque, así que prometer un corte inmediato sería
+        mentir.
+    -->
+    <string name="ajustes_cerrar_todas_detalle">Se cerrará también en este dispositivo. Las sesiones abiertas dejan de poder renovarse y caducan en unos minutos.</string>
+    <string name="ajustes_cerrar_todas_hecho">Sesiones cerradas.</string>
+    <string name="ajustes_privacidad">Privacidad</string>
+    <string name="ajustes_informes_errores">Enviar informes de errores</string>
+    <string name="ajustes_informes_errores_detalle">Si la aplicación se cierra sola, se envía el fallo (pantalla, versión y traza) para poder arreglarlo. No incluye tus datos ni lo que escribes.</string>
+    <string name="ajustes_acerca_de">Acerca de</string>
+    <string name="ajustes_version">Versión</string>
+    <string name="ajustes_servidor">Servidor</string>
+    <string name="ajustes_repositorio">Código fuente</string>
 
     <!-- Adjuntos: CV y foto (Fase B2). -->
     <string name="perfil_foto_cambiar">Cambiar la foto</string>

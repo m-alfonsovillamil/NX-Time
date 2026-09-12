@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,5 +56,22 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"contrasenaAntigua\":\"viejo123\",\"contrasenaNueva\":\"nuevo123\"}"))
                 .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @WithMockSecurityUser
+    @DisplayName("POST /usuario/cerrar-sesiones autenticado devuelve 200 y no lleva cuerpo")
+    void cerrarSesiones_autenticado_devuelve200() throws Exception {
+        mockMvc.perform(post("/api/v1/usuario/cerrar-sesiones"))
+                .andExpect(status().isOk());
+        verify(authService).cerrarTodasLasSesiones(any());
+    }
+
+    @Test
+    @DisplayName("POST /usuario/cerrar-sesiones sin autenticar es rechazado y no llega al servicio")
+    void cerrarSesiones_sinAutenticar_esRechazado() throws Exception {
+        mockMvc.perform(post("/api/v1/usuario/cerrar-sesiones"))
+                .andExpect(status().is4xxClientError());
+        verify(authService, never()).cerrarTodasLasSesiones(any());
     }
 }

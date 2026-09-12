@@ -333,6 +333,10 @@ class AuthRepositoryImpl(
         return apiService.cambiarContrasena(peticion)
     }
 
+    override suspend fun cerrarTodasLasSesiones(): Response<Unit> {
+        return apiService.cerrarTodasLasSesiones()
+    }
+
     override suspend fun getMisEmpleados(): Response<List<EmpleadoSimpleDTO>> {
         return apiService.getMisEmpleados()
     }

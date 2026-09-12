@@ -403,6 +403,13 @@ interface ApiService {
         @Body peticion: CambiarContrasenaRequest
     ): Response<Unit>
 
+    /**
+     * Cierra la sesión en todos los dispositivos. Sin cuerpo: el usuario
+     * es el del token.
+     */
+    @POST("api/v1/usuario/cerrar-sesiones")
+    suspend fun cerrarTodasLasSesiones(): Response<Unit>
+
 
     /*  Endpoints de PERFIL (Fase B) */
 

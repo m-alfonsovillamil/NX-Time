@@ -308,6 +308,24 @@ class AuthServiceImplTest {
         verify(userRepository, never()).save(any());
     }
 
+    // ---- cerrarTodasLasSesiones ----
+
+    @Test
+    @DisplayName("cerrarTodasLasSesiones revoca los refresh tokens y no toca la contraseña")
+    void cerrarTodasLasSesiones_revocaLosRefreshTokens() {
+        User user = User.builder().id(1L).email("ana@nxtime.test").contrasena("hash").build();
+        when(refreshTokenRepository.revocarTodasLasDe(user)).thenReturn(3);
+
+        service.cerrarTodasLasSesiones(user);
+
+        // Lo que se corta es la capacidad de RENOVAR: la contraseña sigue
+        // valiendo, porque esto no es un robo de credenciales sino "quiero
+        // echar a quien haya quedado dentro en otro móvil".
+        verify(refreshTokenRepository).revocarTodasLasDe(user);
+        assertThat(user.getContrasena()).isEqualTo("hash");
+        verify(userRepository, never()).save(any());
+    }
+
     // ---- setEmployeeActive ----
 
     @Test

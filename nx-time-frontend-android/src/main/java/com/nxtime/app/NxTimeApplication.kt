@@ -6,6 +6,7 @@ import com.nxtime.app.data.network.ArranqueEnFrio
 import com.nxtime.app.data.network.RetrofitClient
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.repository.AuthRepositoryImpl
+import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.SessionManager
 import io.sentry.android.core.SentryAndroid
 
@@ -27,14 +28,23 @@ class NxTimeApplication : Application() {
     lateinit var arranqueEnFrio: ArranqueEnFrio
 
     /**
+     * Preferencias que NO son de sesión (tema, informes de errores). Van
+     * en su propio almacén para que cerrar sesión no las borre.
+     */
+    lateinit var ajustes: Ajustes
+
+    /**
      * Esta función se ejecuta 1 sola vez cuando la app arranca. Es el lugar perfecto para configurar nuestras herramientas.
      */
 
     override fun onCreate() {
         super.onCreate()
 
-        // 0. Sentry antes que nada: un cierre mientras se monta el resto
-        //    también tiene que llegar.
+        // 0. Los ajustes, lo primero: deciden si Sentry llega a arrancar.
+        ajustes = Ajustes(this)
+
+        // 0.1. Sentry antes que el resto: un cierre mientras se monta la
+        //      aplicación también tiene que llegar.
         iniciarSentry()
 
         // 1. Creamos el gestor de sesión (guarda el token).
@@ -64,6 +74,11 @@ class NxTimeApplication : Application() {
      */
     private fun iniciarSentry() {
         if (BuildConfig.SENTRY_DSN.isBlank()) return
+        // Y solo si quien usa la app lo permite: son datos que salen de su
+        // móvil. Apagarlo en caliente cierra Sentry (ver AjustesViewModel);
+        // encenderlo tiene efecto al siguiente arranque, que es cuando se
+        // puede inicializar.
+        if (!ajustes.informesDeErrores.value) return
         SentryAndroid.init(this) { opciones ->
             opciones.dsn = BuildConfig.SENTRY_DSN
             opciones.environment = BuildConfig.FLAVOR
