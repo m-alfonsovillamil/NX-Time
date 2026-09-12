@@ -194,6 +194,43 @@ class GestionOfertasViewModelTest {
     }
 
     @Test
+    fun `ver el CV baja el adjunto congelado, no el vigente de esa persona`() = runTest {
+        conOfertas(oferta(estado = "ABIERTA"))
+        whenever(repositorio.getCandidaturasDeOferta(5L))
+            .thenReturn(Response.success(listOf(candidatura())))
+        whenever(repositorio.descargarAdjunto(77L)).thenReturn(
+            Response.success("%PDF-1.7".toResponseBody("application/pdf".toMediaType())))
+
+        val vm = GestionOfertasViewModel(repositorio)
+        advanceUntilIdle()
+        var nombreAbierto: String? = null
+        vm.descargarCv(candidatura()) { _, nombre -> nombreAbierto = nombre }
+        advanceUntilIdle()
+
+        // 77 es 'cvAdjuntoId': si pidiera el CV vigente de esa persona, se
+        // valoraría un documento distinto del que se presentó.
+        verify(repositorio).descargarAdjunto(77L)
+        assertEquals("cv-ana.pdf", nombreAbierto)
+        assertNull(vm.uiState.value.cvDescargandose)
+    }
+
+    @Test
+    fun `si el servidor niega el CV no se abre nada y se explica`() = runTest {
+        conOfertas(oferta(estado = "ABIERTA"))
+        whenever(repositorio.descargarAdjunto(77L)).thenReturn(error(403))
+
+        val vm = GestionOfertasViewModel(repositorio)
+        advanceUntilIdle()
+        var abierto = false
+        vm.descargarCv(candidatura()) { _, _ -> abierto = true }
+        advanceUntilIdle()
+
+        assertEquals(false, abierto)
+        assertNotNull(vm.uiState.value.error)
+        assertNull(vm.uiState.value.cvDescargandose)
+    }
+
+    @Test
     fun `cerrar la lista de candidaturas la vacia`() = runTest {
         conOfertas(oferta(estado = "ABIERTA"))
         whenever(repositorio.getCandidaturasDeOferta(5L))

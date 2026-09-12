@@ -23,6 +23,21 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     Optional<JobApplication> findByOferta_IdAndUsuario_Id(long ofertaId, long usuarioId);
 
     /**
+     * Si ese adjunto es el CV congelado de alguna candidatura presentada
+     * a una oferta de esa empresa.
+     *
+     * Lo pregunta {@code AttachmentServiceImpl} antes de dejar que
+     * alguien lea el CV de otra persona: es la única razón legítima para
+     * hacerlo. La empresa va en la consulta y no se comprueba fuera
+     * porque es parte de la pregunta — que exista la candidatura no basta
+     * si es de otra empresa.
+     */
+    @Query("SELECT COUNT(c) > 0 FROM candidaturas c "
+            + "WHERE c.cv.id = :adjuntoId AND c.oferta.empresa.id = :empresaId")
+    boolean esCvDeCandidaturaDeEmpresa(@Param("adjuntoId") long adjuntoId,
+                                       @Param("empresaId") long empresaId);
+
+    /**
      * Las candidaturas de una oferta, para quien las valora.
      *
      * Trae el usuario y el CV de una vez: la pantalla enseña el nombre y

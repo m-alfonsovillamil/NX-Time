@@ -1663,17 +1663,27 @@ class ApiContractTest {
 
     @Test
     @Order(73)
-    void elGestorPuedeDescargarElCvDeSuEquipo() throws Exception {
-        // Descargar es de EMPRESA, no de persona: un gestor necesita
-        // poder leer el currículum de su equipo.
-        ResponseEntity<byte[]> response = rest.exchange(
+    void elGestorNoPuedeDescargarUnCvQueNadieLePresento_devuelve403() throws Exception {
+        // 🚨 CAMBIADO EN SEPTIEMBRE DE 2026. Este test decia lo contrario:
+        // "descargar es de EMPRESA, no de persona, porque un gestor
+        // necesita leer el curriculum de su equipo". El motivo era bueno
+        // y la regla, demasiado ancha -- los ids son numeros corridos, asi
+        // que cualquiera con sesion podia bajarse el CV de toda la
+        // plantilla probando numeros.
+        //
+        // Ahora leer el CV de otra persona exige un motivo nombrado: que
+        // se haya presentado a una vacante y a ti te toque valorarla (ver
+        // el Order 153, y el ADR 013). Aqui todavia no hay ninguna
+        // candidatura, asi que el gestor no tiene nada que hacer con este
+        // fichero.
+        ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/perfil/adjuntos/" + adjuntoId),
                 HttpMethod.GET,
                 new HttpEntity<>(authHeaders(gestorToken)),
-                byte[].class
+                String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -2856,6 +2866,53 @@ class ApiContractTest {
         // Reabrirla dejaria a quien ya se presento sin saber si su
         // candidatura sigue contando. Se publica otra.
         assertThat(reapertura.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @Order(153)
+    void elGestorLeeElCvPresentado_peroNoElCvActualDeLaPersona() throws Exception {
+        // 🚨 El agujero que cierra esta rama: hasta ahora descargar un
+        // adjunto solo comprobaba la EMPRESA, y como el id es un numero
+        // corrido, cualquiera con sesion podia bajarse el curriculum de
+        // sus companieros probando numeros.
+        //
+        // La linea esta en para que se presento: el CV congelado si, el
+        // que esa persona tenga hoy en su perfil no.
+        ResponseEntity<String> lista = rest.exchange(
+                url("/api/v1/perfil/adjuntos"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        long cvVigenteId = bodyOf(lista).get(0).get("id").asLong();
+        assertThat(cvVigenteId).isNotEqualTo(cvCongeladoId);
+
+        // El congelado si: hay una candidatura que lo justifica.
+        ResponseEntity<String> presentado = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + cvCongeladoId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(presentado.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // El de hoy no: nadie se ha presentado con el.
+        ResponseEntity<String> actual = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + cvVigenteId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(actual.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        // Y su duenio si, claro.
+        ResponseEntity<String> suyo = rest.exchange(
+                url("/api/v1/perfil/adjuntos/" + cvVigenteId),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)),
+                String.class
+        );
+        assertThat(suyo.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     // ------------------------------------------------------------------

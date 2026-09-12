@@ -33,10 +33,10 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * El CV y la foto de perfil (Fase B2). Ver ADR 007.
  *
- * Subir y borrar son cosas de uno mismo; <b>descargar es de empresa</b>,
- * porque un gestor necesita poder leer el CV de su equipo. Esa asimetría
- * está en el servicio, que compara la persona al borrar y la empresa al
- * descargar.
+ * Todo lo de aquí es de uno mismo, con una excepción acotada: el CV que
+ * una candidatura congeló lo puede leer <b>quien la valora</b>, porque
+ * para eso se presentó. Ser de la misma empresa no da acceso a los
+ * adjuntos de nadie; la regla entera está en el servicio.
  */
 @RestController
 @RequestMapping("/api/v1/perfil/adjuntos")
@@ -90,13 +90,16 @@ public class AttachmentController {
     }
 
     @Operation(summary = "Descargar un adjunto",
-            description = "De cualquiera de la misma empresa: un gestor necesita leer el CV de su "
-                    + "equipo. Una FOTO va 'inline' para poder pintarse; un CV, 'attachment'.")
+            description = "Solo los propios, salvo el CV que una candidatura congeló: ese lo puede "
+                    + "leer quien tiene 'candidatura:gestionar' en la empresa de la oferta, porque "
+                    + "para eso se presentó. Una FOTO va 'inline' para poder pintarse; un CV, "
+                    + "'attachment'.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "El contenido"),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "403", description = "Adjunto de otra empresa",
+            @ApiResponse(responseCode = "403", description = "Adjunto de otra empresa, o de otra "
+                    + "persona sin una candidatura que lo justifique",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "404", description = "Adjunto no encontrado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))

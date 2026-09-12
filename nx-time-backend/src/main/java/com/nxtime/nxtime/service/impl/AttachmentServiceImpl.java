@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.domain.Attachment;
 import com.nxtime.nxtime.domain.AttachmentData;
 import com.nxtime.nxtime.domain.AttachmentType;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AttachmentResponse;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -33,6 +34,9 @@ public class AttachmentServiceImpl implements AttachmentService {
      * lo escribe quien sube: se recorta y se limpia antes de aceptarlo.
      */
     private static final int MAXIMO_NOMBRE = 255;
+
+    /** La misma que exige valorar candidaturas: ver {@link #puedeLeer}. */
+    private static final String GESTIONAR_CANDIDATURAS = "candidatura:gestionar";
 
     private final AttachmentRepository attachmentRepository;
     private final AttachmentDataRepository attachmentDataRepository;
@@ -129,6 +133,11 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Override
     public ContenidoDeAdjunto descargar(long adjuntoId, User actor) {
         Attachment adjunto = deLaMismaEmpresa(adjuntoId, actor);
+        if (!puedeLeer(adjunto, actor)) {
+            log.warn("{} ha intentado descargar el adjunto {}, que no es suyo",
+                    actor.getEmail(), adjuntoId);
+            throw new TenantAccessException("Ese adjunto no es tuyo.");
+        }
 
         // La única lectura de los bytes en todo el servicio, y explícita:
         // por eso están en su propia tabla (ver ADR 007).
@@ -185,8 +194,34 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
 
     /**
-     * Leer un adjunto ajeno sí es cosa de empresa: un gestor necesita
-     * ver el CV de su equipo.
+     * Quién puede leer un adjunto que no es suyo.
+     *
+     * 🚨 Hasta aquí bastaba con ser de la misma empresa, y eso era
+     * demasiado: los identificadores son números corridos, así que
+     * cualquiera con sesión podía bajarse el CV de un compañero probando
+     * números, sin dejar rastro de por qué. Leer el CV de otra persona
+     * solo tiene un motivo legítimo —valorar a quien se ha presentado a
+     * una vacante—, y es justo lo que se exige: la authority de
+     * valorarlas y que el adjunto sea el CV congelado de una candidatura
+     * de la empresa.
+     *
+     * Por el mismo camino la FOTO queda solo para su dueño, que es lo
+     * único que la aplicación pide hoy (el avatar del propio perfil).
+     */
+    private boolean puedeLeer(Attachment adjunto, User actor) {
+        if (adjunto.getUsuario().getId() == actor.getId()) {
+            return true;
+        }
+        if (!RoleAuthorities.forRole(actor.getRol()).contains(GESTIONAR_CANDIDATURAS)) {
+            return false;
+        }
+        return jobApplicationRepository.esCvDeCandidaturaDeEmpresa(
+                adjunto.getId(), actor.getEmpresa().getId());
+    }
+
+    /**
+     * La comprobación de empresa, que va siempre primero: un adjunto de
+     * otra empresa no existe para quien pregunta (ADR 006).
      */
     private Attachment deLaMismaEmpresa(long adjuntoId, User actor) {
         Attachment adjunto = attachmentRepository.findById(adjuntoId)

@@ -1,5 +1,7 @@
 package com.nxtime.app.ui.ofertas
 
+import android.content.ActivityNotFoundException
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,9 +28,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,9 +45,14 @@ import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
+import com.nxtime.app.ui.informes.MIME_PDF
+import com.nxtime.app.ui.informes.compartirInforme
+import com.nxtime.app.ui.informes.guardarEnCache
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
+import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 
 /**
  * Publicar vacantes y valorar candidaturas (Fase H).
@@ -61,6 +70,29 @@ fun GestionOfertasScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     var creando by remember { mutableStateOf(false) }
+
+    val contexto = LocalContext.current
+    val alcance = rememberCoroutineScope()
+    val textoSinVisor = stringResource(R.string.empresa_sin_visor)
+
+    /**
+     * El CV se escribe aquí y no en el ViewModel porque el Context es de
+     * la pantalla; es el mismo reparto que en el perfil. Va a la caché y
+     * se cede con el FileProvider: un currículum no se deja en la carpeta
+     * de descargas, a la vista de cualquier app.
+     */
+    fun abrirCv(cuerpo: ResponseBody, nombre: String) {
+        alcance.launch {
+            val fichero = guardarEnCache(contexto, cuerpo, nombre, subcarpeta = "adjuntos")
+            try {
+                compartirInforme(contexto, fichero, MIME_PDF)
+            } catch (_: ActivityNotFoundException) {
+                // Un emulador limpio no trae visor de PDF: el fichero ya
+                // está bajado, así que se avisa en vez de tirar la app.
+                Toast.makeText(contexto, textoSinVisor, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     PantallaConBarra(
         titulo = stringResource(R.string.gestion_ofertas_titulo),
@@ -132,7 +164,9 @@ fun GestionOfertasScreen(
             oferta = oferta,
             candidaturas = estado.candidaturas,
             enviando = estado.enviando,
+            cvDescargandose = estado.cvDescargandose,
             onValorar = viewModel::valorar,
+            onVerCv = { candidatura -> viewModel.descargarCv(candidatura, ::abrirCv) },
             onCerrar = viewModel::cerrarCandidaturas
         )
     }
@@ -282,7 +316,9 @@ private fun DialogoCandidaturas(
     oferta: OfertaDTO,
     candidaturas: List<CandidaturaDTO>,
     enviando: Boolean,
+    cvDescargandose: Long?,
     onValorar: (Long, EstadoCandidatura, String?) -> Unit,
+    onVerCv: (CandidaturaDTO) -> Unit,
     onCerrar: () -> Unit
 ) {
     AlertDialog(
@@ -297,7 +333,7 @@ private fun DialogoCandidaturas(
                     )
                 }
                 candidaturas.forEach { candidatura ->
-                    FilaCandidatura(candidatura, enviando, onValorar)
+                    FilaCandidatura(candidatura, enviando, cvDescargandose, onValorar, onVerCv)
                     HorizontalDivider()
                 }
             }
@@ -314,7 +350,9 @@ private fun DialogoCandidaturas(
 private fun FilaCandidatura(
     candidatura: CandidaturaDTO,
     enviando: Boolean,
-    onValorar: (Long, EstadoCandidatura, String?) -> Unit
+    cvDescargandose: Long?,
+    onValorar: (Long, EstadoCandidatura, String?) -> Unit,
+    onVerCv: (CandidaturaDTO) -> Unit
 ) {
     var comentario by remember(candidatura.id) { mutableStateOf("") }
     val estado = EstadoCandidatura.de(candidatura.estado)
@@ -344,6 +382,23 @@ private fun FilaCandidatura(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        // Y se puede abrir desde aquí: decidir sobre alguien sin leer lo
+        // que presentó obligaba a pedírselo por otro sitio.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                onClick = { onVerCv(candidatura) },
+                enabled = cvDescargandose == null
+            ) {
+                Text(stringResource(R.string.candidatura_ver_cv))
+            }
+            if (cvDescargandose == candidatura.id) {
+                Text(
+                    text = stringResource(R.string.candidatura_cv_abriendo),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         candidatura.carta?.let { carta ->
             Spacer(Modifier.height(4.dp))
