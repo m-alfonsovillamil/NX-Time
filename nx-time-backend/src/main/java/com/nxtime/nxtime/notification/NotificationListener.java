@@ -338,6 +338,48 @@ public class NotificationListener {
         }
     }
 
+    /**
+     * El resumen de la noche para quien revisa: uno por empresa.
+     *
+     * No lleva nombres de nadie, y no es un olvido. Un correo que liste a
+     * quién se le ha ido la jornada acaba reenviado, y el dato de cuántas
+     * horas hace cada persona no tiene por qué viajar por ahí. El aviso
+     * dice cuánto hay y lleva a la bandeja, que es donde ese detalle está
+     * y donde el permiso lo protege.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOvertimeSummary(NotificationEvents.OvertimeSummary evento) {
+        int avisos = evento.avisosNuevos();
+        int personas = evento.personas();
+
+        String titulo = avisos == 1
+                ? "Hay 1 aviso de horas extra sin revisar"
+                : "Hay " + avisos + " avisos de horas extra sin revisar";
+        String cuerpo = personas == 1
+                ? "Detectados anoche, de 1 persona."
+                : "Detectados anoche, de " + personas + " personas.";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.RESUMEN_HORAS_EXTRA,
+                    titulo,
+                    cuerpo,
+                    NoticeType.RESUMEN_HORAS_EXTRA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "overtime-summary",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "avisos", avisos,
+                            "personas", personas));
+        }
+    }
+
     @Async(AsyncConfig.EMAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onOvertimeBalanceNearLimit(NotificationEvents.OvertimeBalanceNearLimit evento) {

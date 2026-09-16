@@ -18,6 +18,7 @@ import com.nxtime.nxtime.dto.OvertimeBalanceResponse;
 import com.nxtime.nxtime.dto.ReviewOvertimeRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
@@ -35,12 +36,16 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.event.EventListener;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -59,6 +64,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * Requisito: {@code docker compose up -d postgres} (ver ApiContractTest).
  */
 @SpringBootTest
+@Import(OvertimeServiceIT.CapturaDeResumenes.class)
 @DisplayName("Detección y revisión de horas extra")
 class OvertimeServiceIT {
 
@@ -96,6 +102,8 @@ class OvertimeServiceIT {
     private UserRepository userRepository;
     @Autowired
     private CompanyRepository companyRepository;
+    @Autowired
+    private CapturaDeResumenes capturas;
 
     private Company empresa;
     private User empleado;
@@ -595,5 +603,83 @@ class OvertimeServiceIT {
         assertThatThrownBy(() ->
                 overtimeService.revisar(avisoId, new ReviewOvertimeRequest(true, null), gestorAjeno))
                 .isInstanceOf(TenantAccessException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // El resumen nocturno para quien revisa (09/2026)
+    // ------------------------------------------------------------------
+
+    /*
+     * Se captura el EVENTO y no el aviso guardado en la tabla porque el
+     * listener de verdad es @Async + AFTER_COMMIT: asertar sobre la base
+     * obligaría a esperar a otro hilo, y un test que depende de un sleep
+     * falla solo de vez en cuando, que es la peor clase de test.
+     *
+     * Este @EventListener es síncrono: se ejecuta en el publishEvent, así
+     * que lo que se comprueba —la agregación— es determinista.
+     */
+    @TestConfiguration
+    static class CapturaDeResumenes {
+        final List<NotificationEvents.OvertimeSummary> resumenes = new ArrayList<>();
+
+        @EventListener
+        void capturar(NotificationEvents.OvertimeSummary evento) {
+            resumenes.add(evento);
+        }
+    }
+
+    @Test
+    @DisplayName("el barrido manda UN resumen por empresa, no uno por exceso")
+    void resumenNocturno_unoPorEmpresaConLosRecuentos() {
+        capturas.resumenes.clear();
+        User otro = crearUsuario("otro" + System.nanoTime() + "@test", Role.EMPLEADO);
+
+        // Cuatro excesos diarios repartidos entre DOS personas.
+        fichar(empleado, LUNES, 11);
+        fichar(empleado, LUNES.plusDays(1), 11);
+        fichar(otro, LUNES, 11);
+        fichar(otro, LUNES.plusDays(1), 11);
+
+        detectarLaSemana();
+
+        // Uno solo, aunque los excesos sean cuatro y las personas dos.
+        assertThat(capturas.resumenes).hasSize(1);
+        NotificationEvents.OvertimeSummary resumen = capturas.resumenes.get(0);
+        assertThat(resumen.avisosNuevos()).isEqualTo(4);
+        assertThat(resumen.personas()).isEqualTo(2);
+
+        // Y va a quien revisa, no a quien hizo las horas.
+        assertThat(resumen.destinatarios()).extracting(User::getId).contains(gestor.getId());
+        assertThat(resumen.destinatarios()).extracting(User::getId)
+                .doesNotContain(empleado.getId(), otro.getId());
+    }
+
+    /**
+     * El barrido corre cada noche sobre los mismos catorce días. Si el
+     * resumen contara todos los avisos vivos en vez de los recién
+     * creados, los gestores recibirían el mismo correo cada mañana hasta
+     * que alguien los revisara, y dejarían de leerlo.
+     */
+    @Test
+    @DisplayName("una segunda pasada sin excesos nuevos no manda ningún resumen")
+    void resumenNocturno_segundaPasadaCallada() {
+        fichar(empleado, LUNES, 11);
+        detectarLaSemana();
+
+        capturas.resumenes.clear();
+        detectarLaSemana();
+
+        assertThat(capturas.resumenes).isEmpty();
+    }
+
+    @Test
+    @DisplayName("una noche sin excesos no manda nada")
+    void resumenNocturno_nocheTranquilaNoMandaNada() {
+        capturas.resumenes.clear();
+        semanaNormal(empleado);
+
+        detectarLaSemana();
+
+        assertThat(capturas.resumenes).isEmpty();
     }
 }

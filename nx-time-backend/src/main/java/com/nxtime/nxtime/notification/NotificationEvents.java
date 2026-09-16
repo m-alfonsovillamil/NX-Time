@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.notification;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.JobApplication;
@@ -106,6 +107,33 @@ public final class NotificationEvents {
             int anio,
             int minutosConsumidos,
             int minutosDisponibles,
+            List<User> destinatarios) {
+    }
+
+    /**
+     * Lo que ha encontrado el barrido nocturno en una empresa, en un solo
+     * aviso para quien revisa.
+     *
+     * <b>Uno por empresa y por noche.</b> El aviso individual
+     * ({@link OvertimeDetected}) sigue yendo solo al empleado: un correo
+     * por cada exceso a cada gestor es spam por diseño, y esa decisión no
+     * cambia. Lo que cambia es que ahora existe también el otro nivel,
+     * agregado, para que un exceso no pueda quedarse semanas sin revisar
+     * solo porque a nadie se le ocurrió abrir la bandeja.
+     *
+     * Lleva los recuentos ya calculados y no la lista de avisos: el
+     * mensaje no habla de ninguno en concreto, y arrastrar las entidades
+     * hasta un listener {@code @Async} —con la sesión de JPA ya cerrada—
+     * es justo lo que obliga a resolverlo todo dentro de la transacción.
+     *
+     * @param personas a cuánta gente distinta afectan esos avisos. Un "7
+     *     avisos" a secas se lee muy distinto si son de siete personas o
+     *     todos de la misma.
+     */
+    public record OvertimeSummary(
+            Company empresa,
+            int avisosNuevos,
+            int personas,
             List<User> destinatarios) {
     }
 
