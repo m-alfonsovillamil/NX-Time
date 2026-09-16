@@ -23,6 +23,7 @@ import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -113,6 +114,11 @@ public class CorrectionServiceImpl implements CorrectionService {
                     "La hora de salida corregida debe ser posterior a la de entrada.",
                     HttpStatus.BAD_REQUEST);
         }
+        // Se avisa ya al pedirla, y no solo al aprobarla: quien la escribe
+        // puede arreglarlo en el momento, mientras que descubrirlo días
+        // después deja a quien aprueba con un error que no causó él.
+        exigirQueLasPausasQuepan(
+                fichaje.getSegundosPausaAcumulados(), request.horaEntrada(), request.horaSalida());
 
         // Se mira antes para dar un 409 que se entienda; quien lo impide
         // de verdad es el índice único parcial de la base, que además
@@ -318,15 +324,17 @@ public class CorrectionServiceImpl implements CorrectionService {
                     "El fichaje ya se corrigió por otra vía mientras esta solicitud esperaba.");
         }
 
+        // Se vuelve a comprobar aquí y no solo en solicitar(): entre pedir
+        // la corrección y aprobarla pueden haberse acumulado más pausas.
+        exigirQueLasPausasQuepan(
+                original.getSegundosPausaAcumulados(),
+                solicitud.getHoraEntradaPropuesta(),
+                solicitud.getHoraSalidaPropuesta());
+
         String antes = snapshotSerializer.toJson(original);
 
-        TimeEntry corregido = timeEntryRepository.save(TimeEntry.builder()
-                .usuario(original.getUsuario())
-                .empresa(original.getEmpresa())
-                .horaEntrada(solicitud.getHoraEntradaPropuesta())
-                .horaSalida(solicitud.getHoraSalidaPropuesta())
-                .registroOriginal(original)
-                .build());
+        TimeEntry corregido = timeEntryRepository.save(copiaCorregidaDe(
+                original, solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta()));
 
         original.setAnulado(true);
         timeEntryRepository.save(original);
@@ -354,6 +362,66 @@ public class CorrectionServiceImpl implements CorrectionService {
         log.info("Corrección {} aplicada por {}: fichaje {} -> {}",
                 solicitud.getId(), actor.getEmail(), original.getId(), corregido.getId());
         return toResponse(solicitud, actor);
+    }
+
+    /**
+     * La versión corregida de un fichaje: horas nuevas, todo lo demás igual.
+     *
+     * Existe como método y no como un builder suelto dentro de {@code aplicar}
+     * porque así es donde se decide, en un solo sitio, qué se hereda y qué no
+     * al corregir. Con el builder en línea, cualquier campo que se añada en el
+     * futuro a {@link TimeEntry} cae a su valor por defecto **en silencio**, y
+     * eso es exactamente cómo nació el defecto que arregla este método: las
+     * pausas no se copiaban, así que aprobar una corrección las borraba y el
+     * tiempo neto de la jornada se inflaba. Como el neto alimenta al detector
+     * de horas extra, una corrección aprobada podía fabricar horas extra que
+     * nadie había hecho.
+     *
+     * <p>Lo que SÍ se hereda:
+     * <ul>
+     *   <li>{@code segundosPausaAcumulados}: las pausas se hicieron de verdad
+     *       y no dejan de existir porque se corrija la hora de entrada.</li>
+     * </ul>
+     *
+     * <p>Lo que NO se hereda, y es correcto que no se herede:
+     * <ul>
+     *   <li>{@code jornadaIncompleta}: la marca dice "esta jornada la cerró el
+     *       proceso nocturno, no su dueño". Corregirla es justamente lo que
+     *       resuelve esa incidencia, así que la versión nueva nace limpia y
+     *       {@code contarIncidenciasAbiertas} deja de contarla. No es un
+     *       olvido: quitar esta línea rompe el contador del panel.</li>
+     *   <li>{@code enPausa} e {@code inicioPausaActual}: solo se corrigen
+     *       jornadas ya cerradas, así que no hay pausa en curso que copiar.</li>
+     *   <li>{@code anulado}: la copia nace viva; la que se anula es la
+     *       original.</li>
+     * </ul>
+     */
+    private TimeEntry copiaCorregidaDe(TimeEntry original, Instant entrada, Instant salida) {
+        return TimeEntry.builder()
+                .usuario(original.getUsuario())
+                .empresa(original.getEmpresa())
+                .horaEntrada(entrada)
+                .horaSalida(salida)
+                .segundosPausaAcumulados(original.getSegundosPausaAcumulados())
+                .registroOriginal(original)
+                .build();
+    }
+
+    /**
+     * Una corrección no puede dejar las pausas sin caber dentro de la jornada.
+     *
+     * Hace falta desde que la corrección conserva las pausas: acortar una
+     * jornada de ocho horas a una, teniendo dos de pausa, daría un tiempo neto
+     * **negativo**. Los agregados del repositorio restan los segundos de pausa
+     * en SQL sin proteger el resultado, así que ese número saldría tal cual en
+     * los informes y en el cálculo de horas extra.
+     */
+    private void exigirQueLasPausasQuepan(long segundosPausa, Instant entrada, Instant salida) {
+        if (segundosPausa >= Duration.between(entrada, salida).getSeconds()) {
+            throw new BusinessException(
+                    "Las horas corregidas no dejan sitio a las pausas ya registradas de esa jornada. "
+                            + "Ajusta también las pausas o revisa las horas.");
+        }
     }
 
     /**

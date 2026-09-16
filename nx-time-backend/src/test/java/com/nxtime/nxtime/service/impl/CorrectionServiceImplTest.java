@@ -242,6 +242,88 @@ class CorrectionServiceImplTest {
         assertThat(fichajeDelEmpleado.isAnulado()).isTrue();
     }
 
+    /*
+     * -----------------------------------------------------------------
+     * Las pausas al corregir (16/09/2026).
+     *
+     * El fichaje corregido se construía con un builder en línea que NO
+     * copiaba `segundosPausaAcumulados`, y el campo tiene
+     * @Builder.Default = 0. Resultado: aprobar CUALQUIER corrección
+     * borraba las pausas de esa jornada e inflaba el tiempo neto. Como el
+     * neto alimenta al detector de horas extra, una corrección aprobada
+     * podía fabricar horas extra que nadie hizo.
+     * -----------------------------------------------------------------
+     */
+
+    @Test
+    @DisplayName("Aprobar una corrección NO borra las pausas: el fichaje corregido las hereda")
+    void resolver_alAplicar_conservaLasPausasDelOriginal() {
+        fichajeDelEmpleado.setSegundosPausaAcumulados(2700); // 45 min de comida
+        CorrectionRequest solicitud = solicitudDe(empleado, CorrectionStatus.PENDIENTE);
+        when(correctionRepository.findById(77L)).thenReturn(Optional.of(solicitud));
+        when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(timeEntryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.resolver(77L, new ResolveCorrectionRequest(true, null), gestor);
+
+        ArgumentCaptor<TimeEntry> guardados = ArgumentCaptor.forClass(TimeEntry.class);
+        verify(timeEntryRepository, org.mockito.Mockito.atLeastOnce()).save(guardados.capture());
+        TimeEntry corregido = guardados.getAllValues().stream()
+                .filter(entry -> entry.getRegistroOriginal() != null)
+                .findFirst()
+                .orElseThrow();
+        assertThat(corregido.getSegundosPausaAcumulados()).isEqualTo(2700);
+    }
+
+    /**
+     * La otra mitad, y va con test propio para que nadie la "arregle": la
+     * marca de jornada cerrada por el proceso nocturno <b>no</b> se
+     * hereda. Corregir la jornada es justo lo que resuelve esa
+     * incidencia, y {@code contarIncidenciasAbiertas} dejaría de cuadrar
+     * si la copia naciera marcada.
+     */
+    @Test
+    @DisplayName("El fichaje corregido NO hereda la marca de jornada incompleta: corregirla la resuelve")
+    void resolver_alAplicar_noHeredaLaMarcaDeJornadaIncompleta() {
+        fichajeDelEmpleado.setJornadaIncompleta(true);
+        CorrectionRequest solicitud = solicitudDe(empleado, CorrectionStatus.PENDIENTE);
+        when(correctionRepository.findById(77L)).thenReturn(Optional.of(solicitud));
+        when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(timeEntryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.resolver(77L, new ResolveCorrectionRequest(true, null), gestor);
+
+        ArgumentCaptor<TimeEntry> guardados = ArgumentCaptor.forClass(TimeEntry.class);
+        verify(timeEntryRepository, org.mockito.Mockito.atLeastOnce()).save(guardados.capture());
+        TimeEntry corregido = guardados.getAllValues().stream()
+                .filter(entry -> entry.getRegistroOriginal() != null)
+                .findFirst()
+                .orElseThrow();
+        assertThat(corregido.isJornadaIncompleta()).isFalse();
+    }
+
+    /**
+     * Conservar las pausas obliga a una comprobación que antes no hacía
+     * falta: unas horas corregidas más cortas que las pausas darían un
+     * tiempo neto <b>negativo</b>, y los agregados del repositorio restan
+     * en SQL sin proteger el resultado.
+     */
+    @Test
+    @DisplayName("Pedir una corrección que deja las pausas sin caber se rechaza al pedirla")
+    void solicitar_horasQueNoDejanSitioALasPausas_falla() {
+        // Jornada de 8 h con 2 h de pausa; se pide recortarla a 1 h.
+        fichajeDelEmpleado.setSegundosPausaAcumulados(7200);
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
+
+        CorrectionRequestDTO recorte =
+                new CorrectionRequestDTO(ENTRADA, ENTRADA.plusSeconds(3600), "Me equivoqué de hora");
+
+        assertThatThrownBy(() -> service.solicitar(5L, recorte, empleado))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("pausas");
+        verify(correctionRepository, never()).saveAndFlush(any());
+    }
+
     /**
      * El caso inverso, y el más importante: si la corrección la pide un
      * gestor sobre el fichaje de otro, <b>no puede aprobársela él</b>.
