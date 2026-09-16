@@ -81,6 +81,13 @@
     <string name="fichar_en_pausa">En pausa desde las %1$s</string>
     <string name="fichar_reanuda_antes">Reanuda la jornada antes de finalizarla.</string>
     <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
+    <string name="fichar_confirmar_fin_titulo">¿Terminas la jornada?</string>
+    <string name="fichar_confirmar_fin_entrada">Entraste a las %1$s</string>
+    <string name="fichar_confirmar_fin_trabajado">Llevas trabajadas %1$s</string>
+    <string name="fichar_confirmar_fin_pausa">Has hecho %1$s de pausa</string>
+    <string name="fichar_confirmar_fin_aviso">Una vez cerrada, cambiarla exige pedir una corrección y que la apruebe tu gestor.</string>
+    <string name="fichar_confirmar_fin_si">Terminar</string>
+    <string name="fichar_confirmar_fin_no">Sigo trabajando</string>
 
     <!-- Cronometro y resumen de la jornada -->
     <!--
