@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.AccessCode;
 import com.nxtime.nxtime.domain.AccessCodeType;
+import com.nxtime.nxtime.domain.Emails;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.notification.EmailNotSentException;
@@ -111,7 +112,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
     @Override
     @Transactional
     public void solicitarRecuperacion(String email) {
-        Optional<User> cuenta = userRepository.findByEmail(email.trim()).filter(User::isActivo);
+        Optional<User> cuenta = userRepository.findByEmail(Emails.normalizar(email)).filter(User::isActivo);
         if (cuenta.isEmpty()) {
             // Sin el correo en el log: sería un registro de qué direcciones
             // se están probando.
@@ -158,7 +159,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         Instant ahora = clock.instant();
         String limpio = codigo.strip();
 
-        Optional<AccessCode> vigente = userRepository.findByEmail(email.trim())
+        Optional<AccessCode> vigente = userRepository.findByEmail(Emails.normalizar(email))
                 .filter(User::isActivo)
                 .flatMap(accessCodeRepository::findFirstByUsuarioAndUsadoEnIsNullAndAnuladoEnIsNullOrderByCreadoEnDesc)
                 .filter(candidato -> candidato.estaVigente(ahora));
