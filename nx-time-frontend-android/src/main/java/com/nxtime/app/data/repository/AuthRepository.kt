@@ -37,6 +37,16 @@ interface AuthRepository {
         peticion: CorreccionFichajeRequest
     ): Response<CorreccionDTO>
 
+    /** Pausas añadidas a posteriori (ADR 015). El servidor decide si se aplica o se pide. */
+    suspend fun anadirPausa(
+        fichajeId: Long,
+        peticion: PausaAnadidaRequest
+    ): Response<PausaAnadidaResultado>
+
+    suspend fun getPausasAnadidas(fichajeId: Long): Response<List<PausaAnadidaDTO>>
+
+    suspend fun deshacerPausa(fichajeId: Long, pausaId: Long): Response<Registro>
+
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
     suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
     suspend fun resolverCorreccion(

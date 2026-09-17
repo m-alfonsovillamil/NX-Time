@@ -12,6 +12,7 @@ import com.nxtime.app.ui.ajustes.AjustesViewModel
 import com.nxtime.app.ui.acceso.RecuperarAccesoViewModel
 import com.nxtime.app.ui.auditoria.AuditoriaViewModel
 import com.nxtime.app.ui.auditoria.CorregirFichajeViewModel
+import com.nxtime.app.ui.fichar.AnadirPausaViewModel
 import com.nxtime.app.ui.navegacion.ARG_FICHAJE_ID
 import com.nxtime.app.ui.acceso.RegistroEmpresaViewModel
 import com.nxtime.app.ui.ausencias.AusenciasViewModel
@@ -98,6 +99,12 @@ object AppViewModelProvider {
         }
         initializer {
             CorregirFichajeViewModel(
+                fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
+                authRepository = app().authRepository
+            )
+        }
+        initializer {
+            AnadirPausaViewModel(
                 fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
                 authRepository = app().authRepository
             )

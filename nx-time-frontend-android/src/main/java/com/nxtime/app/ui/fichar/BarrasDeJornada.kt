@@ -37,11 +37,16 @@ import com.nxtime.app.ui.util.DateFormats
  * siguiente.
  *
  * **No es una línea temporal.** Sería mejor enseñar *cuándo* fue cada
- * pausa, pero el backend no guarda los intervalos: `TimeEntry` solo
- * tiene `segundosPausaAcumulados` y, si acaso, `inicioPausaActual`.
- * Pintar bloques en posiciones inventadas sería mentir sobre un registro
- * con valor legal, así que esto es una **composición** -- cuánto de cada
- * cosa -- y no un cuándo.
+ * pausa, pero el backend no guarda los intervalos de las pausas FICHADAS:
+ * `TimeEntry` solo tiene `segundosPausaAcumulados` y, si acaso,
+ * `inicioPausaActual`. Pintar bloques en posiciones inventadas sería
+ * mentir sobre un registro con valor legal, así que esto es una
+ * **composición** -- cuánto de cada cosa -- y no un cuándo.
+ *
+ * Desde el ADR 015 las pausas AÑADIDAS a mano sí tienen intervalo
+ * (`GET /fichaje/{id}/pausas`). Aun así no bastan para una línea temporal:
+ * serían unos bloques ciertos al lado de un hueco sin forma para las
+ * fichadas, y eso se lee como si las fichadas no existieran.
  */
 @Composable
 fun ComposicionDeLaJornada(
