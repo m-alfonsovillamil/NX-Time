@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/*
+  La solicitud de borrado no se ha ejecutado (ADR 016). Siempre con el porqué.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu solicitud de borrado', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${resolutor}">Quien la ha revisado</strong> no ha ejecutado tu solicitud de
+        borrado de datos, por este motivo:
+    </p>
+
+    <p style="padding: 12px 16px; background: #f4f4f5; border-radius: 8px;" th:text="${comentario}">
+        Comentario
+    </p>
+
+    <p style="margin: 0;">
+        Tu cuenta y tus datos siguen como estaban. Puedes volver a pedirlo desde
+        <strong>Ajustes &rsaquo; Privacidad</strong> cuando se haya resuelto lo que lo impedía.
+    </p>
+</div>
+</body>
+</html>

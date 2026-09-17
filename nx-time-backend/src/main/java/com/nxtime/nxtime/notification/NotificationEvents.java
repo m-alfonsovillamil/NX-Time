@@ -4,10 +4,12 @@ import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
+import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.JobApplication;
 import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.User;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -222,5 +224,35 @@ public final class NotificationEvents {
      * descarte es la mitad del mensaje.
      */
     public record JobApplicationUpdated(JobApplication candidatura, List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
+    // 09/2026: borrado de datos personales (ADR 016)
+    // ------------------------------------------------------------------
+
+    /**
+     * Alguien pide que se borren sus datos. Va a quien puede ejecutarlo.
+     *
+     * El motivo NO viaja en el aviso ni en el correo, aunque la persona lo
+     * haya escrito: puede contar cosas de salud o de un conflicto, y para
+     * leerlo hay que entrar en la bandeja.
+     */
+    public record DeletionRequested(DeletionRequest solicitud, List<User> destinatarios) {
+    }
+
+    /** Rechazada: se avisa a quien la pidió, con el porqué. */
+    public record DeletionRejected(DeletionRequest solicitud) {
+    }
+
+    /**
+     * Ejecutada. <b>Solo correo, sin aviso</b>: la cuenta ya está desactivada
+     * y sus avisos acaban de borrarse, así que uno nuevo no lo leería nadie.
+     *
+     * Lleva nombre y correo copiados y no el {@link User}: son los últimos
+     * datos que quedan para decirle a la persona lo que se ha hecho, y el
+     * listener corre después, cuando la entidad ya no pinta nada.
+     */
+    public record DeletionExecuted(
+            String email, String nombre, String nombreEmpresa, LocalDate anonimizarDesde) {
     }
 }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<!--/*
+  El borrado se ha ejecutado (ADR 016). Es lo último que recibe la persona:
+  dice qué se ha borrado, qué se conserva, por qué y hasta cuándo.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tus datos se han borrado', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${empresa}">Empresa</strong> ha atendido tu solicitud de borrado de datos.
+        Tu cuenta de NX Time está desactivada y ya no se puede usar.
+    </p>
+
+    <p style="margin-bottom: 4px;"><strong>Se ha borrado ya:</strong></p>
+    <p style="margin-top: 0;">
+        tu foto, tu CV, tu fecha de nacimiento, tus candidaturas a ofertas internas, tus avisos y
+        tus sesiones abiertas.
+    </p>
+
+    <p style="margin-bottom: 4px;"><strong>Se conserva, porque la ley obliga:</strong></p>
+    <p style="margin-top: 0;">
+        tu registro de jornada (fichajes, pausas, ausencias, correcciones y horas extra) con tu
+        nombre y tu correo. La empresa tiene que guardarlo cuatro años (art. 34.9 del Estatuto de
+        los Trabajadores) por si lo pide una inspección.
+    </p>
+
+    <p style="margin: 0;">
+        A partir del <strong th:text="${#temporals.format(anonimizarDesde, 'dd/MM/yyyy')}">01/01/2030</strong>
+        esos datos se anonimizan automáticamente: tu nombre, tu correo y lo que escribiste en ellos
+        dejarán de estar asociados a ti.
+    </p>
+</div>
+</body>
+</html>

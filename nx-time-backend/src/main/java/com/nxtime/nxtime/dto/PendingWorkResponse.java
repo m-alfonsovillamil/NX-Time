@@ -15,6 +15,7 @@ package com.nxtime.nxtime.dto;
 public record PendingWorkResponse(
         int ausencias,
         int correcciones,
-        int horasExtra
+        int horasExtra,
+        int borrados
 ) {
 }

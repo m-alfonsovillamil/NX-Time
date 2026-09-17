@@ -6,6 +6,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.PendingWorkResponse;
 import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.DataDeletionService;
 import com.nxtime.nxtime.service.OvertimeService;
 import com.nxtime.nxtime.service.PendingWorkService;
 import java.time.Clock;
@@ -36,24 +37,28 @@ public class PendingWorkServiceImpl implements PendingWorkService {
     private final AbsenceService absenceService;
     private final CorrectionService correctionService;
     private final OvertimeService overtimeService;
+    private final DataDeletionService dataDeletionService;
     private final Clock clock;
 
     @Autowired
     public PendingWorkServiceImpl(
             AbsenceService absenceService,
             CorrectionService correctionService,
-            OvertimeService overtimeService) {
-        this(absenceService, correctionService, overtimeService, Clock.systemUTC());
+            OvertimeService overtimeService,
+            DataDeletionService dataDeletionService) {
+        this(absenceService, correctionService, overtimeService, dataDeletionService, Clock.systemUTC());
     }
 
     PendingWorkServiceImpl(
             AbsenceService absenceService,
             CorrectionService correctionService,
             OvertimeService overtimeService,
+            DataDeletionService dataDeletionService,
             Clock clock) {
         this.absenceService = absenceService;
         this.correctionService = correctionService;
         this.overtimeService = overtimeService;
+        this.dataDeletionService = dataDeletionService;
         this.clock = clock;
     }
 
@@ -78,6 +83,13 @@ public class PendingWorkServiceImpl implements PendingWorkService {
                         .count()
                 : 0;
 
-        return new PendingWorkResponse(ausencias, correcciones, horasExtra);
+        // Todas las de la empresa, como la bandeja: no hay reparto de quién
+        // resuelve cada una. Incluye las que hoy tienen bloqueos, porque
+        // también esperan algo (que se resuelva lo que las bloquea).
+        int borrados = authorities.contains("empleado:gestionar")
+                ? dataDeletionService.contarPendientes(actor)
+                : 0;
+
+        return new PendingWorkResponse(ausencias, correcciones, horasExtra, borrados);
     }
 }

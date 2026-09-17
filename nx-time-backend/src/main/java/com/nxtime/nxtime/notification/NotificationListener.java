@@ -9,6 +9,7 @@ import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.Complaint;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
+import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.OvertimeType;
@@ -583,6 +584,82 @@ public class NotificationListener {
                             "descartada", descartada,
                             "comentario", candidatura.getComentario()));
         }
+    }
+
+    // ------------------------------------------------------------------
+    // 09/2026: borrado de datos personales (ADR 016)
+    // ------------------------------------------------------------------
+
+    /**
+     * El aviso NO lleva el nombre de quien lo pide, y el correo sí. El aviso
+     * se queda guardado en {@code avisos} de quien lo recibe, y cuatro años
+     * después seguiría diciendo el nombre de una persona ya anonimizada; el
+     * correo sale del sistema en el momento y no hay nada que anonimizar
+     * después. Ninguno de los dos lleva el motivo.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDeletionRequested(NotificationEvents.DeletionRequested evento) {
+        DeletionRequest solicitud = evento.solicitud();
+        String solicitante = solicitud.getUsuario().getNombre();
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    solicitud.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.BORRADO_SOLICITADO,
+                    "Nueva solicitud de borrado de datos",
+                    "Revisa si se puede ejecutar. Hay un mes para responder.",
+                    NoticeType.BORRADO_SOLICITADO.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    "Solicitud de borrado de datos de " + solicitante,
+                    "deletion-requested",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "solicitante", solicitante));
+        }
+    }
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDeletionRejected(NotificationEvents.DeletionRejected evento) {
+        DeletionRequest solicitud = evento.solicitud();
+        User persona = solicitud.getUsuario();
+        String titulo = "Tu solicitud de borrado no se ha ejecutado";
+
+        avisar(new CreateNoticeCommand(
+                solicitud.getEmpresa().getId(),
+                persona.getId(),
+                NoticeType.BORRADO_RECHAZADO,
+                titulo,
+                solicitud.getComentarioResolucion(),
+                NoticeType.BORRADO_RECHAZADO.getRutaDestinoPorDefecto()));
+
+        emailSender.enviar(
+                persona.getEmail(),
+                titulo,
+                "deletion-rejected",
+                variables(
+                        "nombreDestinatario", persona.getNombre(),
+                        "resolutor", solicitud.getResueltaPor() != null
+                                ? solicitud.getResueltaPor().getNombre() : "quien la ha revisado",
+                        "comentario", solicitud.getComentarioResolucion()));
+    }
+
+    /** Solo correo: ver {@link NotificationEvents.DeletionExecuted}. */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDeletionExecuted(NotificationEvents.DeletionExecuted evento) {
+        emailSender.enviar(
+                evento.email(),
+                "Tus datos en NX Time se han borrado",
+                "deletion-executed",
+                variables(
+                        "nombreDestinatario", evento.nombre(),
+                        "empresa", evento.nombreEmpresa(),
+                        "anonimizarDesde", evento.anonimizarDesde()));
     }
 
     /**
