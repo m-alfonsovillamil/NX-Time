@@ -40,6 +40,9 @@ class DashboardControllerTest {
     @MockitoBean
     private PendingWorkService pendingWorkService;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.DailyHoursService dailyHoursService;
+
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
     @DisplayName("GET /dashboard/resumen con 'fichaje:leer' devuelve 200")
@@ -88,5 +91,18 @@ class DashboardControllerTest {
     @DisplayName("GET /dashboard/empresa sin 'fichaje:leer:equipo' devuelve 403 (un EMPLEADO no ve la empresa)")
     void getCompanyDashboard_sinAuthorityDeEquipo_devuelve403() throws Exception {
         mockMvc.perform(get("/api/v1/dashboard/empresa")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /dashboard/horas-por-dia llega al servicio con las dos fechas, y sin una da 400")
+    void horasPorDia() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard/horas-por-dia").param("desde", "2026-09-14").param("hasta", "2026-09-20"))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verify(dailyHoursService).horasPorDia("empleado@nxtime.test",
+                java.time.LocalDate.of(2026, 9, 14), java.time.LocalDate.of(2026, 9, 20));
+
+        mockMvc.perform(get("/api/v1/dashboard/horas-por-dia").param("desde", "2026-09-14"))
+                .andExpect(status().isBadRequest());
     }
 }

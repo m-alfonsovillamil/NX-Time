@@ -92,9 +92,11 @@ fun FicharScreen(
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
     iniciales: String,
-    viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    detalleViewModel: DetalleDeTiempoViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    val detalle by detalleViewModel.uiState.collectAsStateWithLifecycle()
 
     /*
      * Recarga al volver a la pantalla, no solo al entrar: tras añadir una
@@ -259,7 +261,7 @@ fun FicharScreen(
                 Spacer(Modifier.height(20.dp))
             }
 
-            ResumenDeTiempos(estado)
+            ResumenDeTiempos(estado, onAbrir = detalleViewModel::abrir)
 
             estado.resumen?.let { resumen ->
                 Spacer(Modifier.height(14.dp))
@@ -310,6 +312,13 @@ fun FicharScreen(
             }
             Spacer(Modifier.height(24.dp))
         }
+
+        DetalleDeTiempoHoja(
+            estado = detalle,
+            ficha = estado,
+            hoy = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Madrid")),
+            onCerrar = detalleViewModel::cerrar
+        )
 
         if (estado.confirmandoFin) {
             DialogoFinDeJornada(
@@ -397,7 +406,7 @@ private fun DialogoFinDeJornada(
  * enseñar ceros: un "0h 00m" es una afirmación falsa, y un hueco no.
  */
 @Composable
-private fun ResumenDeTiempos(estado: FicharUiState) {
+private fun ResumenDeTiempos(estado: FicharUiState, onAbrir: (TipoDetalle) -> Unit) {
     val resumen = estado.resumen ?: return
 
     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
@@ -406,16 +415,19 @@ private fun ResumenDeTiempos(estado: FicharUiState) {
                 etiqueta = stringResource(R.string.fichar_tiempo_hoy),
                 valor = DateFormats.minutos(estado.minutosHoy),
                 destacada = true,
+                onClick = { onAbrir(TipoDetalle.HOY) },
                 modifier = Modifier.weight(1f)
             )
             TarjetaTiempo(
                 etiqueta = stringResource(R.string.fichar_tiempo_semana),
                 valor = DateFormats.minutos(estado.minutosSemana),
+                onClick = { onAbrir(TipoDetalle.SEMANA) },
                 modifier = Modifier.weight(1f)
             )
             TarjetaTiempo(
                 etiqueta = stringResource(R.string.fichar_tiempo_mes),
                 valor = DateFormats.minutos(estado.minutosMes),
+                onClick = { onAbrir(TipoDetalle.MES) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -429,6 +441,7 @@ private fun ResumenDeTiempos(estado: FicharUiState) {
                     saldo.diasDisponibles,
                     saldo.diasTotales
                 ),
+                onClick = { onAbrir(TipoDetalle.VACACIONES) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -439,6 +452,7 @@ private fun ResumenDeTiempos(estado: FicharUiState) {
 private fun TarjetaTiempo(
     etiqueta: String,
     valor: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     destacada: Boolean = false
 ) {
@@ -449,7 +463,9 @@ private fun TarjetaTiempo(
      * al lado del resto de la pantalla. El secundario es el mismo
      * verde azulado en versión suave y mantiene el contraste AA.
      */
+    // Pulsable: abre el detalle (ver DetalleDeTiempoHoja).
     Card(
+        onClick = onClick,
         modifier = modifier,
         elevation = elevacionDeTarjeta(),
         colors = CardDefaults.cardColors(

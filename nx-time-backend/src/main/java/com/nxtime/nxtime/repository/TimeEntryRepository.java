@@ -238,6 +238,37 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             @Param("desde") Instant desde,
             @Param("hasta") Instant hasta);
 
+    /**
+     * Los mismos días que {@link #sumarSegundosPorUsuarioYDia}, con las mismas
+     * reglas (día de España, cuenta el día en que empieza, se suman los de un
+     * mismo día, solo cerradas y no anuladas), pero de UNA persona: para el
+     * gráfico de la pantalla de inicio. Los días sin fichajes no salen.
+     */
+    @Query(value = """
+            SELECT (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date AS dia,
+                   SUM(EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
+                       - r.segundos_pausa_acumulados) AS segundos
+            FROM registros r
+            WHERE r.usuario_id = :usuarioId
+              AND r.anulado = false
+              AND r.hora_salida IS NOT NULL
+              AND r.hora_entrada >= :desde
+              AND r.hora_entrada < :hasta
+            GROUP BY (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date
+            ORDER BY dia
+            """, nativeQuery = true)
+    List<DayHoursProjection> sumarSegundosPorDiaDeUsuario(
+            @Param("usuarioId") long usuarioId,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
+    /** Proyección de {@link #sumarSegundosPorDiaDeUsuario}. */
+    interface DayHoursProjection {
+        LocalDate getDia();
+
+        long getSegundos();
+    }
+
     /** Proyección de {@link #sumarSegundosPorEmpleado}: Spring Data la implementa sola. */
     interface EmployeeHoursProjection {
         long getUsuarioId();
