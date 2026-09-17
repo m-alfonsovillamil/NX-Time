@@ -967,6 +967,16 @@
     <string name="borrados_rechazar_sin_comentario">Hay que explicar por qué no se ejecuta el borrado.</string>
     <string name="borrados_comentario">Comentario</string>
     <string name="borrados_rechazado">Solicitud rechazada</string>
+    <string name="borrados_registrar">Registrar solicitud</string>
+    <string name="borrados_registrar_ayuda">Para quien no puede pedirlo desde la app, por ejemplo porque ya está de baja y lo ha pedido por correo o por carta. Le enviaremos un acuse de recibo.</string>
+    <string name="borrados_registrar_nadie">No hay nadie para quien registrar una solicitud.</string>
+    <string name="borrados_de_baja">%1$s · de baja</string>
+    <string name="borrados_como_llego_campo">Cómo llegó (p. ej. correo del 12/09)</string>
+    <string name="borrados_registrar_confirmar">Registrar</string>
+    <string name="borrados_registrar_sin_motivo">Hay que indicar cómo llegó la solicitud.</string>
+    <string name="borrados_registrada">Solicitud registrada</string>
+    <string name="borrados_registrada_por">Registrada por %1$s</string>
+    <string name="borrados_como_llego">Cómo llegó: %1$s</string>
 
     <string name="ajustes_borrar_datos">Borrar mis datos</string>
     <string name="ajustes_borrar_datos_detalle">Puedes pedir que se borren tus datos personales. Lo revisa RRHH, que tiene un mes para responder. Tu registro horario no se borra enseguida: la empresa tiene que guardarlo cuatro años.</string>

@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service;
 
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.dto.DeletionCandidate;
 import com.nxtime.nxtime.dto.DeletionRequestDTO;
 import com.nxtime.nxtime.dto.DeletionResponse;
 import java.time.LocalDate;
@@ -23,6 +24,16 @@ public interface DataDeletionService {
 
     /** La última solicitud de la persona, en cualquier estado. */
     Optional<DeletionResponse> miUltimaSolicitud(User persona);
+
+    /**
+     * RRHH/ADMIN registra una solicitud recibida fuera de la app, típicamente
+     * de alguien que ya está de baja y no puede entrar. Queda constancia de
+     * quién la registró y de cómo llegó.
+     */
+    DeletionResponse registrar(User actor, long usuarioId, String comoLlego);
+
+    /** Para quién se puede registrar una: ver {@code DeletionRequestRepository.findCandidatos}. */
+    List<DeletionCandidate> candidatos(User actor);
 
     /** Retirar la pendiente. 404 si no hay ninguna. */
     DeletionResponse cancelar(User persona);

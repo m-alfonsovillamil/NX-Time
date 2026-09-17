@@ -648,6 +648,19 @@ public class NotificationListener {
                         "comentario", solicitud.getComentarioResolucion()));
     }
 
+    /** Solo correo: ver {@link NotificationEvents.DeletionRegistered}. */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDeletionRegistered(NotificationEvents.DeletionRegistered evento) {
+        emailSender.enviar(
+                evento.email(),
+                "Hemos recibido tu solicitud de borrado de datos",
+                "deletion-registered",
+                variables(
+                        "nombreDestinatario", evento.nombre(),
+                        "empresa", evento.nombreEmpresa()));
+    }
+
     /** Solo correo: ver {@link NotificationEvents.DeletionExecuted}. */
     @Async(AsyncConfig.EMAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

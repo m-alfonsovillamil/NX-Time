@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.borrados
 
 import com.nxtime.app.ReglaDispatcherPrincipal
+import com.nxtime.app.data.dto.CandidatoBorradoDTO
 import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.repository.AuthRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -94,6 +96,61 @@ class BorradosViewModelTest {
         assertNotNull(vm.uiState.value.error)
         assertEquals(listOf("Tiene una jornada abierta."), vm.uiState.value.pendientes.single().bloqueos)
         verify(repositorio, times(2)).getBorradosPendientes()
+    }
+
+    @Test
+    fun `abrir el registro carga los candidatos, y registrar bien cierra el dialogo y recarga`() = runTest {
+        whenever(repositorio.getBorradosPendientes())
+            .thenReturn(Response.success(emptyList()))
+            .thenReturn(Response.success(listOf(solicitud(7))))
+        whenever(repositorio.getCandidatosBorrado()).thenReturn(
+            Response.success(listOf(CandidatoBorradoDTO(10L, "Javi", "javi@test", activo = false)))
+        )
+        whenever(repositorio.registrarBorrado(10L, "Correo del 12/09"))
+            .thenReturn(Response.success(solicitud(7)))
+
+        val vm = BorradosViewModel(repositorio)
+        advanceUntilIdle()
+        vm.abrirRegistro()
+        advanceUntilIdle()
+        assertEquals(false, vm.uiState.value.candidatos!!.single().activo)
+
+        vm.registrar(10L, "Correo del 12/09")
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.registrando)
+        assertNotNull(vm.uiState.value.aviso)
+        assertEquals(7L, vm.uiState.value.pendientes.single().id)
+    }
+
+    /* Si el servidor lo rechaza, el diálogo sigue abierto: lo escrito no se pierde. */
+    @Test
+    fun `si registrar falla, el dialogo sigue abierto con el error`() = runTest {
+        whenever(repositorio.getBorradosPendientes()).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.getCandidatosBorrado()).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.registrarBorrado(any(), any())).thenReturn(error409())
+
+        val vm = BorradosViewModel(repositorio)
+        advanceUntilIdle()
+        vm.abrirRegistro()
+        vm.registrar(10L, "Carta")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.registrando)
+        assertNotNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `registrar sin decir como llego no llega al servidor`() = runTest {
+        whenever(repositorio.getBorradosPendientes()).thenReturn(Response.success(emptyList()))
+
+        val vm = BorradosViewModel(repositorio)
+        advanceUntilIdle()
+        vm.registrar(10L, " ")
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.error)
+        verify(repositorio, never()).registrarBorrado(any(), any())
     }
 
     @Test

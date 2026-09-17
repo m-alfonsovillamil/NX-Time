@@ -180,6 +180,8 @@ interface AuthRepository {
     suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
     suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
     suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>>
+    suspend fun registrarBorrado(usuarioId: Long, comoLlego: String): Response<SolicitudBorradoDTO>
+    suspend fun getCandidatosBorrado(): Response<List<CandidatoBorradoDTO>>
     suspend fun ejecutarBorrado(solicitudId: Long): Response<SolicitudBorradoDTO>
     suspend fun rechazarBorrado(solicitudId: Long, comentario: String): Response<SolicitudBorradoDTO>
     suspend fun actualizarMiPerfil(

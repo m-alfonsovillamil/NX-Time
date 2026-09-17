@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.DeletionStatus;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.dto.DeletionCandidate;
 import com.nxtime.nxtime.dto.DeletionRequestDTO;
 import com.nxtime.nxtime.dto.DeletionResponse;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -108,6 +109,59 @@ public class DataDeletionServiceImpl implements DataDeletionService {
         eventPublisher.publishEvent(new NotificationEvents.DeletionRequested(solicitud, destinatarios));
 
         return aRespuesta(solicitud, List.of());
+    }
+
+    @Override
+    @Transactional
+    public DeletionResponse registrar(User actor, long usuarioId, String comoLlego) {
+        User persona = userRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));
+        if (persona.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("Esa persona no pertenece a tu empresa.");
+        }
+        if (persona.getId() == actor.getId()) {
+            // El CHECK de V21 también lo impide; aquí se explica.
+            throw new BusinessException("Para pedir el borrado de tus propios datos, hazlo desde Ajustes.");
+        }
+        String texto = vacioComoNulo(comoLlego);
+        if (texto == null) {
+            throw new BusinessException("Hay que indicar cómo llegó la solicitud.", HttpStatus.BAD_REQUEST);
+        }
+        if (repository.existsByUsuarioAndEstado(persona, DeletionStatus.EJECUTADA)) {
+            throw new BusinessException("Los datos de esta persona ya se borraron.");
+        }
+        if (repository.existsByUsuarioAndEstado(persona, DeletionStatus.PENDIENTE)) {
+            throw new BusinessException("Esta persona ya tiene una solicitud de borrado pendiente.");
+        }
+
+        DeletionRequest solicitud = repository.save(DeletionRequest.builder()
+                .empresa(persona.getEmpresa())
+                .usuario(persona)
+                .registradaPor(actor)
+                .motivo(texto)
+                .creadaEn(Instant.now(clock))
+                .build());
+
+        // A los demás que pueden ejecutarla, para que haya otro par de ojos.
+        // Ni a quien la registra (ya lo sabe) ni a la persona.
+        List<User> destinatarios = Destinatarios.conAuthorityMenos(
+                        userRepository.findByEmpresa(persona.getEmpresa()), AUTHORITY_EJECUTAR, actor).stream()
+                .filter(u -> u.getId() != persona.getId())
+                .toList();
+        eventPublisher.publishEvent(new NotificationEvents.DeletionRequested(solicitud, destinatarios));
+        eventPublisher.publishEvent(new NotificationEvents.DeletionRegistered(
+                persona.getEmail(), persona.getNombre(), persona.getEmpresa().getNombre()));
+
+        log.info("Solicitud de borrado {} registrada para el usuario {} por el usuario {}.",
+                solicitud.getId(), persona.getId(), actor.getId());
+        return aRespuesta(solicitud, List.of());
+    }
+
+    @Override
+    public List<DeletionCandidate> candidatos(User actor) {
+        return repository.findCandidatos(actor.getEmpresa().getId(), actor.getId()).stream()
+                .map(u -> new DeletionCandidate(u.getId(), nombreCompleto(u), u.getEmail(), u.isActivo()))
+                .toList();
     }
 
     @Override
@@ -294,22 +348,26 @@ public class DataDeletionServiceImpl implements DataDeletionService {
 
     private DeletionResponse aRespuesta(DeletionRequest solicitud, List<String> bloqueos) {
         User persona = solicitud.getUsuario();
-        String nombre = persona.getApellidos() == null || persona.getApellidos().isBlank()
-                ? persona.getNombre()
-                : persona.getNombre() + " " + persona.getApellidos();
         return new DeletionResponse(
                 solicitud.getId(),
                 persona.getId(),
-                nombre,
+                nombreCompleto(persona),
                 persona.getEmail(),
                 solicitud.getEstado().name(),
                 solicitud.getMotivo(),
+                solicitud.getRegistradaPor() != null ? solicitud.getRegistradaPor().getNombre() : null,
                 solicitud.getCreadaEn(),
                 solicitud.getResueltaPor() != null ? solicitud.getResueltaPor().getNombre() : null,
                 solicitud.getResueltaEn(),
                 solicitud.getComentarioResolucion(),
                 solicitud.getAnonimizarDesde(),
                 bloqueos);
+    }
+
+    private static String nombreCompleto(User persona) {
+        return persona.getApellidos() == null || persona.getApellidos().isBlank()
+                ? persona.getNombre()
+                : persona.getNombre() + " " + persona.getApellidos();
     }
 
     private static String vacioComoNulo(String texto) {

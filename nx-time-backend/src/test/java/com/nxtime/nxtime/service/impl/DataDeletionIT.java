@@ -283,6 +283,66 @@ class DataDeletionIT {
         assertThat(service.miUltimaSolicitud(ana).orElseThrow().estado()).isEqualTo("PENDIENTE");
     }
 
+    /*
+     * El caso para el que existe: alguien ya de baja, que no puede entrar a
+     * pedirlo, lo pide por correo y RRHH lo registra.
+     */
+    @Test
+    @DisplayName("RRHH registra la solicitud de alguien de baja, queda constancia, y se puede ejecutar")
+    void registrar_paraAlguienDeBaja() {
+        sembrarDatos(javi);
+        javi.setActivo(false);
+        javi = userRepository.save(javi);
+
+        assertThat(service.candidatos(rrhh)).extracting(c -> c.id())
+                .contains(javi.getId(), ana.getId()).doesNotContain(rrhh.getId());
+
+        DeletionResponse registrada = service.registrar(rrhh, javi.getId(), "Correo del 12/09 a rrhh@empresa");
+
+        assertThat(registrada.estado()).isEqualTo("PENDIENTE");
+        assertThat(registrada.registradaPor()).isEqualTo("Rita");
+        assertThat(registrada.motivo()).isEqualTo("Correo del 12/09 a rrhh@empresa");
+        assertThat(service.candidatos(rrhh)).extracting(c -> c.id()).doesNotContain(javi.getId());
+
+        assertThat(service.ejecutar(registrada.id(), rrhh).estado()).isEqualTo("EJECUTADA");
+        assertThat(prescindibleDe(javi).values()).containsOnly(0);
+        assertThat(service.candidatos(rrhh)).extracting(c -> c.id()).doesNotContain(javi.getId());
+        assertThatThrownBy(() -> service.registrar(rrhh, javi.getId(), "Otra vez"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("ya se borraron");
+    }
+
+    @Test
+    @DisplayName("Registrar: ni para uno mismo, ni sin decir cómo llegó, ni dos veces, ni de otra empresa")
+    void registrar_reglas() {
+        assertThatThrownBy(() -> service.registrar(rrhh, rrhh.getId(), "Yo mismo"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("Ajustes");
+        assertThatThrownBy(() -> service.registrar(rrhh, ana.getId(), "  "))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+
+        service.registrar(rrhh, ana.getId(), "Carta");
+        assertThatThrownBy(() -> service.registrar(admin, ana.getId(), "Carta repetida"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("pendiente");
+
+        Company otra = companyRepository.save(Company.builder().nombre("Otra " + System.nanoTime()).build());
+        User rrhhDeOtra = userRepository.save(User.builder()
+                .nombre("Fuera").email("fuera" + System.nanoTime() + "@test").contrasena("x")
+                .rol(Role.RRHH).empresa(otra).activo(true).horasSemanales(new BigDecimal("40.0")).build());
+        assertThatThrownBy(() -> service.registrar(rrhhDeOtra, javi.getId(), "Correo"))
+                .isInstanceOf(TenantAccessException.class);
+        assertThat(service.candidatos(rrhhDeOtra)).extracting(c -> c.id()).doesNotContain(javi.getId());
+    }
+
+    /* El CHECK de V21, por si algún día se escribe sin pasar por el servicio. */
+    @Test
+    @DisplayName("La base no deja registrar una solicitud en nombre de uno mismo")
+    void registrar_checkDeLaBase() {
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO solicitudes_borrado (empresa_id, usuario_id, registrada_por_id, motivo) VALUES (?, ?, ?, 'x')",
+                empresa.getId(), rrhh.getId(), rrhh.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
     @Test
     @DisplayName("Rechazar exige comentario y no borra nada")
     void rechazar() {
@@ -307,12 +367,13 @@ class DataDeletionIT {
         DeletionResponse ejecutada = pedirYEjecutar(ana);
         LocalDate desde = ejecutada.anonimizarDesde();
 
-        // La víspera no toca nada.
-        assertThat(service.anonimizarVencidas(desde.minusDays(1))).isZero();
+        // La víspera no la toca. (Los totales que devuelve no se miran: la
+        // base es compartida con las otras pruebas de la clase.)
+        service.anonimizarVencidas(desde.minusDays(1));
         assertThat(jdbc.queryForObject("SELECT nombre FROM usuarios WHERE id = ?", String.class, ana.getId()))
                 .isEqualTo("Ana");
 
-        assertThat(service.anonimizarVencidas(desde)).isEqualTo(1);
+        assertThat(service.anonimizarVencidas(desde)).isPositive();
 
         long id = ana.getId();
         Map<String, Object> fila = jdbc.queryForMap("SELECT * FROM usuarios WHERE id = ?", id);

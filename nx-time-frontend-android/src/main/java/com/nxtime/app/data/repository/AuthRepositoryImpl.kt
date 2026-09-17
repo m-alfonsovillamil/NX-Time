@@ -532,6 +532,12 @@ class AuthRepositoryImpl(
     override suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>> =
         apiService.getBorradosPendientes()
 
+    override suspend fun registrarBorrado(usuarioId: Long, comoLlego: String): Response<SolicitudBorradoDTO> =
+        apiService.registrarBorrado(RegistroBorrado(usuarioId, comoLlego.trim()))
+
+    override suspend fun getCandidatosBorrado(): Response<List<CandidatoBorradoDTO>> =
+        apiService.getCandidatosBorrado()
+
     override suspend fun ejecutarBorrado(solicitudId: Long): Response<SolicitudBorradoDTO> =
         apiService.ejecutarBorrado(solicitudId)
 

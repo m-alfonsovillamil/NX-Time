@@ -48,7 +48,7 @@ class DataDeletionControllerTest {
     private DataDeletionService service;
 
     private DeletionResponse solicitud(String estado) {
-        return new DeletionResponse(3L, 10L, "Ana Pruebas", "ana@test", estado, null,
+        return new DeletionResponse(3L, 10L, "Ana Pruebas", "ana@test", estado, null, null,
                 Instant.parse("2026-09-17T08:00:00Z"), null, null, null, null, List.of());
     }
 
@@ -80,6 +80,29 @@ class DataDeletionControllerTest {
         mockMvc.perform(post("/api/v1/borrados/3/ejecutar")).andExpect(status().isForbidden());
         verify(service, never()).pendientes(any());
         verify(service, never()).ejecutar(anyLong(), any());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.GESTOR)
+    @DisplayName("Registrar y ver candidatos como GESTOR devuelven 403")
+    void registrar_comoGestor_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/v1/borrados/candidatos")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/borrados")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":10,\"motivo\":\"Correo\"}"))
+                .andExpect(status().isForbidden());
+        verify(service, never()).registrar(any(), anyLong(), anyString());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("POST /borrados sin decir cómo llegó devuelve 400 sin llegar al servicio")
+    void registrar_sinMotivo_devuelve400() throws Exception {
+        mockMvc.perform(post("/api/v1/borrados")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":10,\"motivo\":\"\"}"))
+                .andExpect(status().isBadRequest());
+        verify(service, never()).registrar(any(), anyLong(), anyString());
     }
 
     @Test

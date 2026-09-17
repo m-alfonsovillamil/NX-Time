@@ -240,6 +240,15 @@ public final class NotificationEvents {
     public record DeletionRequested(DeletionRequest solicitud, List<User> destinatarios) {
     }
 
+    /**
+     * RRHH/ADMIN la ha registrado en nombre de la persona: se le manda un
+     * acuse de recibo por correo. Solo correo, porque lo normal es que esté
+     * de baja y no vaya a abrir la app. Lleva los datos copiados por lo mismo
+     * que {@link DeletionExecuted}.
+     */
+    public record DeletionRegistered(String email, String nombre, String nombreEmpresa) {
+    }
+
     /** Rechazada: se avisa a quien la pidió, con el porqué. */
     public record DeletionRejected(DeletionRequest solicitud) {
     }

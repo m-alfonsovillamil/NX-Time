@@ -18,6 +18,25 @@ public interface DeletionRequestRepository extends JpaRepository<DeletionRequest
 
     Optional<DeletionRequest> findByUsuarioAndEstado(User usuario, DeletionStatus estado);
 
+    boolean existsByUsuarioAndEstado(User usuario, DeletionStatus estado);
+
+    /**
+     * Para quién puede RRHH/ADMIN registrar una solicitud: todos los de la
+     * empresa, de alta o de baja, menos quien pregunta y menos quien ya tiene
+     * una pendiente o un borrado ejecutado.
+     */
+    @Query("""
+            SELECT u FROM usuarios u
+            WHERE u.empresa.id = :empresaId AND u.id <> :actorId
+              AND NOT EXISTS (
+                  SELECT s FROM solicitudes_borrado s
+                  WHERE s.usuario = u
+                    AND s.estado IN (com.nxtime.nxtime.domain.DeletionStatus.PENDIENTE,
+                                     com.nxtime.nxtime.domain.DeletionStatus.EJECUTADA))
+            ORDER BY u.activo DESC, u.nombre ASC
+            """)
+    List<User> findCandidatos(@Param("empresaId") long empresaId, @Param("actorId") long actorId);
+
     List<DeletionRequest> findByEmpresa_IdAndEstadoOrderByCreadaEnAsc(long empresaId, DeletionStatus estado);
 
     long countByEmpresa_IdAndEstado(long empresaId, DeletionStatus estado);

@@ -17,6 +17,8 @@ data class SolicitudBorradoDTO(
     val email: String,
     val estado: String,
     val motivo: String? = null,
+    /** Quién la registró en nombre de la persona; null si la pidió ella. Entonces `motivo` dice cómo llegó. */
+    val registradaPor: String? = null,
     val creadaEn: String? = null,
     val resueltaPor: String? = null,
     val resueltaEn: String? = null,
@@ -39,3 +41,17 @@ data class PeticionBorrado(val motivo: String?)
 
 /** Rechazar exige decir por qué. */
 data class RechazoBorrado(val comentario: String)
+
+/**
+ * Alguien para quien RRHH/ADMIN puede registrar una solicitud recibida fuera
+ * de la app. Incluye a quien está de baja, que es el caso para el que existe.
+ */
+data class CandidatoBorradoDTO(
+    val id: Long,
+    val nombre: String,
+    val email: String,
+    val activo: Boolean
+)
+
+/** Registrar una solicitud recibida por correo, carta o en persona. `motivo` dice cómo llegó. */
+data class RegistroBorrado(val usuarioId: Long, val motivo: String)
