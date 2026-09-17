@@ -24,6 +24,7 @@ import com.nxtime.nxtime.dto.DisputeRequest;
 import com.nxtime.nxtime.dto.ResolveCorrectionRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -61,6 +62,8 @@ class CorrectionServiceImplTest {
     private TimeEntrySnapshotSerializer snapshotSerializer;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private AddedPauseRepository addedPauseRepository;
 
     private CorrectionServiceImpl service;
 
@@ -79,7 +82,7 @@ class CorrectionServiceImplTest {
     void setUp() {
         service = new CorrectionServiceImpl(
                 correctionRepository, timeEntryRepository, userRepository,
-                snapshotSerializer, eventPublisher);
+                snapshotSerializer, eventPublisher, addedPauseRepository);
 
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra").build();
