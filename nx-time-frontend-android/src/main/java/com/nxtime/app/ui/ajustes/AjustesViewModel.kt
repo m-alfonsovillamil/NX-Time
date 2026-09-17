@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.PeticionLogin
+import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.Ajustes
@@ -31,6 +32,11 @@ data class AjustesUiState(
     val cerrandoSesiones: Boolean = false,
     /** Se está preparando la descarga de mis datos. */
     val descargandoDatos: Boolean = false,
+    /** Mi última solicitud de borrado de datos, o null si nunca pedí ninguna. */
+    val solicitudBorrado: SolicitudBorradoDTO? = null,
+    /** El diálogo que explica el borrado está abierto. */
+    val confirmandoBorrado: Boolean = false,
+    val enviandoBorrado: Boolean = false,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 )
@@ -216,6 +222,75 @@ class AjustesViewModel(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(descargandoDatos = false, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /**
+     * Carga mi última solicitud de borrado. La llama la pantalla al abrirse y
+     * no el `init`, para que los tests de las demás preferencias no tengan que
+     * simular una llamada que no les importa.
+     *
+     * Si falla no se enseña error: la tarjeta se ve como si no hubiera
+     * ninguna, y pedirla otra vez daría el 409 que lo explica.
+     */
+    fun cargarSolicitudBorrado() {
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.getMiSolicitudBorrado()
+                if (respuesta.isSuccessful) {
+                    // 204 = nunca pedí ninguna: cuerpo null, y es lo correcto.
+                    _uiState.update { it.copy(solicitudBorrado = respuesta.body()) }
+                }
+            } catch (e: Exception) {
+                // Ver arriba.
+            }
+        }
+    }
+
+    fun pedirBorrado() = _uiState.update { it.copy(confirmandoBorrado = true, error = null) }
+
+    fun cancelarPeticionDeBorrado() = _uiState.update { it.copy(confirmandoBorrado = false) }
+
+    /**
+     * Envía la solicitud. **No borra nada**: la ejecuta RRHH o ADMIN después de
+     * comprobar que no queda nada abierto (ADR 016).
+     */
+    fun confirmarBorrado(motivo: String) = enviarBorrado(R.string.ajustes_borrar_datos_enviada) {
+        authRepository.solicitarBorrado(motivo)
+    }
+
+    fun retirarBorrado() = enviarBorrado(R.string.ajustes_borrar_datos_retirada) {
+        authRepository.cancelarBorrado()
+    }
+
+    private fun enviarBorrado(
+        avisoOk: Int,
+        accion: suspend () -> retrofit2.Response<SolicitudBorradoDTO>
+    ) {
+        if (_uiState.value.enviandoBorrado) return
+        _uiState.update { it.copy(enviandoBorrado = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = accion()
+                if (respuesta.isSuccessful) {
+                    _uiState.update {
+                        it.copy(
+                            enviandoBorrado = false,
+                            confirmandoBorrado = false,
+                            solicitudBorrado = respuesta.body(),
+                            aviso = MensajeUi.Recurso(avisoOk)
+                        )
+                    }
+                } else {
+                    // El diálogo se queda abierto: lo escrito en el motivo no
+                    // se pierde por un fallo que quizá se arregla reintentando.
+                    _uiState.update {
+                        it.copy(enviandoBorrado = false, error = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(enviandoBorrado = false, error = ApiErrorParser.mensajeDeRed(e)) }
             }
         }
     }

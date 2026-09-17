@@ -11,5 +11,7 @@ package com.nxtime.app.data.dto
 data class PendientesDTO(
     val ausencias: Int = 0,
     val correcciones: Int = 0,
-    val horasExtra: Int = 0
+    val horasExtra: Int = 0,
+    /** Solicitudes de borrado de datos. Solo RRHH y ADMIN ven otra cosa que 0. */
+    val borrados: Int = 0
 )

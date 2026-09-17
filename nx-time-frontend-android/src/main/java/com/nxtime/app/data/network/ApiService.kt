@@ -352,6 +352,33 @@ interface ApiService {
      * Todos mis datos (RGPD, arts. 15 y 20). Con token, como los informes:
      * por eso se descarga con Retrofit y no con DownloadManager.
      */
+    /*
+     * Borrado de datos personales (RGPD, art. 17; ADR 016). La persona lo
+     * pide sobre lo suyo; RRHH o ADMIN lo ejecuta desde la bandeja.
+     * El GET devuelve 204 si nunca se pidió ninguno: Retrofit deja el
+     * cuerpo a null, y eso es "no hay solicitud", no un error.
+     */
+    @POST("api/v1/perfil/borrado")
+    suspend fun solicitarBorrado(@Body peticion: PeticionBorrado): Response<SolicitudBorradoDTO>
+
+    @GET("api/v1/perfil/borrado")
+    suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
+
+    @POST("api/v1/perfil/borrado/cancelar")
+    suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
+
+    @GET("api/v1/borrados/pendientes")
+    suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>>
+
+    @POST("api/v1/borrados/{id}/ejecutar")
+    suspend fun ejecutarBorrado(@Path("id") solicitudId: Long): Response<SolicitudBorradoDTO>
+
+    @POST("api/v1/borrados/{id}/rechazar")
+    suspend fun rechazarBorrado(
+        @Path("id") solicitudId: Long,
+        @Body peticion: RechazoBorrado
+    ): Response<SolicitudBorradoDTO>
+
     @Streaming
     @GET("api/v1/perfil/mis-datos")
     suspend fun descargarMisDatosJson(): Response<ResponseBody>

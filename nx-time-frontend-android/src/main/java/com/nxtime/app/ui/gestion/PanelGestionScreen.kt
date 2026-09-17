@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.HowToReg
@@ -53,7 +54,7 @@ import com.nxtime.app.ui.components.PantallaConBarra
 /**
  * Panel de gestión: la puerta a las pantallas de gestor.
  *
- * Casi todo es un menú, pero las tres bandejas llevan su contador, y eso
+ * Casi todo es un menú, pero las bandejas llevan su contador, y eso
  * sí es estado: ver [PanelGestionViewModel].
  * La versión anterior (`ManagerHomeActivity`) era también eso, pero
  * apilaba botones a pantalla completa sin decir a dónde llevaba cada
@@ -86,6 +87,8 @@ fun PanelGestionScreen(
     onIrResueltas: () -> Unit,
     onIrAltaEmpleado: () -> Unit,
     onIrAltaGestor: () -> Unit,
+    puedeGestionarBorrados: Boolean,
+    onIrBorrados: () -> Unit,
     viewModel: PanelGestionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val pendientes by viewModel.pendientes.collectAsStateWithLifecycle()
@@ -151,6 +154,16 @@ fun PanelGestionScreen(
                 onClick = onIrHorasExtra,
                 contador = pendientes?.horasExtra
             )
+            // Esta sí se gatea: solo RRHH y ADMIN la pueden ejecutar, y a un
+            // GESTOR no le corresponde saber que alguien lo ha pedido.
+            if (puedeGestionarBorrados) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_borrados),
+                    icono = Icons.Default.DeleteForever,
+                    onClick = onIrBorrados,
+                    contador = pendientes?.borrados
+                )
+            }
 
             /*
              * EQUIPO: las personas y su historial. Aquí se juntan las dos

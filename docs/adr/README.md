@@ -25,3 +25,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [013](013-la-candidatura-congela-el-cv.md) | La candidatura congela el CV que se presentó |
 | [014](014-acceso-por-codigo.md) | Nadie teclea la contraseña de otro: acceso por código |
 | [015](015-pausas-anadidas-a-posteriori.md) | Añadir una pausa después: un libro al lado del contador |
+| [016](016-borrar-sin-borrar-el-registro-horario.md) | Borrar los datos de alguien sin borrar su registro horario |

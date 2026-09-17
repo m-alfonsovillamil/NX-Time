@@ -174,6 +174,14 @@ interface AuthRepository {
     /** Exportación de datos personales (RGPD). */
     suspend fun descargarMisDatosJson(): Response<ResponseBody>
     suspend fun descargarMisDatosPdf(): Response<ResponseBody>
+
+    /** Borrado de datos personales (RGPD, art. 17; ADR 016). */
+    suspend fun solicitarBorrado(motivo: String?): Response<SolicitudBorradoDTO>
+    suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
+    suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
+    suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>>
+    suspend fun ejecutarBorrado(solicitudId: Long): Response<SolicitudBorradoDTO>
+    suspend fun rechazarBorrado(solicitudId: Long, comentario: String): Response<SolicitudBorradoDTO>
     suspend fun actualizarMiPerfil(
         nombre: String?,
         apellidos: String?,

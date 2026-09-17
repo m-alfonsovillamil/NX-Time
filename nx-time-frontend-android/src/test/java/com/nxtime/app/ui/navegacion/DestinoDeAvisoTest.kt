@@ -83,4 +83,12 @@ class DestinoDeAvisoTest {
         assertEquals("ausencias-equipo/false", rutaDeAviso(DESTINO_AUSENCIAS_EQUIPO_PENDIENTES))
         assertEquals("ausencias-equipo/true", rutaDeAviso(DESTINO_AUSENCIAS_EQUIPO_RESUELTAS))
     }
+
+    @Test
+    fun `los avisos de borrado llevan a la bandeja o a Ajustes (ADR 016)`() {
+        // Los símbolos son los de NoticeType.BORRADO_SOLICITADO y
+        // BORRADO_RECHAZADO en el backend: si alguno cambia allí, aquí.
+        assertEquals(Pantalla.BORRADOS.ruta, rutaDeAviso("borrados"))
+        assertEquals(Pantalla.AJUSTES.ruta, rutaDeAviso("ajustes"))
+    }
 }

@@ -52,6 +52,7 @@ import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
 import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
+import com.nxtime.app.ui.borrados.BorradosScreen
 import com.nxtime.app.ui.correcciones.CorreccionesScreen
 import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
 import com.nxtime.app.ui.denuncias.DenunciasScreen
@@ -126,6 +127,8 @@ enum class Pantalla(val ruta: String) {
     // candidaturas") y la vista de quien publica.
     OFERTAS("ofertas"),
     GESTION_OFERTAS("gestion-ofertas"),
+    // Borrado de datos (ADR 016). Hoja del panel, solo para RRHH y ADMIN.
+    BORRADOS("borrados"),
     AUSENCIAS_EQUIPO("ausencias-equipo/{$ARG_RESUELTAS}"),
     ALTA_USUARIO("alta/{$ARG_ES_GESTOR}"),
     EMPRESA("empresa"),
@@ -610,8 +613,16 @@ fun NxTimeNavHost(
                     },
                     onIrAltaGestor = {
                         navController.navigate(Pantalla.altaUsuario(esGestor = true))
-                    }
+                    },
+                    // RRHH y ADMIN, como dar de baja: ejecutar un borrado
+                    // desactiva la cuenta, y más cosas.
+                    puedeGestionarBorrados = Permisos.puedeGestionarEmpleados(rol),
+                    onIrBorrados = { navController.navigate(Pantalla.BORRADOS.ruta) }
                 )
+            }
+
+            composable(Pantalla.BORRADOS.ruta) {
+                BorradosScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.CORRECCIONES.ruta) {
