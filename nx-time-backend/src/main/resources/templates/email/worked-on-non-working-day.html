@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--/*
+  Alguien ha empezado a trabajar en un festivo o durante una ausencia
+  aprobada (09/2026). Va a quien aprueba ausencias.
+
+  No acusa a nadie: puede ser una guardia pactada. Dice qué ha pasado y, si
+  eran vacaciones, que el día no se devuelve solo al saldo.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Jornada en un día no laborable', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${empleado}">Persona</strong> ha iniciado una jornada el
+        <strong th:text="${#temporals.format(fecha, 'dd/MM/yyyy')}">12/10/2026</strong>,
+        que para esa persona no es laborable:
+        <strong th:text="${motivo}">Festivo</strong>.
+    </p>
+
+    <p th:if="${vacaciones}" style="margin: 0 0 16px;">
+        Tenía ese día de vacaciones aprobado. Si al final lo trabaja, el día
+        <strong>no vuelve solo a su saldo</strong>: habría que modificar la ausencia.
+    </p>
+
+    <p style="margin: 0;">
+        Puedes ver sus fichajes en la aplicación, en <strong>Gestión &rsaquo; Historial del equipo</strong>.
+        Si no era algo previsto, conviene hablarlo: esas horas pueden acabar contando como horas extra.
+    </p>
+</div>
+</body>
+</html>

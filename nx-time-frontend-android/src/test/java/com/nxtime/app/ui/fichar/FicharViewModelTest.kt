@@ -131,6 +131,60 @@ class FicharViewModelTest {
         assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
     }
 
+    /* Un festivo o una ausencia aprobada: se pregunta antes, y no se ficha hasta confirmar. */
+    @Test
+    fun `en un dia no laborable pregunta antes de iniciar, y solo inicia al confirmar`() = runTest {
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        whenever(repositorio.getEstadoDeHoy())
+            .thenReturn(Response.success(com.nxtime.app.data.dto.EstadoDelDiaDTO(false, "Festivo: Navidad")))
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertEquals("Festivo: Navidad", viewModel.uiState.value.confirmandoInicioNoLaborable)
+        verify(repositorio, org.mockito.kotlin.never()).registrarFichaje(any())
+
+        viewModel.confirmarInicioNoLaborable()
+        advanceUntilIdle()
+
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))
+        assertNull(viewModel.uiState.value.confirmandoInicioNoLaborable)
+    }
+
+    @Test
+    fun `cancelar en un dia no laborable no ficha`() = runTest {
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        whenever(repositorio.getEstadoDeHoy())
+            .thenReturn(Response.success(com.nxtime.app.data.dto.EstadoDelDiaDTO(false, "Vacaciones")))
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        viewModel.cancelarInicioNoLaborable()
+        advanceUntilIdle()
+
+        verify(repositorio, org.mockito.kotlin.never()).registrarFichaje(any())
+        assertEquals(EstadoJornada.SIN_JORNADA, viewModel.uiState.value.estado)
+        assertFalse(viewModel.uiState.value.cargando)
+    }
+
+    /* Fichar no puede quedarse bloqueado por la comprobación: si falla, se inicia. */
+    @Test
+    fun `si no se puede saber si hoy es laborable, inicia igual`() = runTest {
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        whenever(repositorio.getEstadoDeHoy()).thenThrow(RuntimeException("sin red"))
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))
+        assertNull(viewModel.uiState.value.confirmandoInicioNoLaborable)
+    }
+
     /*
      * Finalizar pide confirmación e iniciar no, y la asimetría es
      * deliberada: cerrar la jornada por error obliga a pedir una

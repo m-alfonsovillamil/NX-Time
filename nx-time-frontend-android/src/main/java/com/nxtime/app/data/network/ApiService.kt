@@ -68,6 +68,9 @@ interface ApiService {
     @GET("api/v1/fichaje/activo")
     suspend fun getRegistroActivo(): Response<Registro?>
 
+    @GET("api/v1/fichaje/hoy")
+    suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
+
     @POST("api/v1/fichaje")
     suspend fun registrarFichaje(
         @Body peticion: PeticionFichaje

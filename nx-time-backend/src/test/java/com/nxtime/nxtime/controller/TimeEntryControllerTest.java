@@ -117,6 +117,23 @@ class TimeEntryControllerTest {
 
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /fichaje/hoy dice si es laborable y, si no, por qué")
+    void getHoy() throws Exception {
+        when(timeEntryService.motivoNoLaborableHoy("empleado@nxtime.test")).thenReturn(
+                Optional.of(new com.nxtime.nxtime.service.NonWorkingDayService.Motivo("Festivo: Navidad", false)));
+        mockMvc.perform(get("/api/v1/fichaje/hoy"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.laborable").value(false))
+                .andExpect(jsonPath("$.motivo").value("Festivo: Navidad"));
+
+        when(timeEntryService.motivoNoLaborableHoy("empleado@nxtime.test")).thenReturn(Optional.empty());
+        mockMvc.perform(get("/api/v1/fichaje/hoy"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.laborable").value(true));
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
     @DisplayName("GET /fichaje/historial con las dos fechas filtra por periodo")
     void getHistory_conFechas_usaElPeriodo() throws Exception {
         when(timeEntryService.getHistory("empleado@nxtime.test",

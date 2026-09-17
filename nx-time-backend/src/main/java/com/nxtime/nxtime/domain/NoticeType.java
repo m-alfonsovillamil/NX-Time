@@ -118,7 +118,15 @@ public enum NoticeType {
      * a esas alturas la cuenta está desactivada y no podría leerlo. Ese va
      * solo por correo.
      */
-    BORRADO_RECHAZADO("ajustes");
+    BORRADO_RECHAZADO("ajustes"),
+
+    // 09/2026
+
+    /**
+     * Alguien ha empezado a trabajar en un festivo o con una ausencia
+     * aprobada. A quien aprueba ausencias; lleva al historial del equipo.
+     */
+    TRABAJO_EN_DIA_NO_LABORABLE("equipo");
 
     private final String rutaDestinoPorDefecto;
 

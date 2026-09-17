@@ -62,6 +62,8 @@ class TimeEntryServiceImplTest {
     private TimeEntryMapper timeEntryMapper;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.nxtime.nxtime.service.NonWorkingDayService nonWorkingDayService;
 
     private TimeEntryServiceImpl service;
 
@@ -80,7 +82,7 @@ class TimeEntryServiceImplTest {
                 new ObjectMapper().registerModule(new JavaTimeModule()));
         service = new TimeEntryServiceImpl(
                 timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
-                eventPublisher, snapshotSerializer);
+                eventPublisher, snapshotSerializer, nonWorkingDayService);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado").empresa(empresa).build();
         // lenient: no todos los tests llegan a guardar (varios cortan antes con una excepción de negocio).
@@ -102,6 +104,51 @@ class TimeEntryServiceImplTest {
         assertThat(result.getHoraEntrada()).isNotNull();
         assertThat(result.getHoraSalida()).isNull();
         verify(timeEntryRepository).save(any(TimeEntry.class));
+    }
+
+    /*
+     * El aviso lo decide el servidor al registrar el INICIO: una app antigua
+     * que no pregunta antes también tiene que dispararlo.
+     */
+    @Test
+    @DisplayName("INICIO en un día no laborable avisa a quien aprueba ausencias, y no a la propia persona")
+    void registerTimeEntry_inicioEnDiaNoLaborable_publicaAviso() {
+        User gestora = User.builder().id(20L).email("g@test").nombre("Gestora")
+                .rol(com.nxtime.nxtime.domain.Role.GESTOR).empresa(empresa).activo(true).build();
+        User companero = User.builder().id(30L).email("c@test").nombre("Compa")
+                .rol(com.nxtime.nxtime.domain.Role.EMPLEADO).empresa(empresa).activo(true).build();
+        empleado.setRol(com.nxtime.nxtime.domain.Role.GESTOR);
+        empleado.setActivo(true);
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+        when(nonWorkingDayService.motivo(eq(empleado), any()))
+                .thenReturn(Optional.of(new com.nxtime.nxtime.service.NonWorkingDayService.Motivo("Vacaciones", true)));
+        when(userRepository.findByEmpresa(empresa)).thenReturn(java.util.List.of(empleado, gestora, companero));
+
+        service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+
+        org.mockito.ArgumentCaptor<Object> eventos = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publishEvent(eventos.capture());
+        var aviso = eventos.getAllValues().stream()
+                .filter(e -> e instanceof com.nxtime.nxtime.notification.NotificationEvents.WorkedOnNonWorkingDay)
+                .map(e -> (com.nxtime.nxtime.notification.NotificationEvents.WorkedOnNonWorkingDay) e)
+                .findFirst().orElseThrow();
+        assertThat(aviso.motivo()).isEqualTo("Vacaciones");
+        assertThat(aviso.vacaciones()).isTrue();
+        assertThat(aviso.destinatarios()).containsExactly(gestora);
+    }
+
+    @Test
+    @DisplayName("INICIO en un día laborable no publica ningún aviso")
+    void registerTimeEntry_inicioEnDiaLaborable_noAvisa() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+        when(nonWorkingDayService.motivo(eq(empleado), any())).thenReturn(Optional.empty());
+
+        service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+
+        verify(eventPublisher, never()).publishEvent(
+                any(com.nxtime.nxtime.notification.NotificationEvents.WorkedOnNonWorkingDay.class));
     }
 
     @Test
