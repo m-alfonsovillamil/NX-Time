@@ -21,6 +21,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -51,6 +52,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
     private final Clock clock;
+    private final String urlDescargaApp;
     private final SecureRandom azar = new SecureRandom();
 
     /**
@@ -67,9 +69,10 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
-            EmailSender emailSender) {
+            EmailSender emailSender,
+            @Value("${application.app.download-url:}") String urlDescargaApp) {
         this(accessCodeRepository, userRepository, refreshTokenRepository, passwordEncoder, emailSender,
-                Clock.systemUTC());
+                Clock.systemUTC(), urlDescargaApp);
     }
 
     AccessCodeServiceImpl(
@@ -78,13 +81,15 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             EmailSender emailSender,
-            Clock clock) {
+            Clock clock,
+            String urlDescargaApp) {
         this.accessCodeRepository = accessCodeRepository;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailSender = emailSender;
         this.clock = clock;
+        this.urlDescargaApp = urlDescargaApp == null ? "" : urlDescargaApp.trim();
         this.hashDeRelleno = passwordEncoder.encode("000000");
     }
 
@@ -96,6 +101,8 @@ public class AccessCodeServiceImpl implements AccessCodeService {
 
         Map<String, Object> variables = variables(usuario, codigo, AccessCodeType.ALTA);
         variables.put("nombreEmpresa", nombreEmpresa);
+        // Solo en el alta: quien recupera la contraseña ya tiene la app.
+        variables.put("urlDescargaApp", urlDescargaApp);
         try {
             emailSender.enviarObligatorio(
                     usuario.getEmail(), "Tu cuenta de NX Time", "access-code-welcome", variables);
