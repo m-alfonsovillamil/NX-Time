@@ -273,10 +273,9 @@ private fun FilaDeIniciales() {
 
 @Composable
 private fun Rejilla(estado: CalendarioUiState, onDia: (LocalDate) -> Unit) {
-    val primerDia = estado.periodo.atDay(1)
-    // getValue() del lunes es 1, así que el hueco antes del día 1 es
-    // exactamente el número de días de semana que le preceden.
-    val huecoInicial = primerDia.dayOfWeek.value - 1
+    // El cálculo vive en DateFormats para poder tener test: aquí dentro
+    // estaba en un Composable privado y no lo cubría ninguno.
+    val huecoInicial = DateFormats.huecoInicialDelMes(estado.periodo)
     val celdas = huecoInicial + estado.periodo.lengthOfMonth()
     val semanas = (celdas + 6) / 7
     val hoy = LocalDate.now(DateFormats.ZONA_ESPANA)

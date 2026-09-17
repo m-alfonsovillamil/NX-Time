@@ -30,15 +30,45 @@ object DateFormats {
     val ZONA_ESPANA: ZoneId = ZoneId.of("Europe/Madrid")
     private val ES = Locale.forLanguageTag("es-ES")
 
-    private val FECHA_LARGA = DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", ES)
     private val FECHA_CORTA = DateTimeFormatter.ofPattern("dd/MM/yyyy", ES)
     private val HORA = DateTimeFormatter.ofPattern("HH:mm 'h'", ES)
     private val FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", ES)
-    private val MES_Y_ANIO = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", ES)
+
+    /*
+     * Los nombres de los meses y las iniciales de los días van escritos
+     * aquí, y NO se le piden al sistema con `MMMM` ni con
+     * `getDisplayName`. 16/09/2026: en un móvil salió la fila de
+     * cabeceras del calendario como "1 2 3 4 5 6 7" en vez de "L M X J V
+     * S D".
+     *
+     * No fue casualidad ni un fallo del cálculo. Cuando `java.time` no
+     * encuentra los datos de idioma **devuelve el número**, y así está
+     * documentado. En Android los trae el *desugaring* de la biblioteca
+     * estándar y no siempre están disponibles en el primer arranque, que
+     * es por lo que "se arregla solo" al volver a abrir la aplicación.
+     *
+     * El mismo fallo alcanzaba a la cabecera del mes y a la fecha larga,
+     * donde nadie lo había visto todavía: decían "5 de 2026" en vez de
+     * "Mayo de 2026".
+     *
+     * Escribirlos aquí y no en `strings.xml` por lo mismo que la zona y
+     * el `Locale` de arriba están cableados: esta aplicación es solo en
+     * español, no hay `values-` de ningún otro idioma, y los tests de
+     * esta clase son JUnit a secas. Sacarlos a recursos obligaría a
+     * meter un `Context` en un `object` y a levantar Robolectric para
+     * comprobar que un mes se llama mayo.
+     */
+    private val MESES = arrayOf(
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    )
+
+    /** En el orden de `DayOfWeek`: lunes primero, como la rejilla. */
+    private val INICIALES_DIA = arrayOf("L", "M", "X", "J", "V", "S", "D")
 
     /** "29 de agosto, 2026" a partir del instante ISO que manda el backend. */
     fun fechaLarga(instanteIso: String?): String = conInstante(instanteIso) {
-        FECHA_LARGA.format(it)
+        "%02d de %s, %d".format(ES, it.dayOfMonth, MESES[it.monthValue - 1], it.year)
     }
 
     /** "09:00 h" en hora española. */
@@ -127,20 +157,35 @@ object DateFormats {
      * no es "I", y ese es el fallo clásico de `uppercase()` sin locale.
      */
     fun mesYAnio(periodo: YearMonth): String {
-        val texto = MES_Y_ANIO.format(periodo)
+        val texto = "${MESES[periodo.monthValue - 1]} de ${periodo.year}"
         return texto.replaceFirstChar { it.titlecase(ES) }
     }
 
     /**
      * La inicial de un día de la semana ("L", "M", "X"...), en español.
      *
-     * Va aquí y no en la pantalla por lo mismo que todo lo demás de esta
-     * clase: `getDisplayName` sin `Locale` explícito usa el del móvil, y
-     * en un teléfono en inglés la fila de la rejilla saldría "M T W T F
-     * S S" con el resto de la pantalla en español.
+     * `DayOfWeek.ordinal` es 0 para el lunes, que es justo la columna en
+     * la que lo pinta la rejilla del calendario. Ver [INICIALES_DIA] para
+     * por qué no se le pregunta al sistema.
      */
-    fun inicialDelDia(dia: DayOfWeek): String =
-        dia.getDisplayName(java.time.format.TextStyle.NARROW, ES).uppercase(ES)
+    fun inicialDelDia(dia: DayOfWeek): String = INICIALES_DIA[dia.ordinal]
+
+    /**
+     * Cuántas celdas vacías van antes del día 1 en la rejilla del mes.
+     *
+     * Estaba dentro del Composable de la rejilla, que es `private` y no
+     * tiene test: el cálculo era correcto pero sin red. Aquí se puede
+     * comprobar, y es el sitio donde alguien miraría si el mes vuelve a
+     * salir desplazado.
+     *
+     * La rejilla empieza en LUNES. `dayOfWeek.value` es 1 para el lunes,
+     * así que restarle uno da los días de semana que le preceden, que es
+     * el hueco. Y coincide con `ordinal`, que es como se indexan las
+     * cabeceras: las dos mitades comparten sistema de coordenadas, y por
+     * eso el `- 1` es exactamente el ajuste necesario.
+     */
+    fun huecoInicialDelMes(periodo: YearMonth): Int =
+        periodo.atDay(1).dayOfWeek.value - 1
 
     /**
      * Segundos netos trabajados en la jornada abierta, "02:14:38".
