@@ -30,7 +30,7 @@ no se toca mientras está pendiente.
 | El dueño, sobre su fichaje | Alguien con `correccion:aprobar` (GESTOR+) |
 | Otra persona, sobre el fichaje del dueño | **El dueño**, a quien le cambian sus horas |
 | Cualquiera, tras una disputa | `correccion:disputa:resolver` (RRHH+) |
-| El dueño teniendo `correccion:aprobar` | Se auto-aprueba, y la traza lo dice |
+| El dueño teniendo `correccion:aprobar` | Otra persona con ese permiso; **solo si no hay ninguna**, se auto-aprueba y la traza lo dice |
 
 La regla vive **en un solo sitio** (`CorrectionServiceImpl.puedeResolver`) y
 viaja al cliente ya resuelta, en los campos `puedoResolver` y `puedoDisputar` de
@@ -47,6 +47,16 @@ misma; dejar que el gestor insista, lo mismo al revés.
 por encima— no podría corregir jamás su propio fichaje: la solicitud esperaría
 para siempre a alguien que no existe. Lo que la hace aceptable es que queda
 escrita como tal en la traza, con su motivo, igual que cualquier otra.
+
+**Revisión del 17/09/2026: solo cuando no hay nadie más.** La primera versión
+auto-aprobaba a cualquiera con el permiso, así que un GESTOR o RRHH se corregía
+lo suyo al momento aunque hubiera otras personas que podían revisarlo. Se vio en
+el piloto. Es un conflicto de interés, y contradice la regla que ya siguen las
+horas extra (ADR 011): nadie revisa lo suyo. Ahora la solicitud de quien tiene el
+permiso le llega a **otro** aprobador activo, y solo se aplica sola si no existe
+ninguno, que es exactamente el caso que justificaba la excepción. Una consecuencia
+aceptada: la corrección de alguien de RRHH puede aprobarla un GESTOR si es el
+único otro aprobador.
 
 ## El endpoint viejo desaparece, no cambia de significado
 
