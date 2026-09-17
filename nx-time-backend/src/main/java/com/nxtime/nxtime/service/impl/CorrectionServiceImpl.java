@@ -19,6 +19,7 @@ import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
@@ -28,7 +29,6 @@ import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.ReglasDePausa;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,7 +105,7 @@ public class CorrectionServiceImpl implements CorrectionService {
         // operación distinta de pedirla sobre el propio, y por eso exige
         // su authority: es lo que antes hacía RRHH directamente.
         boolean esMio = fichaje.getUsuario().getId() == actor.getId();
-        if (!esMio && !tiene(actor, CORREGIR_AJENO)) {
+        if (!esMio && !RoleAuthorities.tiene(actor, CORREGIR_AJENO)) {
             throw new TenantAccessException("Solo puedes pedir correcciones de tus propios fichajes.");
         }
         if (fichaje.isAnulado()) {
@@ -162,7 +162,7 @@ public class CorrectionServiceImpl implements CorrectionService {
          * que la hace aceptable es que queda escrita como tal en la
          * traza, con su motivo, igual que cualquier otra.
          */
-        if (esMio && tiene(actor, APROBAR)) {
+        if (esMio && RoleAuthorities.tiene(actor, APROBAR)) {
             log.info("{} se auto-aprueba la corrección del fichaje {}", actor.getEmail(), fichajeId);
             return aplicar(solicitud, actor, "Auto-aprobada por el propio empleado.");
         }
@@ -295,12 +295,12 @@ public class CorrectionServiceImpl implements CorrectionService {
         if (solicitud.getEstado() == CorrectionStatus.EN_DISPUTA) {
             // La discrepancia es entre el empleado y quien lleva su
             // equipo: la resuelve alguien por encima de los dos.
-            return tiene(actor, RESOLVER_DISPUTAS);
+            return RoleAuthorities.tiene(actor, RESOLVER_DISPUTAS);
         }
         if (solicitud.laPidioElDueno()) {
             // Nadie se aprueba a sí mismo por esta vía: si el dueño
             // pudiera aprobar, ya se auto-aprobó al pedirla.
-            return tiene(actor, APROBAR) && solicitud.getSolicitante().getId() != actor.getId();
+            return RoleAuthorities.tiene(actor, APROBAR) && solicitud.getSolicitante().getId() != actor.getId();
         }
         // Se la piden a él: decide el dueño del fichaje.
         return solicitud.getDuenoDelFichaje().getId() == actor.getId();
@@ -560,35 +560,13 @@ public class CorrectionServiceImpl implements CorrectionService {
     }
 
     /**
-     * La gente de la empresa que tiene una authority, excluyendo a quien
-     * se indique (normalmente, quien acaba de hacer la acción: avisarse a
-     * uno mismo de lo que acaba de hacer solo genera ruido).
+     * La gente de la empresa que tiene una authority, menos {@code excluido}.
+     * Las reglas (solo activos, por authority) viven en {@link Destinatarios}.
      */
     private List<User> conAuthority(Company empresa, String authority, User excluido) {
-        List<User> destinatarios = new ArrayList<>();
-        for (User candidato : userRepository.findByEmpresa(empresa)) {
-            // Una cuenta de baja no tiene que recibir avisos de algo que
-            // ya no puede resolver.
-            if (!candidato.isActivo()) {
-                continue;
-            }
-            if (excluido != null && candidato.getId() == excluido.getId()) {
-                continue;
-            }
-            if (tiene(candidato, authority)) {
-                destinatarios.add(candidato);
-            }
-        }
-        return destinatarios;
+        return Destinatarios.conAuthorityMenos(userRepository.findByEmpresa(empresa), authority, excluido);
     }
 
-    private boolean tiene(User usuario, String authority) {
-        // Se pregunta a RoleAuthorities y no al SecurityContext: es la
-        // misma fuente que alimenta los @PreAuthorize, así que no puede
-        // decir una cosa distinta. Y sirve para usuarios que NO son quien
-        // hace la petición (los destinatarios de un aviso).
-        return RoleAuthorities.forRole(usuario.getRol()).contains(authority);
-    }
 
     private CorrectionRequest deLaMismaEmpresa(long id, User actor) {
         CorrectionRequest solicitud = correctionRepository.findById(id)
