@@ -90,6 +90,8 @@ class AuthRepositoryImpl(
     override suspend fun deshacerPausa(fichajeId: Long, pausaId: Long): Response<Registro> =
         apiService.deshacerPausa(fichajeId, pausaId)
 
+    override suspend fun getPendientes(): Response<PendientesDTO> = apiService.getPendientes()
+
     override suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>> {
         return apiService.getCorreccionesPendientes()
     }

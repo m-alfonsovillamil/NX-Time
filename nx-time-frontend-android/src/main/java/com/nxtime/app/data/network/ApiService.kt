@@ -124,6 +124,10 @@ interface ApiService {
         @Path("pausaId") pausaId: Long
     ): Response<Registro>
 
+    /** Contadores de las bandejas del panel de gestión. */
+    @GET("api/v1/dashboard/pendientes")
+    suspend fun getPendientes(): Response<PendientesDTO>
+
     @GET("api/v1/correcciones/pendientes")
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
 

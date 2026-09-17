@@ -306,6 +306,10 @@
     -->
     <string name="gestion_seccion_pendiente">Pendiente de resolver</string>
     <string name="gestion_seccion_equipo">Equipo</string>
+    <plurals name="gestion_pendientes">
+        <item quantity="one">%1$d pendiente</item>
+        <item quantity="other">%1$d pendientes</item>
+    </plurals>
     <string name="gestion_seccion_empresa">Empresa</string>
     <string name="gestion_historial_equipo">Historial del equipo</string>
     <string name="gestion_ausencias_pendientes">Ausencias pendientes</string>
