@@ -20,4 +20,7 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     List<Notice> findByDestinatarioAndLeidoFalse(User destinatario);
 
     long countByDestinatarioAndLeidoFalse(User destinatario);
+
+    /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
+    List<Notice> findByDestinatarioOrderByCreadoEnDesc(User destinatario);
 }

@@ -344,6 +344,18 @@ interface ApiService {
         @Query("mes") mes: Int
     ): Response<ResponseBody>
 
+    /**
+     * Todos mis datos (RGPD, arts. 15 y 20). Con token, como los informes:
+     * por eso se descarga con Retrofit y no con DownloadManager.
+     */
+    @Streaming
+    @GET("api/v1/perfil/mis-datos")
+    suspend fun descargarMisDatosJson(): Response<ResponseBody>
+
+    @Streaming
+    @GET("api/v1/perfil/mis-datos/pdf")
+    suspend fun descargarMisDatosPdf(): Response<ResponseBody>
+
     @Streaming
     @GET("api/v1/informes/mensual/{empleadoId}")
     suspend fun descargarPdfMensual(

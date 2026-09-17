@@ -461,6 +461,10 @@
     <string name="ajustes_cerrar_todas_hecho">Sesiones cerradas.</string>
     <string name="ajustes_privacidad">Privacidad</string>
     <string name="ajustes_informes_errores">Enviar informes de errores</string>
+    <string name="ajustes_mis_datos">Descargar mis datos</string>
+    <string name="ajustes_mis_datos_detalle">Todo lo que NX Time guarda sobre ti: perfil, fichajes, ausencias, correcciones, horas extra y avisos. El PDF es para leerlo; el JSON, para llevártelo a otro servicio.</string>
+    <string name="ajustes_mis_datos_pdf">PDF</string>
+    <string name="ajustes_mis_datos_json">JSON</string>
     <string name="ajustes_informes_errores_detalle">Si la aplicación se cierra sola, se envía el fallo (pantalla, versión y traza) para poder arreglarlo. No incluye tus datos ni lo que escribes.</string>
     <!--
         Entrar con huella. Es una puerta al abrir la aplicación, no un

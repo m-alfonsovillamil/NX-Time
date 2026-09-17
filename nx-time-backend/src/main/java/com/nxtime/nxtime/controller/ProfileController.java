@@ -1,9 +1,12 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.dto.PersonalDataExport;
 import com.nxtime.nxtime.dto.ProfileResponse;
+import com.nxtime.nxtime.report.PersonalDataPdfGenerator;
 import com.nxtime.nxtime.dto.UpdateProfileRequest;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.EmployeeProfileService;
+import com.nxtime.nxtime.service.PersonalDataExportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -12,6 +15,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +29,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 /**
  * El perfil propio y el de los compañeros (Fase B).
@@ -40,9 +48,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileController {
 
     private final EmployeeProfileService employeeProfileService;
+    private final PersonalDataExportService exportService;
+    private final PersonalDataPdfGenerator exportPdfGenerator;
 
-    public ProfileController(EmployeeProfileService employeeProfileService) {
+    public ProfileController(
+            EmployeeProfileService employeeProfileService,
+            PersonalDataExportService exportService,
+            PersonalDataPdfGenerator exportPdfGenerator) {
         this.employeeProfileService = employeeProfileService;
+        this.exportService = exportService;
+        this.exportPdfGenerator = exportPdfGenerator;
     }
 
     @Operation(summary = "Mi perfil",
@@ -99,5 +114,54 @@ public class ProfileController {
     public ResponseEntity<ProfileResponse> getProfile(
             @PathVariable long usuarioId, @AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(employeeProfileService.getProfile(usuarioId, usuario.getUser()));
+    }
+
+    @Operation(summary = "Descargar todos mis datos (JSON)",
+            description = "Derecho de acceso y portabilidad (RGPD, arts. 15 y 20): perfil, todos los fichajes, "
+                    + "pausas añadidas, ausencias, vacaciones, correcciones pedidas, horas extra, proyectos, "
+                    + "avisos, adjuntos (sin su contenido), candidaturas y denuncias presentadas identificándose. "
+                    + "Sin paginar. Solo los datos propios, y sin necesitar la aprobación de nadie. "
+                    + "Lo que NO incluye va explicado dentro del propio fichero, en 'notas'.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Fichero JSON",
+                    content = @Content(schema = @Schema(implementation = PersonalDataExport.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/mis-datos")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PersonalDataExport> exportarMisDatos(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + nombreDeFichero("json") + "\"")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(exportService.exportar(usuario.getUser()));
+    }
+
+    @Operation(summary = "Descargar todos mis datos (PDF)",
+            description = "Lo mismo que el JSON, para leerlo sin herramientas. Sale del mismo objeto, así que "
+                    + "no puede faltar en uno algo que esté en el otro. Las horas van en hora de España.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Documento PDF",
+                    content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/mis-datos/pdf")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<StreamingResponseBody> exportarMisDatosEnPdf(@AuthenticationPrincipal SecurityUser usuario) {
+        // Los datos se leen AQUÍ, en el hilo de la petición y dentro de la
+        // transacción del servicio; el PDF solo escribe lo que ya está leído.
+        PersonalDataExport datos = exportService.exportar(usuario.getUser());
+        StreamingResponseBody cuerpo = salida -> exportPdfGenerator.generar(datos, salida);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + nombreDeFichero("pdf") + "\"")
+                .body(cuerpo);
+    }
+
+    private static String nombreDeFichero(String extension) {
+        return "nxtime-mis-datos-" + LocalDate.now(ZoneId.of("Europe/Madrid")) + "." + extension;
     }
 }

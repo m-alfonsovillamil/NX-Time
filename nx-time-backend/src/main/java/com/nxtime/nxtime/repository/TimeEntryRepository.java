@@ -243,4 +243,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 
         long getUltimoRegistroId();
     }
+
+    /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
+    List<TimeEntry> findByUsuarioOrderByHoraEntradaAsc(User usuario);
 }

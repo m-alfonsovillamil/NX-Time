@@ -206,4 +206,58 @@ class AjustesViewModelTest {
         // la segunda respuesta llegaría con la sesión ya cerrada.
         verify(repositorio, times(1)).cerrarTodasLasSesiones()
     }
+
+    // ------------------------------------------------------------------
+    // Descargar mis datos (RGPD)
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `descargar en PDF pide el PDF y entrega el cuerpo con su nombre`() = runTest {
+        val cuerpo = "%PDF".toResponseBody("application/pdf".toMediaType())
+        whenever(repositorio.descargarMisDatosPdf()).thenReturn(Response.success(cuerpo))
+        val vm = viewModel()
+        var nombreRecibido: String? = null
+
+        vm.descargarMisDatos(FormatoDeExportacion.PDF) { _, nombre -> nombreRecibido = nombre }
+        advanceUntilIdle()
+
+        verify(repositorio).descargarMisDatosPdf()
+        verify(repositorio, never()).descargarMisDatosJson()
+        assertEquals("nxtime-mis-datos.pdf", nombreRecibido)
+        assertFalse(vm.uiState.value.descargandoDatos)
+    }
+
+    @Test
+    fun `si el servidor falla, se dice y no se entrega nada`() = runTest {
+        whenever(repositorio.descargarMisDatosJson()).thenReturn(
+            Response.error(500, "{}".toResponseBody("application/json".toMediaType()))
+        )
+        val vm = viewModel()
+        var entregado = false
+
+        vm.descargarMisDatos(FormatoDeExportacion.JSON) { _, _ -> entregado = true }
+        advanceUntilIdle()
+
+        assertFalse(entregado)
+        assertNotNull(vm.uiState.value.error)
+        assertFalse(vm.uiState.value.descargandoDatos)
+    }
+
+    /*
+     * Un segundo toque mientras se prepara no lanza otra descarga: con todos
+     * los datos de alguien, dos peticiones seguidas son trabajo doble para el
+     * servidor y dos visores abriéndose.
+     */
+    @Test
+    fun `un segundo toque mientras descarga no pide otra vez`() = runTest {
+        val cuerpo = "{}".toResponseBody("application/json".toMediaType())
+        whenever(repositorio.descargarMisDatosJson()).thenReturn(Response.success(cuerpo))
+        val vm = viewModel()
+
+        vm.descargarMisDatos(FormatoDeExportacion.JSON) { _, _ -> }
+        vm.descargarMisDatos(FormatoDeExportacion.JSON) { _, _ -> }
+        advanceUntilIdle()
+
+        verify(repositorio, times(1)).descargarMisDatosJson()
+    }
 }
