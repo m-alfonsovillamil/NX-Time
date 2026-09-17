@@ -81,6 +81,15 @@ class AuthRepositoryImpl(
     override suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO> =
         apiService.getProyectosParaFichar()
 
+    override suspend fun getImputaciones(fichajeId: Long): Response<ImputacionesDTO> =
+        apiService.getImputaciones(fichajeId)
+
+    override suspend fun repartir(
+        fichajeId: Long,
+        lineas: List<LineaReparto>,
+        motivo: String?
+    ): Response<ResponseBody> = apiService.repartir(fichajeId, PeticionReparto(lineas, motivo?.trim()))
+
     override suspend fun cambiarProyecto(fichajeId: Long, proyectoId: Long): Response<ProyectosParaFicharDTO> =
         apiService.cambiarProyecto(fichajeId, CambioDeProyecto(proyectoId))
 

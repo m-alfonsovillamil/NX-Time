@@ -37,6 +37,13 @@ data class CorreccionDTO(
     val pausaInicioPropuesta: String? = null,
     val pausaFinPropuesta: String? = null,
 
+    /**
+     * El reparto por proyecto que propone la solicitud (ADR 017), vacío si no
+     * toca proyectos. Sin esto, una solicitud que solo reparte se vería como
+     * "de 09:00-18:00 a 09:00-18:00": la misma trampa que con las pausas.
+     */
+    val repartoPropuesto: List<RepartoPropuestoDTO> = emptyList(),
+
     val motivo: String,
     val estado: String,
 
@@ -55,3 +62,6 @@ data class ResolverCorreccionRequest(val aprobada: Boolean, val comentario: Stri
 
 /** No aceptar una corrección que te han propuesto. */
 data class DisputaRequest(val motivo: String)
+
+/** Una línea del reparto propuesto por una corrección. */
+data class RepartoPropuestoDTO(val proyectoId: Long, val codigo: String, val minutos: Long)

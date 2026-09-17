@@ -47,5 +47,8 @@ public enum AuditAction {
     // --- 09/2026: varios proyectos por jornada (ADR 017) ---
 
     /** Se ha cambiado de proyecto con la jornada abierta. */
-    PROYECTO_CAMBIADO
+    PROYECTO_CAMBIADO,
+
+    /** Se han repartido a mano las horas de la jornada entre proyectos. */
+    REPARTO_PROYECTOS
 }

@@ -111,6 +111,12 @@ object AppViewModelProvider {
             PanelGestionViewModel(app().authRepository)
         }
         initializer {
+            com.nxtime.app.ui.reparto.RepartoViewModel(
+                fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
+                authRepository = app().authRepository
+            )
+        }
+        initializer {
             AnadirPausaViewModel(
                 fichajeId = createSavedStateHandle().get<Long>(ARG_FICHAJE_ID) ?: 0L,
                 authRepository = app().authRepository

@@ -35,6 +35,8 @@ interface AuthRepository {
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
     suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO>
+    suspend fun getImputaciones(fichajeId: Long): Response<ImputacionesDTO>
+    suspend fun repartir(fichajeId: Long, lineas: List<LineaReparto>, motivo: String?): Response<ResponseBody>
     suspend fun cambiarProyecto(fichajeId: Long, proyectoId: Long): Response<ProyectosParaFicharDTO>
     suspend fun getHorasPorDia(desde: java.time.LocalDate, hasta: java.time.LocalDate): Response<List<HorasDelDiaDTO>>
 

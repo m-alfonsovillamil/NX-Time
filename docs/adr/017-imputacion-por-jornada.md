@@ -79,6 +79,26 @@ abiertas), saca las horas con la consulta de antes, migra a V23 y **comprueba qu
 las nuevas son idénticas**. Los datos de demo pasan por la misma regla al
 sembrarse.
 
+### Repartir a mano: libre esta semana, con permiso después
+
+`PUT /api/v1/fichaje/{id}/imputaciones` sobre la jornada propia y cerrada:
+
+- **Suma el neto y es de esta semana** → se aplica en el acto (200) y queda en
+  la traza del fichaje. Mover horas entre proyectos no cambia cuánto se trabajó,
+  así que no hay nada que aprobar.
+- **Suma el neto pero es de antes** → se crea una solicitud de corrección con el
+  reparto dentro (202), y la aprueba un gestor. Un mes ya informado no cambia de
+  reparto sin que nadie lo mire.
+- **Suma más que el neto** → eso no es repartir, es decir que se trabajó más: se
+  amplía la hora de salida lo justo y va por el mismo circuito, con el reparto
+  dentro. Al aprobar se aplican las dos cosas.
+- **Suma menos** → 400. Quitar horas también es corregir el fichaje.
+
+El reparto propuesto vive en `repartos_propuestos` (V25) y no en un JSON: cada
+línea apunta a un proyecto de verdad, con su clave ajena. Se guarda dentro de
+`CorrectionService.solicitar` porque una solicitud puede **auto-aprobarse** en
+el acto (ADR 010), y entonces el reparto tiene que estar ya escrito.
+
 ## Consecuencias
 
 - **Corregir ya no puede perder horas de un proyecto.** Una corrección anula la
@@ -91,4 +111,9 @@ sembrarse.
 - **Los informes ya no se pueden reconstruir solo con fichajes y asignaciones.**
   Es el precio de que una persona pueda estar en dos proyectos: la información de
   en cuál trabajó cada hora no está en ninguna otra parte.
-- `V23` va detrás de `V22`.
+- **El reparto libre tiene plazo, y el plazo es una decisión de producto**, no
+  una restricción técnica: lunes a domingo, en hora de España. Cambiarlo es
+  cambiar una línea; lo que no puede cambiar sin pensarlo es que exista.
+- **Repartir el fichaje de otra persona no existe.** Como con las pausas (ADR
+  015), para eso está pedir una corrección.
+- `V23`, `V24` y `V25` van detrás de `V22`.

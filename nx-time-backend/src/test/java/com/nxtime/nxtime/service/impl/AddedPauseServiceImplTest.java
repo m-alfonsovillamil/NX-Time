@@ -173,7 +173,7 @@ class AddedPauseServiceImplTest {
                 deAyer.getHoraEntrada(), deAyer.getHoraSalida(), deAyer.getHoraEntrada(), deAyer.getHoraSalida(),
                 Instant.parse("2026-05-31T11:00:00Z"), Instant.parse("2026-05-31T12:00:00Z"),
                 "Olvidé fichar la comida", CorrectionStatus.PENDIENTE,
-                null, null, null, null, AHORA, false, false));
+                null, null, null, null, AHORA, false, false, java.util.List.of()));
 
         service.anadir(5L, comida("2026-05-31T11:00:00Z", "2026-05-31T12:00:00Z"), empleada);
 

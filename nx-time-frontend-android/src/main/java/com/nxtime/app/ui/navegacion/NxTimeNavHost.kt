@@ -54,6 +54,7 @@ import com.nxtime.app.ui.avisos.AvisosScreen
 import com.nxtime.app.ui.avisos.AvisosViewModel
 import com.nxtime.app.ui.borrados.BorradosScreen
 import com.nxtime.app.ui.correcciones.CorreccionesScreen
+import com.nxtime.app.ui.reparto.RepartoScreen
 import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
 import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
@@ -135,7 +136,9 @@ enum class Pantalla(val ruta: String) {
     AUDITORIA("auditoria/{$ARG_FICHAJE_ID}"),
     CORRECCION("correccion/{$ARG_FICHAJE_ID}?$ARG_NOMBRE={$ARG_NOMBRE}" +
             "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}"),
-    ANADIR_PAUSA("pausa/{$ARG_FICHAJE_ID}?$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}");
+    ANADIR_PAUSA("pausa/{$ARG_FICHAJE_ID}?$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}"),
+    // Reparto de las horas de una jornada entre proyectos (ADR 017).
+    REPARTO("reparto/{$ARG_FICHAJE_ID}");
 
     companion object {
         /** Ausencias del equipo, ya resueltas o pendientes de responder. */
@@ -146,6 +149,9 @@ enum class Pantalla(val ruta: String) {
 
         /** Línea temporal de cambios de un fichaje. */
         fun auditoria(fichajeId: Long) = "auditoria/$fichajeId"
+
+        /** Reparto por proyecto de una jornada. */
+        fun reparto(fichajeId: Long) = "reparto/$fichajeId"
 
         /**
          * Formulario de corrección.
@@ -491,11 +497,19 @@ fun NxTimeNavHost(
                             Pantalla.anadirPausa(registro.id, registro.horaEntrada, registro.horaSalida)
                         )
                     },
+                    onRepartir = { registro -> navController.navigate(Pantalla.reparto(registro.id)) },
                     contadorAvisos = estadoAvisos.noLeidos,
                     onIrAvisos = irAAvisos,
                     iniciales = iniciales,
                     onIrPerfil = irAPerfil
                 )
+            }
+
+            composable(
+                route = Pantalla.REPARTO.ruta,
+                arguments = listOf(navArgument(ARG_FICHAJE_ID) { type = NavType.LongType })
+            ) {
+                RepartoScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.CALENDARIO.ruta) {

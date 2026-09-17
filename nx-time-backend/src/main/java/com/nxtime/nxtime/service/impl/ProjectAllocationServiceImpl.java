@@ -109,6 +109,20 @@ public class ProjectAllocationServiceImpl implements ProjectAllocationService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public List<Project> proyectosDelDia(User persona, LocalDate dia) {
+        return assignmentRepository.findVigentesDe(persona.getId(), dia).stream()
+                .map(ProjectAssignment::getProyecto)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    public void aplicarReparto(TimeEntry registro, Map<Project, Long> segundosPorProyecto) {
+        sustituir(registro, new LinkedHashMap<>(segundosPorProyecto), Origen.MANUAL);
+    }
+
+    @Override
     public void abrirTramo(TimeEntry registro, Project proyecto) {
         segmentRepository.save(ProjectSegment.builder()
                 .empresa(registro.getEmpresa())

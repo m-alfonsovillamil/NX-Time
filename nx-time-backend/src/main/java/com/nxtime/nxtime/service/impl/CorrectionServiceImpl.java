@@ -7,6 +7,8 @@ import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
+import com.nxtime.nxtime.domain.Project;
+import com.nxtime.nxtime.domain.ProposedAllocation;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
@@ -23,6 +25,8 @@ import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
+import com.nxtime.nxtime.repository.ProjectRepository;
+import com.nxtime.nxtime.repository.ProposedAllocationRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
@@ -30,7 +34,9 @@ import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.ReglasDePausa;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -73,6 +79,8 @@ public class CorrectionServiceImpl implements CorrectionService {
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
     private final ProjectAllocationService projectAllocationService;
+    private final ProposedAllocationRepository proposedAllocationRepository;
+    private final ProjectRepository projectRepository;
     private final AddedPauseRepository addedPauseRepository;
 
     public CorrectionServiceImpl(
@@ -82,7 +90,9 @@ public class CorrectionServiceImpl implements CorrectionService {
             TimeEntrySnapshotSerializer snapshotSerializer,
             ApplicationEventPublisher eventPublisher,
             AddedPauseRepository addedPauseRepository,
-            ProjectAllocationService projectAllocationService) {
+            ProjectAllocationService projectAllocationService,
+            ProposedAllocationRepository proposedAllocationRepository,
+            ProjectRepository projectRepository) {
         this.correctionRepository = correctionRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
@@ -90,6 +100,8 @@ public class CorrectionServiceImpl implements CorrectionService {
         this.eventPublisher = eventPublisher;
         this.addedPauseRepository = addedPauseRepository;
         this.projectAllocationService = projectAllocationService;
+        this.proposedAllocationRepository = proposedAllocationRepository;
+        this.projectRepository = projectRepository;
     }
 
     // ------------------------------------------------------------------
@@ -154,6 +166,7 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .build();
 
         solicitud = guardarControlandoLaCarrera(solicitud);
+        guardarRepartoPropuesto(solicitud, request.reparto());
 
         anotarEnLaTraza(solicitud, AuditAction.SOLICITUD_CORRECCION, actor, request.motivo());
 
@@ -387,6 +400,7 @@ public class CorrectionServiceImpl implements CorrectionService {
         // Después de mover y añadir las pausas: el reparto se calcula con el
         // neto definitivo de la versión corregida (ADR 017).
         projectAllocationService.alCorregir(original, corregido);
+        aplicarRepartoPropuesto(solicitud, corregido);
 
         solicitud.setEstado(CorrectionStatus.APROBADA);
         solicitud.setAprobador(actor);
@@ -593,6 +607,56 @@ public class CorrectionServiceImpl implements CorrectionService {
         return solicitud;
     }
 
+    /**
+     * Las líneas del reparto que viene con la solicitud (ADR 017).
+     *
+     * Se guardan aquí y no en quien las arma porque una solicitud puede
+     * aprobarse en el acto (auto-aprobación): si el reparto se guardara
+     * después, {@link #aplicar} no lo encontraría.
+     */
+    private void guardarRepartoPropuesto(
+            CorrectionRequest solicitud, List<CorrectionRequestDTO.ProjectShare> reparto) {
+        if (reparto == null || reparto.isEmpty()) {
+            return;
+        }
+        for (CorrectionRequestDTO.ProjectShare linea : reparto) {
+            Project proyecto = projectRepository.findById(linea.proyectoId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado."));
+            if (proyecto.getEmpresa().getId() != solicitud.getEmpresa().getId()) {
+                throw new TenantAccessException("Ese proyecto no es de tu empresa.");
+            }
+            proposedAllocationRepository.save(ProposedAllocation.builder()
+                    .solicitud(solicitud)
+                    .proyecto(proyecto)
+                    .segundos(linea.minutos() * 60)
+                    .build());
+        }
+    }
+
+    /**
+     * Al aprobar, el reparto propuesto sustituye al que tuviera la jornada.
+     *
+     * Se aplica DESPUÉS de {@code alCorregir}, para que sea el último que
+     * escribe: si las horas cambiaron, el reparto propuesto ya venía calculado
+     * contra esas horas nuevas.
+     */
+    private void aplicarRepartoPropuesto(CorrectionRequest solicitud, TimeEntry corregido) {
+        List<ProposedAllocation> lineas = proposedAllocationRepository.findBySolicitudOrderByIdAsc(solicitud);
+        if (lineas.isEmpty()) {
+            return;
+        }
+        Map<Project, Long> reparto = new LinkedHashMap<>();
+        lineas.forEach(linea -> reparto.merge(linea.getProyecto(), linea.getSegundos(), Long::sum));
+        projectAllocationService.aplicarReparto(corregido, reparto);
+    }
+
+    private List<CorrectionResponse.ProjectShare> repartoDe(CorrectionRequest solicitud) {
+        return proposedAllocationRepository.findBySolicitudOrderByIdAsc(solicitud).stream()
+                .map(linea -> new CorrectionResponse.ProjectShare(
+                        linea.getProyecto().getId(), linea.getProyecto().getCodigo(), linea.getSegundos() / 60))
+                .toList();
+    }
+
     private CorrectionResponse toResponse(CorrectionRequest solicitud, User actor) {
         TimeEntry fichaje = solicitud.getRegistro();
         return new CorrectionResponse(
@@ -615,6 +679,7 @@ public class CorrectionServiceImpl implements CorrectionService {
                 solicitud.getMotivoDisputa(),
                 solicitud.getCreadoEn(),
                 puedeResolver(solicitud, actor),
-                puedeDisputar(solicitud, actor));
+                puedeDisputar(solicitud, actor),
+                repartoDe(solicitud));
     }
 }

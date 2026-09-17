@@ -2,6 +2,7 @@ package com.nxtime.nxtime.dto;
 
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Una solicitud de corrección tal y como se enseña.
@@ -45,6 +46,16 @@ public record CorrectionResponse(
         Instant creadoEn,
 
         boolean puedoResolver,
-        boolean puedoDisputar
+        boolean puedoDisputar,
+
+        /**
+         * El reparto por proyecto que propone la solicitud (ADR 017), vacío si
+         * no toca proyectos. La pantalla de correcciones lo pinta: una
+         * solicitud que solo reparte lleva las mismas horas propuestas que las
+         * actuales, y sin esto diría "de 09:00-18:00 a 09:00-18:00".
+         */
+        List<ProjectShare> repartoPropuesto
 ) {
+    public record ProjectShare(long proyectoId, String codigo, long minutos) {
+    }
 }
