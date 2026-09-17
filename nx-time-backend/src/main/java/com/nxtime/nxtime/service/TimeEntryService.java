@@ -15,6 +15,12 @@ public interface TimeEntryService {
 
     List<TimeEntry> getHistory(String userEmail);
 
+    /**
+     * El historial propio entre dos días de España, los dos incluidos. 400 si
+     * {@code desde} es posterior a {@code hasta} o el periodo pasa de un año.
+     */
+    List<TimeEntry> getHistory(String userEmail, java.time.LocalDate desde, java.time.LocalDate hasta);
+
     List<TeamTimeEntryDTO> getTeamHistory(String managerEmail);
 
         /** Línea temporal completa de cambios de un fichaje. Mismo control de empresa que el resto. */

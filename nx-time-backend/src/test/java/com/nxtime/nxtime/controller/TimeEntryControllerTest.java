@@ -117,6 +117,30 @@ class TimeEntryControllerTest {
 
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /fichaje/historial con las dos fechas filtra por periodo")
+    void getHistory_conFechas_usaElPeriodo() throws Exception {
+        when(timeEntryService.getHistory("empleado@nxtime.test",
+                java.time.LocalDate.of(2026, 9, 1), java.time.LocalDate.of(2026, 9, 30))).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("desde", "2026-09-01").param("hasta", "2026-09-30"))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(timeEntryService).getHistory("empleado@nxtime.test",
+                java.time.LocalDate.of(2026, 9, 1), java.time.LocalDate.of(2026, 9, 30));
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /fichaje/historial con una sola fecha, o mal escrita, devuelve 400")
+    void getHistory_fechasIncompletasOMalEscritas_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("desde", "2026-09-01"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("desde", "01/09/2026").param("hasta", "2026-09-30"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
     @DisplayName("GET /fichaje/gestor/historial sin 'fichaje:leer:equipo' devuelve 403 (un EMPLEADO no ve al equipo)")
     void getTeamHistory_sinAuthorityDeEquipo_devuelve403() throws Exception {
         mockMvc.perform(get("/api/v1/fichaje/gestor/historial")).andExpect(status().isForbidden());

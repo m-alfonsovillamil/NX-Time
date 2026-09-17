@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.domain.CorrectionStatus;
+import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.dto.AddPauseRequest;
 import com.nxtime.nxtime.dto.AddPauseResponse;
 import com.nxtime.nxtime.dto.AddedPauseDTO;
@@ -9,6 +10,7 @@ import com.nxtime.nxtime.dto.CorrectionResponse;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AddedPauseService;
@@ -23,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -109,10 +113,16 @@ public class TimeEntryController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @Operation(summary = "Historial de fichajes propio", description = "Los últimos 200, más recientes primero.")
+    @Operation(summary = "Historial de fichajes propio",
+            description = "Sin fechas, los últimos 200, más recientes primero. Con 'desde' y 'hasta' (días de España, "
+                    + "los dos incluidos, formato YYYY-MM-DD): todos los de ese periodo, sin límite de filas y con "
+                    + "un año como máximo. Hay que pasar las dos o ninguna.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Historial",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = TimeEntryResponse.class)))),
+            @ApiResponse(responseCode = "400", description = "Solo una de las dos fechas, fecha mal escrita, "
+                    + "inicio posterior al fin, o más de un año",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer'",
@@ -120,9 +130,17 @@ public class TimeEntryController {
     })
     @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/historial")
-    public ResponseEntity<List<TimeEntryResponse>> getHistory(Authentication authentication) {
-        List<TimeEntryResponse> history = timeEntryService.getHistory(authentication.getName())
-                .stream().map(timeEntryMapper::toResponse).toList();
+    public ResponseEntity<List<TimeEntryResponse>> getHistory(
+            @RequestParam(required = false) LocalDate desde,
+            @RequestParam(required = false) LocalDate hasta,
+            Authentication authentication) {
+        if ((desde == null) != (hasta == null)) {
+            throw new BusinessException("Para filtrar el historial hacen falta las dos fechas.", HttpStatus.BAD_REQUEST);
+        }
+        List<TimeEntry> fichajes = desde == null
+                ? timeEntryService.getHistory(authentication.getName())
+                : timeEntryService.getHistory(authentication.getName(), desde, hasta);
+        List<TimeEntryResponse> history = fichajes.stream().map(timeEntryMapper::toResponse).toList();
         return ResponseEntity.ok(history);
     }
 

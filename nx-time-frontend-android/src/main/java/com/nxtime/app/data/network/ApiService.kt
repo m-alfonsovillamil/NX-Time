@@ -73,8 +73,15 @@ interface ApiService {
         @Body peticion: PeticionFichaje
     ): Response<Registro>
 
+    /**
+     * Sin fechas, los últimos 200. Con las dos ("YYYY-MM-DD", días de España,
+     * incluidos), todo ese periodo. Retrofit no manda los parámetros a null.
+     */
     @GET("api/v1/fichaje/historial")
-    suspend fun getHistorial(): Response<List<Registro>>
+    suspend fun getHistorial(
+        @Query("desde") desde: String? = null,
+        @Query("hasta") hasta: String? = null
+    ): Response<List<Registro>>
 
     /*  Resumen personal (cualquier usuario con `fichaje:leer`)  */
 

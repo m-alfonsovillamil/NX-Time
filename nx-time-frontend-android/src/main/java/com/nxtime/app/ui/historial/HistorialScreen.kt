@@ -41,6 +41,20 @@ import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.horaDeSalida
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun HistorialScreen(
@@ -83,36 +97,176 @@ fun HistorialScreen(
             )
         }
     ) { modifier ->
-        ListaConRecarga(
-            cargando = estado.cargando,
-            hayContenido = estado.registros.isNotEmpty(),
-            onRecargar = viewModel::cargar,
-            modifier = modifier
-        ) {
-            when {
-                estado.error != null -> EstadoErrorPantalla(
-                    mensaje = estado.error!!.resolver(),
-                    onReintentar = viewModel::cargar
-                )
+        // Los filtros van FUERA de la lista: dentro, desaparecerían cada vez
+        // que se cambia de periodo y la lista vuelve a enseñar el esqueleto.
+        Column(modifier = modifier) {
+            SelectorDePeriodo(
+                periodo = estado.periodo,
+                rango = estado.rango,
+                segundosNetos = estado.segundosNetos,
+                mostrarTotal = !estado.cargando && estado.error == null,
+                onCambiar = viewModel::cambiarPeriodo
+            )
+            ListaConRecarga(
+                cargando = estado.cargando,
+                hayContenido = estado.registros.isNotEmpty(),
+                onRecargar = viewModel::cargar,
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    estado.error != null -> EstadoErrorPantalla(
+                        mensaje = estado.error!!.resolver(),
+                        onReintentar = viewModel::cargar
+                    )
 
-                estado.registros.isEmpty() -> EstadoVacio(
-                    titulo = stringResource(R.string.historial_vacio_titulo),
-                    texto = stringResource(R.string.historial_vacio_texto)
-                )
+                    // Un periodo sin fichajes no es "aún no has fichado nunca".
+                    estado.registros.isEmpty() && estado.periodo != PeriodoHistorial.Recientes -> EstadoVacio(
+                        titulo = stringResource(R.string.historial_periodo_vacio_titulo),
+                        texto = stringResource(R.string.historial_periodo_vacio_texto)
+                    )
 
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(estado.registros, key = { it.id }) { registro ->
-                        TarjetaJornada(
-                            registro,
-                            onPedirCorreccion = { onPedirCorreccion(registro) },
-                            onAnadirPausa = { onAnadirPausa(registro) }
-                        )
+                    estado.registros.isEmpty() -> EstadoVacio(
+                        titulo = stringResource(R.string.historial_vacio_titulo),
+                        texto = stringResource(R.string.historial_vacio_texto)
+                    )
+
+                    else -> LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(estado.registros, key = { it.id }) { registro ->
+                            TarjetaJornada(
+                                registro,
+                                onPedirCorreccion = { onPedirCorreccion(registro) },
+                                onAnadirPausa = { onAnadirPausa(registro) }
+                            )
+                        }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Chips de periodo y, con un periodo elegido, las fechas y el total neto.
+ *
+ * "Recientes" es el de siempre (los últimos 200) y no lleva total: sumar
+ * 200 jornadas sueltas no responde a ninguna pregunta que alguien se haga.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectorDePeriodo(
+    periodo: PeriodoHistorial,
+    rango: Pair<LocalDate, LocalDate>?,
+    segundosNetos: Long,
+    mostrarTotal: Boolean,
+    onCambiar: (PeriodoHistorial) -> Unit
+) {
+    var eligiendoFechas by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+        ) {
+            listOf(
+                PeriodoHistorial.Recientes to R.string.historial_periodo_recientes,
+                PeriodoHistorial.EstaSemana to R.string.historial_periodo_semana,
+                PeriodoHistorial.EsteMes to R.string.historial_periodo_mes,
+                PeriodoHistorial.MesAnterior to R.string.historial_periodo_mes_anterior
+            ).forEach { (opcion, texto) ->
+                FilterChip(
+                    selected = periodo == opcion,
+                    onClick = { onCambiar(opcion) },
+                    label = { Text(stringResource(texto), maxLines = 1) }
+                )
+            }
+            FilterChip(
+                selected = periodo is PeriodoHistorial.Elegido,
+                onClick = { eligiendoFechas = true },
+                label = { Text(stringResource(R.string.historial_periodo_elegir), maxLines = 1) }
+            )
+        }
+        if (rango != null && mostrarTotal) {
+            Text(
+                text = stringResource(
+                    R.string.historial_periodo_total,
+                    DateFormats.fechaCorta(rango.first),
+                    DateFormats.fechaCorta(rango.second),
+                    DateFormats.minutos(segundosNetos / 60)
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+    }
+
+    if (eligiendoFechas) {
+        DialogoDeFechas(
+            inicial = (periodo as? PeriodoHistorial.Elegido)?.let { it.desde to it.hasta },
+            onElegir = { desde, hasta ->
+                eligiendoFechas = false
+                onCambiar(PeriodoHistorial.Elegido(desde, hasta))
+            },
+            onCancelar = { eligiendoFechas = false }
+        )
+    }
+}
+
+/**
+ * Rango de fechas con el `DateRangePicker` de Material 3.
+ *
+ * Trabaja en milisegundos UTC, así que se convierte por UTC en los dos
+ * sentidos (ver `CampoFecha`): hacerlo con la zona del móvil mueve el día
+ * elegido a un lado u otro de la medianoche.
+ *
+ * El tope de un año es del servidor; aquí solo se avisa antes de pedirlo.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DialogoDeFechas(
+    inicial: Pair<LocalDate, LocalDate>?,
+    onElegir: (LocalDate, LocalDate) -> Unit,
+    onCancelar: () -> Unit
+) {
+    val estado = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = inicial?.first?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli(),
+        initialSelectedEndDateMillis = inicial?.second?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+    )
+    val desde = estado.selectedStartDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+    val hasta = estado.selectedEndDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+    val demasiadoLargo = desde != null && hasta != null && ChronoUnit.DAYS.between(desde, hasta) + 1 > 366
+
+    DatePickerDialog(
+        onDismissRequest = onCancelar,
+        confirmButton = {
+            TextButton(
+                enabled = desde != null && hasta != null && !demasiadoLargo,
+                onClick = { if (desde != null && hasta != null) onElegir(desde, hasta) }
+            ) { Text(stringResource(R.string.aceptar)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
+    ) {
+        Column {
+            DateRangePicker(
+                state = estado,
+                showModeToggle = false,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            if (demasiadoLargo) {
+                Text(
+                    text = stringResource(R.string.historial_periodo_max_un_anio),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
             }
         }
     }

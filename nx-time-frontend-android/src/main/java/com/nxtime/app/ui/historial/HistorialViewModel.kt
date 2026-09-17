@@ -11,12 +11,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 
 data class HistorialUiState(
     val cargando: Boolean = true,
     val registros: List<Registro> = emptyList(),
+    val periodo: PeriodoHistorial = PeriodoHistorial.Recientes,
+    /** Los dos días del periodo, para la cabecera. Null en [PeriodoHistorial.Recientes]. */
+    val rango: Pair<LocalDate, LocalDate>? = null,
     val error: MensajeUi? = null
-)
+) {
+    val segundosNetos: Long get() = PeriodoHistorial.segundosNetos(registros)
+}
 
 /**
  * Historial de fichajes del propio empleado.
@@ -26,7 +33,9 @@ data class HistorialUiState(
  * en blanco, y solo el segundo mostraba además un Toast que se iba solo.
  */
 class HistorialViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    /** "Hoy" en España. Se inyecta para poder probar la semana y el mes. */
+    private val hoy: () -> LocalDate = { LocalDate.now(ZoneId.of("Europe/Madrid")) }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistorialUiState())
@@ -36,11 +45,20 @@ class HistorialViewModel(
         cargar()
     }
 
+    /** Cambia el periodo y recarga. Se conserva al volver a la pantalla (ON_RESUME). */
+    fun cambiarPeriodo(periodo: PeriodoHistorial) {
+        _uiState.update { it.copy(periodo = periodo, registros = emptyList()) }
+        cargar()
+    }
+
     fun cargar() {
-        _uiState.update { it.copy(cargando = true, error = null) }
+        // "Esta semana" se recalcula en cada carga: la pantalla puede quedarse
+        // abierta de un lunes a otro.
+        val rango = _uiState.value.periodo.rango(hoy())
+        _uiState.update { it.copy(cargando = true, error = null, rango = rango) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.getHistorial()
+                val respuesta = authRepository.getHistorial(rango?.first, rango?.second)
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful && cuerpo != null) {
                     _uiState.update {
