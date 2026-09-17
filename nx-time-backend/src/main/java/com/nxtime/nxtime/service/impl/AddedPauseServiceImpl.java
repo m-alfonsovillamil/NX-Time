@@ -20,6 +20,7 @@ import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.service.AddedPauseService;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.ReglasDePausa;
 import java.time.Clock;
 import java.time.Duration;
@@ -57,6 +58,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
     private final CorrectionService correctionService;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProjectAllocationService projectAllocationService;
     private final Clock clock;
 
     @Autowired
@@ -66,9 +68,10 @@ public class AddedPauseServiceImpl implements AddedPauseService {
             CorrectionRequestRepository correctionRepository,
             CorrectionService correctionService,
             TimeEntrySnapshotSerializer snapshotSerializer,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            ProjectAllocationService projectAllocationService) {
         this(timeEntryRepository, addedPauseRepository, correctionRepository, correctionService,
-                snapshotSerializer, eventPublisher, Clock.systemUTC());
+                snapshotSerializer, eventPublisher, projectAllocationService, Clock.systemUTC());
     }
 
     AddedPauseServiceImpl(
@@ -78,6 +81,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
             CorrectionService correctionService,
             TimeEntrySnapshotSerializer snapshotSerializer,
             ApplicationEventPublisher eventPublisher,
+            ProjectAllocationService projectAllocationService,
             Clock clock) {
         this.timeEntryRepository = timeEntryRepository;
         this.addedPauseRepository = addedPauseRepository;
@@ -85,6 +89,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
         this.correctionService = correctionService;
         this.snapshotSerializer = snapshotSerializer;
         this.eventPublisher = eventPublisher;
+        this.projectAllocationService = projectAllocationService;
         this.clock = clock;
     }
 
@@ -160,6 +165,8 @@ public class AddedPauseServiceImpl implements AddedPauseService {
 
         fichaje.setSegundosPausaAcumulados(fichaje.getSegundosPausaAcumulados() + pausa.getSegundos());
         TimeEntry guardado = timeEntryRepository.save(fichaje);
+        // Una jornada de hoy ya cerrada cambia de neto: su reparto también.
+        projectAllocationService.alCambiarPausas(guardado);
 
         anotar(guardado, actor, AuditAction.PAUSA_ANADIDA, antes, request.motivo().trim());
         log.info("{} añade una pausa de {} min al fichaje {}",
@@ -232,6 +239,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
         fichaje.setSegundosPausaAcumulados(
                 Math.max(0, fichaje.getSegundosPausaAcumulados() - pausa.getSegundos()));
         TimeEntry guardado = timeEntryRepository.save(fichaje);
+        projectAllocationService.alCambiarPausas(guardado);
 
         anotar(guardado, actor, AuditAction.PAUSA_ANULADA, antes,
                 "Deshace la pausa añadida: " + pausa.getMotivo());

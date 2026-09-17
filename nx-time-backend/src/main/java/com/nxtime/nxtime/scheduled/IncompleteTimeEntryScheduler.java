@@ -7,6 +7,7 @@ import com.nxtime.nxtime.domain.ScheduledTask;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
+import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.TaskMonitorService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -56,6 +57,7 @@ public class IncompleteTimeEntryScheduler {
     private final ApplicationEventPublisher eventPublisher;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final TaskMonitorService taskMonitor;
+    private final ProjectAllocationService projectAllocationService;
     private final TransactionTemplate transaccion;
 
     public IncompleteTimeEntryScheduler(
@@ -63,12 +65,14 @@ public class IncompleteTimeEntryScheduler {
             ApplicationEventPublisher eventPublisher,
             TimeEntrySnapshotSerializer snapshotSerializer,
             TaskMonitorService taskMonitor,
-            TransactionTemplate transaccion) {
+            TransactionTemplate transaccion,
+            ProjectAllocationService projectAllocationService) {
         this.timeEntryRepository = timeEntryRepository;
         this.eventPublisher = eventPublisher;
         this.snapshotSerializer = snapshotSerializer;
         this.taskMonitor = taskMonitor;
         this.transaccion = transaccion;
+        this.projectAllocationService = projectAllocationService;
     }
 
     /**
@@ -116,6 +120,8 @@ public class IncompleteTimeEntryScheduler {
             entrada.setEnPausa(false);
             entrada.setInicioPausaActual(null);
             timeEntryRepository.save(entrada);
+            // Cerrada por el sistema, pero cerrada: sus horas se imputan igual.
+            projectAllocationService.alCerrar(entrada);
 
             eventPublisher.publishEvent(new TimeEntryAuditEvent(TimeEntryAudit.builder()
                     .registro(entrada)

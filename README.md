@@ -471,6 +471,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 14. [Nadie teclea la contraseña de otro: acceso por código](docs/adr/014-acceso-por-codigo.md)
 15. [Añadir una pausa después: un libro al lado del contador](docs/adr/015-pausas-anadidas-a-posteriori.md)
 16. [Borrar los datos de alguien sin borrar su registro horario](docs/adr/016-borrar-sin-borrar-el-registro-horario.md)
+17. [Las horas de un proyecto se imputan por jornada, no se deducen por día](docs/adr/017-imputacion-por-jornada.md)
 
 ---
 

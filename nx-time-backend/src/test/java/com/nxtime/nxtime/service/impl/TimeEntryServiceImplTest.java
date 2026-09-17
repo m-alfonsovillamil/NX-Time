@@ -82,7 +82,7 @@ class TimeEntryServiceImplTest {
                 new ObjectMapper().registerModule(new JavaTimeModule()));
         service = new TimeEntryServiceImpl(
                 timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
-                eventPublisher, snapshotSerializer, nonWorkingDayService);
+                eventPublisher, snapshotSerializer, nonWorkingDayService, org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class));
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado").empresa(empresa).build();
         // lenient: no todos los tests llegan a guardar (varios cortan antes con una excepción de negocio).

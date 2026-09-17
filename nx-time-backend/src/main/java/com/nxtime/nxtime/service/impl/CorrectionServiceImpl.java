@@ -26,6 +26,7 @@ import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.ReglasDePausa;
 import java.time.Duration;
 import java.time.Instant;
@@ -71,6 +72,7 @@ public class CorrectionServiceImpl implements CorrectionService {
     private final UserRepository userRepository;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
+    private final ProjectAllocationService projectAllocationService;
     private final AddedPauseRepository addedPauseRepository;
 
     public CorrectionServiceImpl(
@@ -79,13 +81,15 @@ public class CorrectionServiceImpl implements CorrectionService {
             UserRepository userRepository,
             TimeEntrySnapshotSerializer snapshotSerializer,
             ApplicationEventPublisher eventPublisher,
-            AddedPauseRepository addedPauseRepository) {
+            AddedPauseRepository addedPauseRepository,
+            ProjectAllocationService projectAllocationService) {
         this.correctionRepository = correctionRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.snapshotSerializer = snapshotSerializer;
         this.eventPublisher = eventPublisher;
         this.addedPauseRepository = addedPauseRepository;
+        this.projectAllocationService = projectAllocationService;
     }
 
     // ------------------------------------------------------------------
@@ -380,6 +384,9 @@ public class CorrectionServiceImpl implements CorrectionService {
                     .solicitud(solicitud)
                     .build());
         }
+        // Después de mover y añadir las pausas: el reparto se calcula con el
+        // neto definitivo de la versión corregida (ADR 017).
+        projectAllocationService.alCorregir(original, corregido);
 
         solicitud.setEstado(CorrectionStatus.APROBADA);
         solicitud.setAprobador(actor);

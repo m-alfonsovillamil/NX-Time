@@ -63,7 +63,7 @@ class IncompleteTimeEntrySchedulerTest {
         doAnswer(invocacion -> invocacion.<Supplier<String>>getArgument(1).get())
                 .when(taskMonitor).ejecutar(any(), any());
         scheduler = new IncompleteTimeEntryScheduler(timeEntryRepository, eventPublisher, serializer,
-                taskMonitor, new TransactionTemplate(transactionManager));
+                taskMonitor, new TransactionTemplate(transactionManager), org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class));
         Company empresa = Company.builder().id(1L).build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").empresa(empresa).build();
     }

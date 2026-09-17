@@ -53,6 +53,8 @@ class ProjectServiceImplTest {
     private ProjectAssignmentRepository assignmentRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private com.nxtime.nxtime.repository.ProjectAllocationRepository allocationRepository;
 
     private ProjectServiceImpl service;
 
@@ -64,7 +66,7 @@ class ProjectServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ProjectServiceImpl(projectRepository, assignmentRepository, userRepository);
+        service = new ProjectServiceImpl(projectRepository, assignmentRepository, userRepository, allocationRepository);
 
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra").build();
@@ -180,19 +182,18 @@ class ProjectServiceImplTest {
     // ---------------------------------------------------------------
 
     @Test
-    @DisplayName("Asignar a alguien que ya está en otro proyecto dice en cuál")
+    @DisplayName("Asignar a alguien que ya está en ESE proyecto dice en cuál; estar en otro ya no impide nada (V23)")
     void asignar_yaAsignado_da409ConElProyecto() {
         when(projectRepository.findById(100L)).thenReturn(Optional.of(proyecto));
         when(userRepository.findById(11L)).thenReturn(Optional.of(empleado));
-        Project otro = Project.builder().id(300L).empresa(empresa).codigo("NX-APP").build();
-        when(assignmentRepository.findVigenteDe(eq(11L), any())).thenReturn(
-                Optional.of(ProjectAssignment.builder().id(1L).usuario(empleado).proyecto(otro)
+        when(assignmentRepository.findVigenteDelProyecto(eq(11L), eq(100L), any())).thenReturn(
+                Optional.of(ProjectAssignment.builder().id(1L).usuario(empleado).proyecto(proyecto)
                         .fechaInicio(LocalDate.of(2026, 1, 1)).build()));
 
         assertThatThrownBy(() -> service.asignar(100L,
                 new ProjectAssignmentRequest(11L, LocalDate.of(2026, 3, 1), null), gestor))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("NX-APP")
+                .hasMessageContaining(proyecto.getCodigo())
                 .hasMessageContaining("Ana");
 
         verify(assignmentRepository, never()).saveAndFlush(any());
@@ -208,19 +209,19 @@ class ProjectServiceImplTest {
     void asignar_solapeQueSoloVeLaBase_seTraduceA409() {
         when(projectRepository.findById(100L)).thenReturn(Optional.of(proyecto));
         when(userRepository.findById(11L)).thenReturn(Optional.of(empleado));
-        when(assignmentRepository.findVigenteDe(anyLong(), any())).thenReturn(Optional.empty());
+        when(assignmentRepository.findVigenteDelProyecto(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
         when(assignmentRepository.saveAndFlush(any())).thenThrow(
                 new DataIntegrityViolationException(
                         "could not execute statement",
                         new RuntimeException("conflicting key value violates exclusion constraint "
-                                + "\"ex_asignaciones_sin_solape\"")));
+                                + "\"ex_asignaciones_sin_solape_mismo_proyecto\"")));
 
         assertThatThrownBy(() -> service.asignar(100L,
                 new ProjectAssignmentRequest(11L, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)),
                 gestor))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Ana")
-                .hasMessageContaining("otro proyecto");
+                .hasMessageContaining("este proyecto");
     }
 
     @Test
@@ -228,7 +229,7 @@ class ProjectServiceImplTest {
     void asignar_otraViolacion_seDejaPasar() {
         when(projectRepository.findById(100L)).thenReturn(Optional.of(proyecto));
         when(userRepository.findById(11L)).thenReturn(Optional.of(empleado));
-        when(assignmentRepository.findVigenteDe(anyLong(), any())).thenReturn(Optional.empty());
+        when(assignmentRepository.findVigenteDelProyecto(anyLong(), anyLong(), any())).thenReturn(Optional.empty());
         when(assignmentRepository.saveAndFlush(any())).thenThrow(
                 new DataIntegrityViolationException("violates foreign key constraint \"fk_otra_cosa\""));
 
@@ -309,7 +310,7 @@ class ProjectServiceImplTest {
     @Test
     @DisplayName("Los segundos se truncan a minutos, no se redondean")
     void horasDelMes_truncaLosSegundos() {
-        when(assignmentRepository.sumarSegundosPorProyecto(anyLong(), any(), any()))
+        when(allocationRepository.sumarSegundosPorProyecto(anyLong(), any(), any()))
                 .thenReturn(List.of(filaDeHoras(100L, "NX-CORE", "Plataforma", 89)));
 
         var respuesta = service.horasDelMes(2026, 6, gestor);
