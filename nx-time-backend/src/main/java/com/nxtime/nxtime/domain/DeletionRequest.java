@@ -48,6 +48,15 @@ public class DeletionRequest {
     @Builder.Default
     private DeletionStatus estado = DeletionStatus.PENDIENTE;
 
+    /**
+     * Si la registró RRHH/ADMIN en nombre de la persona (V21), quién. Null si
+     * la pidió ella desde la aplicación. En ese caso {@link #motivo} dice cómo
+     * llegó la petición.
+     */
+    @ManyToOne
+    @JoinColumn(name = "registrada_por_id")
+    private User registradaPor;
+
     private String motivo;
 
     @Builder.Default

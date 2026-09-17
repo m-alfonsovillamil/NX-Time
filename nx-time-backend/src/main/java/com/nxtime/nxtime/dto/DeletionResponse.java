@@ -20,6 +20,8 @@ public record DeletionResponse(
         String email,
         String estado,
         String motivo,
+        /** Quién la registró en nombre de la persona, o null si la pidió ella. */
+        String registradaPor,
         Instant creadaEn,
         String resueltaPor,
         Instant resueltaEn,

@@ -10,6 +10,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PostAdd
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.widget.Toast
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.CandidatoBorradoDTO
 import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
@@ -59,7 +69,19 @@ fun BorradosScreen(
     var aRechazar by remember { mutableStateOf<SolicitudBorradoDTO?>(null) }
     val contexto = LocalContext.current
 
-    PantallaConBarra(titulo = stringResource(R.string.borrados_titulo), onVolver = onVolver) { modifier ->
+    PantallaConBarra(
+        titulo = stringResource(R.string.borrados_titulo),
+        onVolver = onVolver,
+        // Para quien no puede pedirlo desde la app: sobre todo, quien ya está
+        // de baja y lo ha pedido por correo o por carta.
+        accionFlotante = {
+            ExtendedFloatingActionButton(
+                onClick = viewModel::abrirRegistro,
+                icon = { Icon(Icons.Default.PostAdd, contentDescription = null) },
+                text = { Text(stringResource(R.string.borrados_registrar)) }
+            )
+        }
+    ) { modifier ->
         ListaConRecarga(
             cargando = estado.cargando,
             hayContenido = estado.pendientes.isNotEmpty(),
@@ -101,6 +123,15 @@ fun BorradosScreen(
                 aEjecutar = null
             },
             onCancela = { aEjecutar = null }
+        )
+    }
+
+    if (estado.registrando) {
+        DialogoRegistrar(
+            candidatos = estado.candidatos,
+            enviando = estado.enviando,
+            onConfirma = viewModel::registrar,
+            onCancela = viewModel::cerrarRegistro
         )
     }
 
@@ -147,10 +178,21 @@ private fun TarjetaBorrado(
                 text = stringResource(R.string.borrados_pedida_el, DateFormats.fechaLarga(solicitud.creadaEn)),
                 style = MaterialTheme.typography.bodyMedium
             )
+            // Registrada por RRHH/ADMIN: quién, y el motivo es cómo llegó.
+            solicitud.registradaPor?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.borrados_registrada_por, it),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             solicitud.motivo?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.borrados_motivo, it),
+                    text = stringResource(
+                        if (solicitud.registradaPor != null) R.string.borrados_como_llego else R.string.borrados_motivo,
+                        it
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -245,6 +287,81 @@ private fun DialogoRechazar(onConfirma: (String) -> Unit, onCancela: () -> Unit)
         confirmButton = {
             TextButton(enabled = comentario.isNotBlank(), onClick = { onConfirma(comentario) }) {
                 Text(stringResource(R.string.borrados_rechazar))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancela) { Text(stringResource(R.string.cancelar)) }
+        }
+    )
+}
+
+/**
+ * Registrar una solicitud recibida fuera de la app. Quién y cómo llegó son
+ * los dos obligatorios: sin lo segundo no quedaría constancia de que la
+ * persona lo pidió, porque no lo pidió desde su cuenta.
+ */
+@Composable
+private fun DialogoRegistrar(
+    candidatos: List<CandidatoBorradoDTO>?,
+    enviando: Boolean,
+    onConfirma: (Long, String) -> Unit,
+    onCancela: () -> Unit
+) {
+    var elegido by remember { mutableStateOf<Long?>(null) }
+    var comoLlego by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onCancela,
+        title = { Text(stringResource(R.string.borrados_registrar)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.borrados_registrar_ayuda), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                when {
+                    candidatos == null -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+                    candidatos.isEmpty() -> Text(
+                        stringResource(R.string.borrados_registrar_nadie),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    else -> LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
+                        items(candidatos, key = { it.id }) { persona ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(selected = elegido == persona.id, onClick = { elegido = persona.id })
+                            ) {
+                                RadioButton(selected = elegido == persona.id, onClick = { elegido = persona.id })
+                                Column {
+                                    Text(persona.nombre, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = if (persona.activo) persona.email
+                                        else stringResource(R.string.borrados_de_baja, persona.email),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = comoLlego,
+                    onValueChange = { if (it.length <= 500) comoLlego = it },
+                    label = { Text(stringResource(R.string.borrados_como_llego_campo)) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            val persona = elegido
+            TextButton(
+                enabled = !enviando && persona != null && comoLlego.isNotBlank(),
+                onClick = { if (persona != null) onConfirma(persona, comoLlego) }
+            ) {
+                Text(stringResource(R.string.borrados_registrar_confirmar))
             }
         },
         dismissButton = {

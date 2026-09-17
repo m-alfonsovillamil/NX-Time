@@ -67,6 +67,24 @@ dan de baja), y **el servidor bloquea** la ejecución, con la razón en frases, 
 Rechazar exige comentario, que se le manda a la persona. La bandeja no la ve un
 GESTOR: saber que alguien ha pedido borrar sus datos no le corresponde.
 
+### Quien ya no puede entrar también puede pedirlo (V21)
+
+El derecho no se pierde por estar de baja, pero con la cuenta desactivada no hay
+Ajustes desde donde pedirlo. Lo normal es que llegue por correo o por carta, así
+que RRHH o ADMIN puede **registrar** la solicitud en nombre de la persona:
+
+- Elige a alguien de la empresa, de alta o de baja, que no tenga ya una pendiente
+  ni un borrado ejecutado. A uno mismo no: para eso está Ajustes, y un `CHECK`
+  impide que una solicitud propia se haga pasar por recibida de fuera.
+- **Cómo llegó** es obligatorio ("correo del 12/09 a rrhh@…"). Es la constancia
+  de que la persona lo pidió, porque no lo pidió desde su cuenta. Queda también
+  quién la registró (`registrada_por_id`).
+- A la persona le llega un **acuse de recibo** por correo, con un "si no lo has
+  pedido tú, avisa". Los demás que pueden ejecutar reciben el aviso habitual.
+- Después sigue el camino de siempre: los mismos bloqueos y la misma ejecución.
+  Quien la registró puede ejecutarla; exigir a otra persona dejaría sin salida a
+  una empresa con un solo responsable de RRHH.
+
 ### SQL explícito, en un solo sitio
 
 Lo que borra y anonimiza está en `PersonalDataEraser`, sentencia a sentencia, y no
@@ -91,10 +109,20 @@ Solo el motivo, que escribió la persona, se borra al anonimizar.
 
 ## Consecuencias
 
-- **Los motivos de `auditoria_fichaje` no se anonimizan.** La tabla es append-only
-  y así se queda. Sin nombre ni correo en `usuarios`, esos textos dejan de apuntar
-  a alguien identificable, pero si alguien escribió un nombre dentro de un motivo,
-  ahí sigue.
+- **Los motivos de `auditoria_fichaje` no se anonimizan, y es una decisión, no un
+  olvido.** Cada línea guarda el hash SHA-256 de sus campos —el motivo incluido—
+  encadenado con el de la anterior (ADR 003). Cambiar un motivo, aunque fuera a
+  `[eliminado]`, rompería la verificación de toda la traza posterior de la
+  empresa: justo la prueba de que el registro horario no se ha manipulado, que es
+  lo que el art. 17.3.b permite conservar. Sin nombre ni correo en `usuarios`,
+  esos textos dejan de apuntar a alguien identificable; lo que queda es el caso de
+  alguien que escribiera un nombre dentro de un motivo.
+
+  Se descartaron dos alternativas: relajar el trigger y recalcular la cadena (la
+  traza dejaría de ser append-only justo cuando más importa), y cifrar cada motivo
+  con una clave por persona que se destruye al anonimizar (*crypto-shredding*):
+  es la solución correcta a gran escala, pero añade una clave maestra que, si se
+  pierde, deja ilegible toda la auditoría, y no arregla las líneas ya escritas.
 - **Los correos que ya salieron no se pueden recuperar.** Por eso el aviso de "nueva
   solicitud" no lleva el nombre (se guarda en `avisos` y sobreviviría a la
   anonimización) y el correo sí; ninguno de los dos lleva el motivo.
@@ -103,12 +131,16 @@ Solo el motivo, que escribió la persona, se borra al anonimizar.
   volver a subir la foto recién borrada. El filtro JWT ya cargaba el usuario de la
   base en cada petición; ahora además comprueba que sigue activo. Arregla lo mismo
   para las bajas, que tenían el mismo hueco.
-- **Solo se puede pedir con la cuenta activa.** Quien ya está de baja no puede
-  entrar a pedirlo; hoy tendría que hacerlo por otro canal y RRHH no tiene cómo
-  registrarlo en la aplicación.
+- **Una solicitud registrada se apoya en la palabra de quien la registra.** La app
+  no puede comprobar que el correo o la carta existen; por eso queda quién la
+  registró y cómo dice que llegó, y la persona recibe el acuse de recibo para
+  poder protestar si no la pidió.
 - **La anonimización hace que la persona desaparezca de los informes con su
   nombre**, que es justo lo que se busca, pero un informe regenerado de hace cinco
   años ya no dirá quién fichó.
 - `V20` va detrás de `V19`. Amplía dos `CHECK` que había que reescribir enteros: el
   de los tipos de aviso y el de las tareas nocturnas. Sin el segundo, la tarea nueva
   habría fallado cada noche al registrar su propia ejecución.
+- `V21` añade `registrada_por_id` y su `CHECK`. El motivo obligatorio de una
+  solicitud registrada lo exige el servicio y no la base, porque la anonimización
+  lo pone a NULL.

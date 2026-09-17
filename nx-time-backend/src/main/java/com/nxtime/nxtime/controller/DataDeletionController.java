@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.dto.DeletionCandidate;
 import com.nxtime.nxtime.dto.DeletionRequestDTO;
 import com.nxtime.nxtime.dto.DeletionResponse;
+import com.nxtime.nxtime.dto.RegisterDeletionRequest;
 import com.nxtime.nxtime.dto.RejectDeletionRequest;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.DataDeletionService;
@@ -114,6 +116,51 @@ public class DataDeletionController {
     @PreAuthorize("hasAuthority('empleado:gestionar')")
     public ResponseEntity<List<DeletionResponse>> pendientes(@AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(service.pendientes(usuario.getUser()));
+    }
+
+    @Operation(summary = "Registrar una solicitud recibida fuera de la app",
+            description = "Para quien no puede pedirlo desde Ajustes, normalmente porque ya está de baja y lo ha "
+                    + "pedido por correo o por carta. 'motivo' es obligatorio y dice cómo llegó. Queda constancia de "
+                    + "quién la registró, se avisa a los demás que pueden ejecutarla y a la persona le llega un acuse "
+                    + "de recibo por correo. No sirve para uno mismo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Solicitud registrada",
+                    content = @Content(schema = @Schema(implementation = DeletionResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Sin motivo, o demasiado largo",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority, o persona de otra empresa",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "La persona no existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Es uno mismo, ya tiene una pendiente o ya se borraron sus datos",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/api/v1/borrados")
+    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    public ResponseEntity<DeletionResponse> registrar(
+            @Valid @RequestBody RegisterDeletionRequest peticion,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(service.registrar(usuario.getUser(), peticion.usuarioId(), peticion.motivo()));
+    }
+
+    @Operation(summary = "Para quién se puede registrar una solicitud",
+            description = "Todos los de la empresa, de alta o de baja, menos uno mismo y menos quien ya tiene una "
+                    + "pendiente o un borrado ejecutado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Personas",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DeletionCandidate.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'empleado:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/api/v1/borrados/candidatos")
+    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    public ResponseEntity<List<DeletionCandidate>> candidatos(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(service.candidatos(usuario.getUser()));
     }
 
     @Operation(summary = "Ejecutar un borrado",

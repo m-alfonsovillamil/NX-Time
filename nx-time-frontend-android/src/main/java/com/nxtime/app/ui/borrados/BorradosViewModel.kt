@@ -3,6 +3,7 @@ package com.nxtime.app.ui.borrados
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.CandidatoBorradoDTO
 import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
@@ -19,6 +20,12 @@ data class BorradosUiState(
     val pendientes: List<SolicitudBorradoDTO> = emptyList(),
     /** Hay una ejecución o un rechazo en marcha: los botones se apagan. */
     val enviando: Boolean = false,
+    /**
+     * El diálogo de registrar una solicitud recibida fuera de la app está
+     * abierto. `candidatos` es null mientras se cargan.
+     */
+    val registrando: Boolean = false,
+    val candidatos: List<CandidatoBorradoDTO>? = null,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 )
@@ -69,6 +76,41 @@ class BorradosViewModel(private val authRepository: AuthRepository) : ViewModel(
         enviar(R.string.borrados_rechazado) { authRepository.rechazarBorrado(solicitudId, comentario) }
     }
 
+    /**
+     * Abre el registro y carga para quién se puede registrar. La lista la
+     * filtra el servidor (sin uno mismo, sin quien ya tiene una pendiente o
+     * un borrado ejecutado), así que se pide cada vez que se abre.
+     */
+    fun abrirRegistro() {
+        _uiState.update { it.copy(registrando = true, candidatos = null, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.getCandidatosBorrado()
+                if (respuesta.isSuccessful) {
+                    _uiState.update { it.copy(candidatos = respuesta.body().orEmpty()) }
+                } else {
+                    _uiState.update {
+                        it.copy(registrando = false, error = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(registrando = false, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    fun cerrarRegistro() = _uiState.update { it.copy(registrando = false) }
+
+    fun registrar(usuarioId: Long, comoLlego: String) {
+        if (comoLlego.isBlank()) {
+            _uiState.update { it.copy(error = MensajeUi.de(R.string.borrados_registrar_sin_motivo)) }
+            return
+        }
+        enviar(R.string.borrados_registrada, cerrarRegistroSiVaBien = true) {
+            authRepository.registrarBorrado(usuarioId, comoLlego)
+        }
+    }
+
     fun avisoMostrado() = _uiState.update { it.copy(aviso = null) }
 
     fun descartarError() = _uiState.update { it.copy(error = null) }
@@ -78,14 +120,24 @@ class BorradosViewModel(private val authRepository: AuthRepository) : ViewModel(
      * cargar y pulsar alguien abrió una jornada cambia los bloqueos, y la
      * tarjeta tiene que enseñar los de ahora.
      */
-    private fun enviar(avisoOk: Int, accion: suspend () -> Response<SolicitudBorradoDTO>) {
+    private fun enviar(
+        avisoOk: Int,
+        cerrarRegistroSiVaBien: Boolean = false,
+        accion: suspend () -> Response<SolicitudBorradoDTO>
+    ) {
         if (_uiState.value.enviando) return
         _uiState.update { it.copy(enviando = true, error = null) }
         viewModelScope.launch {
             try {
                 val respuesta = accion()
                 if (respuesta.isSuccessful) {
-                    _uiState.update { it.copy(enviando = false, aviso = MensajeUi.de(avisoOk)) }
+                    _uiState.update {
+                        it.copy(
+                            enviando = false,
+                            aviso = MensajeUi.de(avisoOk),
+                            registrando = if (cerrarRegistroSiVaBien) false else it.registrando
+                        )
+                    }
                 } else {
                     _uiState.update { it.copy(enviando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
                 }

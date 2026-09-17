@@ -367,6 +367,12 @@ interface ApiService {
     @POST("api/v1/perfil/borrado/cancelar")
     suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
 
+    @POST("api/v1/borrados")
+    suspend fun registrarBorrado(@Body peticion: RegistroBorrado): Response<SolicitudBorradoDTO>
+
+    @GET("api/v1/borrados/candidatos")
+    suspend fun getCandidatosBorrado(): Response<List<CandidatoBorradoDTO>>
+
     @GET("api/v1/borrados/pendientes")
     suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>>
 

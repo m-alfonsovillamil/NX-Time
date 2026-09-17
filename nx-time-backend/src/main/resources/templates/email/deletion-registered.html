@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--/*
+  Acuse de recibo de una solicitud de borrado que RRHH/ADMIN ha registrado en
+  nombre de la persona (ADR 016). Lo normal es que esté de baja y la haya
+  pedido por correo o por carta: este es el justificante de que llegó.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Hemos recibido tu solicitud', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${empresa}">Empresa</strong> ha registrado tu solicitud de borrado de tus
+        datos personales en NX Time. La empresa tiene <strong>un mes</strong> para responderte.
+    </p>
+
+    <p style="margin: 0;">
+        Cuando se resuelva te escribiremos a este correo. Si no la has pedido tú, avisa a tu empresa
+        cuanto antes.
+    </p>
+</div>
+</body>
+</html>
