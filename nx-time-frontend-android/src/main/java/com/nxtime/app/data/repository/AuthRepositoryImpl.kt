@@ -521,4 +521,20 @@ class AuthRepositoryImpl(
     override suspend fun descargarMisDatosJson(): Response<ResponseBody> = apiService.descargarMisDatosJson()
 
     override suspend fun descargarMisDatosPdf(): Response<ResponseBody> = apiService.descargarMisDatosPdf()
+
+    override suspend fun solicitarBorrado(motivo: String?): Response<SolicitudBorradoDTO> =
+        apiService.solicitarBorrado(PeticionBorrado(motivo?.trim()?.ifBlank { null }))
+
+    override suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO> = apiService.getMiSolicitudBorrado()
+
+    override suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO> = apiService.cancelarBorrado()
+
+    override suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>> =
+        apiService.getBorradosPendientes()
+
+    override suspend fun ejecutarBorrado(solicitudId: Long): Response<SolicitudBorradoDTO> =
+        apiService.ejecutarBorrado(solicitudId)
+
+    override suspend fun rechazarBorrado(solicitudId: Long, comentario: String): Response<SolicitudBorradoDTO> =
+        apiService.rechazarBorrado(solicitudId, RechazoBorrado(comentario.trim()))
 }

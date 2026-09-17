@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!--/*
+  Alguien ha pedido que se borren sus datos (ADR 016). Va a RRHH y ADMIN.
+
+  NO lleva el motivo aunque la persona lo haya escrito: puede hablar de
+  salud o de un conflicto, y un correo acaba reenviado. Se lee en la bandeja.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Solicitud de borrado de datos', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        <strong th:text="${solicitante}">Persona</strong> ha pedido que se borren sus datos
+        personales, en ejercicio de su derecho de supresión (RGPD, art. 17).
+    </p>
+
+    <p>
+        Revísala en la aplicación, en <strong>Gestión &rsaquo; Borrados de datos</strong>. Allí
+        verás si queda algo abierto que impida ejecutarla. La empresa tiene
+        <strong>un mes</strong> para responder.
+    </p>
+
+    <p style="margin: 0;">
+        Ejecutarla desactiva la cuenta y borra lo prescindible. El registro horario se conserva los
+        cuatro años que exige la ley, y después se anonimiza solo.
+    </p>
+</div>
+</body>
+</html>

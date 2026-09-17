@@ -26,7 +26,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * ve en la base: que la aplicación, conectada como {@code nxtime_app} y no
  * como propietario, puede insertar y actualizar en
  * {@code ejecuciones_tarea}; que los CHECK de V15 aceptan las filas que
- * escribe el código; y que las dos tareas de verdad, con sus transacciones,
+ * escribe el código; y que las tareas de verdad, con sus transacciones,
  * quedan registradas.
  *
  * Los dos tests comparten base y pueden correr en cualquier orden, así que
@@ -60,15 +60,20 @@ class ScheduledTaskMonitorIT {
     @Autowired
     private OvertimeScheduler horasExtra;
     @Autowired
+    private DataDeletionScheduler anonimizacion;
+    @Autowired
     private TaskMonitorService taskMonitorService;
     @Autowired
     private ScheduledTaskRunRepository repository;
 
     @Test
-    @DisplayName("Las dos tareas nocturnas quedan registradas como OK y el estado pasa a verde")
-    void lasDosTareas_quedanRegistradas_yElEstadoPasaAVerde() {
+    @DisplayName("Las tareas nocturnas quedan registradas como OK y el estado pasa a verde")
+    void lasTareas_quedanRegistradas_yElEstadoPasaAVerde() {
         cierreDeJornadas.cerrarJornadasOlvidadas();
         horasExtra.detectarHorasExtra();
+        // La de anonimización, además, prueba que el CHECK de V20 la admite:
+        // sin ampliarlo, fallaría al registrar su propia ejecución.
+        anonimizacion.anonimizar();
 
         for (ScheduledTask tarea : ScheduledTask.values()) {
             ScheduledTaskRun ultima = repository.findFirstByTareaOrderByInicioDesc(tarea).orElseThrow();

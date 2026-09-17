@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import static com.nxtime.nxtime.domain.ScheduledTask.ANONIMIZACION;
 import static com.nxtime.nxtime.domain.ScheduledTask.CIERRE_JORNADAS;
 import static com.nxtime.nxtime.domain.ScheduledTask.HORAS_EXTRA;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.EN_CURSO;
@@ -158,18 +159,20 @@ class TaskMonitorServiceImplTest {
     }
 
     @Test
-    @DisplayName("Con las dos tareas terminadas bien desde su última hora programada, el estado está en verde")
-    void estado_ambasTareasCorrieronDesdeSuUltimaHora_ok() {
+    @DisplayName("Con todas las tareas terminadas bien desde su última hora programada, el estado está en verde")
+    void estado_todasLasTareasCorrieronDesdeSuUltimaHora_ok() {
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 CIERRE_JORNADAS, OK, madrid("2026-09-12T03:00:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 HORAS_EXTRA, OK, madrid("2026-09-12T03:30:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                ANONIMIZACION, OK, madrid("2026-09-12T03:45:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T05:15:00").estado();
 
         assertThat(estado.ok()).isTrue();
         assertThat(estado.tareas()).extracting(SystemStatusResponse.TaskStatus::tarea)
-                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA);
+                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, ANONIMIZACION);
     }
 
     @Test
@@ -196,6 +199,8 @@ class TaskMonitorServiceImplTest {
                 CIERRE_JORNADAS, OK, madrid("2026-09-11T03:00:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 HORAS_EXTRA, OK, madrid("2026-09-11T03:30:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                ANONIMIZACION, OK, madrid("2026-09-11T03:45:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T03:10:00").estado();
 

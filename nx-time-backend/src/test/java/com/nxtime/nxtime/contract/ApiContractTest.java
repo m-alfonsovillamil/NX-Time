@@ -25,6 +25,7 @@ import org.springframework.util.MultiValueMap;
 
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 
+import com.nxtime.nxtime.domain.ScheduledTask;
 import com.nxtime.nxtime.notification.EmailSender;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -3183,7 +3184,7 @@ class ApiContractTest {
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         JsonNode cuerpo = bodyOf(respuesta);
         assertThat(cuerpo.get("ok").asBoolean()).isFalse();
-        assertThat(cuerpo.get("tareas")).hasSize(2);
+        assertThat(cuerpo.get("tareas")).hasSize(ScheduledTask.values().length);
         assertThat(cuerpo.get("tareas").get(0).get("ok").asBoolean()).isFalse();
         assertThat(cuerpo.get("tareas").get(0).has("detalle")).isFalse();
     }
@@ -3193,8 +3194,13 @@ class ApiContractTest {
     // ------------------------------------------------------------------
 
     @Test
-    @Order(90)
+    @Order(Integer.MAX_VALUE)
     void gestorDaDeBajaAUnEmpleado_yYaNoPuedeIniciarSesion() throws Exception {
+        // El último de todos, y con MAX_VALUE y no con un número: estuvo en el
+        // 90 y los tests de festivos (100+) siguieron usando el token de este
+        // empleado ya de baja sin que nada fallara, porque el filtro JWT no
+        // miraba si la cuenta seguía activa. Ahora lo mira (ADR 016).
+        //
         // Colocado al final a propósito: da de baja al empleado
         // definitivamente, así que no puede ir antes de ningún otro
         // test que necesite volver a iniciar sesión como empleado -- ni
@@ -3218,5 +3224,12 @@ class ApiContractTest {
         // DisabledException (Spring Security, por isEnabled()=false) es
         // una AuthenticationException más -> 401 vía GlobalExceptionHandler.
         assertThat(loginTrasBaja.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // Y el access token que ya tenía deja de valer en el acto, no a los
+        // 15 minutos: el filtro comprueba que la cuenta sigue activa.
+        ResponseEntity<String> conTokenViejo = rest.exchange(
+                url("/api/v1/perfil"), HttpMethod.GET,
+                new HttpEntity<>(authHeaders(empleadoToken)), String.class);
+        assertThat(conTokenViejo.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

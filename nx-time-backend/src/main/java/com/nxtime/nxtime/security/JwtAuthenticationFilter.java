@@ -74,7 +74,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
                 // PASO 6: Validación del Token.
-                if (jwtService.isTokenValid(jwtToken, userDetails)) {
+                //
+                // Y de la cuenta: el usuario se acaba de leer de la base, así
+                // que saber si sigue activo no cuesta nada. Sin esto, un
+                // access token emitido antes de una baja -- o de ejecutar un
+                // borrado de datos (ADR 016) -- seguía valiendo sus 15
+                // minutos, y en ese rato se podía, por ejemplo, volver a subir
+                // la foto que el borrado acababa de eliminar.
+                if (userDetails.isEnabled() && jwtService.isTokenValid(jwtToken, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

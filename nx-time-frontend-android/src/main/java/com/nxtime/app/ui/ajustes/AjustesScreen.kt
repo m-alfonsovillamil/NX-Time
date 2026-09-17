@@ -33,6 +33,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +48,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.BuildConfig
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.session.Tema
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.recordatorio.RecordatorioDeFichaje
 import com.nxtime.app.recordatorio.ReglaDelRecordatorio
 import com.nxtime.app.ui.AppViewModelProvider
@@ -72,6 +75,8 @@ fun AjustesScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
+
+    LaunchedEffect(Unit) { viewModel.cargarSolicitudBorrado() }
 
     /*
      * Programar el trabajo periódico necesita un Context, así que lo hace
@@ -169,13 +174,25 @@ fun AjustesScreen(
                 activos = estado.informesDeErrores,
                 onCambiar = viewModel::cambiarInformesDeErrores,
                 descargando = estado.descargandoDatos,
-                onDescargar = ::descargar
+                onDescargar = ::descargar,
+                solicitudBorrado = estado.solicitudBorrado,
+                enviandoBorrado = estado.enviandoBorrado,
+                onPedirBorrado = viewModel::pedirBorrado,
+                onRetirarBorrado = viewModel::retirarBorrado
             )
 
             Spacer(Modifier.height(16.dp))
             AcercaDe()
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (estado.confirmandoBorrado) {
+        DialogoPedirBorrado(
+            enviando = estado.enviandoBorrado,
+            onConfirmar = viewModel::confirmarBorrado,
+            onCancelar = viewModel::cancelarPeticionDeBorrado
+        )
     }
 
     if (estado.confirmandoHuella) {
@@ -428,7 +445,11 @@ private fun Privacidad(
     activos: Boolean,
     onCambiar: (Boolean) -> Unit,
     descargando: Boolean,
-    onDescargar: (FormatoDeExportacion) -> Unit
+    onDescargar: (FormatoDeExportacion) -> Unit,
+    solicitudBorrado: SolicitudBorradoDTO?,
+    enviandoBorrado: Boolean,
+    onPedirBorrado: () -> Unit,
+    onRetirarBorrado: () -> Unit
 ) {
     Tarjeta(stringResource(R.string.ajustes_privacidad)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -477,8 +498,113 @@ private fun Privacidad(
                 Text(stringResource(R.string.ajustes_mis_datos_json))
             }
         }
+
+        /*
+         * Derecho de supresión (ADR 016). Justo debajo de la descarga a
+         * propósito: quien va a pedir que le borren los datos suele querer
+         * una copia antes, y el diálogo se lo recuerda.
+         */
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.ajustes_borrar_datos),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = stringResource(R.string.ajustes_borrar_datos_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        if (solicitudBorrado?.pendiente == true) {
+            Text(
+                text = stringResource(
+                    R.string.ajustes_borrar_datos_pendiente,
+                    DateFormats.fechaLarga(solicitudBorrado.creadaEn)
+                ),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onRetirarBorrado,
+                enabled = !enviandoBorrado,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.ajustes_borrar_datos_retirar))
+            }
+        } else {
+            // Una rechazada se enseña con su porqué: es lo que hay que
+            // resolver antes de volver a pedirlo, y el botón sigue ahí.
+            val comentario = solicitudBorrado?.takeIf { it.rechazada }?.comentarioResolucion
+            if (comentario != null) {
+                Text(
+                    text = stringResource(R.string.ajustes_borrar_datos_rechazado, comentario),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            OutlinedButton(
+                onClick = onPedirBorrado,
+                enabled = !enviandoBorrado,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    stringResource(R.string.ajustes_borrar_datos_pedir),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
+
+/**
+ * Antes de pedir el borrado se explica qué pasará, y sobre todo lo que NO:
+ * los fichajes se quedan cuatro años. Enterarse de eso después, con la
+ * cuenta ya cerrada, sería peor que no poder pedirlo.
+ */
+@Composable
+private fun DialogoPedirBorrado(
+    enviando: Boolean,
+    onConfirmar: (String) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var motivo by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(stringResource(R.string.ajustes_borrar_datos_confirmar_titulo)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = stringResource(R.string.ajustes_borrar_datos_confirmar_detalle),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { if (it.length <= MAXIMO_MOTIVO) motivo = it },
+                    label = { Text(stringResource(R.string.ajustes_borrar_datos_motivo)) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirmar(motivo) }, enabled = !enviando) {
+                Text(
+                    stringResource(R.string.ajustes_borrar_datos_enviar),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
+    )
+}
+
+/** El mismo límite que el servidor (DeletionRequestDTO). */
+private const val MAXIMO_MOTIVO = 500
 
 @Composable
 private fun AcercaDe() {

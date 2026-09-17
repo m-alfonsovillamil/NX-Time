@@ -31,6 +31,8 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_OFERTAS -> Pantalla.OFERTAS.ruta
     DESTINO_MIS_CANDIDATURAS -> Pantalla.OFERTAS.ruta
     DESTINO_GESTION_OFERTAS -> Pantalla.GESTION_OFERTAS.ruta
+    DESTINO_BORRADOS -> Pantalla.BORRADOS.ruta
+    DESTINO_AJUSTES -> Pantalla.AJUSTES.ruta
     else -> null
 }
 
@@ -65,3 +67,9 @@ const val DESTINO_DENUNCIAS = "denuncias"
 const val DESTINO_OFERTAS = "ofertas"
 const val DESTINO_MIS_CANDIDATURAS = "mis-candidaturas"
 const val DESTINO_GESTION_OFERTAS = "gestion-ofertas"
+
+// Borrado de datos (ADR 016). La solicitud nueva lleva a RRHH/ADMIN a la
+// bandeja; el rechazo lleva a la persona a Ajustes, donde ve el porque y
+// puede volver a pedirlo. La ejecucion no tiene aviso: la cuenta ya no entra.
+const val DESTINO_BORRADOS = "borrados"
+const val DESTINO_AJUSTES = "ajustes"

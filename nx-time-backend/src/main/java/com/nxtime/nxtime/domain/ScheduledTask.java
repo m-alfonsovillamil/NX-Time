@@ -25,7 +25,15 @@ public enum ScheduledTask {
      * después que la anterior a propósito: una jornada abierta no tiene
      * horas que contar.
      */
-    HORAS_EXTRA(ScheduledTask.CRON_HORAS_EXTRA);
+    HORAS_EXTRA(ScheduledTask.CRON_HORAS_EXTRA),
+
+    /**
+     * {@code DataDeletionScheduler}: anonimiza a quien pidió el borrado de sus
+     * datos cuando vencen los cuatro años de conservación (ADR 016). Casi
+     * todas las noches no encuentra nada, y eso también se registra: una
+     * tarea que no deja rastro no se distingue de una que no corrió.
+     */
+    ANONIMIZACION(ScheduledTask.CRON_ANONIMIZACION);
 
     /*
      * Constantes y no solo el campo de cada valor: {@code @Scheduled} solo
@@ -34,7 +42,14 @@ public enum ScheduledTask {
     public static final String CRON_CIERRE_JORNADAS = "0 0 3 * * *";
     public static final String CRON_HORAS_EXTRA = "0 30 3 * * *";
 
-    /** Las dos corren en hora española, con el sistema en calma. */
+    /*
+     * 3:45 y no más tarde: el workflow de GitHub que comprueba /estado/tareas
+     * corre a las 03:15 UTC, que en invierno son las 4:15 en Madrid. A las 4:00
+     * la tarea quedaría justo en el borde de la gracia de 15 minutos.
+     */
+    public static final String CRON_ANONIMIZACION = "0 45 3 * * *";
+
+    /** Todas corren en hora española, con el sistema en calma. */
     public static final String ZONA = "Europe/Madrid";
 
     private final String cron;

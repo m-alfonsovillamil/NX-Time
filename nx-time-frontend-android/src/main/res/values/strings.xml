@@ -948,4 +948,36 @@
     <!-- Entradas desde el perfil y desde el panel de gestión -->
     <string name="ofertas_ver">Ofertas internas</string>
     <string name="gestion_ofertas">Ofertas internas</string>
+
+    <!-- Borrado de datos personales (RGPD, art. 17; ADR 016) -->
+    <string name="gestion_borrados">Borrados de datos</string>
+    <string name="borrados_titulo">Borrados de datos</string>
+    <string name="borrados_vacio_titulo">Nada pendiente</string>
+    <string name="borrados_vacio_texto">Cuando alguien pida que se borren sus datos, aparecerá aquí. Hay un mes para responder.</string>
+    <string name="borrados_pedida_el">Pedido el %1$s</string>
+    <string name="borrados_motivo">Motivo: %1$s</string>
+    <string name="borrados_bloqueos">Antes hay que resolver:</string>
+    <string name="borrados_ejecutar">Ejecutar</string>
+    <string name="borrados_ejecutar_titulo">¿Borrar los datos de %1$s?</string>
+    <string name="borrados_ejecutar_detalle">No se puede deshacer. Se desactiva su cuenta y se borran su foto, su CV, su fecha de nacimiento, sus candidaturas, sus avisos y sus sesiones.\n\nSu registro horario se conserva con su nombre los cuatro años que exige la ley, y después se anonimiza solo. Le llegará un correo explicándoselo.</string>
+    <string name="borrados_ejecutar_confirmar">Borrar datos</string>
+    <string name="borrados_ejecutado">Datos borrados</string>
+    <string name="borrados_rechazar">Rechazar</string>
+    <string name="borrados_rechazar_ayuda">Explica por qué no se ejecuta. Se lo enviaremos a la persona, que podrá volver a pedirlo cuando se resuelva.</string>
+    <string name="borrados_rechazar_sin_comentario">Hay que explicar por qué no se ejecuta el borrado.</string>
+    <string name="borrados_comentario">Comentario</string>
+    <string name="borrados_rechazado">Solicitud rechazada</string>
+
+    <string name="ajustes_borrar_datos">Borrar mis datos</string>
+    <string name="ajustes_borrar_datos_detalle">Puedes pedir que se borren tus datos personales. Lo revisa RRHH, que tiene un mes para responder. Tu registro horario no se borra enseguida: la empresa tiene que guardarlo cuatro años.</string>
+    <string name="ajustes_borrar_datos_pedir">Pedir el borrado</string>
+    <string name="ajustes_borrar_datos_pendiente">Lo pediste el %1$s. Está pendiente de revisar.</string>
+    <string name="ajustes_borrar_datos_rechazado">No se ejecutó: %1$s</string>
+    <string name="ajustes_borrar_datos_retirar">Retirar la solicitud</string>
+    <string name="ajustes_borrar_datos_confirmar_titulo">¿Pedir el borrado de tus datos?</string>
+    <string name="ajustes_borrar_datos_confirmar_detalle">Si RRHH lo ejecuta, tu cuenta se desactivará y no podrás volver a entrar. Se borrarán tu foto, tu CV, tu fecha de nacimiento, tus candidaturas y tus avisos.\n\nTus fichajes, ausencias y correcciones se conservan con tu nombre cuatro años desde tu último fichaje, porque lo exige la ley, y después se anonimizan.\n\nSi quieres una copia, descárgala antes.</string>
+    <string name="ajustes_borrar_datos_motivo">Motivo (opcional)</string>
+    <string name="ajustes_borrar_datos_enviar">Pedir el borrado</string>
+    <string name="ajustes_borrar_datos_enviada">Solicitud enviada</string>
+    <string name="ajustes_borrar_datos_retirada">Solicitud retirada</string>
 </resources>

@@ -468,6 +468,9 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 11. [Las horas extra se detectan, no se imputan](docs/adr/011-horas-extra-detectadas-no-imputadas.md)
 12. [El anonimato del canal de denuncias es estructural, no una promesa](docs/adr/012-anonimato-estructural-en-el-canal-de-denuncias.md)
 13. [La candidatura congela el CV que se presentó](docs/adr/013-la-candidatura-congela-el-cv.md)
+14. [Nadie teclea la contraseña de otro: acceso por código](docs/adr/014-acceso-por-codigo.md)
+15. [Añadir una pausa después: un libro al lado del contador](docs/adr/015-pausas-anadidas-a-posteriori.md)
+16. [Borrar los datos de alguien sin borrar su registro horario](docs/adr/016-borrar-sin-borrar-el-registro-horario.md)
 
 ---
 

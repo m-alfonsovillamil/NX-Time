@@ -18,6 +18,7 @@ import com.nxtime.nxtime.dto.OvertimeAlertResponse;
 import com.nxtime.nxtime.dto.PendingWorkResponse;
 import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.DataDeletionService;
 import com.nxtime.nxtime.service.OvertimeService;
 import java.time.Clock;
 import java.time.Instant;
@@ -37,6 +38,7 @@ class PendingWorkServiceImplTest {
     private final AbsenceService absenceService = mock(AbsenceService.class);
     private final CorrectionService correctionService = mock(CorrectionService.class);
     private final OvertimeService overtimeService = mock(OvertimeService.class);
+    private final DataDeletionService dataDeletionService = mock(DataDeletionService.class);
 
     /*
      * 31 de diciembre a las 23:30 UTC, que en Madrid ya es 1 de enero: el año
@@ -48,7 +50,8 @@ class PendingWorkServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new PendingWorkServiceImpl(absenceService, correctionService, overtimeService, nochevieja);
+        service = new PendingWorkServiceImpl(
+                absenceService, correctionService, overtimeService, dataDeletionService, nochevieja);
     }
 
     private static User con(Role rol) {
@@ -71,7 +74,7 @@ class PendingWorkServiceImplTest {
 
         PendingWorkResponse contadores = service.contar(gestora);
 
-        assertThat(contadores).isEqualTo(new PendingWorkResponse(2, 1, 1));
+        assertThat(contadores).isEqualTo(new PendingWorkResponse(2, 1, 1, 0));
     }
 
     /*
@@ -108,8 +111,24 @@ class PendingWorkServiceImplTest {
         User empleado = con(Role.EMPLEADO);
         when(correctionService.pendientesParaMi(any())).thenReturn(List.of());
 
-        assertThat(service.contar(empleado)).isEqualTo(new PendingWorkResponse(0, 0, 0));
+        assertThat(service.contar(empleado)).isEqualTo(new PendingWorkResponse(0, 0, 0, 0));
         verify(absenceService, never()).getPendingRequests(anyString());
         verify(overtimeService, never()).delEquipo(any(), anyInt());
+        verify(dataDeletionService, never()).contarPendientes(any());
+    }
+
+    /*
+     * Los borrados son de RRHH y ADMIN, no de GESTOR: un gestor no debe ver
+     * que alguien de la empresa ha pedido que se borren sus datos.
+     */
+    @Test
+    @DisplayName("Los borrados pendientes cuentan para RRHH y no para un GESTOR")
+    void borrados_soloParaQuienLosEjecuta() {
+        User rrhh = con(Role.RRHH);
+        User gestora = con(Role.GESTOR);
+        when(dataDeletionService.contarPendientes(any())).thenReturn(3);
+
+        assertThat(service.contar(rrhh).borrados()).isEqualTo(3);
+        assertThat(service.contar(gestora).borrados()).isZero();
     }
 }

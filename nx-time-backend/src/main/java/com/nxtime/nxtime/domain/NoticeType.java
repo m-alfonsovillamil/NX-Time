@@ -106,7 +106,19 @@ public enum NoticeType {
     CANDIDATURA_RECIBIDA("gestion-ofertas"),
 
     /** Han movido tu candidatura. */
-    CANDIDATURA_ACTUALIZADA("mis-candidaturas");
+    CANDIDATURA_ACTUALIZADA("mis-candidaturas"),
+
+    // 09/2026: borrado de datos personales (ADR 016).
+
+    /** Alguien ha pedido que se borren sus datos. A quien puede ejecutarlo. */
+    BORRADO_SOLICITADO("borrados"),
+
+    /**
+     * No se ha ejecutado tu borrado, y por qué. No hay aviso de "ejecutado":
+     * a esas alturas la cuenta está desactivada y no podría leerlo. Ese va
+     * solo por correo.
+     */
+    BORRADO_RECHAZADO("ajustes");
 
     private final String rutaDestinoPorDefecto;
 

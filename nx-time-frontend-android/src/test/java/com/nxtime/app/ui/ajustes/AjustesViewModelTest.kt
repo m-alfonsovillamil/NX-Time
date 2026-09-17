@@ -4,6 +4,7 @@ import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.data.dto.PeticionLogin
 import com.nxtime.app.data.dto.RespuestaAutenticacion
+import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.Tema
@@ -16,6 +17,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -296,5 +298,77 @@ class AjustesViewModelTest {
         advanceUntilIdle()
 
         verify(repositorio, times(1)).descargarMisDatosJson()
+    }
+
+    // ------------------------------------------------------------------
+    // Borrado de datos (ADR 016)
+    // ------------------------------------------------------------------
+
+    private fun solicitud(estado: String, comentario: String? = null) = SolicitudBorradoDTO(
+        id = 3L, usuarioId = 10L, nombre = "Ana", email = "ana@test", estado = estado,
+        creadaEn = "2026-09-17T08:00:00Z", comentarioResolucion = comentario
+    )
+
+    @Test
+    fun `sin ninguna solicitud previa (204) no hay nada que enseñar ni error`() = runTest {
+        whenever(repositorio.getMiSolicitudBorrado()).thenReturn(Response.success<SolicitudBorradoDTO>(204, null))
+        val vm = viewModel()
+
+        vm.cargarSolicitudBorrado()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.solicitudBorrado)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `pedir el borrado abre la explicacion, y solo al confirmar se envia`() = runTest {
+        whenever(repositorio.solicitarBorrado(any())).thenReturn(Response.success(solicitud("PENDIENTE")))
+        val vm = viewModel()
+
+        vm.pedirBorrado()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.confirmandoBorrado)
+        verify(repositorio, never()).solicitarBorrado(any())
+
+        vm.confirmarBorrado("Me voy")
+        advanceUntilIdle()
+
+        verify(repositorio).solicitarBorrado(eq("Me voy"))
+        assertFalse(vm.uiState.value.confirmandoBorrado)
+        assertTrue(vm.uiState.value.solicitudBorrado!!.pendiente)
+    }
+
+    /*
+     * Si el servidor dice que no (por ejemplo, ya hay una pendiente), el
+     * diálogo se queda abierto con el error: cerrarlo perdería lo escrito.
+     */
+    @Test
+    fun `si el servidor rechaza la solicitud el dialogo sigue abierto con el error`() = runTest {
+        whenever(repositorio.solicitarBorrado(any())).thenReturn(
+            Response.error(409, """{"detail":"Ya tienes una solicitud de borrado pendiente."}"""
+                .toResponseBody("application/problem+json".toMediaType()))
+        )
+        val vm = viewModel()
+
+        vm.pedirBorrado()
+        vm.confirmarBorrado("")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.confirmandoBorrado)
+        assertNotNull(vm.uiState.value.error)
+        assertFalse(vm.uiState.value.enviandoBorrado)
+    }
+
+    @Test
+    fun `retirar la solicitud refleja el estado que devuelve el servidor`() = runTest {
+        whenever(repositorio.cancelarBorrado()).thenReturn(Response.success(solicitud("CANCELADA")))
+        val vm = viewModel()
+
+        vm.retirarBorrado()
+        advanceUntilIdle()
+
+        assertEquals("CANCELADA", vm.uiState.value.solicitudBorrado!!.estado)
+        assertFalse(vm.uiState.value.solicitudBorrado!!.pendiente)
     }
 }
