@@ -44,9 +44,12 @@ android {
          *
          * 2 = piloto del 12/09/2026: recuperación de contraseña, CV en
          * candidaturas, nombre y apellidos, Ajustes, huella y recordatorio.
+         * 3 = 17/09/2026: calendario sin depender del idioma, confirmar el fin
+         * de jornada, panel de gestión en secciones y con contadores, añadir
+         * una pausa a posteriori y descargar mis datos (RGPD).
          */
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
