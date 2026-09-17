@@ -14,6 +14,7 @@ import com.nxtime.nxtime.dto.ReviewOvertimeRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
@@ -149,7 +150,7 @@ public class OvertimeServiceImpl implements OvertimeService {
         if (usuarioId != null && usuarioId != actor.getId()) {
             // Mirar la bolsa de otra persona es una operación de
             // revisión, aunque solo se lea: son sus horas.
-            if (!tiene(actor, REVISAR)) {
+            if (!RoleAuthorities.tiene(actor, REVISAR)) {
                 throw new TenantAccessException("No puedes ver la bolsa de horas extra de otra persona.");
             }
             dueno = userRepository.findById(usuarioId)
@@ -184,7 +185,7 @@ public class OvertimeServiceImpl implements OvertimeService {
         if (aviso.getEmpresa().getId() != actor.getEmpresa().getId()) {
             throw new TenantAccessException("Ese aviso es de otra empresa.");
         }
-        if (!tiene(actor, REVISAR)) {
+        if (!RoleAuthorities.tiene(actor, REVISAR)) {
             throw new TenantAccessException("No puedes revisar avisos de horas extra.");
         }
         // Nadie decide sobre sus propias horas extra, tenga la authority
@@ -640,18 +641,9 @@ public class OvertimeServiceImpl implements OvertimeService {
      * los eventos de {@link NotificationEvents}.
      */
     private List<User> revisoresDe(Company empresa) {
-        return userRepository.findByEmpresa(empresa).stream()
-                .filter(User::isActivo)
-                .filter(u -> tiene(u, REVISAR))
-                .toList();
+        return Destinatarios.conAuthority(userRepository.findByEmpresa(empresa), REVISAR);
     }
 
-    private boolean tiene(User usuario, String authority) {
-        // A RoleAuthorities y no al SecurityContext: es la misma fuente
-        // que alimenta los @PreAuthorize, y sirve para usuarios que no
-        // son quien hace la petición.
-        return RoleAuthorities.forRole(usuario.getRol()).contains(authority);
-    }
 
     private static LocalDate lunesDe(LocalDate fecha) {
         return fecha.with(DayOfWeek.MONDAY);

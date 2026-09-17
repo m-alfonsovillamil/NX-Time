@@ -16,6 +16,7 @@ import com.nxtime.nxtime.dto.CreateComplaintRequest;
 import com.nxtime.nxtime.dto.UpdateComplaintStatusRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.ComplaintMessageRepository;
 import com.nxtime.nxtime.repository.ComplaintRepository;
@@ -26,7 +27,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -441,14 +441,8 @@ public class ComplaintServiceImpl implements ComplaintService {
      * garantizarlo es que no lo mire.
      */
     private List<User> quienInstruye(Company empresa) {
-        List<User> instructores = new ArrayList<>();
-        for (User candidato : userRepository.findByEmpresa(empresa)) {
-            if (candidato.isActivo()
-                    && RoleAuthorities.forRole(candidato.getRol()).contains(INSTRUIR)) {
-                instructores.add(candidato);
-            }
-        }
-        return instructores;
+        // conAuthority y NO conAuthorityMenos: ver el Javadoc de arriba.
+        return Destinatarios.conAuthority(userRepository.findByEmpresa(empresa), INSTRUIR);
     }
 
     // ------------------------------------------------------------------

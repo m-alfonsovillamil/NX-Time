@@ -18,6 +18,7 @@ import com.nxtime.nxtime.dto.UpdateJobPostingStatusRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AttachmentRepository;
 import com.nxtime.nxtime.repository.DepartmentRepository;
@@ -28,7 +29,6 @@ import com.nxtime.nxtime.service.JobPostingService;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +113,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         // Un BORRADOR no existe para la plantilla: enseñarlo dejaría ver
         // vacantes a medio escribir, con condiciones que igual cambian
         // antes de publicarse.
-        if (!oferta.getEstado().estaPublicada() && !tiene(actor, PUBLICAR)) {
+        if (!oferta.getEstado().estaPublicada() && !RoleAuthorities.tiene(actor, PUBLICAR)) {
             throw new ResourceNotFoundException("Oferta no encontrada.");
         }
         return toResponse(oferta, actor);
@@ -344,7 +344,7 @@ public class JobPostingServiceImpl implements JobPostingService {
      * {@code puedoValorar} para que la app no la reimplemente.
      */
     private boolean puedeValorar(JobApplication candidatura, User actor) {
-        return tiene(actor, GESTIONAR_CANDIDATURAS)
+        return RoleAuthorities.tiene(actor, GESTIONAR_CANDIDATURAS)
                 && candidatura.getUsuario().getId() != actor.getId();
     }
 
@@ -374,13 +374,7 @@ public class JobPostingServiceImpl implements JobPostingService {
      * de la lista no revela nada.
      */
     private List<User> laPlantilla(JobPosting oferta, User autor) {
-        List<User> destinatarios = new ArrayList<>();
-        for (User candidato : userRepository.findByEmpresa(oferta.getEmpresa())) {
-            if (candidato.isActivo() && candidato.getId() != autor.getId()) {
-                destinatarios.add(candidato);
-            }
-        }
-        return destinatarios;
+        return Destinatarios.activosMenos(userRepository.findByEmpresa(oferta.getEmpresa()), autor);
     }
 
     private JobPosting deLaMismaEmpresa(long id, User actor) {
@@ -392,9 +386,6 @@ public class JobPostingServiceImpl implements JobPostingService {
         return oferta;
     }
 
-    private boolean tiene(User usuario, String authority) {
-        return RoleAuthorities.forRole(usuario.getRol()).contains(authority);
-    }
 
     private String vacioANull(String valor) {
         return valor != null && !valor.isBlank() ? valor.trim() : null;
@@ -413,7 +404,7 @@ public class JobPostingServiceImpl implements JobPostingService {
             // Ni una consulta más: además, un IN vacío no es SQL válido.
             return List.of();
         }
-        boolean valora = tiene(actor, GESTIONAR_CANDIDATURAS);
+        boolean valora = RoleAuthorities.tiene(actor, GESTIONAR_CANDIDATURAS);
         Map<Long, Long> candidaturas = valora ? contarCandidaturas(ofertas) : Map.of();
 
         // Las mías, de una vez. Preguntar "¿me he presentado a esta?"
@@ -449,7 +440,7 @@ public class JobPostingServiceImpl implements JobPostingService {
      * lo sería, y por eso {@link #resumirOfertas} los trae en bloque.
      */
     private JobPostingResponse toResponse(JobPosting oferta, User actor) {
-        Long candidaturas = tiene(actor, GESTIONAR_CANDIDATURAS)
+        Long candidaturas = RoleAuthorities.tiene(actor, GESTIONAR_CANDIDATURAS)
                 ? (long) applicationRepository.findDeOferta(oferta.getId()).size()
                 : null;
         boolean yaMePresente = applicationRepository
@@ -478,7 +469,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 oferta.admiteCandidaturas(),
                 oferta.plazoVencido(),
                 yaMePresente,
-                tiene(actor, GESTIONAR_CANDIDATURAS) ? candidaturas : null);
+                RoleAuthorities.tiene(actor, GESTIONAR_CANDIDATURAS) ? candidaturas : null);
     }
 
     private JobApplicationResponse toResponse(JobApplication candidatura, User actor) {
