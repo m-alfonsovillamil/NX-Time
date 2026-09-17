@@ -154,17 +154,25 @@ public class CorrectionServiceImpl implements CorrectionService {
         anotarEnLaTraza(solicitud, AuditAction.SOLICITUD_CORRECCION, actor, request.motivo());
 
         /*
-         * Auto-aprobación: quien pide es el dueño Y puede aprobar.
+         * Auto-aprobación: quien pide es el dueño, puede aprobar, Y NO HAY
+         * NADIE MÁS en la empresa que pueda hacerlo.
          *
-         * No es un atajo por comodidad. Sin ella, un ADMIN —que no tiene
-         * a nadie por encima— no podría corregir jamás su propio fichaje:
-         * la solicitud se quedaría esperando a alguien que no existe. Lo
-         * que la hace aceptable es que queda escrita como tal en la
-         * traza, con su motivo, igual que cualquier otra.
+         * Existe por un caso concreto: sin ella, un ADMIN que es el único
+         * responsable de su empresa no podría corregir jamás su propio
+         * fichaje, porque la solicitud esperaría a alguien que no existe.
+         *
+         * Hasta el 17/09/2026 bastaba con tener el permiso, así que un
+         * GESTOR o RRHH se aprobaba lo suyo al momento aunque hubiera otras
+         * personas que podían revisarlo. Eso es un conflicto de interés, y
+         * choca con la regla que ya siguen las horas extra: nadie revisa lo
+         * suyo. Ahora, si hay otro aprobador activo, la solicitud le llega a
+         * él como a cualquier otra. Queda escrita en la traza en los dos casos.
          */
-        if (esMio && RoleAuthorities.tiene(actor, APROBAR)) {
+        if (esMio && RoleAuthorities.tiene(actor, APROBAR)
+                && conAuthority(actor.getEmpresa(), APROBAR, actor).isEmpty()) {
             log.info("{} se auto-aprueba la corrección del fichaje {}", actor.getEmail(), fichajeId);
-            return aplicar(solicitud, actor, "Auto-aprobada por el propio empleado.");
+            return aplicar(solicitud, actor,
+                    "Auto-aprobada: no hay nadie más en la empresa que pueda aprobarla.");
         }
 
         eventPublisher.publishEvent(new NotificationEvents.CorrectionRequested(
@@ -298,8 +306,9 @@ public class CorrectionServiceImpl implements CorrectionService {
             return RoleAuthorities.tiene(actor, RESOLVER_DISPUTAS);
         }
         if (solicitud.laPidioElDueno()) {
-            // Nadie se aprueba a sí mismo por esta vía: si el dueño
-            // pudiera aprobar, ya se auto-aprobó al pedirla.
+            // Nadie se aprueba a sí mismo por esta vía. Si el dueño tiene el
+            // permiso y hay otro aprobador, la resuelve ese otro; si no lo
+            // había, ya se auto-aprobó al pedirla.
             return RoleAuthorities.tiene(actor, APROBAR) && solicitud.getSolicitante().getId() != actor.getId();
         }
         // Se la piden a él: decide el dueño del fichaje.

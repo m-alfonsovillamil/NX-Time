@@ -154,11 +154,13 @@ class CorrectionServiceImplTest {
      * tuviera que esperar a que alguien se lo apruebe, no habría nadie.
      */
     @Test
-    @DisplayName("Quien pide sobre SU fichaje y puede aprobar, se auto-aprueba y se aplica en el acto")
+    @DisplayName("Quien pide sobre SU fichaje, puede aprobar y NO hay nadie más que pueda, se auto-aprueba")
     void solicitar_dueñoQuePuedeAprobar_seAplicaEnElActo() {
         TimeEntry suyo = TimeEntry.builder().id(7L).usuario(gestor).empresa(empresa)
                 .horaEntrada(ENTRADA).horaSalida(SALIDA).anulado(false).build();
         when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
+        // El gestor es el único con permiso de aprobar: el empleado no lo tiene.
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, empleado));
         when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
         when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -170,12 +172,44 @@ class CorrectionServiceImplTest {
         assertThat(suyo.isAnulado()).isTrue();
     }
 
+    /*
+     * 17/09/2026, visto en el piloto: un gestor se aprobaba sus propias
+     * correcciones aunque hubiera otras personas que podían revisarlas. Es
+     * un conflicto de interés, y las horas extra ya lo prohíben.
+     */
+    @Test
+    @DisplayName("Un gestor NO se auto-aprueba si hay otra persona que puede aprobar: le llega a ella")
+    void solicitar_dueñoQuePuedeAprobar_conOtroAprobador_quedaPendiente() {
+        TimeEntry suyo = TimeEntry.builder().id(7L).usuario(gestor).empresa(empresa)
+                .horaEntrada(ENTRADA).horaSalida(SALIDA).anulado(false).build();
+        when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
+        when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
+        alGuardarDevolverLoMismo();
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, rrhh, empleado));
+
+        CorrectionResponse respuesta = service.solicitar(7L, peticion(), gestor);
+
+        assertThat(respuesta.estado()).isEqualTo(CorrectionStatus.PENDIENTE);
+        assertThat(suyo.isAnulado()).isFalse();
+        verify(timeEntryRepository, never()).save(any());
+
+        ArgumentCaptor<Object> eventos = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, org.mockito.Mockito.atLeastOnce()).publishEvent(eventos.capture());
+        assertThat(eventos.getAllValues())
+                .filteredOn(com.nxtime.nxtime.notification.NotificationEvents.CorrectionRequested.class::isInstance)
+                .singleElement()
+                .satisfies(e -> assertThat(
+                        ((com.nxtime.nxtime.notification.NotificationEvents.CorrectionRequested) e).destinatarios())
+                        .containsExactly(rrhh));
+    }
+
     @Test
     @DisplayName("La auto-aprobación queda escrita en la traza; es lo que la hace aceptable")
     void solicitar_autoAprobacion_dejaTraza() {
         TimeEntry suyo = TimeEntry.builder().id(7L).usuario(gestor).empresa(empresa)
                 .horaEntrada(ENTRADA).horaSalida(SALIDA).anulado(false).build();
         when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, empleado));
         when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
         when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
