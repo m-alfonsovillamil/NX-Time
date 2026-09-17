@@ -94,69 +94,50 @@ fun PanelGestionScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Primero el panel: es la vista de conjunto desde la que se
-            // decide a qué mirar después.
-            if (puedeVerPanelEmpresa) {
-                OpcionGestion(
-                    texto = stringResource(R.string.empresa_titulo),
-                    icono = Icons.Default.Insights,
-                    onClick = onIrPanelEmpresa
-                )
-            }
+            /*
+             * PENDIENTE DE RESOLVER: las tres bandejas. Van primero
+             * porque son lo único de esta pantalla que espera una
+             * decisión, y es a lo que un gestor entra cada mañana.
+             *
+             * Ninguna se gatea aquí. Las correcciones y las horas extra
+             * las ve cualquier rol de gestión, y lo que puede RESOLVER
+             * cada uno lo decide el servidor: sobre los avisos propios no
+             * puede decidir ninguno, y el servicio ni siquiera los manda
+             * en esa lista.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_pendiente))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
                 icono = Icons.Default.PendingActions,
                 onClick = onIrPendientes
             )
             OpcionGestion(
-                texto = stringResource(R.string.gestion_historial_equipo),
-                icono = Icons.AutoMirrored.Filled.ListAlt,
-                onClick = onIrHistorialEquipo
-            )
-            // Los proyectos los ve cualquier rol de gestión; lo que hay
-            // DENTRO (alta y asignaciones) se gatea aparte, dentro de la
-            // propia pantalla, con `proyecto:gestionar`.
-            // Las correcciones las ve cualquier rol de gestion, pero lo
-            // que puede RESOLVER cada uno lo decide el servidor: aqui no
-            // se gatea nada.
-            OpcionGestion(
                 texto = stringResource(R.string.correcciones_titulo),
                 icono = Icons.Default.EditNote,
                 onClick = onIrCorrecciones
             )
-            // Las horas extra igual: la bandeja la ve cualquier rol de
-            // gestion, y sobre los avisos PROPIOS no puede decidir
-            // ninguno -- eso lo aplica el servidor, que ni siquiera los
-            // manda en esta lista.
             OpcionGestion(
                 texto = stringResource(R.string.gestion_horas_extra),
                 icono = Icons.Default.MoreTime,
                 onClick = onIrHorasExtra
             )
+
+            /*
+             * EQUIPO: las personas y su historial. Aquí se juntan las dos
+             * parejas que antes estaban separadas por media lista:
+             * ausencias pendientes/resueltas --que son la misma pantalla
+             * con un booleano-- y el alta de empleado/gestor, que son el
+             * mismo formulario.
+             *
+             * Las resueltas van con el equipo y no con las pendientes: no
+             * esperan nada, se consultan.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_equipo))
             OpcionGestion(
-                texto = stringResource(R.string.proyectos_titulo),
-                icono = Icons.Default.WorkOutline,
-                onClick = onIrProyectos
+                texto = stringResource(R.string.gestion_historial_equipo),
+                icono = Icons.AutoMirrored.Filled.ListAlt,
+                onClick = onIrHistorialEquipo
             )
-            // El canal de denuncias NO sigue la regla de los anteriores:
-            // aquí sí se gatea, y solo lo ve un ADMIN. La denuncia puede
-            // ser sobre el GESTOR que está mirando esta misma pantalla,
-            // así que ni siquiera la entrada debe aparecerle -- saber que
-            // el canal tiene expedientes ya es información.
-            if (puedePublicarOfertas) {
-                OpcionGestion(
-                    texto = stringResource(R.string.gestion_ofertas),
-                    icono = Icons.Default.Campaign,
-                    onClick = onIrGestionOfertas
-                )
-            }
-            if (puedeInstruirDenuncias) {
-                OpcionGestion(
-                    texto = stringResource(R.string.gestion_canal_denuncias),
-                    icono = Icons.Default.Shield,
-                    onClick = onIrCanalDenuncias
-                )
-            }
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_resueltas),
                 icono = Icons.Default.EventAvailable,
@@ -174,8 +155,71 @@ fun PanelGestionScreen(
                     onClick = onIrAltaGestor
                 )
             }
+
+            /*
+             * EMPRESA: la vista de conjunto y los catálogos.
+             *
+             * Los proyectos los ve cualquier rol de gestión; lo que hay
+             * DENTRO (alta y asignaciones) se gatea aparte, dentro de la
+             * propia pantalla, con `proyecto:gestionar`.
+             *
+             * El canal de denuncias NO sigue esa regla: aquí sí se gatea,
+             * y solo lo ve un ADMIN. La denuncia puede ser sobre el GESTOR
+             * que está mirando esta misma pantalla, así que ni siquiera la
+             * entrada debe aparecerle -- saber que el canal tiene
+             * expedientes ya es información.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_empresa))
+            if (puedeVerPanelEmpresa) {
+                OpcionGestion(
+                    texto = stringResource(R.string.empresa_titulo),
+                    icono = Icons.Default.Insights,
+                    onClick = onIrPanelEmpresa
+                )
+            }
+            OpcionGestion(
+                texto = stringResource(R.string.proyectos_titulo),
+                icono = Icons.Default.WorkOutline,
+                onClick = onIrProyectos
+            )
+            if (puedePublicarOfertas) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_ofertas),
+                    icono = Icons.Default.Campaign,
+                    onClick = onIrGestionOfertas
+                )
+            }
+            if (puedeInstruirDenuncias) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_canal_denuncias),
+                    icono = Icons.Default.Shield,
+                    onClick = onIrCanalDenuncias
+                )
+            }
         }
     }
+}
+
+/**
+ * El rótulo que separa un bloque del siguiente.
+ *
+ * Texto pequeño y en `onSurfaceVariant`, no otra tarjeta: una cabecera con
+ * el mismo peso visual que las opciones se leería como una opción más que
+ * no hace nada al tocarla.
+ *
+ * ⚠️ Las tres secciones tienen al menos una entrada que ven TODOS los roles
+ * de gestión (ausencias pendientes, historial del equipo y proyectos), así
+ * que ninguna cabecera puede quedarse suelta sobre un bloque vacío. Si
+ * alguna de esas tres pasa a gatearse, hay que volver por aquí.
+ */
+@Composable
+private fun CabeceraDeSeccion(texto: String) {
+    Text(
+        text = texto,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 12.dp)
+    )
 }
 
 @Composable

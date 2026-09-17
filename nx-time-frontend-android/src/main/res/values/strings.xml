@@ -298,6 +298,15 @@
 
     <!-- Gestion -->
     <string name="gestion_titulo">Panel de gestión</string>
+    <!--
+      Las tres secciones del panel. El orden no es alfabético ni por
+      frecuencia: primero lo que espera una decisión tuya, que es a lo que
+      un gestor entra cada mañana, y después la consulta y la
+      configuración, que se visitan cuando hace falta.
+    -->
+    <string name="gestion_seccion_pendiente">Pendiente de resolver</string>
+    <string name="gestion_seccion_equipo">Equipo</string>
+    <string name="gestion_seccion_empresa">Empresa</string>
     <string name="gestion_historial_equipo">Historial del equipo</string>
     <string name="gestion_ausencias_pendientes">Ausencias pendientes</string>
     <string name="gestion_ausencias_resueltas">Ausencias resueltas</string>
