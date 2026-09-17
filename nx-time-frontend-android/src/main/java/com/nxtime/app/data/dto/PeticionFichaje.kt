@@ -9,5 +9,11 @@ package com.nxtime.app.data.dto
  * contrato no cambia**: solo deja de poder escribirse mal.
  */
 data class PeticionFichaje(
-    val tipo: TipoFichaje
+    val tipo: TipoFichaje,
+    /**
+     * Solo al iniciar: en qué proyecto se va a trabajar (ADR 017). Null = que
+     * decida el servidor (con un solo proyecto, ese; sin ninguno, sin proyecto).
+     * Gson no manda los null, así que para el resto de acciones el JSON no cambia.
+     */
+    val proyectoId: Long? = null
 )

@@ -5,6 +5,8 @@ import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.dto.AddPauseRequest;
 import com.nxtime.nxtime.dto.AddPauseResponse;
 import com.nxtime.nxtime.dto.AddedPauseDTO;
+import com.nxtime.nxtime.dto.ChangeProjectRequest;
+import com.nxtime.nxtime.dto.ClockProjectsResponse;
 import com.nxtime.nxtime.dto.CorrectionRequestDTO;
 import com.nxtime.nxtime.dto.CorrectionResponse;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
@@ -73,7 +75,9 @@ public class TimeEntryController {
     }
 
     @Operation(summary = "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
-            description = "Avanza la máquina de estados del fichaje del usuario autenticado.")
+            description = "Avanza la máquina de estados del fichaje del usuario autenticado. En INICIO se puede "
+                    + "mandar 'proyectoId' (ver GET /fichaje/proyectos); sin él, con un solo proyecto asignado se usa "
+                    + "ese, y con varios la jornada empieza sin proyecto.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Fichaje registrado",
                     content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
@@ -112,6 +116,46 @@ public class TimeEntryController {
                 .map(timeEntryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @Operation(summary = "Mis proyectos para fichar",
+            description = "Los proyectos en los que puedo fichar hoy (asignación vigente y proyecto activo) y el de "
+                    + "la jornada en curso, si la hay. Con dos o más disponibles, la app pregunta al iniciar la "
+                    + "jornada y manda 'proyectoId' en el INICIO.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Proyectos",
+                    content = @Content(schema = @Schema(implementation = ClockProjectsResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer')")
+    @GetMapping("/proyectos")
+    public ResponseEntity<ClockProjectsResponse> getProyectos(Authentication authentication) {
+        return ResponseEntity.ok(timeEntryService.proyectosParaFichar(authentication.getName()));
+    }
+
+    @Operation(summary = "Cambiar de proyecto durante la jornada",
+            description = "Cierra el tramo del proyecto en curso y abre otro desde ahora. Solo en la jornada propia, "
+                    + "abierta y fuera de pausa. Queda en la traza del fichaje.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Proyecto cambiado",
+                    content = @Content(schema = @Schema(implementation = ClockProjectsResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra persona o proyecto no asignado hoy",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Jornada cerrada, en pausa, o ya en ese proyecto",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
+    @PostMapping("/{id}/proyecto")
+    public ResponseEntity<ClockProjectsResponse> cambiarProyecto(
+            @PathVariable long id,
+            @Valid @RequestBody ChangeProjectRequest peticion,
+            Authentication authentication) {
+        return ResponseEntity.ok(timeEntryService.cambiarProyecto(authentication.getName(), id, peticion.proyectoId()));
     }
 
     @Operation(summary = "¿Es hoy laborable para mí?",

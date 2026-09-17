@@ -42,5 +42,10 @@ public enum AuditAction {
     PAUSA_ANADIDA,
 
     /** Se ha deshecho una pausa añadida. La fila del libro no se borra. */
-    PAUSA_ANULADA
+    PAUSA_ANULADA,
+
+    // --- 09/2026: varios proyectos por jornada (ADR 017) ---
+
+    /** Se ha cambiado de proyecto con la jornada abierta. */
+    PROYECTO_CAMBIADO
 }

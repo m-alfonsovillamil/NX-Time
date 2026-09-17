@@ -61,6 +61,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.ProyectosParaFicharDTO
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
@@ -252,6 +255,10 @@ fun FicharScreen(
                  * orden en que se leen: qué estoy haciendo, qué llevo
                  * hoy, y qué llevo acumulado.
                  */
+                ProyectoEnCurso(
+                    proyectos = estado.proyectos,
+                    onCambiar = viewModel::pedirCambioDeProyecto
+                )
                 ComposicionDeLaJornada(
                     segundosTrabajados = estado.segundosEnCurso,
                     segundosPausa = estado.registro?.segundosPausaAcumulados ?: 0,
@@ -319,6 +326,27 @@ fun FicharScreen(
             hoy = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Madrid")),
             onCerrar = detalleViewModel::cerrar
         )
+
+        estado.proyectos?.let { proyectos ->
+            if (estado.eligiendoProyectoAlIniciar) {
+                DialogoDeProyecto(
+                    titulo = stringResource(R.string.fichar_proyecto_elegir_titulo),
+                    proyectos = proyectos,
+                    confirmar = stringResource(R.string.fichar_proyecto_empezar),
+                    onElegir = viewModel::iniciarEnProyecto,
+                    onCancelar = viewModel::cancelarEleccionDeProyecto
+                )
+            }
+            if (estado.cambiandoDeProyecto) {
+                DialogoDeProyecto(
+                    titulo = stringResource(R.string.fichar_proyecto_cambiar_titulo),
+                    proyectos = proyectos,
+                    confirmar = stringResource(R.string.fichar_proyecto_cambiar),
+                    onElegir = viewModel::cambiarAProyecto,
+                    onCancelar = viewModel::cancelarCambioDeProyecto
+                )
+            }
+        }
 
         estado.confirmandoInicioNoLaborable?.let { motivo ->
             AlertDialog(
@@ -631,5 +659,94 @@ private fun textoDeEstado(estado: FicharUiState): String = when (estado.estado) 
     )
     EstadoJornada.EN_PAUSA -> stringResource(
         R.string.fichar_en_pausa, DateFormats.hora(estado.registro?.horaEntrada)
+    )
+}
+
+/**
+ * "Proyecto: NX-CORE · Cambiar", con la jornada abierta (ADR 017).
+ *
+ * Solo aparece si hay proyecto en curso o donde elegir: a quien no trabaja por
+ * proyectos no se le enseña una línea vacía.
+ */
+@Composable
+private fun ProyectoEnCurso(proyectos: ProyectosParaFicharDTO?, onCambiar: () -> Unit) {
+    if (proyectos == null || (proyectos.enCurso == null && !proyectos.hayQueElegir)) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+    ) {
+        Text(
+            text = proyectos.enCurso?.let { stringResource(R.string.fichar_proyecto_en_curso, it.codigo, it.nombre) }
+                ?: stringResource(R.string.fichar_proyecto_sin),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (proyectos.hayQueElegir) {
+            TextButton(onClick = onCambiar) { Text(stringResource(R.string.fichar_proyecto_cambiar)) }
+        }
+    }
+}
+
+/**
+ * Elegir proyecto, al empezar o al cambiar. El de la jornada en curso sale
+ * marcado y no se puede volver a elegir: cambiar al mismo no hace nada.
+ */
+@Composable
+private fun DialogoDeProyecto(
+    titulo: String,
+    proyectos: ProyectosParaFicharDTO,
+    confirmar: String,
+    onElegir: (Long) -> Unit,
+    onCancelar: () -> Unit
+) {
+    var elegido by remember { mutableStateOf<Long?>(null) }
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(titulo) },
+        text = {
+            Column {
+                proyectos.disponibles.forEach { proyecto ->
+                    val esElActual = proyecto.id == proyectos.enCurso?.id
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = elegido == proyecto.id,
+                                enabled = !esElActual,
+                                onClick = { elegido = proyecto.id }
+                            )
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(
+                            selected = elegido == proyecto.id || esElActual,
+                            enabled = !esElActual,
+                            onClick = { elegido = proyecto.id }
+                        )
+                        Column {
+                            Text(proyecto.codigo, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                text = if (esElActual) stringResource(R.string.fichar_proyecto_actual, proyecto.nombre)
+                                else proyecto.nombre,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val proyecto = elegido
+            TextButton(enabled = proyecto != null, onClick = { if (proyecto != null) onElegir(proyecto) }) {
+                Text(confirmar)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
     )
 }

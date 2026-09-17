@@ -17,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -129,6 +130,72 @@ class FicharViewModelTest {
 
         verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))
         assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    private fun proyectos(vararg codigos: String, enCurso: Int? = null): com.nxtime.app.data.dto.ProyectosParaFicharDTO {
+        val lista = codigos.mapIndexed { i, codigo -> com.nxtime.app.data.dto.ProyectoParaFichar(i + 1L, codigo, "Proyecto $codigo") }
+        return com.nxtime.app.data.dto.ProyectosParaFicharDTO(lista, enCurso?.let { lista[it] })
+    }
+
+    /* ADR 017: con dos o más proyectos se pregunta en cuál se empieza. */
+    @Test
+    fun `con varios proyectos pregunta en cual empezar y ficha con el elegido`() = runTest {
+        whenever(repositorio.getProyectosParaFichar()).thenReturn(Response.success(proyectos("CORE", "APP")))
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.eligiendoProyectoAlIniciar)
+        verify(repositorio, org.mockito.kotlin.never()).registrarFichaje(any())
+
+        viewModel.iniciarEnProyecto(2L)
+        advanceUntilIdle()
+
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO, 2L))
+        assertFalse(viewModel.uiState.value.eligiendoProyectoAlIniciar)
+    }
+
+    @Test
+    fun `con un solo proyecto no pregunta y decide el servidor`() = runTest {
+        whenever(repositorio.getProyectosParaFichar()).thenReturn(Response.success(proyectos("CORE")))
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.eligiendoProyectoAlIniciar)
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))
+    }
+
+    @Test
+    fun `cambiar de proyecto actualiza el proyecto en curso, y un rechazo se ve como error`() = runTest {
+        whenever(repositorio.getProyectosParaFichar()).thenReturn(Response.success(proyectos("CORE", "APP", enCurso = 0)))
+        val viewModel = viewModelCon(activo = registro())
+        advanceUntilIdle()
+        whenever(repositorio.cambiarProyecto(1L, 2L))
+            .thenReturn(Response.success(proyectos("CORE", "APP", enCurso = 1)))
+
+        viewModel.pedirCambioDeProyecto()
+        viewModel.cambiarAProyecto(2L)
+        advanceUntilIdle()
+
+        assertEquals("APP", viewModel.uiState.value.proyectos?.enCurso?.codigo)
+        assertFalse(viewModel.uiState.value.cambiandoDeProyecto)
+
+        whenever(repositorio.cambiarProyecto(1L, 1L)).thenReturn(
+            Response.error(409, """{"detail":"Reanuda la jornada antes de cambiar de proyecto."}"""
+                .toResponseBody("application/problem+json".toMediaType()))
+        )
+        viewModel.cambiarAProyecto(1L)
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.error)
+        assertEquals("APP", viewModel.uiState.value.proyectos?.enCurso?.codigo)
     }
 
     /* Un festivo o una ausencia aprobada: se pregunta antes, y no se ficha hasta confirmar. */
