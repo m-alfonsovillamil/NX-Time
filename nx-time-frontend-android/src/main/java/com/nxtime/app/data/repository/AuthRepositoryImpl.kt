@@ -76,6 +76,8 @@ class AuthRepositoryImpl(
         hasta: java.time.LocalDate
     ): Response<List<HorasDelDiaDTO>> = apiService.getHorasPorDia(desde.toString(), hasta.toString())
 
+    override suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO> = apiService.getEstadoDeHoy()
+
     override suspend fun getResumenPersonal(): Response<ResumenPersonalDTO> {
         return apiService.getResumenPersonal()
     }

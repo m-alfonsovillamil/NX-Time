@@ -40,6 +40,11 @@ data class FicharUiState(
      * en la composición, el test del ViewModel no lo vería.
      */
     val confirmandoFin: Boolean = false,
+    /**
+     * Hoy no es laborable (festivo o ausencia aprobada) y se está
+     * preguntando si iniciar igualmente. Es el motivo, para enseñarlo.
+     */
+    val confirmandoInicioNoLaborable: String? = null,
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -191,10 +196,45 @@ class FicharViewModel(
             return
         }
         if (estado == EstadoJornada.SIN_JORNADA) {
-            registrarFichaje(TipoFichaje.INICIO)
+            iniciarComprobandoElDia()
         } else {
             _uiState.update { it.copy(confirmandoFin = true, error = null) }
         }
+    }
+
+    /**
+     * Antes de iniciar, pregunta si hoy es laborable. Si no lo es, se pide
+     * confirmación con el motivo delante; si lo es, se inicia sin más.
+     *
+     * **Si la pregunta falla, se inicia igual.** Fichar es la función de la
+     * app, y no puede quedar bloqueada por una comprobación de cortesía: el
+     * aviso a los gestores lo decide el servidor al registrar el inicio,
+     * haya preguntado la app o no.
+     */
+    private fun iniciarComprobandoElDia() {
+        _uiState.update { it.copy(cargando = true, error = null) }
+        viewModelScope.launch {
+            val motivo = try {
+                authRepository.getEstadoDeHoy().body()?.takeIf { !it.laborable }?.motivo
+            } catch (e: Exception) {
+                null
+            }
+            if (motivo != null) {
+                _uiState.update { it.copy(cargando = false, confirmandoInicioNoLaborable = motivo) }
+            } else {
+                registrarFichaje(TipoFichaje.INICIO)
+            }
+        }
+    }
+
+    /** Sí, empieza la jornada aunque hoy no sea laborable. */
+    fun confirmarInicioNoLaborable() {
+        _uiState.update { it.copy(confirmandoInicioNoLaborable = null) }
+        registrarFichaje(TipoFichaje.INICIO)
+    }
+
+    fun cancelarInicioNoLaborable() {
+        _uiState.update { it.copy(confirmandoInicioNoLaborable = null) }
     }
 
     /** Sí, termina la jornada. */

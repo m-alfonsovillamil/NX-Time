@@ -99,6 +99,15 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
+    /** Las aprobadas de una persona que cubren un día (ver NonWorkingDayService). */
+    @Query("SELECT a FROM peticiones_ausencia a "
+            + "WHERE a.usuario.id = :usuarioId "
+            + "AND a.estado = com.nxtime.nxtime.domain.AbsenceStatus.APROBADA "
+            + "AND a.fechaInicio <= :dia AND a.fechaFin >= :dia")
+    List<AbsenceRequest> findAprobadasDeUsuarioEnFecha(
+            @Param("usuarioId") long usuarioId,
+            @Param("dia") LocalDate dia);
+
     // Agregados del dashboard (Fase 10): contar en la base de datos, no
     // traerse las filas para hacer size() sobre la lista.
     long countByUsuarioAndEstado(User usuario, AbsenceStatus estado);

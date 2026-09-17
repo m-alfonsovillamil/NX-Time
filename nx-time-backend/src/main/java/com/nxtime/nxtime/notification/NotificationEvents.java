@@ -227,6 +227,27 @@ public final class NotificationEvents {
     }
 
     // ------------------------------------------------------------------
+    // 09/2026: trabajar en un día no laborable
+    // ------------------------------------------------------------------
+
+    /**
+     * Alguien ha iniciado una jornada en un festivo o con una ausencia
+     * aprobada. Lo publica el servidor al registrar el INICIO, no la app: una
+     * versión antigua que no pregunte también dispara el aviso.
+     *
+     * Datos copiados y no la entidad, como el resto de eventos que cruzan al
+     * listener @Async.
+     */
+    public record WorkedOnNonWorkingDay(
+            long empresaId,
+            String empleado,
+            LocalDate fecha,
+            String motivo,
+            boolean vacaciones,
+            List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
     // 09/2026: borrado de datos personales (ADR 016)
     // ------------------------------------------------------------------
 

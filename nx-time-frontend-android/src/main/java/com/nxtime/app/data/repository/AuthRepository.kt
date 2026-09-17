@@ -33,6 +33,7 @@ interface AuthRepository {
         hasta: java.time.LocalDate? = null
     ): Response<List<Registro>>
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
+    suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
     suspend fun getHorasPorDia(desde: java.time.LocalDate, hasta: java.time.LocalDate): Response<List<HorasDelDiaDTO>>
 
     /* Cumplimiento normativo (RRHH/ADMIN) */

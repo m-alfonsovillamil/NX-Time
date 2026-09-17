@@ -15,6 +15,9 @@ public interface TimeEntryService {
 
     List<TimeEntry> getHistory(String userEmail);
 
+    /** Si hoy (en España) no es laborable para esta persona, por qué. Ver NonWorkingDayService. */
+    java.util.Optional<com.nxtime.nxtime.service.NonWorkingDayService.Motivo> motivoNoLaborableHoy(String userEmail);
+
     /**
      * El historial propio entre dos días de España, los dos incluidos. 400 si
      * {@code desde} es posterior a {@code hasta} o el periodo pasa de un año.

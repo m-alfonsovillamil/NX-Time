@@ -32,6 +32,7 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_MIS_CANDIDATURAS -> Pantalla.OFERTAS.ruta
     DESTINO_GESTION_OFERTAS -> Pantalla.GESTION_OFERTAS.ruta
     DESTINO_BORRADOS -> Pantalla.BORRADOS.ruta
+    DESTINO_EQUIPO -> Pantalla.EQUIPO.ruta
     DESTINO_AJUSTES -> Pantalla.AJUSTES.ruta
     else -> null
 }
@@ -73,3 +74,7 @@ const val DESTINO_GESTION_OFERTAS = "gestion-ofertas"
 // puede volver a pedirlo. La ejecucion no tiene aviso: la cuenta ya no entra.
 const val DESTINO_BORRADOS = "borrados"
 const val DESTINO_AJUSTES = "ajustes"
+
+// 09/2026. Alguien ha empezado a trabajar en un festivo o con una ausencia
+// aprobada: el aviso lleva a quien lo recibe al historial del equipo.
+const val DESTINO_EQUIPO = "equipo"

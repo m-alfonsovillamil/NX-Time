@@ -91,4 +91,10 @@ class DestinoDeAvisoTest {
         assertEquals(Pantalla.BORRADOS.ruta, rutaDeAviso("borrados"))
         assertEquals(Pantalla.AJUSTES.ruta, rutaDeAviso("ajustes"))
     }
+
+    @Test
+    fun `el aviso de trabajo en dia no laborable lleva al historial del equipo`() {
+        // NoticeType.TRABAJO_EN_DIA_NO_LABORABLE en el backend.
+        assertEquals(Pantalla.EQUIPO.ruta, rutaDeAviso("equipo"))
+    }
 }

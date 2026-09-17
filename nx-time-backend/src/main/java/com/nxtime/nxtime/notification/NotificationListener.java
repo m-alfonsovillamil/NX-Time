@@ -587,6 +587,39 @@ public class NotificationListener {
     }
 
     // ------------------------------------------------------------------
+    // 09/2026: trabajar en un día no laborable
+    // ------------------------------------------------------------------
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onWorkedOnNonWorkingDay(NotificationEvents.WorkedOnNonWorkingDay evento) {
+        String titulo = evento.empleado() + " está trabajando en un día no laborable";
+        String cuerpo = evento.motivo() + ", " + FECHA.format(evento.fecha()) + "."
+                + (evento.vacaciones() ? " El día no vuelve solo al saldo de vacaciones." : "");
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    destinatario.getId(),
+                    NoticeType.TRABAJO_EN_DIA_NO_LABORABLE,
+                    titulo,
+                    cuerpo,
+                    NoticeType.TRABAJO_EN_DIA_NO_LABORABLE.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "worked-on-non-working-day",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "empleado", evento.empleado(),
+                            "fecha", evento.fecha(),
+                            "motivo", evento.motivo(),
+                            "vacaciones", evento.vacaciones()));
+        }
+    }
+
+    // ------------------------------------------------------------------
     // 09/2026: borrado de datos personales (ADR 016)
     // ------------------------------------------------------------------
 

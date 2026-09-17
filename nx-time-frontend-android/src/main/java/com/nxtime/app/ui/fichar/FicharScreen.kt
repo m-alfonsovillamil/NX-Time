@@ -320,6 +320,24 @@ fun FicharScreen(
             onCerrar = detalleViewModel::cerrar
         )
 
+        estado.confirmandoInicioNoLaborable?.let { motivo ->
+            AlertDialog(
+                onDismissRequest = viewModel::cancelarInicioNoLaborable,
+                title = { Text(stringResource(R.string.fichar_no_laborable_titulo)) },
+                text = { Text(stringResource(R.string.fichar_no_laborable_texto, motivo)) },
+                confirmButton = {
+                    TextButton(onClick = viewModel::confirmarInicioNoLaborable) {
+                        Text(stringResource(R.string.fichar_no_laborable_si))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::cancelarInicioNoLaborable) {
+                        Text(stringResource(R.string.cancelar))
+                    }
+                }
+            )
+        }
+
         if (estado.confirmandoFin) {
             DialogoFinDeJornada(
                 estado = estado,

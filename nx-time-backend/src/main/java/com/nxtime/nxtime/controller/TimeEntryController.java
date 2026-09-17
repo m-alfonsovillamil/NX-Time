@@ -10,6 +10,7 @@ import com.nxtime.nxtime.dto.CorrectionResponse;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
+import com.nxtime.nxtime.dto.TodayStatusResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.security.SecurityUser;
@@ -111,6 +112,24 @@ public class TimeEntryController {
                 .map(timeEntryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @Operation(summary = "¿Es hoy laborable para mí?",
+            description = "Lo pregunta la app antes de iniciar la jornada. No laborable = festivo de la empresa o "
+                    + "ausencia aprobada (los fines de semana no cuentan). Iniciar la jornada igualmente está "
+                    + "permitido, y avisa a quien aprueba ausencias.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Estado del día",
+                    content = @Content(schema = @Schema(implementation = TodayStatusResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer')")
+    @GetMapping("/hoy")
+    public ResponseEntity<TodayStatusResponse> getHoy(Authentication authentication) {
+        return ResponseEntity.ok(timeEntryService.motivoNoLaborableHoy(authentication.getName())
+                .map(motivo -> new TodayStatusResponse(false, motivo.texto()))
+                .orElse(new TodayStatusResponse(true, null)));
     }
 
     @Operation(summary = "Historial de fichajes propio",

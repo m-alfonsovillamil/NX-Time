@@ -263,6 +263,9 @@
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>
     <string name="detalle_vacaciones_proximas">Próximas ausencias aprobadas</string>
     <string name="detalle_vacaciones_ninguna">No tienes ninguna.</string>
+    <string name="fichar_no_laborable_titulo">Hoy no es un día laborable</string>
+    <string name="fichar_no_laborable_texto">%1$s. ¿Quieres iniciar la jornada igualmente? Se avisará a tu responsable.</string>
+    <string name="fichar_no_laborable_si">Iniciar igualmente</string>
     <string name="ausencias_titulo">Mis ausencias</string>
     <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
     <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>

@@ -10,6 +10,9 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.notification.Destinatarios;
+import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.service.NonWorkingDayService;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
@@ -65,7 +68,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     /** Un año bisiesto entero. Ver {@link #getHistory(String, LocalDate, LocalDate)}. */
     static final int MAXIMO_DIAS_HISTORIAL = 366;
 
-    private static final ZoneId ZONA_HISTORIAL = ZoneId.of("Europe/Madrid");
+    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final TimeEntryRepository timeEntryRepository;
     private final TimeEntryAuditRepository timeEntryAuditRepository;
@@ -73,6 +76,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private final TimeEntryMapper timeEntryMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
+    private final NonWorkingDayService nonWorkingDayService;
 
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
@@ -80,7 +84,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             UserRepository userRepository,
             TimeEntryMapper timeEntryMapper,
             ApplicationEventPublisher eventPublisher,
-            TimeEntrySnapshotSerializer snapshotSerializer
+            TimeEntrySnapshotSerializer snapshotSerializer,
+            NonWorkingDayService nonWorkingDayService
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.timeEntryAuditRepository = timeEntryAuditRepository;
@@ -88,6 +93,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         this.timeEntryMapper = timeEntryMapper;
         this.eventPublisher = eventPublisher;
         this.snapshotSerializer = snapshotSerializer;
+        this.nonWorkingDayService = nonWorkingDayService;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -116,6 +122,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .horaEntrada(Instant.now())
                         .build();
                 accion = AuditAction.CREACION;
+                avisarSiNoEsLaborable(user);
                 yield timeEntryRepository.save(newEntry);
             }
             case FIN -> {
@@ -181,6 +188,32 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         return result;
     }
 
+    /**
+     * Si hoy no es laborable para esta persona, avisa a quien aprueba
+     * ausencias. No impide fichar: una guardia en festivo existe, y el
+     * registro horario tiene que recoger lo que se trabajó, no lo que se
+     * esperaba. El aviso sale después del commit, así que si el INICIO
+     * falla no se avisa de nada.
+     */
+    private void avisarSiNoEsLaborable(User user) {
+        LocalDate hoy = LocalDate.now(MADRID);
+        nonWorkingDayService.motivo(user, hoy).ifPresent(motivo -> {
+            List<User> destinatarios = Destinatarios.conAuthorityMenos(
+                    userRepository.findByEmpresa(user.getEmpresa()), "ausencia:aprobar", user);
+            eventPublisher.publishEvent(new NotificationEvents.WorkedOnNonWorkingDay(
+                    user.getEmpresa().getId(), user.getNombre(), hoy,
+                    motivo.texto(), motivo.vacaciones(), destinatarios));
+            log.info("Jornada iniciada en día no laborable por el usuario {}: {}", user.getId(), motivo.texto());
+        });
+    }
+
+    @Override
+    public Optional<NonWorkingDayService.Motivo> motivoNoLaborableHoy(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        return nonWorkingDayService.motivo(user, LocalDate.now(MADRID));
+    }
+
     @Override
     public Optional<TimeEntry> getActiveTimeEntry(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
@@ -211,8 +244,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         // Días de España: un fichaje a las 23:30 UTC del día 31 es del día 1.
         return timeEntryRepository.findHistoryByUsuarioEntre(
                 user,
-                desde.atStartOfDay(ZONA_HISTORIAL).toInstant(),
-                hasta.plusDays(1).atStartOfDay(ZONA_HISTORIAL).toInstant());
+                desde.atStartOfDay(MADRID).toInstant(),
+                hasta.plusDays(1).atStartOfDay(MADRID).toInstant());
     }
 
     @Override
