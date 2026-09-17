@@ -64,8 +64,11 @@ class AuthRepositoryImpl(
         return apiService.registrarFichaje(peticion)
     }
 
-    override suspend fun getHistorial(): Response<List<Registro>> {
-        return apiService.getHistorial()
+    override suspend fun getHistorial(
+        desde: java.time.LocalDate?,
+        hasta: java.time.LocalDate?
+    ): Response<List<Registro>> {
+        return apiService.getHistorial(desde?.toString(), hasta?.toString())
     }
 
     override suspend fun getResumenPersonal(): Response<ResumenPersonalDTO> {

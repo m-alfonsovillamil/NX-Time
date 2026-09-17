@@ -235,6 +235,15 @@
     <string name="historial_en_curso">Jornada sin cerrar</string>
 
     <!-- Ausencias -->
+    <string name="historial_periodo_recientes">Recientes</string>
+    <string name="historial_periodo_semana">Esta semana</string>
+    <string name="historial_periodo_mes">Este mes</string>
+    <string name="historial_periodo_mes_anterior">Mes anterior</string>
+    <string name="historial_periodo_elegir">Elegir fechas</string>
+    <string name="historial_periodo_total">Del %1$s al %2$s · %3$s trabajadas</string>
+    <string name="historial_periodo_vacio_titulo">Sin fichajes en este periodo</string>
+    <string name="historial_periodo_vacio_texto">Prueba con otras fechas.</string>
+    <string name="historial_periodo_max_un_anio">Como mucho, un año.</string>
     <string name="ausencias_titulo">Mis ausencias</string>
     <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
     <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>

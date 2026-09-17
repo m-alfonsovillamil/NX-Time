@@ -27,7 +27,11 @@ interface AuthRepository {
     /* Funciones de Fichaje (Empleado) */
     suspend fun getRegistroActivo(): Response<Registro?>
     suspend fun registrarFichaje(peticion: PeticionFichaje): Response<Registro>
-    suspend fun getHistorial(): Response<List<Registro>>
+    /** Ver [com.nxtime.app.data.network.ApiService.getHistorial]. Las dos fechas o ninguna. */
+    suspend fun getHistorial(
+        desde: java.time.LocalDate? = null,
+        hasta: java.time.LocalDate? = null
+    ): Response<List<Registro>>
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
 
     /* Cumplimiento normativo (RRHH/ADMIN) */

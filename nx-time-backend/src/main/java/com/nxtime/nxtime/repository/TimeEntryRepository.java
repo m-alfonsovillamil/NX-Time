@@ -166,6 +166,22 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             @Param("desde") Instant desde,
             @Param("hasta") Instant hasta);
 
+    /**
+     * El historial propio acotado a un periodo, más recientes primero.
+     *
+     * A diferencia de {@link #findHistoryByUsuario}, sin límite de filas: el
+     * rango ya lo acota el servicio (un año como mucho). Incluye la jornada
+     * abierta si cae en el periodo, igual que el historial sin filtro.
+     */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.usuario = :usuario AND t.anulado = false "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta "
+            + "ORDER BY t.horaEntrada DESC")
+    List<TimeEntry> findHistoryByUsuarioEntre(
+            @Param("usuario") User usuario,
+            @Param("desde") Instant desde,
+            @Param("hasta") Instant hasta);
+
     /** Lo mismo para un único empleado: el informe mensual individual. */
     @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
             + "WHERE t.usuario = :usuario AND t.anulado = false AND t.horaSalida IS NOT NULL "

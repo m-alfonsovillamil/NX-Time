@@ -19,6 +19,9 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -58,6 +61,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 
     /** Límite de filas de los listados de historial (ver auditoría: antes no había ninguno). */
     private static final int HISTORY_PAGE_SIZE = 200;
+
+    /** Un año bisiesto entero. Ver {@link #getHistory(String, LocalDate, LocalDate)}. */
+    static final int MAXIMO_DIAS_HISTORIAL = 366;
+
+    private static final ZoneId ZONA_HISTORIAL = ZoneId.of("Europe/Madrid");
 
     private final TimeEntryRepository timeEntryRepository;
     private final TimeEntryAuditRepository timeEntryAuditRepository;
@@ -186,6 +194,25 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         Pageable pageable = PageRequest.of(0, HISTORY_PAGE_SIZE);
         return timeEntryRepository.findHistoryByUsuario(user, pageable);
+    }
+
+    @Override
+    public List<TimeEntry> getHistory(String userEmail, LocalDate desde, LocalDate hasta) {
+        if (desde.isAfter(hasta)) {
+            throw new BusinessException("La fecha de inicio no puede ser posterior a la de fin.", HttpStatus.BAD_REQUEST);
+        }
+        // Un año como mucho: sin el límite de 200 filas, un rango abierto
+        // devolvería la vida laboral entera de alguien en una sola respuesta.
+        if (ChronoUnit.DAYS.between(desde, hasta) + 1 > MAXIMO_DIAS_HISTORIAL) {
+            throw new BusinessException("El periodo no puede pasar de un año.", HttpStatus.BAD_REQUEST);
+        }
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        // Días de España: un fichaje a las 23:30 UTC del día 31 es del día 1.
+        return timeEntryRepository.findHistoryByUsuarioEntre(
+                user,
+                desde.atStartOfDay(ZONA_HISTORIAL).toInstant(),
+                hasta.plusDays(1).atStartOfDay(ZONA_HISTORIAL).toInstant());
     }
 
     @Override
