@@ -15,8 +15,12 @@ import kotlinx.coroutines.launch
 data class AusenciasUiState(
     val cargando: Boolean = true,
     val peticiones: List<RespuestaAusencia> = emptyList(),
+    val filtro: FiltroAusencias = FiltroAusencias(),
     val error: MensajeUi? = null
-)
+) {
+    /** Lo que se pinta: las peticiones que pasan el filtro. */
+    val visibles: List<RespuestaAusencia> get() = FiltroAusencias.filtrar(peticiones, filtro)
+}
 
 /** Las ausencias que ha pedido el propio empleado, con su estado. */
 class AusenciasViewModel(
@@ -29,6 +33,14 @@ class AusenciasViewModel(
     init {
         cargar()
     }
+
+    /**
+     * El filtro se conserva al recargar: tirar para refrescar no debe
+     * devolver la lista entera a quien estaba mirando sus vacaciones de 2025.
+     */
+    fun cambiarFiltro(filtro: FiltroAusencias) = _uiState.update { it.copy(filtro = filtro) }
+
+    fun quitarFiltros() = _uiState.update { it.copy(filtro = FiltroAusencias()) }
 
     fun cargar() {
         _uiState.update { it.copy(cargando = true, error = null) }
