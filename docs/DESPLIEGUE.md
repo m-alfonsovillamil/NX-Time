@@ -177,6 +177,34 @@ release compila igual, pero sin firmar (es lo que pasa en el CI).
 > cualquiera de los dos, la app instalada **no se puede volver a actualizar
 > nunca**: Android exige que cada versión venga firmada con la misma clave.
 
+### Publicar una versión nueva
+
+El correo de alta lleva un botón para descargar la app que apunta a
+`https://github.com/m-alfonsovillamil/NX-Time/releases/latest/download/NX-Time.apk`
+(variable `APP_DOWNLOAD_URL`; vacía, el correo dice que la pida a quien le dio de
+alta). Ese enlace **solo sigue valiendo si cada versión se publica igual**:
+
+1. Sube `versionCode` (y `versionName`) en `nx-time-frontend-android/build.gradle.kts`,
+   en una PR, y mergéala. Con el mismo `versionCode` el APK no se instala encima
+   del anterior, y Sentry mezcla los fallos de las dos versiones.
+2. Compila `assembleProdRelease` desde ese `main`.
+3. Publica la release **con el APK renombrado a `NX-Time.apk`**, siempre ese nombre:
+
+```bash
+cp nx-time-frontend-android/build/outputs/apk/prod/release/nx-time-frontend-android-prod-release.apk NX-Time.apk
+gh release create app-vX.Y NX-Time.apk --target "$(git rev-parse main)" --title "NX Time X.Y (Android)"
+```
+
+`--target` exige el SHA **completo**; con el abreviado GitHub responde
+`target_commitish is invalid`. Y el enlace `latest` tarda unos segundos en
+apuntar a la release nueva: un 404 justo después de publicar no es un fallo.
+
+> ⚠️ Si al compilar falla con `AccessDeniedException` o `Unable to delete
+> directory` dentro de `build/`, algo tiene ficheros abiertos (visto el 17/09/2026:
+> los servidores de Java de VS Code). Compila en un worktree fuera del proyecto:
+> `git worktree add --detach ../nxtime-apk main`, copia `local.properties` y
+> compila allí.
+
 ## 4. El arranque en frío
 
 - **Render duerme el servicio** tras 15 minutos sin tráfico. Medido el

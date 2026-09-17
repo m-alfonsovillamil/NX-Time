@@ -124,6 +124,14 @@ management:
 
 # Configuración personalizada de la aplicación
 application:
+  app:
+    # Dónde se descarga la app Android. Va en el correo de alta, que es lo
+    # primero que recibe alguien a quien acaban de dar de alta y que todavía
+    # no tiene la aplicación. Por defecto, la última release de GitHub: el
+    # APK se sube siempre con el mismo nombre (NX-Time.apk), así que este
+    # enlace sigue valiendo cuando sale una versión nueva. Vacío = el correo
+    # dice que la pida a quien le ha dado de alta.
+    download-url: "${APP_DOWNLOAD_URL:https://github.com/m-alfonsovillamil/NX-Time/releases/latest/download/NX-Time.apk}"
   mail:
     # Remitente de las notificaciones (Fase 10). En desarrollo da igual
     # -- MailHog acepta cualquier cosa --; en producción tiene que ser

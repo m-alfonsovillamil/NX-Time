@@ -66,13 +66,15 @@ class AccessCodeServiceImplTest {
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
+    private static final String URL_APP = "https://example.test/NX-Time.apk";
+
     private AccessCodeServiceImpl service;
     private User ana;
 
     @BeforeEach
     void setUp() {
         service = new AccessCodeServiceImpl(accessCodeRepository, userRepository, refreshTokenRepository,
-                passwordEncoder, emailSender, Clock.fixed(AHORA, ZoneOffset.UTC));
+                passwordEncoder, emailSender, Clock.fixed(AHORA, ZoneOffset.UTC), URL_APP);
         ana = User.builder().id(10L).email(EMAIL).nombre("Ana").activo(true).build();
     }
 

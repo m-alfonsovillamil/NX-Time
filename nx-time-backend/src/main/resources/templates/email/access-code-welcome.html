@@ -15,8 +15,30 @@
         Tu usuario es <strong th:text="${email}">correo@empresa.com</strong>.
     </p>
 
+    <!--/*
+      Cómo conseguir la app, ANTES que el código: sin la aplicación, los pasos
+      de abajo no se pueden seguir. Hasta el 17/09/2026 el correo daba por hecho
+      que la persona ya la tenía, y a alguien recién dado de alta nadie se la ha
+      dado todavía.
+    */-->
+    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}">
+        <strong>1. Instala la aplicación</strong> (Android) desde tu móvil:
+    </p>
+    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" style="margin: 16px 0;">
+        <a th:href="${urlDescargaApp}" href="#"
+           style="background: #1f6feb; color: #ffffff; padding: 12px 20px; border-radius: 6px;
+                  text-decoration: none; font-weight: bold; display: inline-block;">Descargar NX Time</a>
+    </p>
+    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" style="color: #6a737d; font-size: 13px;">
+        La primera vez, Android te pedirá permiso para instalar aplicaciones
+        que no vienen de Google Play. Es normal: acéptalo solo para este archivo.
+    </p>
+    <p th:unless="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}">
+        <strong>1. Consigue la aplicación:</strong> pídesela a quien te ha dado de alta.
+    </p>
+
     <p>
-        Para elegir tu contraseña, abre la aplicación, pulsa
+        <strong>2.</strong> Para elegir tu contraseña, abre la aplicación, pulsa
         <strong>«¿Has olvidado tu contraseña o es tu primera vez?»</strong>,
         escribe tu correo, pulsa <strong>«Ya tengo un código»</strong> y usa este:
     </p>

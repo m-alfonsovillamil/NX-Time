@@ -167,6 +167,36 @@ class EmailTemplateRenderingTest {
         assertThat(html).doesNotContain("contrasena").doesNotContain("password");
     }
 
+    /*
+     * 17/09/2026: el correo de alta daba por hecho que la persona ya tenía la
+     * app, y a alguien recién dado de alta nadie se la ha dado todavía.
+     */
+    @Test
+    @DisplayName("El correo de alta lleva el enlace para descargar la app, antes que el código")
+    void accessCodeWelcome_llevaElEnlaceDeLaApp() {
+        Map<String, Object> vars = variablesDeCodigo();
+        vars.put("nombreEmpresa", "TechCorp");
+        vars.put("urlDescargaApp", "https://example.test/NX-Time.apk");
+
+        String html = render("access-code-welcome", vars);
+
+        assertThat(html).contains("href=\"https://example.test/NX-Time.apk\"").contains("Descargar NX Time");
+        assertThat(html.indexOf("Descargar NX Time")).isLessThan(html.indexOf("012345"));
+        assertThat(html).doesNotContain("pídesela a quien te ha dado de alta");
+    }
+
+    @Test
+    @DisplayName("Sin enlace configurado, el correo de alta dice que pida la app, sin un botón roto")
+    void accessCodeWelcome_sinEnlace_diceQueLaPida() {
+        Map<String, Object> vars = variablesDeCodigo();
+        vars.put("nombreEmpresa", "TechCorp");
+        vars.put("urlDescargaApp", "");
+
+        String html = render("access-code-welcome", vars);
+
+        assertThat(html).contains("pídesela a quien te ha dado de alta").doesNotContain("Descargar NX Time");
+    }
+
     @Test
     @DisplayName("El correo de recuperación renderiza con el código y su caducidad")
     void accessCodeRecovery_renderizaConElCodigo() {
