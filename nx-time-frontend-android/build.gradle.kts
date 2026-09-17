@@ -50,9 +50,14 @@ android {
          * 4 = 17/09/2026: pedir el borrado de mis datos (RGPD) y la bandeja de
          * borrados para RRHH/ADMIN, con el registro de solicitudes recibidas
          * fuera de la app.
+         * 5 = 17/09/2026: filtros por periodo en Historial y por estado, año y
+         * tipo en Ausencias; tarjetas de inicio que se abren con el gráfico de
+         * horas por día; aviso al gestor al trabajar en festivo o con una
+         * ausencia aprobada; y varios proyectos por persona: elegir proyecto al
+         * iniciar jornada, cambiarlo durante el día y repartir las horas.
          */
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
