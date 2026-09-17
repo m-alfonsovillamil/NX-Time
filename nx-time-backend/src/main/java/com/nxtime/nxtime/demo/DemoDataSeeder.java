@@ -55,6 +55,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import com.nxtime.nxtime.service.NationalHolidayGenerator;
 import com.nxtime.nxtime.service.OvertimeService;
+import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.TrackingCode;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -120,6 +121,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final ComplaintRepository complaintRepository;
     private final ComplaintMessageRepository complaintMessageRepository;
     private final OvertimeService overtimeService;
+    private final ProjectAllocationService projectAllocationService;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
@@ -141,6 +143,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             ComplaintRepository complaintRepository,
             ComplaintMessageRepository complaintMessageRepository,
             OvertimeService overtimeService,
+            ProjectAllocationService projectAllocationService,
             PasswordEncoder passwordEncoder
     ) {
         this.companyRepository = companyRepository;
@@ -161,6 +164,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.complaintRepository = complaintRepository;
         this.complaintMessageRepository = complaintMessageRepository;
         this.overtimeService = overtimeService;
+        this.projectAllocationService = projectAllocationService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -231,6 +235,13 @@ public class DemoDataSeeder implements CommandLineRunner {
         // parece no hacer nada.
         sembrarProyectos(empleadosTech, techCorp, "NX-CORE", "NX-APP");
         sembrarProyectos(empleadosIberica, consultoraIberica, "CI-AUDIT", "CI-ERP");
+
+        // Desde V23 las horas por proyecto se imputan al cerrar la jornada, y
+        // los fichajes de la demo se guardan directamente, sin cerrarse por
+        // el servicio. Sin esto las barras de proyectos saldrían vacías: se
+        // imputa cada jornada cerrada con la misma regla que al fichar.
+        imputarProyectos(empleadosTech);
+        imputarProyectos(empleadosIberica);
 
         // Fase A. Sin esto la campana sale a cero y el diálogo de ficha
         // enseña 40 h y 22 días para toda la plantilla: las dos
@@ -484,12 +495,20 @@ public class DemoDataSeeder implements CommandLineRunner {
                 crearAsignacion(empresa, empleado, primero, inicio, null);
             } else {
                 // Relevo: cierra en el primero el día ANTES de empezar en
-                // el segundo. Si las dos asignaciones compartieran el día
-                // del relevo, el EXCLUDE de la base rechazaría la
-                // segunda -- que es exactamente lo que tiene que hacer.
+                // el segundo. Desde V23 podrían solaparse, pero entonces el
+                // día del relevo tendría dos proyectos y, sin tramos de
+                // fichaje en la demo, sus horas no se imputarían a ninguno.
                 crearAsignacion(empresa, empleado, primero, inicio, relevo.minusDays(1));
                 crearAsignacion(empresa, empleado, segundo, relevo, null);
             }
+        }
+    }
+
+    private void imputarProyectos(List<User> empleados) {
+        for (User empleado : empleados) {
+            timeEntryRepository.findByUsuarioOrderByHoraEntradaAsc(empleado).stream()
+                    .filter(fichaje -> fichaje.getHoraSalida() != null && !fichaje.isAnulado())
+                    .forEach(projectAllocationService::alCerrar);
         }
     }
 

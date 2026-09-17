@@ -26,3 +26,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [014](014-acceso-por-codigo.md) | Nadie teclea la contraseña de otro: acceso por código |
 | [015](015-pausas-anadidas-a-posteriori.md) | Añadir una pausa después: un libro al lado del contador |
 | [016](016-borrar-sin-borrar-el-registro-horario.md) | Borrar los datos de alguien sin borrar su registro horario |
+| [017](017-imputacion-por-jornada.md) | Las horas de un proyecto se imputan por jornada, no se deducen por día |

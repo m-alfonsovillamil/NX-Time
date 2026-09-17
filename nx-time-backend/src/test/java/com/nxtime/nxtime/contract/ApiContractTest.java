@@ -2054,11 +2054,10 @@ class ApiContractTest {
 
     @Test
     @Order(83)
-    void nadiePuedeEstarEnDosProyectosElMismoDia_devuelve409() throws Exception {
-        // La asignación anterior no tiene fecha de fin, así que cubre
-        // desde 2026-01-01 hasta el infinito: cualquier fecha posterior
-        // choca. Lo impide el EXCLUDE de la base, no el código Java.
-        ResponseEntity<String> response = rest.exchange(
+    void unaPersonaPuedeEstarEnDosProyectosALaVez_peroNoDosVecesEnElMismo() throws Exception {
+        // Desde V23 (ADR 017) estar en NX-CORE no impide estar además en
+        // NX-APP: se elige proyecto al fichar.
+        ResponseEntity<String> otro = rest.exchange(
                 url("/api/v1/proyectos/" + otroProyectoId + "/asignaciones"),
                 HttpMethod.POST,
                 new HttpEntity<>(toJson(mapOf(
@@ -2066,15 +2065,27 @@ class ApiContractTest {
                         "fechaInicio", "2026-06-01")), authHeaders(gestorToken)),
                 String.class
         );
+        assertThat(otro.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(bodyOf(otro).get("proyectoCodigo").asText()).isEqualTo("NX-APP");
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        // Y el mensaje dice en qué proyecto está, no "error inesperado".
-        assertThat(bodyOf(response).get("detail").asText()).contains("NX-CORE");
+        // Lo que sigue sin poder ser es estar dos veces en el MISMO: la
+        // asignación a NX-CORE no tiene fin y cubre el 1 de marzo. Lo impide
+        // el EXCLUDE de la base, no el código Java.
+        ResponseEntity<String> repetida = rest.exchange(
+                url("/api/v1/proyectos/" + proyectoId + "/asignaciones"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf(
+                        "usuarioId", empleadoId,
+                        "fechaInicio", "2026-03-01")), authHeaders(gestorToken)),
+                String.class
+        );
+        assertThat(repetida.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(bodyOf(repetida).get("detail").asText()).contains("NX-CORE");
     }
 
     @Test
     @Order(84)
-    void alCerrarLaAsignacionAnterior_yaSePuedeAsignarAlOtroProyecto() throws Exception {
+    void cerrarUnaAsignacion_leDaFechaDeFin() throws Exception {
         ResponseEntity<String> cerrada = rest.exchange(
                 url("/api/v1/proyectos/asignaciones/" + asignacionId),
                 HttpMethod.PATCH,
@@ -2083,20 +2094,6 @@ class ApiContractTest {
         );
         assertThat(cerrada.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(bodyOf(cerrada).get("fechaFin").asText()).isEqualTo("2026-05-31");
-
-        // El relevo es al día siguiente: un rango [.., 31/5] y otro que
-        // empieza el 1/6 no se solapan (daterange normaliza el límite
-        // superior a exclusivo).
-        ResponseEntity<String> nueva = rest.exchange(
-                url("/api/v1/proyectos/" + otroProyectoId + "/asignaciones"),
-                HttpMethod.POST,
-                new HttpEntity<>(toJson(mapOf(
-                        "usuarioId", empleadoId,
-                        "fechaInicio", "2026-06-01")), authHeaders(gestorToken)),
-                String.class
-        );
-        assertThat(nueva.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(bodyOf(nueva).get("proyectoCodigo").asText()).isEqualTo("NX-APP");
     }
 
     @Test

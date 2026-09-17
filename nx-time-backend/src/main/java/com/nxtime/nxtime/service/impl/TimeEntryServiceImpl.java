@@ -13,6 +13,7 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.service.NonWorkingDayService;
+import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
@@ -77,6 +78,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private final ApplicationEventPublisher eventPublisher;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final NonWorkingDayService nonWorkingDayService;
+    private final ProjectAllocationService projectAllocationService;
 
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
@@ -85,7 +87,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             TimeEntryMapper timeEntryMapper,
             ApplicationEventPublisher eventPublisher,
             TimeEntrySnapshotSerializer snapshotSerializer,
-            NonWorkingDayService nonWorkingDayService
+            NonWorkingDayService nonWorkingDayService,
+            ProjectAllocationService projectAllocationService
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.timeEntryAuditRepository = timeEntryAuditRepository;
@@ -94,6 +97,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         this.eventPublisher = eventPublisher;
         this.snapshotSerializer = snapshotSerializer;
         this.nonWorkingDayService = nonWorkingDayService;
+        this.projectAllocationService = projectAllocationService;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -134,7 +138,10 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 }
                 activeEntry.setHoraSalida(Instant.now());
                 accion = AuditAction.MODIFICACION;
-                yield timeEntryRepository.save(activeEntry);
+                TimeEntry cerrada = timeEntryRepository.save(activeEntry);
+                // Con la salida ya hay neto: se reparte entre proyectos (ADR 017).
+                projectAllocationService.alCerrar(cerrada);
+                yield cerrada;
             }
             case PAUSA_INICIO -> {
                 if (activeEntry == null) {

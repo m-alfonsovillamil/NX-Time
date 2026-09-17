@@ -12,6 +12,7 @@ import com.nxtime.nxtime.dto.ProjectResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.repository.ProjectAllocationRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
 import com.nxtime.nxtime.repository.ProjectRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -38,24 +39,27 @@ public class ProjectServiceImpl implements ProjectService {
     private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
 
     /**
-     * Nombre de la restricción que impide que una persona esté en dos
-     * proyectos el mismo día. Se busca en el mensaje de la excepción
+     * Nombre de la restricción que impide que una persona esté dos veces en
+     * el mismo proyecto a la vez (V23). Se busca en el mensaje de la excepción
      * para distinguir ese choque concreto de cualquier otra violación de
      * integridad, que no significaría lo mismo.
      */
-    private static final String RESTRICCION_SOLAPE = "ex_asignaciones_sin_solape";
+    private static final String RESTRICCION_SOLAPE = "ex_asignaciones_sin_solape_mismo_proyecto";
 
     private final ProjectRepository projectRepository;
     private final ProjectAssignmentRepository assignmentRepository;
     private final UserRepository userRepository;
+    private final ProjectAllocationRepository allocationRepository;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
             ProjectAssignmentRepository assignmentRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ProjectAllocationRepository allocationRepository) {
         this.projectRepository = projectRepository;
         this.assignmentRepository = assignmentRepository;
         this.userRepository = userRepository;
+        this.allocationRepository = allocationRepository;
     }
 
     // ------------------------------------------------------------------
@@ -80,7 +84,7 @@ public class ProjectServiceImpl implements ProjectService {
                         .toList();
 
         List<ProjectDetailResponse.EmployeeHoursItem> horas =
-                assignmentRepository.sumarSegundosDelProyectoPorEmpleado(
+                allocationRepository.sumarSegundosDelProyectoPorEmpleado(
                                 id, inicioDelMes(periodo), finExclusivo(periodo)).stream()
                         .map(fila -> new ProjectDetailResponse.EmployeeHoursItem(
                                 fila.getUsuarioId(), fila.getNombre(), aMinutos(fila.getSegundos())))
@@ -191,11 +195,11 @@ public class ProjectServiceImpl implements ProjectService {
             throw new TenantAccessException("No puedes asignar a alguien de otra empresa.");
         }
 
-        // Se busca el choque ANTES de insertar solo para poder decir en
-        // qué proyecto está ya. Quien lo impide de verdad es el EXCLUDE
-        // de la base: entre esta lectura y el INSERT cabe otra petición,
-        // y por eso el catch de abajo no sobra.
-        assignmentRepository.findVigenteDe(persona.getId(), request.fechaInicio())
+        // Desde V23 una persona puede estar en varios proyectos a la vez; lo
+        // que no puede es estar dos veces en el MISMO. Se busca antes solo
+        // para dar un mensaje claro: quien lo impide de verdad es el EXCLUDE
+        // de la base, y por eso el catch de guardarControlandoElSolape no sobra.
+        assignmentRepository.findVigenteDelProyecto(persona.getId(), proyectoId, request.fechaInicio())
                 .ifPresent(existente -> {
                     // "ya tiene una asignación" y no "ya está asignado":
                     // el mensaje concatena un nombre propio y el
@@ -257,7 +261,7 @@ public class ProjectServiceImpl implements ProjectService {
         YearMonth periodo = periodoValido(anio, mes);
 
         List<ProjectHoursResponse.ProjectHoursItem> items =
-                assignmentRepository.sumarSegundosPorProyecto(
+                allocationRepository.sumarSegundosPorProyecto(
                                 actor.getEmpresa().getId(),
                                 inicioDelMes(periodo),
                                 finExclusivo(periodo)).stream()
@@ -290,8 +294,8 @@ public class ProjectServiceImpl implements ProjectService {
             if (mensajeCompleto(e).contains(RESTRICCION_SOLAPE)) {
                 // Sin participio concordado, por lo mismo que arriba.
                 throw new BusinessException(
-                        persona.getNombre() + " ya tiene una asignación en otro proyecto en alguna "
-                                + "de esas fechas. Cierra la asignación anterior antes de crear la nueva.");
+                        persona.getNombre() + " ya tiene una asignación en este proyecto en alguna "
+                                + "de esas fechas. Cierra la anterior antes de crear la nueva.");
             }
             throw e;
         }

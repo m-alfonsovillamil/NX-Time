@@ -1,6 +1,8 @@
 # 9. Las asignaciones a proyecto llevan vigencia, y el solape lo impide la base
 
-**Estado:** aceptada · **Fecha:** septiembre 2026
+**Estado:** aceptada · **Fecha:** septiembre 2026 · **Superada en parte por:** [ADR 017](017-imputacion-por-jornada.md)
+
+> Desde V23 una persona **sí** puede estar en varios proyectos a la vez (solo no dos veces en el mismo), y las horas se **imputan** por jornada en vez de deducirse por día. La vigencia de las asignaciones, y la regla de cerrar en vez de borrar, siguen como se cuenta aquí.
 
 ## Contexto
 

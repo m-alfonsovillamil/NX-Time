@@ -77,7 +77,8 @@ class AddedPauseServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new AddedPauseServiceImpl(timeEntryRepository, addedPauseRepository, correctionRepository,
-                correctionService, snapshotSerializer, eventPublisher, Clock.fixed(AHORA, ZoneOffset.UTC));
+                correctionService, snapshotSerializer, eventPublisher, org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class),
+                Clock.fixed(AHORA, ZoneOffset.UTC));
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         empleada = User.builder().id(10L).email("ana@test").nombre("Ana")
                 .rol(Role.EMPLEADO).empresa(empresa).activo(true).build();
