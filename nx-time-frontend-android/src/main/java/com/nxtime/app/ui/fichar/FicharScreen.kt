@@ -36,6 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.Avatar
@@ -82,6 +87,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun FicharScreen(
     onIrSolicitud: () -> Unit,
+    onAnadirPausa: (Registro) -> Unit,
     onIrPerfil: () -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
@@ -89,6 +95,22 @@ fun FicharScreen(
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+
+    /*
+     * Recarga al volver a la pantalla, no solo al entrar: tras añadir una
+     * pausa desde aquí, la jornada ha cambiado en el servidor y esta pantalla
+     * seguiría enseñando la de antes. `ON_RESUME` y no `LaunchedEffect(Unit)`
+     * por lo mismo que en HistorialEquipoScreen: este último solo se dispara
+     * la primera vez.
+     */
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.comprobarEstadoJornada()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
 
     /*
      * El latido del cronómetro. Vive aquí y no en el ViewModel para que
@@ -209,7 +231,18 @@ fun FicharScreen(
                         )
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+
+                /*
+                 * "Se me olvidó darle a pausar para comer" (ADR 015). Va aquí,
+                 * pegado al botón de pausa, porque es donde se busca justo
+                 * después de darse cuenta.
+                 */
+                estado.registro?.let { registro ->
+                    TextButton(onClick = { onAnadirPausa(registro) }) {
+                        Text(stringResource(R.string.pausa_boton))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
 
                 /*
                  * De qué se compone la jornada abierta. Va justo debajo

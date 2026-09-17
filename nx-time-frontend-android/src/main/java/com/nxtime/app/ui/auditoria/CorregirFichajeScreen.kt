@@ -7,18 +7,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,10 +29,11 @@ import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.BotonPrincipal
 import com.nxtime.app.ui.components.ColumnaFormulario
+import com.nxtime.app.ui.components.DialogoDeHora
 import com.nxtime.app.ui.components.PantallaConBarra
+import com.nxtime.app.ui.components.SelectorDeHora
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
-import java.util.Locale
 
 /**
  * Corregir un fichaje ya cerrado (RRHH/ADMIN).
@@ -200,62 +193,3 @@ fun CorregirFichajeScreen(
 }
 
 private enum class Campo { ENTRADA, SALIDA }
-
-@Composable
-private fun SelectorDeHora(
-    etiqueta: String,
-    hora: Int,
-    minuto: Int,
-    onPulsa: () -> Unit
-) {
-    OutlinedTextField(
-        value = String.format(Locale.forLanguageTag("es-ES"), "%02d:%02d", hora, minuto),
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(etiqueta) },
-        trailingIcon = {
-            // El campo entero abre el diálogo, pero el icono lo anuncia:
-            // un campo de solo lectura sin pista visual parece roto.
-            TextButton(onClick = onPulsa) {
-                Icon(Icons.Default.Schedule, contentDescription = etiqueta)
-            }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DialogoDeHora(
-    horaInicial: Int,
-    minutoInicial: Int,
-    onConfirma: (Int, Int) -> Unit,
-    onCancela: () -> Unit
-) {
-    val estado = rememberTimePickerState(
-        initialHour = horaInicial,
-        initialMinute = minutoInicial,
-        // Formato de 24 horas: es el que usa el resto de la app y el que
-        // se espera en un registro horario español.
-        is24Hour = true
-    )
-
-    AlertDialog(
-        onDismissRequest = onCancela,
-        confirmButton = {
-            TextButton(onClick = { onConfirma(estado.hour, estado.minute) }) {
-                Text(stringResource(R.string.aceptar))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancela) {
-                Text(stringResource(R.string.cancelar))
-            }
-        },
-        text = {
-            Column { TimePicker(state = estado) }
-        }
-    )
-}

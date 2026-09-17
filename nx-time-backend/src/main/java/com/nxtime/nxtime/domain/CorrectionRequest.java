@@ -74,6 +74,15 @@ public class CorrectionRequest {
 
     private Instant horaSalidaPropuesta;
 
+    /**
+     * Una pausa que se pide añadir, o las dos a null si la solicitud solo
+     * toca horas (V19, ADR 015). Cuando SOLO se pide la pausa, las horas
+     * propuestas son las mismas que las actuales.
+     */
+    private Instant pausaInicioPropuesta;
+
+    private Instant pausaFinPropuesta;
+
     private String motivo;
 
     @Enumerated(EnumType.STRING)
@@ -100,6 +109,11 @@ public class CorrectionRequest {
     /** Quién es el dueño del fichaje, que no tiene por qué ser el solicitante. */
     public User getDuenoDelFichaje() {
         return registro.getUsuario();
+    }
+
+    /** Si la solicitud incluye añadir una pausa. */
+    public boolean proponePausa() {
+        return pausaInicioPropuesta != null && pausaFinPropuesta != null;
     }
 
     /** Si la pidió el propio dueño del fichaje. */

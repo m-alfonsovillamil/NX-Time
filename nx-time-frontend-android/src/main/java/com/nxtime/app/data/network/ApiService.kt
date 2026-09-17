@@ -103,6 +103,27 @@ interface ApiService {
         @Body peticion: CorreccionFichajeRequest
     ): Response<CorreccionDTO>
 
+    /**
+     * Añadir una pausa a posteriori (ADR 015). 201 si se aplicó, 202 si
+     * quedó pedida como corrección; el cuerpo lo dice también en `aplicada`,
+     * que es lo que lee la pantalla.
+     */
+    @POST("api/v1/fichaje/{id}/pausas")
+    suspend fun anadirPausa(
+        @Path("id") fichajeId: Long,
+        @Body peticion: PausaAnadidaRequest
+    ): Response<PausaAnadidaResultado>
+
+    @GET("api/v1/fichaje/{id}/pausas")
+    suspend fun getPausasAnadidas(@Path("id") fichajeId: Long): Response<List<PausaAnadidaDTO>>
+
+    /** Solo sobre la jornada abierta; cerrada, se pide una corrección. */
+    @DELETE("api/v1/fichaje/{id}/pausas/{pausaId}")
+    suspend fun deshacerPausa(
+        @Path("id") fichajeId: Long,
+        @Path("pausaId") pausaId: Long
+    ): Response<Registro>
+
     @GET("api/v1/correcciones/pendientes")
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
 

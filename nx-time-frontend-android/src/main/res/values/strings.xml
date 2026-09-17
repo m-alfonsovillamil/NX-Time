@@ -674,6 +674,33 @@
     -->
     <string name="correccion_pedida">Corrección pedida. El fichaje no cambia hasta que la aprueben.</string>
     <string name="correccion_aplicada">Fichaje corregido.</string>
+
+    <!--
+      Añadir una pausa que no se fichó (ADR 015). Qué pasa lo decide el
+      servidor: la jornada abierta, o la cerrada que empezó hoy, cambia en el
+      acto; la de un día pasado queda pedida y no cambia hasta que la
+      aprueben. Los textos lo dicen ANTES de enviar, porque descubrirlo
+      después, viendo que el historial sigue igual, parece un fallo.
+    -->
+    <string name="pausa_titulo">Añadir una pausa</string>
+    <string name="pausa_boton">Añadir pausa</string>
+    <string name="pausa_explicacion_directa">Se descontará de tu jornada en cuanto la guardes.</string>
+    <string name="pausa_explicacion_aprobacion">Es de un día pasado: la tendrá que aprobar tu gestor, y tu jornada no cambia hasta entonces.</string>
+    <string name="pausa_inicio">Empezó a las</string>
+    <string name="pausa_fin">Acabó a las</string>
+    <string name="pausa_fin_otro_dia">Acabó al día siguiente</string>
+    <string name="pausa_motivo">Motivo</string>
+    <string name="pausa_motivo_ayuda">Por ejemplo: «Olvidé fichar la comida».</string>
+    <string name="pausa_motivo_vacio">Explica por qué añades la pausa.</string>
+    <string name="pausa_fin_anterior">La pausa tiene que acabar después de empezar.</string>
+    <string name="pausa_guardar_directa">Añadir pausa</string>
+    <string name="pausa_guardar_aprobacion">Pedir que la añadan</string>
+    <string name="pausa_aplicada">Pausa añadida. Tu jornada ya la descuenta.</string>
+    <string name="pausa_pedida">Pausa pedida. Tu jornada no cambia hasta que la aprueben.</string>
+    <string name="pausa_ya_anadidas">Pausas que ya añadiste a esta jornada</string>
+    <string name="pausa_rango">%1$s – %2$s · %3$s</string>
+    <string name="pausa_deshacer">Deshacer</string>
+    <string name="correcciones_solo_pausa">Añadir una pausa de %1$s a %2$s</string>
     <!-- Auditoría: las tres acciones nuevas -->
     <string name="auditoria_accion_solicitud_correccion">Corrección solicitada</string>
     <string name="auditoria_accion_rechazo_correccion">Corrección rechazada</string>

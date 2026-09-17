@@ -24,3 +24,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [012](012-anonimato-estructural-en-el-canal-de-denuncias.md) | El anonimato del canal de denuncias es estructural, no una promesa |
 | [013](013-la-candidatura-congela-el-cv.md) | La candidatura congela el CV que se presentó |
 | [014](014-acceso-por-codigo.md) | Nadie teclea la contraseña de otro: acceso por código |
+| [015](015-pausas-anadidas-a-posteriori.md) | Añadir una pausa después: un libro al lado del contador |

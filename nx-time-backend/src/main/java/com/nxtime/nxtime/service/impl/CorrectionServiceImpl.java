@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
 import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
+import com.nxtime.nxtime.domain.AddedPause;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.CorrectionRequest;
@@ -19,10 +20,12 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.ReglasDePausa;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -68,18 +71,21 @@ public class CorrectionServiceImpl implements CorrectionService {
     private final UserRepository userRepository;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
+    private final AddedPauseRepository addedPauseRepository;
 
     public CorrectionServiceImpl(
             CorrectionRequestRepository correctionRepository,
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
             TimeEntrySnapshotSerializer snapshotSerializer,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            AddedPauseRepository addedPauseRepository) {
         this.correctionRepository = correctionRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.snapshotSerializer = snapshotSerializer;
         this.eventPublisher = eventPublisher;
+        this.addedPauseRepository = addedPauseRepository;
     }
 
     // ------------------------------------------------------------------
@@ -119,6 +125,8 @@ public class CorrectionServiceImpl implements CorrectionService {
         // después deja a quien aprueba con un error que no causó él.
         exigirQueLasPausasQuepan(
                 fichaje.getSegundosPausaAcumulados(), request.horaEntrada(), request.horaSalida());
+        exigirPausaPropuestaValida(fichaje, request.horaEntrada(), request.horaSalida(),
+                request.pausaInicio(), request.pausaFin());
 
         // Se mira antes para dar un 409 que se entienda; quien lo impide
         // de verdad es el índice único parcial de la base, que además
@@ -134,6 +142,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .solicitante(actor)
                 .horaEntradaPropuesta(request.horaEntrada())
                 .horaSalidaPropuesta(request.horaSalida())
+                .pausaInicioPropuesta(request.pausaInicio())
+                .pausaFinPropuesta(request.pausaFin())
                 .motivo(request.motivo().trim())
                 .estado(CorrectionStatus.PENDIENTE)
                 .creadoEn(Instant.now())
@@ -330,14 +340,37 @@ public class CorrectionServiceImpl implements CorrectionService {
                 original.getSegundosPausaAcumulados(),
                 solicitud.getHoraEntradaPropuesta(),
                 solicitud.getHoraSalidaPropuesta());
+        exigirPausaPropuestaValida(original,
+                solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta(),
+                solicitud.getPausaInicioPropuesta(), solicitud.getPausaFinPropuesta());
 
         String antes = snapshotSerializer.toJson(original);
 
-        TimeEntry corregido = timeEntryRepository.save(copiaCorregidaDe(
-                original, solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta()));
+        TimeEntry copia = copiaCorregidaDe(
+                original, solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta());
+        if (solicitud.proponePausa()) {
+            copia.setSegundosPausaAcumulados(copia.getSegundosPausaAcumulados()
+                    + Duration.between(solicitud.getPausaInicioPropuesta(),
+                            solicitud.getPausaFinPropuesta()).getSeconds());
+        }
+        TimeEntry corregido = timeEntryRepository.save(copia);
 
         original.setAnulado(true);
         timeEntryRepository.save(original);
+
+        moverPausasAnadidas(original, corregido);
+        if (solicitud.proponePausa()) {
+            addedPauseRepository.save(AddedPause.builder()
+                    .empresa(original.getEmpresa())
+                    .registro(corregido)
+                    .inicio(solicitud.getPausaInicioPropuesta())
+                    .fin(solicitud.getPausaFinPropuesta())
+                    .motivo(solicitud.getMotivo())
+                    .creadaPor(solicitud.getSolicitante())
+                    .creadaEn(Instant.now())
+                    .solicitud(solicitud)
+                    .build());
+        }
 
         solicitud.setEstado(CorrectionStatus.APROBADA);
         solicitud.setAprobador(actor);
@@ -425,6 +458,41 @@ public class CorrectionServiceImpl implements CorrectionService {
     }
 
     /**
+     * Si la solicitud trae una pausa, que tenga sentido contra las horas que
+     * se PROPONEN, no contra las actuales: es la jornada que va a quedar.
+     *
+     * Las reglas son las mismas que en la vía directa (ver {@link ReglasDePausa}),
+     * y a propósito viven en un solo sitio.
+     */
+    private void exigirPausaPropuestaValida(
+            TimeEntry fichaje, Instant entrada, Instant salida, Instant pausaInicio, Instant pausaFin) {
+        if (pausaInicio == null && pausaFin == null) {
+            return;
+        }
+        ReglasDePausa.exigirValida(
+                pausaInicio, pausaFin, entrada, salida,
+                fichaje.getSegundosPausaAcumulados(),
+                addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(fichaje),
+                null,
+                Instant.now());
+    }
+
+    /**
+     * Las pausas añadidas a mano se mudan a la versión corregida.
+     *
+     * Una corrección no edita el fichaje: lo anula y crea otro. Sus segundos
+     * ya viajan en {@link #copiaCorregidaDe}, pero las filas del libro se
+     * quedarían colgando de la versión anulada y dejarían de verse.
+     */
+    private void moverPausasAnadidas(TimeEntry original, TimeEntry corregido) {
+        List<AddedPause> vivas = addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(original);
+        for (AddedPause pausa : vivas) {
+            pausa.setRegistro(corregido);
+        }
+        addedPauseRepository.saveAll(vivas);
+    }
+
+    /**
      * Guarda la solicitud traduciendo el choque del índice único parcial.
      *
      * Dos peticiones simultáneas sobre el mismo fichaje pasan las dos la
@@ -462,11 +530,19 @@ public class CorrectionServiceImpl implements CorrectionService {
 
     /** Lo que se PROPONE, con la misma forma que un fichaje real. */
     private String propuestaComoJson(CorrectionRequest solicitud) {
+        // Con las pausas que quedarían: sin ellas, la instantánea de "lo
+        // propuesto" diría cero segundos de pausa y mentiría en la traza.
+        long pausa = solicitud.getRegistro().getSegundosPausaAcumulados();
+        if (solicitud.proponePausa()) {
+            pausa += Duration.between(solicitud.getPausaInicioPropuesta(),
+                    solicitud.getPausaFinPropuesta()).getSeconds();
+        }
         return snapshotSerializer.toJson(TimeEntry.builder()
                 .usuario(solicitud.getDuenoDelFichaje())
                 .empresa(solicitud.getEmpresa())
                 .horaEntrada(solicitud.getHoraEntradaPropuesta())
                 .horaSalida(solicitud.getHoraSalidaPropuesta())
+                .segundosPausaAcumulados(pausa)
                 .build());
     }
 
@@ -534,6 +610,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 fichaje.getHoraSalida(),
                 solicitud.getHoraEntradaPropuesta(),
                 solicitud.getHoraSalidaPropuesta(),
+                solicitud.getPausaInicioPropuesta(),
+                solicitud.getPausaFinPropuesta(),
                 solicitud.getMotivo(),
                 solicitud.getEstado(),
                 solicitud.getAprobador() != null
