@@ -31,6 +31,10 @@ public record CorrectionResponse(
         Instant horaEntradaPropuesta,
         Instant horaSalidaPropuesta,
 
+        /** La pausa que se pide añadir, o null si la solicitud solo toca horas. */
+        Instant pausaInicioPropuesta,
+        Instant pausaFinPropuesta,
+
         String motivo,
         CorrectionStatus estado,
 

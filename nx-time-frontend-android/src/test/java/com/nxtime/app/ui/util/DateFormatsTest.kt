@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.DayOfWeek
@@ -160,5 +161,53 @@ class DateFormatsTest {
         // donde saldría "W".
         assertEquals("X", DateFormats.inicialDelDia(DayOfWeek.WEDNESDAY))
         assertEquals("D", DateFormats.inicialDelDia(DayOfWeek.SUNDAY))
+    }
+
+    /*
+     * El bug del 16/09/2026: en un móvil salieron "1 2 3 4 5 6 7" como
+     * cabeceras y "5 de 2026" como título. Es lo que devuelve `java.time`
+     * cuando no encuentra los datos de idioma, y por eso desaparecía al
+     * reabrir la aplicación.
+     *
+     * Estos tres tests comprueban que NINGÚN texto de fecha sale como un
+     * número. No pueden reproducir la ausencia de datos de idioma --
+     * corren en el PC, que siempre los tiene--, así que lo que vigilan es
+     * que nadie vuelva a delegar estos nombres en el sistema.
+     */
+    @Test
+    fun `los doce meses tienen nombre, ninguno sale como numero`() {
+        val nombres = (1..12).map { DateFormats.mesYAnio(YearMonth.of(2026, it)) }
+        assertEquals("Enero de 2026", nombres.first())
+        assertEquals("Septiembre de 2026", nombres[8])
+        nombres.forEach { assertFalse("Un mes ha salido como número: $it", it.first().isDigit()) }
+    }
+
+    @Test
+    fun `las siete iniciales son distintas y ninguna es un numero`() {
+        val iniciales = DayOfWeek.entries.map { DateFormats.inicialDelDia(it) }
+        assertEquals(listOf("L", "M", "X", "J", "V", "S", "D"), iniciales)
+        iniciales.forEach { assertFalse("Una inicial salió como número: $it", it.first().isDigit()) }
+    }
+
+    @Test
+    fun `la fecha larga lleva el mes escrito, no su numero`() {
+        assertEquals("29 de agosto, 2026", DateFormats.fechaLarga("2026-08-29T10:00:00Z"))
+    }
+
+    /*
+     * El hueco de la rejilla del calendario. El cálculo era correcto pero
+     * vivía dentro de un Composable privado, sin ningún test: si alguien
+     * lo cambiaba a una semana que empieza en domingo, el mes entero se
+     * desplazaba una columna y nada se ponía rojo.
+     */
+    @Test
+    fun `el hueco inicial coloca el dia 1 bajo su inicial`() {
+        // Junio de 2026 empieza en LUNES: sin hueco.
+        assertEquals(0, DateFormats.huecoInicialDelMes(YearMonth.of(2026, 6)))
+        // Mayo de 2026 empieza en VIERNES: cuatro huecos (L M X J).
+        assertEquals(4, DateFormats.huecoInicialDelMes(YearMonth.of(2026, 5)))
+        // Noviembre de 2026 empieza en DOMINGO, el peor caso: seis huecos,
+        // y es el mes que obliga a pintar seis filas.
+        assertEquals(6, DateFormats.huecoInicialDelMes(YearMonth.of(2026, 11)))
     }
 }

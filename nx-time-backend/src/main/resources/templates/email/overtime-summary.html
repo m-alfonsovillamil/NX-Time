@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!--/*
+  El resumen de la noche para quien revisa horas extra (09/2026).
+
+  Uno por empresa y por noche, no uno por exceso: el aviso individual
+  sigue yendo solo al empleado, porque un correo por cada exceso a cada
+  gestor es spam por diseño. Este existe para el problema contrario --
+  que un exceso se quede semanas sin revisar porque a nadie se le ocurrió
+  abrir la bandeja.
+
+  NO lleva nombres, y no es un olvido: un correo que liste a quién se le
+  ha ido la jornada acaba reenviado. El detalle está en la bandeja, que
+  es donde el permiso lo protege.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Horas extra sin revisar', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${avisos == 1}">
+        La revisión de anoche ha detectado <strong>1 aviso</strong> de horas extra
+        nuevo, pendiente de revisar.
+    </p>
+    <p th:unless="${avisos == 1}">
+        La revisión de anoche ha detectado <strong th:text="${avisos} + ' avisos'">7 avisos</strong>
+        de horas extra nuevos, pendientes de revisar.
+    </p>
+
+    <p style="margin: 0;" th:if="${personas == 1}">
+        Son de <strong>1 persona</strong>.
+    </p>
+    <p style="margin: 0;" th:unless="${personas == 1}">
+        Son de <strong th:text="${personas} + ' personas'">4 personas</strong>.
+    </p>
+
+    <p style="margin-top: 20px;">
+        Puedes verlos y decidir sobre cada uno en la aplicación, en
+        <strong>Gestión &rsaquo; Horas extra</strong>. Hasta que alguien los revise,
+        un exceso no cuenta como hora extra ni consume la bolsa anual.
+    </p>
+</div>
+</body>
+</html>

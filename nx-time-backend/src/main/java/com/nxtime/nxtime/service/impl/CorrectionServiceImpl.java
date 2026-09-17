@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
 import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
+import com.nxtime.nxtime.domain.AddedPause;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.CorrectionRequest;
@@ -18,13 +19,16 @@ import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.ReglasDePausa;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,18 +71,21 @@ public class CorrectionServiceImpl implements CorrectionService {
     private final UserRepository userRepository;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
+    private final AddedPauseRepository addedPauseRepository;
 
     public CorrectionServiceImpl(
             CorrectionRequestRepository correctionRepository,
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
             TimeEntrySnapshotSerializer snapshotSerializer,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            AddedPauseRepository addedPauseRepository) {
         this.correctionRepository = correctionRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.snapshotSerializer = snapshotSerializer;
         this.eventPublisher = eventPublisher;
+        this.addedPauseRepository = addedPauseRepository;
     }
 
     // ------------------------------------------------------------------
@@ -98,7 +105,7 @@ public class CorrectionServiceImpl implements CorrectionService {
         // operación distinta de pedirla sobre el propio, y por eso exige
         // su authority: es lo que antes hacía RRHH directamente.
         boolean esMio = fichaje.getUsuario().getId() == actor.getId();
-        if (!esMio && !tiene(actor, CORREGIR_AJENO)) {
+        if (!esMio && !RoleAuthorities.tiene(actor, CORREGIR_AJENO)) {
             throw new TenantAccessException("Solo puedes pedir correcciones de tus propios fichajes.");
         }
         if (fichaje.isAnulado()) {
@@ -113,6 +120,13 @@ public class CorrectionServiceImpl implements CorrectionService {
                     "La hora de salida corregida debe ser posterior a la de entrada.",
                     HttpStatus.BAD_REQUEST);
         }
+        // Se avisa ya al pedirla, y no solo al aprobarla: quien la escribe
+        // puede arreglarlo en el momento, mientras que descubrirlo días
+        // después deja a quien aprueba con un error que no causó él.
+        exigirQueLasPausasQuepan(
+                fichaje.getSegundosPausaAcumulados(), request.horaEntrada(), request.horaSalida());
+        exigirPausaPropuestaValida(fichaje, request.horaEntrada(), request.horaSalida(),
+                request.pausaInicio(), request.pausaFin());
 
         // Se mira antes para dar un 409 que se entienda; quien lo impide
         // de verdad es el índice único parcial de la base, que además
@@ -128,6 +142,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .solicitante(actor)
                 .horaEntradaPropuesta(request.horaEntrada())
                 .horaSalidaPropuesta(request.horaSalida())
+                .pausaInicioPropuesta(request.pausaInicio())
+                .pausaFinPropuesta(request.pausaFin())
                 .motivo(request.motivo().trim())
                 .estado(CorrectionStatus.PENDIENTE)
                 .creadoEn(Instant.now())
@@ -146,7 +162,7 @@ public class CorrectionServiceImpl implements CorrectionService {
          * que la hace aceptable es que queda escrita como tal en la
          * traza, con su motivo, igual que cualquier otra.
          */
-        if (esMio && tiene(actor, APROBAR)) {
+        if (esMio && RoleAuthorities.tiene(actor, APROBAR)) {
             log.info("{} se auto-aprueba la corrección del fichaje {}", actor.getEmail(), fichajeId);
             return aplicar(solicitud, actor, "Auto-aprobada por el propio empleado.");
         }
@@ -279,12 +295,12 @@ public class CorrectionServiceImpl implements CorrectionService {
         if (solicitud.getEstado() == CorrectionStatus.EN_DISPUTA) {
             // La discrepancia es entre el empleado y quien lleva su
             // equipo: la resuelve alguien por encima de los dos.
-            return tiene(actor, RESOLVER_DISPUTAS);
+            return RoleAuthorities.tiene(actor, RESOLVER_DISPUTAS);
         }
         if (solicitud.laPidioElDueno()) {
             // Nadie se aprueba a sí mismo por esta vía: si el dueño
             // pudiera aprobar, ya se auto-aprobó al pedirla.
-            return tiene(actor, APROBAR) && solicitud.getSolicitante().getId() != actor.getId();
+            return RoleAuthorities.tiene(actor, APROBAR) && solicitud.getSolicitante().getId() != actor.getId();
         }
         // Se la piden a él: decide el dueño del fichaje.
         return solicitud.getDuenoDelFichaje().getId() == actor.getId();
@@ -318,18 +334,43 @@ public class CorrectionServiceImpl implements CorrectionService {
                     "El fichaje ya se corrigió por otra vía mientras esta solicitud esperaba.");
         }
 
+        // Se vuelve a comprobar aquí y no solo en solicitar(): entre pedir
+        // la corrección y aprobarla pueden haberse acumulado más pausas.
+        exigirQueLasPausasQuepan(
+                original.getSegundosPausaAcumulados(),
+                solicitud.getHoraEntradaPropuesta(),
+                solicitud.getHoraSalidaPropuesta());
+        exigirPausaPropuestaValida(original,
+                solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta(),
+                solicitud.getPausaInicioPropuesta(), solicitud.getPausaFinPropuesta());
+
         String antes = snapshotSerializer.toJson(original);
 
-        TimeEntry corregido = timeEntryRepository.save(TimeEntry.builder()
-                .usuario(original.getUsuario())
-                .empresa(original.getEmpresa())
-                .horaEntrada(solicitud.getHoraEntradaPropuesta())
-                .horaSalida(solicitud.getHoraSalidaPropuesta())
-                .registroOriginal(original)
-                .build());
+        TimeEntry copia = copiaCorregidaDe(
+                original, solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta());
+        if (solicitud.proponePausa()) {
+            copia.setSegundosPausaAcumulados(copia.getSegundosPausaAcumulados()
+                    + Duration.between(solicitud.getPausaInicioPropuesta(),
+                            solicitud.getPausaFinPropuesta()).getSeconds());
+        }
+        TimeEntry corregido = timeEntryRepository.save(copia);
 
         original.setAnulado(true);
         timeEntryRepository.save(original);
+
+        moverPausasAnadidas(original, corregido);
+        if (solicitud.proponePausa()) {
+            addedPauseRepository.save(AddedPause.builder()
+                    .empresa(original.getEmpresa())
+                    .registro(corregido)
+                    .inicio(solicitud.getPausaInicioPropuesta())
+                    .fin(solicitud.getPausaFinPropuesta())
+                    .motivo(solicitud.getMotivo())
+                    .creadaPor(solicitud.getSolicitante())
+                    .creadaEn(Instant.now())
+                    .solicitud(solicitud)
+                    .build());
+        }
 
         solicitud.setEstado(CorrectionStatus.APROBADA);
         solicitud.setAprobador(actor);
@@ -354,6 +395,101 @@ public class CorrectionServiceImpl implements CorrectionService {
         log.info("Corrección {} aplicada por {}: fichaje {} -> {}",
                 solicitud.getId(), actor.getEmail(), original.getId(), corregido.getId());
         return toResponse(solicitud, actor);
+    }
+
+    /**
+     * La versión corregida de un fichaje: horas nuevas, todo lo demás igual.
+     *
+     * Existe como método y no como un builder suelto dentro de {@code aplicar}
+     * porque así es donde se decide, en un solo sitio, qué se hereda y qué no
+     * al corregir. Con el builder en línea, cualquier campo que se añada en el
+     * futuro a {@link TimeEntry} cae a su valor por defecto **en silencio**, y
+     * eso es exactamente cómo nació el defecto que arregla este método: las
+     * pausas no se copiaban, así que aprobar una corrección las borraba y el
+     * tiempo neto de la jornada se inflaba. Como el neto alimenta al detector
+     * de horas extra, una corrección aprobada podía fabricar horas extra que
+     * nadie había hecho.
+     *
+     * <p>Lo que SÍ se hereda:
+     * <ul>
+     *   <li>{@code segundosPausaAcumulados}: las pausas se hicieron de verdad
+     *       y no dejan de existir porque se corrija la hora de entrada.</li>
+     * </ul>
+     *
+     * <p>Lo que NO se hereda, y es correcto que no se herede:
+     * <ul>
+     *   <li>{@code jornadaIncompleta}: la marca dice "esta jornada la cerró el
+     *       proceso nocturno, no su dueño". Corregirla es justamente lo que
+     *       resuelve esa incidencia, así que la versión nueva nace limpia y
+     *       {@code contarIncidenciasAbiertas} deja de contarla. No es un
+     *       olvido: quitar esta línea rompe el contador del panel.</li>
+     *   <li>{@code enPausa} e {@code inicioPausaActual}: solo se corrigen
+     *       jornadas ya cerradas, así que no hay pausa en curso que copiar.</li>
+     *   <li>{@code anulado}: la copia nace viva; la que se anula es la
+     *       original.</li>
+     * </ul>
+     */
+    private TimeEntry copiaCorregidaDe(TimeEntry original, Instant entrada, Instant salida) {
+        return TimeEntry.builder()
+                .usuario(original.getUsuario())
+                .empresa(original.getEmpresa())
+                .horaEntrada(entrada)
+                .horaSalida(salida)
+                .segundosPausaAcumulados(original.getSegundosPausaAcumulados())
+                .registroOriginal(original)
+                .build();
+    }
+
+    /**
+     * Una corrección no puede dejar las pausas sin caber dentro de la jornada.
+     *
+     * Hace falta desde que la corrección conserva las pausas: acortar una
+     * jornada de ocho horas a una, teniendo dos de pausa, daría un tiempo neto
+     * **negativo**. Los agregados del repositorio restan los segundos de pausa
+     * en SQL sin proteger el resultado, así que ese número saldría tal cual en
+     * los informes y en el cálculo de horas extra.
+     */
+    private void exigirQueLasPausasQuepan(long segundosPausa, Instant entrada, Instant salida) {
+        if (segundosPausa >= Duration.between(entrada, salida).getSeconds()) {
+            throw new BusinessException(
+                    "Las horas corregidas no dejan sitio a las pausas ya registradas de esa jornada. "
+                            + "Ajusta también las pausas o revisa las horas.");
+        }
+    }
+
+    /**
+     * Si la solicitud trae una pausa, que tenga sentido contra las horas que
+     * se PROPONEN, no contra las actuales: es la jornada que va a quedar.
+     *
+     * Las reglas son las mismas que en la vía directa (ver {@link ReglasDePausa}),
+     * y a propósito viven en un solo sitio.
+     */
+    private void exigirPausaPropuestaValida(
+            TimeEntry fichaje, Instant entrada, Instant salida, Instant pausaInicio, Instant pausaFin) {
+        if (pausaInicio == null && pausaFin == null) {
+            return;
+        }
+        ReglasDePausa.exigirValida(
+                pausaInicio, pausaFin, entrada, salida,
+                fichaje.getSegundosPausaAcumulados(),
+                addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(fichaje),
+                null,
+                Instant.now());
+    }
+
+    /**
+     * Las pausas añadidas a mano se mudan a la versión corregida.
+     *
+     * Una corrección no edita el fichaje: lo anula y crea otro. Sus segundos
+     * ya viajan en {@link #copiaCorregidaDe}, pero las filas del libro se
+     * quedarían colgando de la versión anulada y dejarían de verse.
+     */
+    private void moverPausasAnadidas(TimeEntry original, TimeEntry corregido) {
+        List<AddedPause> vivas = addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(original);
+        for (AddedPause pausa : vivas) {
+            pausa.setRegistro(corregido);
+        }
+        addedPauseRepository.saveAll(vivas);
     }
 
     /**
@@ -394,11 +530,19 @@ public class CorrectionServiceImpl implements CorrectionService {
 
     /** Lo que se PROPONE, con la misma forma que un fichaje real. */
     private String propuestaComoJson(CorrectionRequest solicitud) {
+        // Con las pausas que quedarían: sin ellas, la instantánea de "lo
+        // propuesto" diría cero segundos de pausa y mentiría en la traza.
+        long pausa = solicitud.getRegistro().getSegundosPausaAcumulados();
+        if (solicitud.proponePausa()) {
+            pausa += Duration.between(solicitud.getPausaInicioPropuesta(),
+                    solicitud.getPausaFinPropuesta()).getSeconds();
+        }
         return snapshotSerializer.toJson(TimeEntry.builder()
                 .usuario(solicitud.getDuenoDelFichaje())
                 .empresa(solicitud.getEmpresa())
                 .horaEntrada(solicitud.getHoraEntradaPropuesta())
                 .horaSalida(solicitud.getHoraSalidaPropuesta())
+                .segundosPausaAcumulados(pausa)
                 .build());
     }
 
@@ -416,35 +560,13 @@ public class CorrectionServiceImpl implements CorrectionService {
     }
 
     /**
-     * La gente de la empresa que tiene una authority, excluyendo a quien
-     * se indique (normalmente, quien acaba de hacer la acción: avisarse a
-     * uno mismo de lo que acaba de hacer solo genera ruido).
+     * La gente de la empresa que tiene una authority, menos {@code excluido}.
+     * Las reglas (solo activos, por authority) viven en {@link Destinatarios}.
      */
     private List<User> conAuthority(Company empresa, String authority, User excluido) {
-        List<User> destinatarios = new ArrayList<>();
-        for (User candidato : userRepository.findByEmpresa(empresa)) {
-            // Una cuenta de baja no tiene que recibir avisos de algo que
-            // ya no puede resolver.
-            if (!candidato.isActivo()) {
-                continue;
-            }
-            if (excluido != null && candidato.getId() == excluido.getId()) {
-                continue;
-            }
-            if (tiene(candidato, authority)) {
-                destinatarios.add(candidato);
-            }
-        }
-        return destinatarios;
+        return Destinatarios.conAuthorityMenos(userRepository.findByEmpresa(empresa), authority, excluido);
     }
 
-    private boolean tiene(User usuario, String authority) {
-        // Se pregunta a RoleAuthorities y no al SecurityContext: es la
-        // misma fuente que alimenta los @PreAuthorize, así que no puede
-        // decir una cosa distinta. Y sirve para usuarios que NO son quien
-        // hace la petición (los destinatarios de un aviso).
-        return RoleAuthorities.forRole(usuario.getRol()).contains(authority);
-    }
 
     private CorrectionRequest deLaMismaEmpresa(long id, User actor) {
         CorrectionRequest solicitud = correctionRepository.findById(id)
@@ -466,6 +588,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 fichaje.getHoraSalida(),
                 solicitud.getHoraEntradaPropuesta(),
                 solicitud.getHoraSalidaPropuesta(),
+                solicitud.getPausaInicioPropuesta(),
+                solicitud.getPausaFinPropuesta(),
                 solicitud.getMotivo(),
                 solicitud.getEstado(),
                 solicitud.getAprobador() != null

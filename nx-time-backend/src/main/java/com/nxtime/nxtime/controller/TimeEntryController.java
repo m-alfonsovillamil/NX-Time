@@ -1,6 +1,9 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.domain.CorrectionStatus;
+import com.nxtime.nxtime.dto.AddPauseRequest;
+import com.nxtime.nxtime.dto.AddPauseResponse;
+import com.nxtime.nxtime.dto.AddedPauseDTO;
 import com.nxtime.nxtime.dto.CorrectionRequestDTO;
 import com.nxtime.nxtime.dto.CorrectionResponse;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
@@ -8,6 +11,7 @@ import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.security.SecurityUser;
+import com.nxtime.nxtime.service.AddedPauseService;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.TimeEntryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,14 +54,17 @@ public class TimeEntryController {
     private final TimeEntryService timeEntryService;
     private final TimeEntryMapper timeEntryMapper;
     private final CorrectionService correctionService;
+    private final AddedPauseService addedPauseService;
 
     public TimeEntryController(
             TimeEntryService timeEntryService,
             TimeEntryMapper timeEntryMapper,
-            CorrectionService correctionService) {
+            CorrectionService correctionService,
+            AddedPauseService addedPauseService) {
         this.timeEntryService = timeEntryService;
         this.timeEntryMapper = timeEntryMapper;
         this.correctionService = correctionService;
+        this.addedPauseService = addedPauseService;
     }
 
     @Operation(summary = "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
@@ -173,5 +181,88 @@ public class TimeEntryController {
                 ? HttpStatus.OK
                 : HttpStatus.ACCEPTED;
         return ResponseEntity.status(estado).body(solicitud);
+    }
+
+    @Operation(summary = "Añadir una pausa que no se fichó en su momento",
+            description = """
+                    Para "se me olvidó darle a pausar para comer" (ADR 015). Siempre con motivo.
+
+                    **El servidor decide qué pasa**, y la respuesta lo dice:
+                    - Jornada abierta, o cerrada que empezó hoy: se aplica en el acto (201).
+                    - Día pasado: se pide como corrección y la aprueba quien corresponda (202).
+                      Si quien la pide puede aprobarse a sí mismo, se aplica y responde 201.
+
+                    Solo sobre tus propios fichajes: para el de otra persona, pide una corrección.
+                    No hay tope de duración, pero la pausa tiene que caber en la jornada y no
+                    solaparse con otras.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Aplicada: el tiempo trabajado ya ha cambiado",
+                    content = @Content(schema = @Schema(implementation = AddPauseResponse.class))),
+            @ApiResponse(responseCode = "202", description = "Pedida como corrección, pendiente de aprobación",
+                    content = @Content(schema = @Schema(implementation = AddPauseResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, o la pausa acaba antes de empezar",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra persona o de otra empresa",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No cabe en la jornada, se solapa, dejaría más pausa "
+                    + "que jornada, o el fichaje tiene una corrección sin resolver",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
+    @PostMapping("/{id}/pausas")
+    public ResponseEntity<AddPauseResponse> anadirPausa(
+            @PathVariable long id,
+            @Valid @RequestBody AddPauseRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        AddedPauseService.Resultado resultado = addedPauseService.anadir(id, request, usuario.getUser());
+        AddPauseResponse cuerpo = new AddPauseResponse(
+                resultado.aplicada(),
+                resultado.fichaje() != null ? timeEntryMapper.toResponse(resultado.fichaje()) : null,
+                resultado.correccion());
+        return ResponseEntity.status(resultado.aplicada() ? HttpStatus.CREATED : HttpStatus.ACCEPTED)
+                .body(cuerpo);
+    }
+
+    @Operation(summary = "Pausas añadidas a posteriori en una jornada",
+            description = "Las que siguen en pie. Las fichadas con el botón no salen: no tienen intervalo guardado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Pausas añadidas",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = AddedPauseDTO.class)))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra persona sin 'fichaje:leer:equipo'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer')")
+    @GetMapping("/{id}/pausas")
+    public ResponseEntity<List<AddedPauseDTO>> pausasAnadidas(
+            @PathVariable long id, @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(addedPauseService.deLaJornada(id, usuario.getUser()));
+    }
+
+    @Operation(summary = "Deshacer una pausa añadida",
+            description = """
+                    Solo sobre la jornada abierta y solo sobre tus fichajes. Una vez cerrada, quitar
+                    una pausa sube el tiempo trabajado y ya no es autoservicio: se pide una corrección.
+                    La pausa no se borra, se marca anulada.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Deshecha: el fichaje actualizado",
+                    content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra persona o de otra empresa",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje o pausa no encontrados",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Jornada ya cerrada, o pausa ya deshecha",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
+    @DeleteMapping("/{id}/pausas/{pausaId}")
+    public ResponseEntity<TimeEntryResponse> deshacerPausa(
+            @PathVariable long id, @PathVariable long pausaId,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(timeEntryMapper.toResponse(
+                addedPauseService.anular(id, pausaId, usuario.getUser())));
     }
 }

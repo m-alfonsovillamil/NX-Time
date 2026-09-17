@@ -5,6 +5,7 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
+import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
@@ -117,9 +118,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         // y no conviene volver a colarlo por aquí.
         // Si no hay nadie con esa authority, no se manda nada: no es un
         // error, simplemente no hay a quién avisar.
-        userRepository.findByEmpresa(user.getEmpresa()).stream()
-                .filter(User::isActivo)
-                .filter(posible -> RoleAuthorities.forRole(posible.getRol()).contains(AUTHORITY_APROBAR))
+        Destinatarios.conAuthority(userRepository.findByEmpresa(user.getEmpresa()), AUTHORITY_APROBAR)
                 .forEach(aprobador -> eventPublisher.publishEvent(
                         new NotificationEvents.AbsenceRequested(saved, aprobador)));
 

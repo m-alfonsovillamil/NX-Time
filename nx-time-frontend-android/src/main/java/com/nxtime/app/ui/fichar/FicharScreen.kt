@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,8 +33,13 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.Avatar
@@ -80,6 +87,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun FicharScreen(
     onIrSolicitud: () -> Unit,
+    onAnadirPausa: (Registro) -> Unit,
     onIrPerfil: () -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
@@ -87,6 +95,22 @@ fun FicharScreen(
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+
+    /*
+     * Recarga al volver a la pantalla, no solo al entrar: tras añadir una
+     * pausa desde aquí, la jornada ha cambiado en el servidor y esta pantalla
+     * seguiría enseñando la de antes. `ON_RESUME` y no `LaunchedEffect(Unit)`
+     * por lo mismo que en HistorialEquipoScreen: este último solo se dispara
+     * la primera vez.
+     */
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.comprobarEstadoJornada()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
 
     /*
      * El latido del cronómetro. Vive aquí y no en el ViewModel para que
@@ -207,7 +231,18 @@ fun FicharScreen(
                         )
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+
+                /*
+                 * "Se me olvidó darle a pausar para comer" (ADR 015). Va aquí,
+                 * pegado al botón de pausa, porque es donde se busca justo
+                 * después de darse cuenta.
+                 */
+                estado.registro?.let { registro ->
+                    TextButton(onClick = { onAnadirPausa(registro) }) {
+                        Text(stringResource(R.string.pausa_boton))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
 
                 /*
                  * De qué se compone la jornada abierta. Va justo debajo
@@ -275,7 +310,80 @@ fun FicharScreen(
             }
             Spacer(Modifier.height(24.dp))
         }
+
+        if (estado.confirmandoFin) {
+            DialogoFinDeJornada(
+                estado = estado,
+                onConfirmar = viewModel::confirmarFinDeJornada,
+                onCancelar = viewModel::cancelarFinDeJornada
+            )
+        }
     }
+}
+
+/**
+ * "¿Terminas la jornada?", con las horas delante.
+ *
+ * Enseña lo que se está a punto de cerrar --entrada, trabajado y pausas--
+ * porque la confirmación sin datos no ayuda a decidir: "¿seguro?" a secas
+ * se contesta que sí por reflejo. Los tres números ya están en el estado y
+ * son los mismos que la pantalla lleva pintando.
+ *
+ * La línea de pausas solo aparece si las hubo: un "0h 00m de pausa" es
+ * ruido, y encima invita a pensar que falta algo.
+ */
+@Composable
+private fun DialogoFinDeJornada(
+    estado: FicharUiState,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    val segundosPausa = estado.registro?.segundosPausaAcumulados ?: 0
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(stringResource(R.string.fichar_confirmar_fin_titulo)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(
+                        R.string.fichar_confirmar_fin_entrada,
+                        DateFormats.hora(estado.registro?.horaEntrada)
+                    )
+                )
+                Text(
+                    stringResource(
+                        R.string.fichar_confirmar_fin_trabajado,
+                        DateFormats.minutos(estado.segundosEnCurso / 60)
+                    ),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (segundosPausa > 0) {
+                    Text(
+                        stringResource(
+                            R.string.fichar_confirmar_fin_pausa,
+                            DateFormats.minutos(segundosPausa / 60)
+                        )
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.fichar_confirmar_fin_aviso),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirmar) {
+                Text(stringResource(R.string.fichar_confirmar_fin_si))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) {
+                Text(stringResource(R.string.fichar_confirmar_fin_no))
+            }
+        }
+    )
 }
 
 /**

@@ -27,6 +27,19 @@ public record CorrectionRequestDTO(
 
         @NotBlank(message = "Hay que explicar por qué se corrige el fichaje.")
         @Size(max = 500, message = "El motivo no puede pasar de 500 caracteres.")
-        String motivo
+        String motivo,
+
+        /*
+         * Opcionales (09/2026, ADR 015): una pausa que se pide añadir. Van las
+         * dos o ninguna. Si la solicitud solo añade la pausa, horaEntrada y
+         * horaSalida se mandan con los valores actuales del fichaje.
+         */
+        Instant pausaInicio,
+        Instant pausaFin
 ) {
+
+    /** Para las solicitudes que solo tocan horas, que son todas las de antes. */
+    public CorrectionRequestDTO(Instant horaEntrada, Instant horaSalida, String motivo) {
+        this(horaEntrada, horaSalida, motivo, null, null);
+    }
 }

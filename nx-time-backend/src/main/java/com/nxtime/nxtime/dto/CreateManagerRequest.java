@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -24,4 +25,9 @@ public record CreateManagerRequest(
         @Email(message = "El email no tiene un formato válido.")
         String email
 ) {
+
+    /** Ver {@link Emails}, por lo mismo que {@link CreateEmployeeRequest}. */
+    public CreateManagerRequest {
+        email = Emails.normalizar(email);
+    }
 }

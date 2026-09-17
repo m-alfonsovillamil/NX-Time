@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -15,4 +16,13 @@ public record LoginRequest(
         @NotBlank(message = "La contraseña es obligatoria.")
         String contrasena
 ) {
+
+    /**
+     * Ver {@link Emails}. Sin esto, teclear el correo con una mayúscula da
+     * "credenciales incorrectas", que manda a buscar el fallo en la
+     * contraseña -- donde no está.
+     */
+    public LoginRequest {
+        email = Emails.normalizar(email);
+    }
 }

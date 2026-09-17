@@ -29,6 +29,14 @@ data class CorreccionDTO(
     val horaEntradaPropuesta: String,
     val horaSalidaPropuesta: String,
 
+    /**
+     * La pausa que se pide añadir, o null si solo se tocan horas (ADR 015).
+     * Cuando la solicitud es SOLO de pausa, las horas propuestas son las
+     * mismas que las actuales, y así hay que enseñarlo: ver CorreccionesScreen.
+     */
+    val pausaInicioPropuesta: String? = null,
+    val pausaFinPropuesta: String? = null,
+
     val motivo: String,
     val estado: String,
 

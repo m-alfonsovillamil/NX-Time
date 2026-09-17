@@ -79,6 +79,19 @@ class AuthRepositoryImpl(
         return apiService.solicitarCorreccion(fichajeId, peticion)
     }
 
+    override suspend fun anadirPausa(
+        fichajeId: Long,
+        peticion: PausaAnadidaRequest
+    ): Response<PausaAnadidaResultado> = apiService.anadirPausa(fichajeId, peticion)
+
+    override suspend fun getPausasAnadidas(fichajeId: Long): Response<List<PausaAnadidaDTO>> =
+        apiService.getPausasAnadidas(fichajeId)
+
+    override suspend fun deshacerPausa(fichajeId: Long, pausaId: Long): Response<Registro> =
+        apiService.deshacerPausa(fichajeId, pausaId)
+
+    override suspend fun getPendientes(): Response<PendientesDTO> = apiService.getPendientes()
+
     override suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>> {
         return apiService.getCorreccionesPendientes()
     }
@@ -505,4 +518,7 @@ class AuthRepositoryImpl(
         return apiService.marcarTodosLosAvisosLeidos()
     }
 
+    override suspend fun descargarMisDatosJson(): Response<ResponseBody> = apiService.descargarMisDatosJson()
+
+    override suspend fun descargarMisDatosPdf(): Response<ResponseBody> = apiService.descargarMisDatosPdf()
 }

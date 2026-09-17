@@ -11,6 +11,7 @@ import com.nxtime.app.data.session.Tema
 import com.nxtime.app.recordatorio.ReglaDelRecordatorio
 import com.nxtime.app.ui.util.MensajeUi
 import io.sentry.Sentry
+import okhttp3.ResponseBody
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,8 @@ data class AjustesUiState(
     val confirmandoHuella: Boolean = false,
     val verificandoContrasena: Boolean = false,
     val cerrandoSesiones: Boolean = false,
+    /** Se está preparando la descarga de mis datos. */
+    val descargandoDatos: Boolean = false,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 )
@@ -183,6 +186,40 @@ class AjustesViewModel(
      * ya no se puede renovar daría una sesión que muere sola al rato, y
      * sin explicación.
      */
+    /**
+     * Descarga todos mis datos (RGPD, arts. 15 y 20).
+     *
+     * Como en el panel de empresa, el fichero no se escribe aquí: se devuelve
+     * el cuerpo a la pantalla, que es quien tiene el `Context`. Un ViewModel
+     * que escribe ficheros necesita el contexto de la aplicación y es mucho
+     * más difícil de probar.
+     *
+     * No pide confirmación ni aprobación de nadie: son los datos de uno mismo.
+     */
+    fun descargarMisDatos(formato: FormatoDeExportacion, alTener: (ResponseBody, String) -> Unit) {
+        if (_uiState.value.descargandoDatos) return
+        _uiState.update { it.copy(descargandoDatos = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = when (formato) {
+                    FormatoDeExportacion.PDF -> authRepository.descargarMisDatosPdf()
+                    FormatoDeExportacion.JSON -> authRepository.descargarMisDatosJson()
+                }
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    alTener(cuerpo, "nxtime-mis-datos.${formato.extension}")
+                    _uiState.update { it.copy(descargandoDatos = false) }
+                } else {
+                    _uiState.update {
+                        it.copy(descargandoDatos = false, error = ApiErrorParser.mensajeDe(respuesta))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(descargandoDatos = false, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
     fun cerrarTodasLasSesiones(alCerrar: () -> Unit) {
         if (_uiState.value.cerrandoSesiones) return
         _uiState.update { it.copy(cerrandoSesiones = true, error = null) }
@@ -214,4 +251,13 @@ class AjustesViewModel(
     }
 
     fun descartarError() = _uiState.update { it.copy(error = null) }
+}
+
+/**
+ * El mismo contenido en dos formatos: el PDF para leerlo, y el JSON porque el
+ * derecho de portabilidad pide un formato "estructurado y de lectura mecánica".
+ */
+enum class FormatoDeExportacion(val extension: String, val mime: String) {
+    PDF("pdf", "application/pdf"),
+    JSON("json", "application/json")
 }

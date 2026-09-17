@@ -154,6 +154,18 @@ public final class RoleAuthorities {
         };
     }
 
+    /**
+     * Si un usuario tiene una authority.
+     *
+     * Se pregunta aquí y no al {@code SecurityContext}: es la misma fuente que
+     * alimenta los {@code @PreAuthorize}, así que no puede decir otra cosa, y
+     * sirve para usuarios que NO son quien hace la petición (los destinatarios
+     * de un aviso). Estaba escrito igual, como método privado, en tres servicios.
+     */
+    public static boolean tiene(User usuario, String authority) {
+        return forRole(usuario.getRol()).contains(authority);
+    }
+
     private static Set<String> union(Set<String> base, Set<String> extra) {
         Set<String> result = new LinkedHashSet<>(base);
         result.addAll(extra);

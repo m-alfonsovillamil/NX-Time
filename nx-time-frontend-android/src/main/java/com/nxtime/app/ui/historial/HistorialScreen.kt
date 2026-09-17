@@ -16,6 +16,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -41,6 +45,7 @@ import com.nxtime.app.ui.util.resolver
 @Composable
 fun HistorialScreen(
     onPedirCorreccion: (Registro) -> Unit,
+    onAnadirPausa: (Registro) -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
     iniciales: String,
@@ -48,6 +53,22 @@ fun HistorialScreen(
     viewModel: HistorialViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+
+    /*
+     * Recarga al volver a la pantalla, no solo al entrar: tras añadir una
+     * pausa desde aquí, la jornada ha cambiado en el servidor y esta pantalla
+     * seguiría enseñando la de antes. `ON_RESUME` y no `LaunchedEffect(Unit)`
+     * por lo mismo que en HistorialEquipoScreen: este último solo se dispara
+     * la primera vez.
+     */
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargar()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
 
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
@@ -85,7 +106,11 @@ fun HistorialScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(estado.registros, key = { it.id }) { registro ->
-                        TarjetaJornada(registro, { onPedirCorreccion(registro) })
+                        TarjetaJornada(
+                            registro,
+                            onPedirCorreccion = { onPedirCorreccion(registro) },
+                            onAnadirPausa = { onAnadirPausa(registro) }
+                        )
                     }
                 }
             }
@@ -101,7 +126,11 @@ fun HistorialScreen(
  * anterior, y la que corresponde a lo que se factura como trabajado.
  */
 @Composable
-private fun TarjetaJornada(registro: Registro, onPedirCorreccion: () -> Unit) {
+private fun TarjetaJornada(
+    registro: Registro,
+    onPedirCorreccion: () -> Unit,
+    onAnadirPausa: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = elevacionDeTarjeta(),
@@ -170,6 +199,12 @@ private fun TarjetaJornada(registro: Registro, onPedirCorreccion: () -> Unit) {
             if (registro.horaSalida != null) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    // Una pausa olvidada no es "corregir las horas": tiene su
+                    // propio botón, y el servidor decide si se aplica o se
+                    // pide según el día (ADR 015).
+                    TextButton(onClick = onAnadirPausa) {
+                        Text(stringResource(R.string.pausa_boton))
+                    }
                     TextButton(onClick = onPedirCorreccion) {
                         Text(stringResource(R.string.correcciones_pedir))
                     }

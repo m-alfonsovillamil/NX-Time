@@ -21,19 +21,31 @@ import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -41,7 +53,8 @@ import com.nxtime.app.ui.components.PantallaConBarra
 /**
  * Panel de gestión: la puerta a las pantallas de gestor.
  *
- * No tiene ViewModel porque no tiene estado ni pide datos; es un menú.
+ * Casi todo es un menú, pero las tres bandejas llevan su contador, y eso
+ * sí es estado: ver [PanelGestionViewModel].
  * La versión anterior (`ManagerHomeActivity`) era también eso, pero
  * apilaba botones a pantalla completa sin decir a dónde llevaba cada
  * uno más allá de su texto.
@@ -72,8 +85,22 @@ fun PanelGestionScreen(
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
     onIrAltaEmpleado: () -> Unit,
-    onIrAltaGestor: () -> Unit
+    onIrAltaGestor: () -> Unit,
+    viewModel: PanelGestionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    val pendientes by viewModel.pendientes.collectAsStateWithLifecycle()
+
+    // Al volver de resolver algo en una bandeja, el contador tiene que
+    // bajar: ON_RESUME y no solo al entrar (ver HistorialEquipoScreen).
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargar()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
+
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
         titulo = stringResource(R.string.gestion_titulo),
@@ -94,69 +121,53 @@ fun PanelGestionScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Primero el panel: es la vista de conjunto desde la que se
-            // decide a qué mirar después.
-            if (puedeVerPanelEmpresa) {
-                OpcionGestion(
-                    texto = stringResource(R.string.empresa_titulo),
-                    icono = Icons.Default.Insights,
-                    onClick = onIrPanelEmpresa
-                )
-            }
+            /*
+             * PENDIENTE DE RESOLVER: las tres bandejas. Van primero
+             * porque son lo único de esta pantalla que espera una
+             * decisión, y es a lo que un gestor entra cada mañana.
+             *
+             * Ninguna se gatea aquí. Las correcciones y las horas extra
+             * las ve cualquier rol de gestión, y lo que puede RESOLVER
+             * cada uno lo decide el servidor: sobre los avisos propios no
+             * puede decidir ninguno, y el servicio ni siquiera los manda
+             * en esa lista.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_pendiente))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
                 icono = Icons.Default.PendingActions,
-                onClick = onIrPendientes
+                onClick = onIrPendientes,
+                contador = pendientes?.ausencias
             )
+            OpcionGestion(
+                texto = stringResource(R.string.correcciones_titulo),
+                icono = Icons.Default.EditNote,
+                onClick = onIrCorrecciones,
+                contador = pendientes?.correcciones
+            )
+            OpcionGestion(
+                texto = stringResource(R.string.gestion_horas_extra),
+                icono = Icons.Default.MoreTime,
+                onClick = onIrHorasExtra,
+                contador = pendientes?.horasExtra
+            )
+
+            /*
+             * EQUIPO: las personas y su historial. Aquí se juntan las dos
+             * parejas que antes estaban separadas por media lista:
+             * ausencias pendientes/resueltas --que son la misma pantalla
+             * con un booleano-- y el alta de empleado/gestor, que son el
+             * mismo formulario.
+             *
+             * Las resueltas van con el equipo y no con las pendientes: no
+             * esperan nada, se consultan.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_equipo))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_historial_equipo),
                 icono = Icons.AutoMirrored.Filled.ListAlt,
                 onClick = onIrHistorialEquipo
             )
-            // Los proyectos los ve cualquier rol de gestión; lo que hay
-            // DENTRO (alta y asignaciones) se gatea aparte, dentro de la
-            // propia pantalla, con `proyecto:gestionar`.
-            // Las correcciones las ve cualquier rol de gestion, pero lo
-            // que puede RESOLVER cada uno lo decide el servidor: aqui no
-            // se gatea nada.
-            OpcionGestion(
-                texto = stringResource(R.string.correcciones_titulo),
-                icono = Icons.Default.EditNote,
-                onClick = onIrCorrecciones
-            )
-            // Las horas extra igual: la bandeja la ve cualquier rol de
-            // gestion, y sobre los avisos PROPIOS no puede decidir
-            // ninguno -- eso lo aplica el servidor, que ni siquiera los
-            // manda en esta lista.
-            OpcionGestion(
-                texto = stringResource(R.string.gestion_horas_extra),
-                icono = Icons.Default.MoreTime,
-                onClick = onIrHorasExtra
-            )
-            OpcionGestion(
-                texto = stringResource(R.string.proyectos_titulo),
-                icono = Icons.Default.WorkOutline,
-                onClick = onIrProyectos
-            )
-            // El canal de denuncias NO sigue la regla de los anteriores:
-            // aquí sí se gatea, y solo lo ve un ADMIN. La denuncia puede
-            // ser sobre el GESTOR que está mirando esta misma pantalla,
-            // así que ni siquiera la entrada debe aparecerle -- saber que
-            // el canal tiene expedientes ya es información.
-            if (puedePublicarOfertas) {
-                OpcionGestion(
-                    texto = stringResource(R.string.gestion_ofertas),
-                    icono = Icons.Default.Campaign,
-                    onClick = onIrGestionOfertas
-                )
-            }
-            if (puedeInstruirDenuncias) {
-                OpcionGestion(
-                    texto = stringResource(R.string.gestion_canal_denuncias),
-                    icono = Icons.Default.Shield,
-                    onClick = onIrCanalDenuncias
-                )
-            }
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_resueltas),
                 icono = Icons.Default.EventAvailable,
@@ -174,15 +185,79 @@ fun PanelGestionScreen(
                     onClick = onIrAltaGestor
                 )
             }
+
+            /*
+             * EMPRESA: la vista de conjunto y los catálogos.
+             *
+             * Los proyectos los ve cualquier rol de gestión; lo que hay
+             * DENTRO (alta y asignaciones) se gatea aparte, dentro de la
+             * propia pantalla, con `proyecto:gestionar`.
+             *
+             * El canal de denuncias NO sigue esa regla: aquí sí se gatea,
+             * y solo lo ve un ADMIN. La denuncia puede ser sobre el GESTOR
+             * que está mirando esta misma pantalla, así que ni siquiera la
+             * entrada debe aparecerle -- saber que el canal tiene
+             * expedientes ya es información.
+             */
+            CabeceraDeSeccion(stringResource(R.string.gestion_seccion_empresa))
+            if (puedeVerPanelEmpresa) {
+                OpcionGestion(
+                    texto = stringResource(R.string.empresa_titulo),
+                    icono = Icons.Default.Insights,
+                    onClick = onIrPanelEmpresa
+                )
+            }
+            OpcionGestion(
+                texto = stringResource(R.string.proyectos_titulo),
+                icono = Icons.Default.WorkOutline,
+                onClick = onIrProyectos
+            )
+            if (puedePublicarOfertas) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_ofertas),
+                    icono = Icons.Default.Campaign,
+                    onClick = onIrGestionOfertas
+                )
+            }
+            if (puedeInstruirDenuncias) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_canal_denuncias),
+                    icono = Icons.Default.Shield,
+                    onClick = onIrCanalDenuncias
+                )
+            }
         }
     }
+}
+
+/**
+ * El rótulo que separa un bloque del siguiente.
+ *
+ * Texto pequeño y en `onSurfaceVariant`, no otra tarjeta: una cabecera con
+ * el mismo peso visual que las opciones se leería como una opción más que
+ * no hace nada al tocarla.
+ *
+ * ⚠️ Las tres secciones tienen al menos una entrada que ven TODOS los roles
+ * de gestión (ausencias pendientes, historial del equipo y proyectos), así
+ * que ninguna cabecera puede quedarse suelta sobre un bloque vacío. Si
+ * alguna de esas tres pasa a gatearse, hay que volver por aquí.
+ */
+@Composable
+private fun CabeceraDeSeccion(texto: String) {
+    Text(
+        text = texto,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 12.dp)
+    )
 }
 
 @Composable
 private fun OpcionGestion(
     texto: String,
     icono: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    contador: Int? = null
 ) {
     Card(
         onClick = onClick,
@@ -193,7 +268,9 @@ private fun OpcionGestion(
         )
     ) {
         androidx.compose.foundation.layout.Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -206,7 +283,27 @@ private fun OpcionGestion(
                 tint = MaterialTheme.colorScheme.tertiary
             )
             Spacer(Modifier.size(16.dp))
-            Text(text = texto, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = texto,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            /*
+             * Solo si hay algo: un "0" en cada bandeja es ruido, y ya se lee
+             * como "nada pendiente" la ausencia de número. El texto para el
+             * lector de pantalla va en plural de verdad; "3" a secas no dice
+             * de qué.
+             */
+            if (contador != null && contador > 0) {
+                val descripcion = pluralStringResource(R.plurals.gestion_pendientes, contador, contador)
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    modifier = Modifier.semantics { contentDescription = descripcion }
+                ) {
+                    Text(text = if (contador > 99) "99+" else contador.toString())
+                }
+            }
         }
     }
 }

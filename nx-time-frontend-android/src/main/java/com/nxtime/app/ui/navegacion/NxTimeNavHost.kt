@@ -59,6 +59,7 @@ import com.nxtime.app.ui.horasextra.HorasExtraScreen
 import com.nxtime.app.ui.ofertas.GestionOfertasScreen
 import com.nxtime.app.ui.ofertas.OfertasScreen
 import com.nxtime.app.ui.calendario.CalendarioScreen
+import com.nxtime.app.ui.fichar.AnadirPausaScreen
 import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.gestion.AltaUsuarioScreen
 import com.nxtime.app.ui.gestion.AusenciasEquipoScreen
@@ -130,7 +131,8 @@ enum class Pantalla(val ruta: String) {
     EMPRESA("empresa"),
     AUDITORIA("auditoria/{$ARG_FICHAJE_ID}"),
     CORRECCION("correccion/{$ARG_FICHAJE_ID}?$ARG_NOMBRE={$ARG_NOMBRE}" +
-            "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}");
+            "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}"),
+    ANADIR_PAUSA("pausa/{$ARG_FICHAJE_ID}?$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}");
 
     companion object {
         /** Ausencias del equipo, ya resueltas o pendientes de responder. */
@@ -160,6 +162,16 @@ enum class Pantalla(val ruta: String) {
                 "?$ARG_NOMBRE=${codificar(nombre)}" +
                 "&$ARG_ENTRADA=${codificar(entradaIso)}" +
                 "&$ARG_SALIDA=${codificar(salidaIso)}"
+
+        /**
+         * Añadir una pausa a posteriori (ADR 015). La entrada y la salida
+         * viajan por lo mismo que en [correccion]; la salida vacía significa
+         * que la jornada sigue abierta.
+         */
+        fun anadirPausa(fichajeId: Long, entradaIso: String?, salidaIso: String?) =
+            "pausa/$fichajeId" +
+                    "?$ARG_ENTRADA=${codificar(entradaIso)}" +
+                    "&$ARG_SALIDA=${codificar(salidaIso)}"
 
         /**
          * `URLEncoder` codifica el espacio como `+` (es codificación de
@@ -441,6 +453,11 @@ fun NxTimeNavHost(
                 LaunchedEffect(Unit) { avisosViewModel.refrescarContador() }
                 FicharScreen(
                     onIrSolicitud = { navController.navigate(Pantalla.SOLICITUD.ruta) },
+                    onAnadirPausa = { registro ->
+                        navController.navigate(
+                            Pantalla.anadirPausa(registro.id, registro.horaEntrada, registro.horaSalida)
+                        )
+                    },
                     onIrPerfil = irAPerfil,
                     contadorAvisos = estadoAvisos.noLeidos,
                     onIrAvisos = irAAvisos,
@@ -464,6 +481,11 @@ fun NxTimeNavHost(
                                 entradaIso = registro.horaEntrada,
                                 salidaIso = registro.horaSalida
                             )
+                        )
+                    },
+                    onAnadirPausa = { registro ->
+                        navController.navigate(
+                            Pantalla.anadirPausa(registro.id, registro.horaEntrada, registro.horaSalida)
                         )
                     },
                     contadorAvisos = estadoAvisos.noLeidos,
@@ -697,6 +719,24 @@ fun NxTimeNavHost(
                     // fichaje corregido es OTRO registro, y dejar en
                     // pantalla el original ya anulado engañaría.
                     onCorregido = navController::navigateUp,
+                    onVolver = navController::navigateUp
+                )
+            }
+
+            composable(
+                route = Pantalla.ANADIR_PAUSA.ruta,
+                arguments = listOf(
+                    navArgument(ARG_FICHAJE_ID) { type = NavType.LongType },
+                    navArgument(ARG_ENTRADA) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(ARG_SALIDA) { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { entrada ->
+                AnadirPausaScreen(
+                    entradaIso = entrada.arguments?.getString(ARG_ENTRADA)?.ifBlank { null },
+                    salidaIso = entrada.arguments?.getString(ARG_SALIDA)?.ifBlank { null },
+                    // Las pantallas de origen recargan al reanudarse, así que
+                    // al volver ya enseñan la pausa descontada.
+                    onHecho = navController::navigateUp,
                     onVolver = navController::navigateUp
                 )
             }

@@ -17,6 +17,7 @@ import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
+import com.nxtime.nxtime.service.AddedPauseService;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.TimeEntryService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
@@ -53,6 +54,9 @@ class TimeEntryControllerTest {
 
     @MockitoBean
     private CorrectionService correctionService;
+
+    @MockitoBean
+    private AddedPauseService addedPauseService;
 
     @MockitoBean
     private TimeEntryMapper timeEntryMapper;
@@ -194,6 +198,7 @@ class TimeEntryControllerTest {
                 1L, 5L,
                 new SimpleUserDTO("Empleado"), new SimpleUserDTO("Empleado"),
                 Instant.now(), Instant.now(), Instant.now(), Instant.now(),
+                null, null,
                 "Fichaje olvidado", estado,
                 null, null, null, null, Instant.now(),
                 false, false);

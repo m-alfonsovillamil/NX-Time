@@ -195,16 +195,38 @@ private fun TarjetaCorreccion(
             // Las horas de antes y las propuestas, juntas: quien decide
             // necesita comparar, y mandarle al historial a buscarlo
             // convierte una decisión de dos segundos en una navegación.
-            Text(
-                text = stringResource(
-                    R.string.correcciones_de_a,
-                    DateFormats.hora(correccion.horaEntradaActual) + " - " +
-                            DateFormats.hora(correccion.horaSalidaActual),
-                    DateFormats.hora(correccion.horaEntradaPropuesta) + " - " +
-                            DateFormats.hora(correccion.horaSalidaPropuesta)
-                ),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            /*
+             * Una solicitud que SOLO añade una pausa (ADR 015) lleva las mismas
+             * horas propuestas que actuales, así que pintarla como las demás
+             * diría "De 09:00 - 18:00 a 09:00 - 18:00": una corrección que no
+             * cambia nada, que es justo lo que parece al aprobarla a ciegas.
+             * La línea de horas solo sale si las horas cambian, y la pausa, si
+             * la hay.
+             */
+            val cambiaHoras = correccion.horaEntradaActual != correccion.horaEntradaPropuesta ||
+                    correccion.horaSalidaActual != correccion.horaSalidaPropuesta
+            if (cambiaHoras) {
+                Text(
+                    text = stringResource(
+                        R.string.correcciones_de_a,
+                        DateFormats.hora(correccion.horaEntradaActual) + " - " +
+                                DateFormats.hora(correccion.horaSalidaActual),
+                        DateFormats.hora(correccion.horaEntradaPropuesta) + " - " +
+                                DateFormats.hora(correccion.horaSalidaPropuesta)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if (correccion.pausaInicioPropuesta != null && correccion.pausaFinPropuesta != null) {
+                Text(
+                    text = stringResource(
+                        R.string.correcciones_solo_pausa,
+                        DateFormats.hora(correccion.pausaInicioPropuesta),
+                        DateFormats.hora(correccion.pausaFinPropuesta)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
 
             Spacer(Modifier.height(4.dp))
             Text(

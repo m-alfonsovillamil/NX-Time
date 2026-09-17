@@ -37,7 +37,20 @@ interface AuthRepository {
         peticion: CorreccionFichajeRequest
     ): Response<CorreccionDTO>
 
+    /** Pausas añadidas a posteriori (ADR 015). El servidor decide si se aplica o se pide. */
+    suspend fun anadirPausa(
+        fichajeId: Long,
+        peticion: PausaAnadidaRequest
+    ): Response<PausaAnadidaResultado>
+
+    suspend fun getPausasAnadidas(fichajeId: Long): Response<List<PausaAnadidaDTO>>
+
+    suspend fun deshacerPausa(fichajeId: Long, pausaId: Long): Response<Registro>
+
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
+
+    /** Los contadores de las bandejas del panel de gestión. */
+    suspend fun getPendientes(): Response<PendientesDTO>
     suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
     suspend fun resolverCorreccion(
         correccionId: Long,
@@ -158,6 +171,9 @@ interface AuthRepository {
 
     /* Funciones de Perfil (Fase B) */
     suspend fun getMiPerfil(): Response<PerfilDTO>
+    /** Exportación de datos personales (RGPD). */
+    suspend fun descargarMisDatosJson(): Response<ResponseBody>
+    suspend fun descargarMisDatosPdf(): Response<ResponseBody>
     suspend fun actualizarMiPerfil(
         nombre: String?,
         apellidos: String?,

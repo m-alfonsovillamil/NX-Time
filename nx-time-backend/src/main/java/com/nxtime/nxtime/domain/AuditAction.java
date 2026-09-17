@@ -34,5 +34,13 @@ public enum AuditAction {
      * El dueño del fichaje no acepta la corrección que le proponen.
      * Escala a RRHH; no cierra nada por sí sola.
      */
-    DISPUTA
+    DISPUTA,
+
+    // --- 09/2026: pausas añadidas a posteriori (ADR 015) ---
+
+    /** Alguien ha añadido a mano una pausa que no fichó en su momento. */
+    PAUSA_ANADIDA,
+
+    /** Se ha deshecho una pausa añadida. La fila del libro no se borra. */
+    PAUSA_ANULADA
 }

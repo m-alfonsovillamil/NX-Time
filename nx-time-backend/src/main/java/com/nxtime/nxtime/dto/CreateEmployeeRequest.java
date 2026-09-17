@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -30,4 +31,13 @@ public record CreateEmployeeRequest(
         @Email(message = "El email no tiene un formato válido.")
         String email
 ) {
+
+    /**
+     * Ver {@link Emails}. Quien da el alta copia el correo de donde sea, con
+     * las mayúsculas que traiga; el empleado luego lo teclea a su manera. Si
+     * no coincidieran, no podría ni entrar ni pedir otro código.
+     */
+    public CreateEmployeeRequest {
+        email = Emails.normalizar(email);
+    }
 }
