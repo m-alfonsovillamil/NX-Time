@@ -239,6 +239,15 @@
     <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
     <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>
     <string name="ausencias_estado_pendiente">Pendiente</string>
+    <string name="ausencias_filtro_pendientes">Pendientes</string>
+    <string name="ausencias_filtro_aprobadas">Aprobadas</string>
+    <string name="ausencias_filtro_rechazadas">Rechazadas</string>
+    <string name="ausencias_filtro_anio">Año</string>
+    <string name="ausencias_filtro_todos_los_anios">Todos los años</string>
+    <string name="ausencias_filtro_tipo">Tipo</string>
+    <string name="ausencias_filtro_todos_los_tipos">Todos los tipos</string>
+    <string name="ausencias_filtro_quitar">Quitar filtros</string>
+    <string name="ausencias_filtro_sin_resultados">No hay ausencias con estos filtros.</string>
     <string name="ausencias_estado_aprobada">Aprobada</string>
     <string name="ausencias_estado_rechazada">Rechazada</string>
     <string name="ausencias_rango">Del %1$s al %2$s</string>
