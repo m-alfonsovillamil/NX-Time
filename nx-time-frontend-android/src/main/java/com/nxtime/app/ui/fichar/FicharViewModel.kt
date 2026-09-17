@@ -32,6 +32,16 @@ data class FicharUiState(
     val segundosEnCurso: Long = 0,
 
     /**
+     * La pantalla está preguntando "¿seguro que terminas?".
+     *
+     * Vive en el estado y no en un `remember` de la pantalla para que el
+     * diálogo sobreviva a un giro de pantalla, y sobre todo para poder
+     * comprobar en un test que finalizar pide confirmación: si estuviera
+     * en la composición, el test del ViewModel no lo vería.
+     */
+    val confirmandoFin: Boolean = false,
+
+    /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
      * quedarse a `null` sin que sea un error: el resumen es un extra, y
      * si falla no debe impedir fichar (ver [cargarResumen]).
@@ -159,13 +169,20 @@ class FicharViewModel(
     }
 
     /**
-     * Botón central. Inicia la jornada si no hay ninguna y la termina si
-     * la hay.
+     * Botón central. Inicia la jornada si no hay ninguna y **pide
+     * confirmación** para terminarla si la hay.
+     *
+     * Iniciar va directo y finalizar no, y la asimetría es deliberada: es
+     * la misma doctrina que el panel de empresa, donde dar de baja pide
+     * confirmación y reactivar no. Se confirma lo que cuesta deshacer.
+     * Cerrar la jornada por error obliga a pedir una corrección y a que
+     * alguien la apruebe; empezarla por error se arregla terminándola.
      *
      * La comprobación de "no puedes terminar estando en pausa" se hace
      * aquí y no se manda al servidor: es una regla que el propio estado
      * de la pantalla ya conoce, y así el usuario recibe la respuesta al
-     * instante en vez de tras una ida y vuelta.
+     * instante en vez de tras una ida y vuelta. Va **antes** del diálogo:
+     * no tiene sentido confirmar algo que se va a rechazar.
      */
     fun pulsarBotonPrincipal() {
         val estado = _uiState.value.estado
@@ -173,8 +190,22 @@ class FicharViewModel(
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_reanuda_antes)) }
             return
         }
-        val tipo = if (estado == EstadoJornada.SIN_JORNADA) TipoFichaje.INICIO else TipoFichaje.FIN
-        registrarFichaje(tipo)
+        if (estado == EstadoJornada.SIN_JORNADA) {
+            registrarFichaje(TipoFichaje.INICIO)
+        } else {
+            _uiState.update { it.copy(confirmandoFin = true, error = null) }
+        }
+    }
+
+    /** Sí, termina la jornada. */
+    fun confirmarFinDeJornada() {
+        _uiState.update { it.copy(confirmandoFin = false) }
+        registrarFichaje(TipoFichaje.FIN)
+    }
+
+    /** No, sigue trabajando. */
+    fun cancelarFinDeJornada() {
+        _uiState.update { it.copy(confirmandoFin = false) }
     }
 
     fun pulsarBotonPausa() {

@@ -131,18 +131,68 @@ class FicharViewModelTest {
         assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
     }
 
+    /*
+     * Finalizar pide confirmación e iniciar no, y la asimetría es
+     * deliberada: cerrar la jornada por error obliga a pedir una
+     * corrección y a que alguien la apruebe, mientras que empezarla por
+     * error se arregla terminándola.
+     */
     @Test
-    fun `el boton principal termina la jornada cuando hay una en marcha`() = runTest {
+    fun `el boton principal NO termina la jornada, primero pregunta`() = runTest {
         val viewModel = viewModelCon(activo = registro())
         advanceUntilIdle()
 
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.confirmandoFin)
+        verify(repositorio, never()).registrarFichaje(any())
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    @Test
+    fun `confirmar termina la jornada de verdad`() = runTest {
+        val viewModel = viewModelCon(activo = registro())
+        advanceUntilIdle()
+        viewModel.pulsarBotonPrincipal()
+
         whenever(repositorio.registrarFichaje(any()))
             .thenReturn(Response.success(registro(horaSalida = "2026-08-29T15:00:00Z")))
-        viewModel.pulsarBotonPrincipal()
+        viewModel.confirmarFinDeJornada()
         advanceUntilIdle()
 
         verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.FIN))
         assertEquals(EstadoJornada.SIN_JORNADA, viewModel.uiState.value.estado)
+        assertFalse(viewModel.uiState.value.confirmandoFin)
+    }
+
+    @Test
+    fun `cancelar deja la jornada como estaba, sin tocar la red`() = runTest {
+        val viewModel = viewModelCon(activo = registro())
+        advanceUntilIdle()
+        viewModel.pulsarBotonPrincipal()
+
+        viewModel.cancelarFinDeJornada()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.confirmandoFin)
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+        verify(repositorio, never()).registrarFichaje(any())
+    }
+
+    /*
+     * La regla de la pausa va ANTES del diálogo: no tiene sentido pedir
+     * confirmación de algo que se va a rechazar igualmente.
+     */
+    @Test
+    fun `estando en pausa no se llega ni a preguntar`() = runTest {
+        val viewModel = viewModelCon(activo = registro(enPausa = true))
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.confirmandoFin)
     }
 
     @Test
