@@ -59,6 +59,7 @@ object AppViewModelProvider {
         initializer { RegistroEmpresaViewModel(app().authRepository) }
         initializer { FicharViewModel(app().authRepository, app().sessionManager) }
         initializer { HistorialViewModel(app().authRepository) }
+        initializer { com.nxtime.app.ui.fichar.DetalleDeTiempoViewModel(app().authRepository) }
         initializer { AusenciasViewModel(app().authRepository) }
         initializer { SolicitudViewModel(app().authRepository) }
         initializer { CambiarContrasenaViewModel(app().authRepository) }

@@ -83,6 +83,13 @@ interface ApiService {
         @Query("hasta") hasta: String? = null
     ): Response<List<Registro>>
 
+    /** Mis horas día a día ("YYYY-MM-DD", días de España, 62 como mucho). */
+    @GET("api/v1/dashboard/horas-por-dia")
+    suspend fun getHorasPorDia(
+        @Query("desde") desde: String,
+        @Query("hasta") hasta: String
+    ): Response<List<HorasDelDiaDTO>>
+
     /*  Resumen personal (cualquier usuario con `fichaje:leer`)  */
 
     @GET("api/v1/dashboard/resumen")
