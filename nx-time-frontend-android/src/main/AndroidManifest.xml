@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <!--
+        Recordatorio de fichar (paso 7). Desde Android 13 notificar exige
+        permiso del usuario, y se pide AL ACTIVAR el recordatorio, no al
+        arrancar la aplicación: un permiso que se pide sin que se vea para
+        qué es un permiso que se deniega.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!--
         allowBackup="false": la copia de seguridad automática de Android
         se lleva el directorio de SharedPreferences a Google Drive, y ahí
         vive NXTIME_PREFS con el access token y el refresh token, que

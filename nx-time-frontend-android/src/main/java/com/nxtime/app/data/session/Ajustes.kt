@@ -65,6 +65,42 @@ class Ajustes(context: Context) {
         prefs.edit().putBoolean(KEY_HUELLA, activa).apply()
     }
 
+    private val _recordatorio = MutableStateFlow(prefs.getBoolean(KEY_RECORDATORIO, false))
+
+    /** Si se avisa cuando toca fichar. Apagado por defecto. */
+    val recordatorio: StateFlow<Boolean> = _recordatorio.asStateFlow()
+
+    private val _horaEntrada =
+        MutableStateFlow(prefs.getString(KEY_HORA_ENTRADA, null) ?: HORA_ENTRADA_POR_DEFECTO)
+
+    /** Hora del aviso de entrada, como "HH:mm". */
+    val horaEntrada: StateFlow<String> = _horaEntrada.asStateFlow()
+
+    private val _horaSalida =
+        MutableStateFlow(prefs.getString(KEY_HORA_SALIDA, null) ?: HORA_SALIDA_POR_DEFECTO)
+
+    /** Hora del aviso de salida, como "HH:mm". */
+    val horaSalida: StateFlow<String> = _horaSalida.asStateFlow()
+
+    fun cambiarRecordatorio(activo: Boolean) {
+        _recordatorio.value = activo
+        prefs.edit().putBoolean(KEY_RECORDATORIO, activo).apply()
+    }
+
+    /**
+     * Las horas se guardan como texto "HH:mm" y no como minutos desde
+     * medianoche: es lo que se lee en el fichero de preferencias cuando
+     * alguien lo mira para depurar, y la conversión es trivial.
+     */
+    fun cambiarHoras(entrada: String, salida: String) {
+        _horaEntrada.value = entrada
+        _horaSalida.value = salida
+        prefs.edit()
+            .putString(KEY_HORA_ENTRADA, entrada)
+            .putString(KEY_HORA_SALIDA, salida)
+            .apply()
+    }
+
     fun cambiarTema(nuevo: Tema) {
         _tema.value = nuevo
         prefs.edit().putString(KEY_TEMA, nuevo.name).apply()
@@ -80,5 +116,12 @@ class Ajustes(context: Context) {
         private const val KEY_TEMA = "tema"
         private const val KEY_INFORMES = "informes_de_errores"
         private const val KEY_HUELLA = "entrar_con_huella"
+        private const val KEY_RECORDATORIO = "recordatorio_fichaje"
+        private const val KEY_HORA_ENTRADA = "recordatorio_hora_entrada"
+        private const val KEY_HORA_SALIDA = "recordatorio_hora_salida"
+
+        /** Las del plan: una jornada de oficina corriente. */
+        const val HORA_ENTRADA_POR_DEFECTO = "09:30"
+        const val HORA_SALIDA_POR_DEFECTO = "18:30"
     }
 }
