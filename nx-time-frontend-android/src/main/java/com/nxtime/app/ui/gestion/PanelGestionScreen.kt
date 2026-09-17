@@ -21,19 +21,31 @@ import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -41,7 +53,8 @@ import com.nxtime.app.ui.components.PantallaConBarra
 /**
  * Panel de gestión: la puerta a las pantallas de gestor.
  *
- * No tiene ViewModel porque no tiene estado ni pide datos; es un menú.
+ * Casi todo es un menú, pero las tres bandejas llevan su contador, y eso
+ * sí es estado: ver [PanelGestionViewModel].
  * La versión anterior (`ManagerHomeActivity`) era también eso, pero
  * apilaba botones a pantalla completa sin decir a dónde llevaba cada
  * uno más allá de su texto.
@@ -72,8 +85,22 @@ fun PanelGestionScreen(
     onIrPendientes: () -> Unit,
     onIrResueltas: () -> Unit,
     onIrAltaEmpleado: () -> Unit,
-    onIrAltaGestor: () -> Unit
+    onIrAltaGestor: () -> Unit,
+    viewModel: PanelGestionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    val pendientes by viewModel.pendientes.collectAsStateWithLifecycle()
+
+    // Al volver de resolver algo en una bandeja, el contador tiene que
+    // bajar: ON_RESUME y no solo al entrar (ver HistorialEquipoScreen).
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargar()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
+
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
         titulo = stringResource(R.string.gestion_titulo),
@@ -109,17 +136,20 @@ fun PanelGestionScreen(
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
                 icono = Icons.Default.PendingActions,
-                onClick = onIrPendientes
+                onClick = onIrPendientes,
+                contador = pendientes?.ausencias
             )
             OpcionGestion(
                 texto = stringResource(R.string.correcciones_titulo),
                 icono = Icons.Default.EditNote,
-                onClick = onIrCorrecciones
+                onClick = onIrCorrecciones,
+                contador = pendientes?.correcciones
             )
             OpcionGestion(
                 texto = stringResource(R.string.gestion_horas_extra),
                 icono = Icons.Default.MoreTime,
-                onClick = onIrHorasExtra
+                onClick = onIrHorasExtra,
+                contador = pendientes?.horasExtra
             )
 
             /*
@@ -226,7 +256,8 @@ private fun CabeceraDeSeccion(texto: String) {
 private fun OpcionGestion(
     texto: String,
     icono: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    contador: Int? = null
 ) {
     Card(
         onClick = onClick,
@@ -237,7 +268,9 @@ private fun OpcionGestion(
         )
     ) {
         androidx.compose.foundation.layout.Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -250,7 +283,27 @@ private fun OpcionGestion(
                 tint = MaterialTheme.colorScheme.tertiary
             )
             Spacer(Modifier.size(16.dp))
-            Text(text = texto, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = texto,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            /*
+             * Solo si hay algo: un "0" en cada bandeja es ruido, y ya se lee
+             * como "nada pendiente" la ausencia de número. El texto para el
+             * lector de pantalla va en plural de verdad; "3" a secas no dice
+             * de qué.
+             */
+            if (contador != null && contador > 0) {
+                val descripcion = pluralStringResource(R.plurals.gestion_pendientes, contador, contador)
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                    modifier = Modifier.semantics { contentDescription = descripcion }
+                ) {
+                    Text(text = if (contador > 99) "99+" else contador.toString())
+                }
+            }
         }
     }
 }

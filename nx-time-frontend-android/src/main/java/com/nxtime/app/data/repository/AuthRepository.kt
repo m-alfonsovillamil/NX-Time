@@ -48,6 +48,9 @@ interface AuthRepository {
     suspend fun deshacerPausa(fichajeId: Long, pausaId: Long): Response<Registro>
 
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
+
+    /** Los contadores de las bandejas del panel de gestión. */
+    suspend fun getPendientes(): Response<PendientesDTO>
     suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
     suspend fun resolverCorreccion(
         correccionId: Long,

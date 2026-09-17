@@ -1,8 +1,11 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.dto.CompanyDashboardResponse;
+import com.nxtime.nxtime.dto.PendingWorkResponse;
 import com.nxtime.nxtime.dto.PersonalDashboardResponse;
+import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.DashboardService;
+import com.nxtime.nxtime.service.PendingWorkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,6 +17,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,9 +36,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final PendingWorkService pendingWorkService;
 
-    public DashboardController(DashboardService dashboardService) {
+    public DashboardController(DashboardService dashboardService, PendingWorkService pendingWorkService) {
         this.dashboardService = dashboardService;
+        this.pendingWorkService = pendingWorkService;
     }
 
     @Operation(summary = "Mi resumen",
@@ -70,5 +76,24 @@ public class DashboardController {
     @GetMapping("/empresa")
     public ResponseEntity<CompanyDashboardResponse> getCompanyDashboard(Authentication authentication) {
         return ResponseEntity.ok(dashboardService.getCompanyDashboard(authentication.getName()));
+    }
+
+    @Operation(summary = "Lo que espera tu decisión (panel de gestión)",
+            description = "Los contadores de las tres bandejas: ausencias por aprobar, correcciones que te "
+                    + "toca resolver y avisos de horas extra abiertos. Cada número es exactamente lo que "
+                    + "verías al abrir esa bandeja, no un total de la empresa. Sin permiso para una "
+                    + "bandeja, su contador es 0.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Contadores",
+                    content = @Content(schema = @Schema(implementation = PendingWorkResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer:equipo'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer:equipo')")
+    @GetMapping("/pendientes")
+    public ResponseEntity<PendingWorkResponse> getPendingWork(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(pendingWorkService.contar(usuario.getUser()));
     }
 }
