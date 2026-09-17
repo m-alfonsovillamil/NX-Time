@@ -10,6 +10,7 @@ import com.nxtime.nxtime.dto.CompanyDashboardResponse;
 import com.nxtime.nxtime.dto.PersonalDashboardResponse;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.service.DashboardService;
+import com.nxtime.nxtime.service.PendingWorkService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
 import com.nxtime.nxtime.web.support.WebMvcTestSecurityConfig;
 import java.util.List;
@@ -35,6 +36,9 @@ class DashboardControllerTest {
 
     @MockitoBean
     private DashboardService dashboardService;
+
+    @MockitoBean
+    private PendingWorkService pendingWorkService;
 
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
