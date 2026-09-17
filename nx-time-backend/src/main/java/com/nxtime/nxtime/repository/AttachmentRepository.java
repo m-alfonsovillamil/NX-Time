@@ -20,4 +20,7 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
     /** Los vigentes de una persona: lo que se enseña en su perfil. */
     List<Attachment> findByUsuarioAndVigenteTrue(User usuario);
+
+    /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
+    List<Attachment> findByUsuarioOrderBySubidoEnDesc(User usuario);
 }

@@ -171,6 +171,9 @@ interface AuthRepository {
 
     /* Funciones de Perfil (Fase B) */
     suspend fun getMiPerfil(): Response<PerfilDTO>
+    /** Exportación de datos personales (RGPD). */
+    suspend fun descargarMisDatosJson(): Response<ResponseBody>
+    suspend fun descargarMisDatosPdf(): Response<ResponseBody>
     suspend fun actualizarMiPerfil(
         nombre: String?,
         apellidos: String?,

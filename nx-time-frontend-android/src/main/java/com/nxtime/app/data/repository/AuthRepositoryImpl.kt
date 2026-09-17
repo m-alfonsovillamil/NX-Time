@@ -518,4 +518,7 @@ class AuthRepositoryImpl(
         return apiService.marcarTodosLosAvisosLeidos()
     }
 
+    override suspend fun descargarMisDatosJson(): Response<ResponseBody> = apiService.descargarMisDatosJson()
+
+    override suspend fun descargarMisDatosPdf(): Response<ResponseBody> = apiService.descargarMisDatosPdf()
 }

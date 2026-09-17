@@ -44,6 +44,12 @@ class ProfileControllerTest {
     @MockitoBean
     private EmployeeProfileService employeeProfileService;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.PersonalDataExportService exportService;
+
+    @MockitoBean
+    private com.nxtime.nxtime.report.PersonalDataPdfGenerator exportPdfGenerator;
+
     private static ProfileResponse perfil() {
         return new ProfileResponse(
                 10L, "ana@nxtime.test", "Ana", "Fernández", "Ana Fernández", "AF",

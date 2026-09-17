@@ -20,4 +20,7 @@ public interface VacationBalanceRepository extends JpaRepository<VacationBalance
      * cada vez que se abre el panel de empresa.
      */
     List<VacationBalance> findByAnioAndUsuarioIn(int anio, Collection<User> usuarios);
+
+    /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
+    List<VacationBalance> findByUsuarioOrderByAnioAsc(User usuario);
 }

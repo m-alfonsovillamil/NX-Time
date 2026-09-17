@@ -1,5 +1,12 @@
 package com.nxtime.app.ui.ajustes
 
+import android.content.ActivityNotFoundException
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.rememberCoroutineScope
+import com.nxtime.app.ui.informes.compartirInforme
+import com.nxtime.app.ui.informes.guardarEnCache
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -59,6 +66,28 @@ fun AjustesScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
+    /*
+     * Escribir el fichero necesita el Context: el ViewModel devuelve el cuerpo
+     * y aquí se guarda en la caché y se abre, igual que los informes. A la
+     * caché y no a Descargas a propósito: son todos tus datos personales, y
+     * en Descargas los podría leer cualquier app con ese permiso.
+     */
+    val contexto = LocalContext.current
+    val alcance = rememberCoroutineScope()
+    val textoSinVisor = stringResource(R.string.empresa_sin_visor)
+    fun descargar(formato: FormatoDeExportacion) {
+        viewModel.descargarMisDatos(formato) { cuerpo, nombre ->
+            alcance.launch {
+                val fichero = guardarEnCache(contexto, cuerpo, nombre)
+                try {
+                    compartirInforme(contexto, fichero, formato.mime)
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(contexto, textoSinVisor, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     PantallaConBarra(titulo = stringResource(R.string.ajustes_titulo), onVolver = onVolver) { modifier ->
         Column(
             modifier = modifier
@@ -90,7 +119,9 @@ fun AjustesScreen(
             Spacer(Modifier.height(16.dp))
             Privacidad(
                 activos = estado.informesDeErrores,
-                onCambiar = viewModel::cambiarInformesDeErrores
+                onCambiar = viewModel::cambiarInformesDeErrores,
+                descargando = estado.descargandoDatos,
+                onDescargar = ::descargar
             )
 
             Spacer(Modifier.height(16.dp))
@@ -276,7 +307,12 @@ private fun Seguridad(
 }
 
 @Composable
-private fun Privacidad(activos: Boolean, onCambiar: (Boolean) -> Unit) {
+private fun Privacidad(
+    activos: Boolean,
+    onCambiar: (Boolean) -> Unit,
+    descargando: Boolean,
+    onDescargar: (FormatoDeExportacion) -> Unit
+) {
     Tarjeta(stringResource(R.string.ajustes_privacidad)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -291,6 +327,39 @@ private fun Privacidad(activos: Boolean, onCambiar: (Boolean) -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        /*
+         * Derecho de acceso y portabilidad (RGPD). Dos botones y no un
+         * selector: el PDF es para leerlo y el JSON para llevárselo a otro
+         * sitio, y quien busca uno no tiene por qué saber qué es el otro.
+         */
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.ajustes_mis_datos),
+            style = MaterialTheme.typography.bodyLarge
+        )
+        Text(
+            text = stringResource(R.string.ajustes_mis_datos_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { onDescargar(FormatoDeExportacion.PDF) },
+                enabled = !descargando,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.ajustes_mis_datos_pdf))
+            }
+            OutlinedButton(
+                onClick = { onDescargar(FormatoDeExportacion.JSON) },
+                enabled = !descargando,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.ajustes_mis_datos_json))
+            }
+        }
     }
 }
 
