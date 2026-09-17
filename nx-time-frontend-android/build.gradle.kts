@@ -47,9 +47,12 @@ android {
          * 3 = 17/09/2026: calendario sin depender del idioma, confirmar el fin
          * de jornada, panel de gestión en secciones y con contadores, añadir
          * una pausa a posteriori y descargar mis datos (RGPD).
+         * 4 = 17/09/2026: pedir el borrado de mis datos (RGPD) y la bandeja de
+         * borrados para RRHH/ADMIN, con el registro de solicitudes recibidas
+         * fuera de la app.
          */
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
