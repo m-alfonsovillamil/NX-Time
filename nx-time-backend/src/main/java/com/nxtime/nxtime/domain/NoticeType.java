@@ -54,6 +54,24 @@ public enum NoticeType {
     /** La bolsa anual de 80 h (art. 35.2 ET) se está agotando. */
     BOLSA_HORAS_EXTRA_AL_LIMITE("horas-extra"),
 
+    /**
+     * Resumen de lo que ha encontrado el barrido nocturno, para quien
+     * revisa. <b>Uno por empresa y por noche</b>, no uno por exceso.
+     *
+     * El aviso individual ({@link #HORAS_EXTRA_DETECTADAS}) va solo al
+     * empleado, y eso no cambia: una empresa mediana genera decenas de
+     * excesos al mes, y un correo por cada uno a cada gestor es spam por
+     * diseño. Pero el otro extremo tampoco valía: los gestores solo se
+     * enteraban si se les ocurría abrir la bandeja, así que un exceso
+     * podía quedarse semanas sin revisar sin que nadie lo supiera.
+     *
+     * Lo que resuelve la tensión es el nivel de agregación, no el canal:
+     * un aviso que dice "esta noche han salido 7 avisos nuevos, de 4
+     * personas" y lleva a la bandeja que ya existe. Su frecuencia máxima
+     * es una vez al día, y las noches sin excesos no mandan nada.
+     */
+    RESUMEN_HORAS_EXTRA("horas-extra"),
+
     // Fase G. Los dos llevan un título genérico y un cuerpo sin
     // contenido: un aviso de denuncia dice QUE hay algo, nunca QUÉ. Ver
     // ComplaintServiceImpl.

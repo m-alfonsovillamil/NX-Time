@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -276,9 +277,10 @@ public class OvertimeServiceImpl implements OvertimeService {
 
         Map<Long, Set<LocalDate>> ausencias = ausenciasPorUsuario(desde, hasta);
 
-        // Lo que este barrido ha encontrado. Sirve para el paso final:
-        // retirar los avisos ABIERTO que ya no proceden.
-        Set<String> excesosEncontrados = new HashSet<>();
+        // Lo que este barrido ha encontrado, y a quién. Lo primero sirve
+        // para retirar los avisos ABIERTO que ya no proceden; lo segundo,
+        // para el resumen que se manda a quien revisa.
+        Barrido barrido = new Barrido();
         int nuevos = 0;
 
         for (Map.Entry<Long, List<TimeEntryRepository.DailyWorkProjection>> entrada : porUsuario.entrySet()) {
@@ -289,13 +291,14 @@ public class OvertimeServiceImpl implements OvertimeService {
             User usuario = quizaUsuario.get();
             List<TimeEntryRepository.DailyWorkProjection> dias = entrada.getValue();
 
-            nuevos += revisarDiasDe(usuario, dias, excesosEncontrados);
+            nuevos += revisarDiasDe(usuario, dias, barrido);
             nuevos += revisarSemanasDe(
                     usuario, dias, ausencias.getOrDefault(usuario.getId(), Set.of()),
-                    desde, hasta, excesosEncontrados);
+                    desde, hasta, barrido);
         }
 
-        retirarLosQueYaNoProceden(desde, hasta, excesosEncontrados);
+        retirarLosQueYaNoProceden(desde, hasta, barrido.encontrados());
+        avisarAQuienRevisa(barrido);
 
         log.info("Barrido de horas extra {} .. {}: {} avisos nuevos o actualizados.", desde, hasta, nuevos);
         return nuevos;
@@ -305,7 +308,7 @@ public class OvertimeServiceImpl implements OvertimeService {
     private int revisarDiasDe(
             User usuario,
             List<TimeEntryRepository.DailyWorkProjection> dias,
-            Set<String> encontrados) {
+            Barrido barrido) {
 
         int tocados = 0;
         for (TimeEntryRepository.DailyWorkProjection dia : dias) {
@@ -314,11 +317,15 @@ public class OvertimeServiceImpl implements OvertimeService {
             if (exceso == 0) {
                 continue;
             }
-            encontrados.add(clave(usuario.getId(), dia.getDia(), OvertimeType.DIARIA));
+            barrido.encontrados().add(clave(usuario.getId(), dia.getDia(), OvertimeType.DIARIA));
             TimeEntry registro = timeEntryRepository.getReferenceById(dia.getUltimoRegistroId());
-            if (guardar(usuario, dia.getDia(), OvertimeType.DIARIA, exceso,
-                    OvertimeCalculator.MINUTOS_MAXIMOS_POR_JORNADA, registro)) {
+            ResultadoDelGuardado resultado = guardar(usuario, dia.getDia(), OvertimeType.DIARIA,
+                    exceso, OvertimeCalculator.MINUTOS_MAXIMOS_POR_JORNADA, registro);
+            if (resultado.huboCambio()) {
                 tocados++;
+            }
+            if (resultado == ResultadoDelGuardado.CREADO) {
+                barrido.anotarNuevo(usuario);
             }
         }
         return tocados;
@@ -339,7 +346,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             Set<LocalDate> diasDeAusencia,
             LocalDate desde,
             LocalDate hasta,
-            Set<String> encontrados) {
+            Barrido barrido) {
 
         Map<LocalDate, Long> minutosPorSemana = new HashMap<>();
         for (TimeEntryRepository.DailyWorkProjection dia : dias) {
@@ -367,10 +374,15 @@ public class OvertimeServiceImpl implements OvertimeService {
                 continue;
             }
 
-            encontrados.add(clave(usuario.getId(), lunes, OvertimeType.SEMANAL));
+            barrido.encontrados().add(clave(usuario.getId(), lunes, OvertimeType.SEMANAL));
             long esperados = OvertimeCalculator.objetivoSemanal(usuario.getHorasSemanales(), habiles);
-            if (guardar(usuario, lunes, OvertimeType.SEMANAL, exceso, (int) esperados, null)) {
+            ResultadoDelGuardado resultado =
+                    guardar(usuario, lunes, OvertimeType.SEMANAL, exceso, (int) esperados, null);
+            if (resultado.huboCambio()) {
                 tocados++;
+            }
+            if (resultado == ResultadoDelGuardado.CREADO) {
+                barrido.anotarNuevo(usuario);
             }
         }
         return tocados;
@@ -419,7 +431,7 @@ public class OvertimeServiceImpl implements OvertimeService {
      *     catorce días, y contarlos todos haría que el log dijera lo
      *     mismo siempre y no significara nada.
      */
-    private boolean guardar(
+    private ResultadoDelGuardado guardar(
             User usuario, LocalDate fecha, OvertimeType tipo,
             int minutosExtra, int minutosEsperados, TimeEntry registro) {
 
@@ -430,17 +442,17 @@ public class OvertimeServiceImpl implements OvertimeService {
             OvertimeAlert aviso = existente.get();
             // Una decisión humana no se pisa. Ver el Javadoc de la clase.
             if (aviso.getEstado() != OvertimeStatus.ABIERTO) {
-                return false;
+                return ResultadoDelGuardado.SIN_CAMBIOS;
             }
             if (aviso.getMinutosExtra() == minutosExtra
                     && aviso.getMinutosEsperados() == minutosEsperados) {
-                return false;
+                return ResultadoDelGuardado.SIN_CAMBIOS;
             }
             aviso.setMinutosExtra(minutosExtra);
             aviso.setMinutosEsperados(minutosEsperados);
             aviso.setRegistro(registro);
             overtimeRepository.save(aviso);
-            return true;
+            return ResultadoDelGuardado.ACTUALIZADO;
         }
 
         OvertimeAlert aviso = overtimeRepository.save(OvertimeAlert.builder()
@@ -464,7 +476,93 @@ public class OvertimeServiceImpl implements OvertimeService {
             eventPublisher.publishEvent(new NotificationEvents.OvertimeDetected(
                     aviso, destinatariosDe(aviso)));
         }
-        return true;
+        return ResultadoDelGuardado.CREADO;
+    }
+
+    /**
+     * Lo que va acumulando un barrido mientras recorre a la gente.
+     *
+     * Dos cosas distintas y las dos hacen falta al final, así que viajan
+     * juntas en vez de como dos parámetros más por todos los métodos:
+     *
+     * <ul>
+     *   <li>{@code encontrados}: las claves de los excesos que siguen
+     *       existiendo, para retirar los avisos ABIERTO que ya no
+     *       proceden.</li>
+     *   <li>{@code nuevosPorEmpresa}: a quién afecta cada aviso
+     *       <b>recién creado</b>, agrupado por empresa. Es lo que se
+     *       resume a quien revisa.</li>
+     * </ul>
+     *
+     * Se guardan los {@link User} y no un simple contador porque el
+     * resumen dice también <b>a cuánta gente</b> afecta: "7 avisos" se lee
+     * muy distinto si son de siete personas o todos de la misma. Y la
+     * empresa sale del propio usuario, que es quien la conoce.
+     */
+    private static final class Barrido {
+
+        private final Set<String> encontrados = new HashSet<>();
+        private final Map<Company, Set<User>> nuevosPorEmpresa = new LinkedHashMap<>();
+        private final Map<Company, Integer> cuantosPorEmpresa = new LinkedHashMap<>();
+
+        Set<String> encontrados() {
+            return encontrados;
+        }
+
+        void anotarNuevo(User usuario) {
+            Company empresa = usuario.getEmpresa();
+            nuevosPorEmpresa.computeIfAbsent(empresa, e -> new LinkedHashSet<>()).add(usuario);
+            cuantosPorEmpresa.merge(empresa, 1, Integer::sum);
+        }
+    }
+
+    /**
+     * El resumen de la noche para quien revisa: uno por empresa.
+     *
+     * Aquí está la decisión de diseño de todo esto. El aviso individual
+     * sigue yendo <b>solo al empleado</b> —un correo por cada exceso a
+     * cada gestor es spam por diseño, y por eso no se hacía—, pero no
+     * avisar de nada tenía su propio coste: un exceso podía quedarse
+     * semanas sin revisar porque a nadie se le ocurrió abrir la bandeja.
+     *
+     * Lo que resuelve la tensión no es el canal sino el nivel de
+     * agregación: como mucho un aviso por empresa y por noche, con el
+     * recuento, y las noches sin excesos nuevos no mandan nada. Fíjate en
+     * que cuenta avisos <b>creados</b>, no tocados: uno que sube de 40 a
+     * 45 minutos porque se corrigió un fichaje no es un hallazgo nuevo.
+     */
+    private void avisarAQuienRevisa(Barrido barrido) {
+        for (Map.Entry<Company, Set<User>> entrada : barrido.nuevosPorEmpresa.entrySet()) {
+            Company empresa = entrada.getKey();
+            List<User> revisores = revisoresDe(empresa);
+            if (revisores.isEmpty()) {
+                continue;
+            }
+            eventPublisher.publishEvent(new NotificationEvents.OvertimeSummary(
+                    empresa,
+                    barrido.cuantosPorEmpresa.getOrDefault(empresa, 0),
+                    entrada.getValue().size(),
+                    revisores));
+        }
+    }
+
+    /**
+     * Qué ha hecho {@link #guardar} de verdad.
+     *
+     * Antes devolvía un booleano que solo decía "he tocado algo", y eso
+     * bastaba para el recuento del log. Deja de bastar desde que hay un
+     * resumen nocturno para quien revisa: ese cuenta <b>avisos nuevos</b>,
+     * y un aviso que sube de 40 a 45 minutos porque se corrigió un fichaje
+     * no es un hallazgo del que haya que avisar otra vez.
+     */
+    private enum ResultadoDelGuardado {
+        CREADO,
+        ACTUALIZADO,
+        SIN_CAMBIOS;
+
+        boolean huboCambio() {
+            return this != SIN_CAMBIOS;
+        }
     }
 
     /**
