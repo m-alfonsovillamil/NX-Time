@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -27,4 +28,9 @@ public record PasswordResetRequest(
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
         String contrasenaNueva
 ) {
+
+    /** Ver {@link Emails}: el correo se busca en minúsculas, siempre. */
+    public PasswordResetRequest {
+        email = Emails.normalizar(email);
+    }
 }

@@ -87,17 +87,43 @@ retornos de carro, que no son base64 válidos. La aplicación falla al arrancar 
 | `MAIL_HOST` / `MAIL_PORT` | los de tu proveedor SMTP (Brevo, Resend…) |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | credenciales del proveedor |
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | `true` |
-| `MAIL_FROM` | remitente en un **dominio verificado**, o los correos irán a spam |
+| `MAIL_FROM` | un remitente **verificado en el proveedor**, copiado carácter a carácter |
 
 > 🚨 **Desde el 09/2026 el correo es obligatorio** (ADR 014). Dar de alta a un
 > empleado o a un gestor le manda el código con el que elige su contraseña, y si
 > ese correo no sale **el alta falla con un 503** en vez de dejar una cuenta en la
 > que nadie puede entrar. Sin SMTP no se pueden dar altas ni recuperar contraseñas.
->
-> Para un piloto basta con una **contraseña de aplicación de Gmail**
-> (`MAIL_HOST=smtp.gmail.com`, `MAIL_PORT=587`, verificación en dos pasos
-> activada, y `MAIL_FROM` igual a esa dirección de Gmail) o con el plan gratuito
-> de **Brevo**.
+
+#### Dos trampas que ya han costado días, en este orden
+
+**1. Render bloquea la salida por el puerto 587** en el plan gratuito, y Gmail no
+ofrece otro. No es la contraseña ni el código: desde tu PC funciona y desde Render
+no. La señal es el tiempo — un `POST /auth/recuperar` que tarda **~15 s** son tres
+esperas de 5 s agotándose; una credencial rechazada habría fallado en ~1 s. La
+salida es un proveedor con **puerto 2525**, pensado justo para esto:
+`MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=2525`. Ojo, el `MAIL_USERNAME` de
+Brevo **no es tu correo**, es el *login* que enseña su pantalla de SMTP
+(`9xxxxxx001@smtp-brevo.com`); confundirlos da un `535`.
+
+**2. `MAIL_FROM` tiene que coincidir EXACTAMENTE con el remitente verificado,
+mayúsculas incluidas.** Brevo compara la cadena tal cual: con
+`M.alfonso@gmail.com` verificado como `m.alfonso@gmail.com`, acepta el mensaje por
+SMTP y **después lo descarta**. Esto tiró todos los correos durante cuatro días
+(16/09/2026) sin dejar ni una excepción en el log de Render.
+
+> ⚠️ **Lo que NO sirve para comprobarlo**: que el código quede guardado en
+> `codigos_acceso` solo prueba que el proveedor aceptó el mensaje, no que lo
+> entregara. Y `/actuator/health` dice `UP` con el correo roto a propósito
+> (`management.health.mail.enabled: false`). **La verdad está en el panel del
+> proveedor**: en Brevo, *Transaccional → Logs*, una fila con **dos eventos
+> ("Enviado" y "Error") no se ha entregado**, y el contador "Entregado" de
+> *Tiempo real* lo canta de un vistazo.
+
+Para un piloto basta el plan gratuito de **Brevo**. Un remitente `@gmail.com`
+verificado funciona, pero Brevo reescribe el remitente a un subdominio suyo
+(`...@12128091.brevosend.com`) porque no puede firmar como gmail.com, y a terceros
+se irá a spam a menudo. Con un dominio propio autenticado (DKIM) eso desaparece:
+no hace falta buzón, solo enviar.
 
 ### CORS
 

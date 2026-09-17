@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -97,6 +99,22 @@ public class User {
 
     @Version
     private long version;
+
+    /**
+     * Última red antes de la base: el correo se guarda siempre en minúsculas.
+     *
+     * Los DTO de entrada ya normalizan lo que teclea la gente, pero esto cubre
+     * lo que no pasa por ahí -- el sembrador de datos de demo, los tests, y
+     * cualquier alta futura que llegue por otro camino. Que el índice único de
+     * V17 sea sobre lower(email) no sirve de nada si la fila entra con
+     * mayúsculas: se guardaría bien, pero el correo que le mandamos a esa
+     * persona llevaría una dirección que luego ella no podría teclear igual.
+     */
+    @PrePersist
+    @PreUpdate
+    private void normalizarEmail() {
+        this.email = Emails.normalizar(this.email);
+    }
 
     @Override
     public boolean equals(Object o) {

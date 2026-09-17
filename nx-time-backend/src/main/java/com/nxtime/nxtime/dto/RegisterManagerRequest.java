@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -38,4 +39,9 @@ public record RegisterManagerRequest(
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
         String contrasena
 ) {
+
+    /** Ver {@link Emails}: la cuenta nace ya con el correo en minúsculas. */
+    public RegisterManagerRequest {
+        email = Emails.normalizar(email);
+    }
 }

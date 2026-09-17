@@ -186,4 +186,49 @@ class AccessCodeIT {
         accessCodeService.confirmar("nueva@nxtime.test", ultimoCodigoEnviadoA("nueva@nxtime.test"), "miPropia12345");
         assertThat(authService.login(new LoginRequest("nueva@nxtime.test", "miPropia12345")).token()).isNotBlank();
     }
+
+    /*
+     * 16/09/2026. El correo se buscaba con una comparación exacta, así que
+     * una mayúscula distinta a la del alta dejaba a la persona fuera: el
+     * login decía "credenciales incorrectas" y "He olvidado mi contraseña"
+     * devolvía 202 sin mandar nada. Este test recorre el alta entera
+     * escribiendo la dirección de CUATRO formas distintas a propósito.
+     */
+    @Test
+    @DisplayName("Las mayúsculas del correo dan igual: alta, código y login son la misma cuenta")
+    void elCorreo_noDistingueMayusculas() {
+        User gestor = crearUsuario("gestor.mayusculas@nxtime.test", Role.GESTOR, "gestor12345");
+
+        // 1. El alta, con el correo tal como vendría copiado de otro sitio.
+        authService.createEmployee(
+                new CreateEmployeeRequest("Juan", "Pérez", "Juan.Perez@NXTIME.test"), gestor);
+
+        // En la base queda en minúsculas, y el correo sale a esa dirección.
+        User creado = userRepository.findByEmail("juan.perez@nxtime.test").orElseThrow();
+        assertThat(creado.getEmail()).isEqualTo("juan.perez@nxtime.test");
+        String codigo = ultimoCodigoEnviadoA("juan.perez@nxtime.test");
+
+        // 2. Elige contraseña escribiéndolo de otra forma.
+        accessCodeService.confirmar("JUAN.PEREZ@nxtime.test", codigo, "miPropia12345");
+
+        // 3. Y entra de una tercera.
+        assertThat(authService.login(new LoginRequest("Juan.Perez@Nxtime.Test", "miPropia12345")).token())
+                .isNotBlank();
+    }
+
+    @Test
+    @DisplayName("La recuperación encuentra la cuenta aunque el correo se teclee con mayúsculas")
+    void laRecuperacion_encuentraLaCuenta_conMayusculas() {
+        User usuario = crearUsuario("olvidadiza@nxtime.test", Role.EMPLEADO, "antigua12345");
+
+        accessCodeService.solicitarRecuperacion("Olvidadiza@NXTime.test");
+
+        // Si no la encontrara no habría código: el endpoint calla en los dos
+        // casos, así que la base es lo único que lo distingue.
+        assertThat(codigosDe(usuario)).hasSize(1);
+        accessCodeService.confirmar("olvidadiza@nxtime.test",
+                ultimoCodigoEnviadoA("olvidadiza@nxtime.test"), "nuevaSegura123");
+        assertThat(authService.login(new LoginRequest("olvidadiza@nxtime.test", "nuevaSegura123")).token())
+                .isNotBlank();
+    }
 }
