@@ -34,6 +34,8 @@ interface AuthRepository {
     ): Response<List<Registro>>
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
+    suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO>
+    suspend fun cambiarProyecto(fichajeId: Long, proyectoId: Long): Response<ProyectosParaFicharDTO>
     suspend fun getHorasPorDia(desde: java.time.LocalDate, hasta: java.time.LocalDate): Response<List<HorasDelDiaDTO>>
 
     /* Cumplimiento normativo (RRHH/ADMIN) */

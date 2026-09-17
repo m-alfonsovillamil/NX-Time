@@ -7,6 +7,7 @@ import com.nxtime.nxtime.domain.ProjectAllocation.Origen;
 import com.nxtime.nxtime.domain.ProjectAssignment;
 import com.nxtime.nxtime.domain.ProjectSegment;
 import com.nxtime.nxtime.domain.TimeEntry;
+import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.ProjectAllocationRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
@@ -21,6 +22,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,6 +86,76 @@ public class ProjectAllocationServiceImpl implements ProjectAllocationService {
         Map<Project, Long> reparto = new LinkedHashMap<>();
         imputaciones.forEach(i -> reparto.put(i.getProyecto(), i.getSegundos()));
         sustituir(corregido, reescalar(reparto, neto(corregido)), Origen.MANUAL);
+    }
+
+    // ------------------------------------------------------------------
+    // Tramos
+    // ------------------------------------------------------------------
+
+    @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public List<Project> proyectosParaFichar(User persona, LocalDate dia) {
+        return assignmentRepository.findVigentesDe(persona.getId(), dia).stream()
+                .map(ProjectAssignment::getProyecto)
+                .filter(Project::isActivo)
+                .distinct()
+                .toList();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public Optional<Project> proyectoEnCurso(TimeEntry registro) {
+        return segmentRepository.findByRegistroAndFinIsNull(registro).map(ProjectSegment::getProyecto);
+    }
+
+    @Override
+    public void abrirTramo(TimeEntry registro, Project proyecto) {
+        segmentRepository.save(ProjectSegment.builder()
+                .empresa(registro.getEmpresa())
+                .registro(registro)
+                .proyecto(proyecto)
+                .inicio(registro.getHoraEntrada())
+                .build());
+    }
+
+    @Override
+    public void cambiarDeProyecto(TimeEntry registro, Project proyecto, Instant ahora) {
+        var enCurso = segmentRepository.findByRegistroAndFinIsNull(registro);
+        if (enCurso.isEmpty()) {
+            // Sin tramos: lo fichado hasta ahora (y sus pausas) pasa a este
+            // proyecto. Las añadidas a mano se descuentan por solape al
+            // calcular, así que aquí solo van las fichadas.
+            long anadidas = addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(registro).stream()
+                    .mapToLong(AddedPause::getSegundos).sum();
+            segmentRepository.save(ProjectSegment.builder()
+                    .empresa(registro.getEmpresa())
+                    .registro(registro)
+                    .proyecto(proyecto)
+                    .inicio(registro.getHoraEntrada())
+                    .segundosPausa(Math.max(0, registro.getSegundosPausaAcumulados() - anadidas))
+                    .build());
+            return;
+        }
+        ProjectSegment actual = enCurso.get();
+        actual.setFin(ahora);
+        // flush antes de abrir el siguiente: el índice único de "un tramo
+        // abierto por jornada" se comprueba fila a fila, y el INSERT del nuevo
+        // no puede llegar antes que el UPDATE que cierra este.
+        segmentRepository.saveAndFlush(actual);
+        segmentRepository.save(ProjectSegment.builder()
+                .empresa(registro.getEmpresa())
+                .registro(registro)
+                .proyecto(proyecto)
+                .inicio(ahora)
+                .build());
+    }
+
+    @Override
+    public void sumarPausaAlTramo(TimeEntry registro, long segundos) {
+        segmentRepository.findByRegistroAndFinIsNull(registro).ifPresent(tramo -> {
+            tramo.setSegundosPausa(tramo.getSegundosPausa() + Math.max(0, segundos));
+            segmentRepository.save(tramo);
+        });
     }
 
     // ------------------------------------------------------------------

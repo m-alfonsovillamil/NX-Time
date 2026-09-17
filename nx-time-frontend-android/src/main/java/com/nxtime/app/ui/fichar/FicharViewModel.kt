@@ -3,6 +3,7 @@ package com.nxtime.app.ui.fichar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.PeticionFichaje
+import com.nxtime.app.data.dto.ProyectosParaFicharDTO
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.ResumenPersonalDTO
 import com.nxtime.app.data.dto.TipoFichaje
@@ -45,6 +46,12 @@ data class FicharUiState(
      * preguntando si iniciar igualmente. Es el motivo, para enseñarlo.
      */
     val confirmandoInicioNoLaborable: String? = null,
+    /** Los proyectos para fichar y el de la jornada en curso. Null si no han cargado. */
+    val proyectos: ProyectosParaFicharDTO? = null,
+    /** Se está eligiendo en qué proyecto empezar la jornada. */
+    val eligiendoProyectoAlIniciar: Boolean = false,
+    /** Se está eligiendo a qué proyecto cambiar con la jornada abierta. */
+    val cambiandoDeProyecto: Boolean = false,
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -222,7 +229,7 @@ class FicharViewModel(
             if (motivo != null) {
                 _uiState.update { it.copy(cargando = false, confirmandoInicioNoLaborable = motivo) }
             } else {
-                registrarFichaje(TipoFichaje.INICIO)
+                iniciarEligiendoProyecto()
             }
         }
     }
@@ -230,7 +237,71 @@ class FicharViewModel(
     /** Sí, empieza la jornada aunque hoy no sea laborable. */
     fun confirmarInicioNoLaborable() {
         _uiState.update { it.copy(confirmandoInicioNoLaborable = null) }
-        registrarFichaje(TipoFichaje.INICIO)
+        iniciarEligiendoProyecto()
+    }
+
+    /**
+     * Con dos o más proyectos se pregunta en cuál se empieza; con uno o
+     * ninguno se inicia sin preguntar y decide el servidor (ADR 017).
+     *
+     * Si los proyectos no han cargado, se inicia igual: fichar no espera a
+     * nada, y la jornada se puede asignar después con "Cambiar".
+     */
+    private fun iniciarEligiendoProyecto() {
+        if (_uiState.value.proyectos?.hayQueElegir == true) {
+            _uiState.update { it.copy(cargando = false, eligiendoProyectoAlIniciar = true) }
+        } else {
+            registrarFichaje(TipoFichaje.INICIO)
+        }
+    }
+
+    fun iniciarEnProyecto(proyectoId: Long) {
+        _uiState.update { it.copy(eligiendoProyectoAlIniciar = false) }
+        registrarFichaje(TipoFichaje.INICIO, proyectoId)
+    }
+
+    fun cancelarEleccionDeProyecto() {
+        _uiState.update { it.copy(eligiendoProyectoAlIniciar = false, cargando = false) }
+    }
+
+    fun pedirCambioDeProyecto() {
+        _uiState.update { it.copy(cambiandoDeProyecto = true, error = null) }
+    }
+
+    fun cancelarCambioDeProyecto() {
+        _uiState.update { it.copy(cambiandoDeProyecto = false) }
+    }
+
+    fun cambiarAProyecto(proyectoId: Long) {
+        val registro = _uiState.value.registro ?: return
+        _uiState.update { it.copy(cambiandoDeProyecto = false) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.cambiarProyecto(registro.id, proyectoId)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    _uiState.update { it.copy(proyectos = cuerpo) }
+                } else {
+                    _uiState.update { it.copy(error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /** Como el resumen: si falla no se enseña nada, y fichar sigue funcionando. */
+    private fun cargarProyectos() {
+        viewModelScope.launch {
+            val proyectos = try {
+                authRepository.getProyectosParaFichar().takeIf { it.isSuccessful }?.body()
+            } catch (e: Exception) {
+                null
+            }
+            if (proyectos != null) {
+                _uiState.update { it.copy(proyectos = proyectos) }
+            }
+        }
     }
 
     fun cancelarInicioNoLaborable() {
@@ -262,11 +333,11 @@ class FicharViewModel(
         registrarFichaje(tipo)
     }
 
-    private fun registrarFichaje(tipo: TipoFichaje) {
+    private fun registrarFichaje(tipo: TipoFichaje, proyectoId: Long? = null) {
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.registrarFichaje(PeticionFichaje(tipo))
+                val respuesta = authRepository.registrarFichaje(PeticionFichaje(tipo, proyectoId))
                 if (respuesta.isSuccessful) {
                     aplicarRegistro(respuesta.body())
                 } else {
@@ -328,6 +399,8 @@ class FicharViewModel(
         // Cada fichaje cambia los totales: al cerrar una jornada, lo
         // trabajado pasa de "en curso" a sumar en el resumen.
         cargarResumen()
+        // Y el proyecto en curso: al iniciar aparece, al cerrar desaparece.
+        cargarProyectos()
     }
 
     fun descartarError() {

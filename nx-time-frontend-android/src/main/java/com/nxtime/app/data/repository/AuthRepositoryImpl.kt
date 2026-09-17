@@ -78,6 +78,12 @@ class AuthRepositoryImpl(
 
     override suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO> = apiService.getEstadoDeHoy()
 
+    override suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO> =
+        apiService.getProyectosParaFichar()
+
+    override suspend fun cambiarProyecto(fichajeId: Long, proyectoId: Long): Response<ProyectosParaFicharDTO> =
+        apiService.cambiarProyecto(fichajeId, CambioDeProyecto(proyectoId))
+
     override suspend fun getResumenPersonal(): Response<ResumenPersonalDTO> {
         return apiService.getResumenPersonal()
     }

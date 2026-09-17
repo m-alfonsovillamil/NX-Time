@@ -263,6 +263,13 @@
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>
     <string name="detalle_vacaciones_proximas">Próximas ausencias aprobadas</string>
     <string name="detalle_vacaciones_ninguna">No tienes ninguna.</string>
+    <string name="fichar_proyecto_elegir_titulo">¿En qué proyecto vas a trabajar?</string>
+    <string name="fichar_proyecto_empezar">Empezar</string>
+    <string name="fichar_proyecto_cambiar_titulo">Cambiar de proyecto</string>
+    <string name="fichar_proyecto_cambiar">Cambiar</string>
+    <string name="fichar_proyecto_en_curso">Proyecto: %1$s · %2$s</string>
+    <string name="fichar_proyecto_sin">Sin proyecto</string>
+    <string name="fichar_proyecto_actual">%1$s (ahora)</string>
     <string name="fichar_no_laborable_titulo">Hoy no es un día laborable</string>
     <string name="fichar_no_laborable_texto">%1$s. ¿Quieres iniciar la jornada igualmente? Se avisará a tu responsable.</string>
     <string name="fichar_no_laborable_si">Iniciar igualmente</string>

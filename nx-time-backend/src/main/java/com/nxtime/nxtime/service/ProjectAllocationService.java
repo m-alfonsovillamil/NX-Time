@@ -1,6 +1,12 @@
 package com.nxtime.nxtime.service;
 
+import com.nxtime.nxtime.domain.Project;
 import com.nxtime.nxtime.domain.TimeEntry;
+import com.nxtime.nxtime.domain.User;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Mantiene las imputaciones de horas a proyectos de cada jornada (ADR 017).
@@ -37,4 +43,29 @@ public interface ProjectAllocationService {
      * desaparecerían de los informes) y el reparto se reescala al nuevo neto.
      */
     void alCorregir(TimeEntry original, TimeEntry corregido);
+
+    // ------------------------------------------------------------------
+    // Tramos: en qué proyecto se trabaja (ADR 017)
+    // ------------------------------------------------------------------
+
+    /** Los proyectos en los que puede fichar la persona ese día: asignación vigente y proyecto activo. */
+    List<Project> proyectosParaFichar(
+            User persona, LocalDate dia);
+
+    /** El proyecto del tramo en curso de la jornada, si lo hay. */
+    Optional<Project> proyectoEnCurso(TimeEntry registro);
+
+    /** Abre el primer tramo de una jornada recién iniciada. */
+    void abrirTramo(TimeEntry registro, Project proyecto);
+
+    /**
+     * Cierra el tramo en curso y abre otro en {@code proyecto} desde
+     * {@code ahora}. Si la jornada no tenía tramos (se inició sin elegir,
+     * p. ej. desde la app 1.3), el proyecto elegido cubre desde la entrada:
+     * es la única lectura razonable de "estoy en este proyecto" sin más datos.
+     */
+    void cambiarDeProyecto(TimeEntry registro, Project proyecto, Instant ahora);
+
+    /** Una pausa fichada acaba de terminar: sus segundos van al tramo en curso. */
+    void sumarPausaAlTramo(TimeEntry registro, long segundos);
 }

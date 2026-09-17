@@ -116,6 +116,49 @@ class TimeEntryControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
+    @DisplayName("POST /fichaje con proyectoId lo pasa al servicio; sin él, también vale")
+    void registerTimeEntry_conProyecto() throws Exception {
+        TimeEntry entry = TimeEntry.builder().id(1L).build();
+        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
+        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0));
+
+        mockMvc.perform(post("/api/v1/fichaje").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tipo\":\"INICIO\",\"proyectoId\":7}"))
+                .andExpect(status().isOk());
+
+        verify(timeEntryService).registerTimeEntry("empleado@nxtime.test",
+                new com.nxtime.nxtime.dto.TimeEntryRequest(com.nxtime.nxtime.domain.TimeEntryAction.INICIO, 7L));
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("POST /fichaje/{id}/proyecto sin 'fichaje:escribir' devuelve 403; GET /fichaje/proyectos con 'fichaje:leer' 200")
+    void proyectos_permisos() throws Exception {
+        when(timeEntryService.proyectosParaFichar("empleado@nxtime.test"))
+                .thenReturn(new com.nxtime.nxtime.dto.ClockProjectsResponse(List.of(), null));
+        mockMvc.perform(get("/api/v1/fichaje/proyectos")).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/fichaje/1/proyecto").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"proyectoId\":7}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
+    @DisplayName("POST /fichaje/{id}/proyecto llega al servicio; sin proyectoId válido, 400")
+    void cambiarProyecto() throws Exception {
+        when(timeEntryService.cambiarProyecto("empleado@nxtime.test", 1L, 7L))
+                .thenReturn(new com.nxtime.nxtime.dto.ClockProjectsResponse(List.of(), null));
+        mockMvc.perform(post("/api/v1/fichaje/1/proyecto").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"proyectoId\":7}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/fichaje/1/proyecto").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"proyectoId\":0}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
     @DisplayName("GET /fichaje/hoy dice si es laborable y, si no, por qué")
     void getHoy() throws Exception {

@@ -15,6 +15,15 @@ public interface TimeEntryService {
 
     List<TimeEntry> getHistory(String userEmail);
 
+    /** Los proyectos en los que puede fichar hoy y el de la jornada en curso (ADR 017). */
+    com.nxtime.nxtime.dto.ClockProjectsResponse proyectosParaFichar(String userEmail);
+
+    /**
+     * Cambia de proyecto con la jornada abierta. 409 si está cerrada, en pausa
+     * o ya en ese proyecto; 403 si no es suya o no tiene ese proyecto hoy.
+     */
+    com.nxtime.nxtime.dto.ClockProjectsResponse cambiarProyecto(String userEmail, long registroId, long proyectoId);
+
     /** Si hoy (en España) no es laborable para esta persona, por qué. Ver NonWorkingDayService. */
     java.util.Optional<com.nxtime.nxtime.service.NonWorkingDayService.Motivo> motivoNoLaborableHoy(String userEmail);
 

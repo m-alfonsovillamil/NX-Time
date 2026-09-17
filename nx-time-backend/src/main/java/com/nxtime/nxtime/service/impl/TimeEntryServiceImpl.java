@@ -9,6 +9,8 @@ import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
+import com.nxtime.nxtime.domain.Project;
+import com.nxtime.nxtime.dto.ClockProjectsResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
@@ -115,11 +117,14 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         String beforeJson = (activeEntry != null) ? toJson(activeEntry) : null;
 
         AuditAction accion;
+        String motivoAuditoria = null;
         TimeEntry result = switch (request.tipo()) {
             case INICIO -> {
                 if (activeEntry != null) {
                     throw new BusinessException("Ya hay una jornada activa.");
                 }
+                Project proyecto = proyectoAlIniciar(user, request.proyectoId());
+                motivoAuditoria = proyecto != null ? "Proyecto: " + proyecto.getCodigo() : null;
                 TimeEntry newEntry = TimeEntry.builder()
                         .usuario(user)
                         .empresa(user.getEmpresa())
@@ -127,7 +132,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .build();
                 accion = AuditAction.CREACION;
                 avisarSiNoEsLaborable(user);
-                yield timeEntryRepository.save(newEntry);
+                TimeEntry creada = timeEntryRepository.save(newEntry);
+                if (proyecto != null) {
+                    projectAllocationService.abrirTramo(creada, proyecto);
+                }
+                yield creada;
             }
             case FIN -> {
                 if (activeEntry == null) {
@@ -173,6 +182,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 Duration duracionPausa = Duration.between(inicioPausa, ahora);
 
                 activeEntry.setSegundosPausaAcumulados(activeEntry.getSegundosPausaAcumulados() + duracionPausa.getSeconds());
+                // La pausa cae entera en el tramo en curso: no se puede cambiar
+                // de proyecto en pausa (ver cambiarProyecto).
+                projectAllocationService.sumarPausaAlTramo(activeEntry, duracionPausa.getSeconds());
                 activeEntry.setEnPausa(false);
                 activeEntry.setInicioPausaActual(null);
                 accion = AuditAction.MODIFICACION;
@@ -188,11 +200,103 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .accion(accion)
                 .valorAnterior(beforeJson)
                 .valorNuevo(toJson(result))
+                .motivo(motivoAuditoria)
                 .build();
         eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
 
         log.info("Fichaje {} registrado para {} (fichaje id={})", request.tipo(), userEmail, result.getId());
         return result;
+    }
+
+    /**
+     * En qué proyecto empieza la jornada (ADR 017).
+     *
+     * <ul>
+     *   <li>Con proyecto elegido: tiene que ser uno de los suyos de hoy (403).</li>
+     *   <li>Sin elegir y con uno solo: ese.</li>
+     *   <li>Sin elegir y con varios: sin proyecto. <b>No se rechaza el
+     *       fichaje</b>: la app 1.4 siempre pregunta, pero alguien con la 1.3
+     *       instalada no podría fichar en absoluto, y fichar es lo único que
+     *       nunca puede quedar bloqueado. Esas horas quedan sin proyecto hasta
+     *       que se cambie o se repartan.</li>
+     * </ul>
+     */
+    private Project proyectoAlIniciar(User user, Long proyectoId) {
+        List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID));
+        if (proyectoId != null) {
+            return disponibles.stream()
+                    .filter(p -> p.getId() == proyectoId)
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(
+                            "No tienes asignado ese proyecto hoy.", HttpStatus.FORBIDDEN));
+        }
+        return disponibles.size() == 1 ? disponibles.get(0) : null;
+    }
+
+    @Override
+    public ClockProjectsResponse proyectosParaFichar(String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        return respuestaDeProyectos(user, timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null));
+    }
+
+    @Override
+    @Transactional
+    public ClockProjectsResponse cambiarProyecto(String userEmail, long registroId, long proyectoId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        TimeEntry registro = timeEntryRepository.findById(registroId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fichaje no encontrado."));
+        if (registro.getUsuario().getId() != user.getId()) {
+            throw new TenantAccessException("Solo puedes cambiar de proyecto en tu propia jornada.");
+        }
+        if (registro.getHoraSalida() != null) {
+            throw new BusinessException("La jornada ya está cerrada. Para repartir sus horas entre proyectos, "
+                    + "hazlo desde el historial.");
+        }
+        // En pausa no: el tramo que se cierra no sabría cuánto de esa pausa es suyo.
+        if (registro.isEnPausa()) {
+            throw new BusinessException("Reanuda la jornada antes de cambiar de proyecto.");
+        }
+        Project nuevo = projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID)).stream()
+                .filter(p -> p.getId() == proyectoId)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("No tienes asignado ese proyecto hoy.", HttpStatus.FORBIDDEN));
+        Project anterior = projectAllocationService.proyectoEnCurso(registro).orElse(null);
+        if (anterior != null && anterior.getId() == nuevo.getId()) {
+            throw new BusinessException("Ya estás trabajando en " + nuevo.getCodigo() + ".");
+        }
+
+        String antes = toJson(registro);
+        projectAllocationService.cambiarDeProyecto(registro, nuevo, Instant.now());
+        eventPublisher.publishEvent(new TimeEntryAuditEvent(TimeEntryAudit.builder()
+                .registro(registro)
+                .usuario(user)
+                .modificadoPor(user)
+                .accion(AuditAction.PROYECTO_CAMBIADO)
+                .valorAnterior(antes)
+                .valorNuevo(toJson(registro))
+                .motivo(anterior != null
+                        ? "De " + anterior.getCodigo() + " a " + nuevo.getCodigo()
+                        : "Proyecto: " + nuevo.getCodigo())
+                .build()));
+        log.info("Usuario {} cambia de proyecto en el fichaje {}: {} -> {}",
+                user.getId(), registroId, anterior != null ? anterior.getCodigo() : "-", nuevo.getCodigo());
+        return respuestaDeProyectos(user, registro);
+    }
+
+    private ClockProjectsResponse respuestaDeProyectos(User user, TimeEntry abierta) {
+        List<ClockProjectsResponse.ProjectOption> disponibles =
+                projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID)).stream()
+                        .map(TimeEntryServiceImpl::opcion)
+                        .toList();
+        ClockProjectsResponse.ProjectOption enCurso = abierta == null ? null
+                : projectAllocationService.proyectoEnCurso(abierta).map(TimeEntryServiceImpl::opcion).orElse(null);
+        return new ClockProjectsResponse(disponibles, enCurso);
+    }
+
+    private static ClockProjectsResponse.ProjectOption opcion(Project proyecto) {
+        return new ClockProjectsResponse.ProjectOption(proyecto.getId(), proyecto.getCodigo(), proyecto.getNombre());
     }
 
     /**
