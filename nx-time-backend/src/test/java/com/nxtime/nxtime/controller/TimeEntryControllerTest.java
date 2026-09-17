@@ -61,6 +61,9 @@ class TimeEntryControllerTest {
     @MockitoBean
     private TimeEntryMapper timeEntryMapper;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.AllocationEditService allocationEditService;
+
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
     @DisplayName("POST /fichaje con la authority correcta y cuerpo válido devuelve 200")
@@ -285,6 +288,6 @@ class TimeEntryControllerTest {
                 null, null,
                 "Fichaje olvidado", estado,
                 null, null, null, null, Instant.now(),
-                false, false);
+                false, false, java.util.List.of());
     }
 }

@@ -60,6 +60,7 @@ import java.time.temporal.ChronoUnit
 fun HistorialScreen(
     onPedirCorreccion: (Registro) -> Unit,
     onAnadirPausa: (Registro) -> Unit,
+    onRepartir: (Registro) -> Unit,
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
     iniciales: String,
@@ -139,7 +140,8 @@ fun HistorialScreen(
                             TarjetaJornada(
                                 registro,
                                 onPedirCorreccion = { onPedirCorreccion(registro) },
-                                onAnadirPausa = { onAnadirPausa(registro) }
+                                onAnadirPausa = { onAnadirPausa(registro) },
+                                onRepartir = { onRepartir(registro) }
                             )
                         }
                     }
@@ -283,7 +285,8 @@ private fun DialogoDeFechas(
 private fun TarjetaJornada(
     registro: Registro,
     onPedirCorreccion: () -> Unit,
-    onAnadirPausa: () -> Unit
+    onAnadirPausa: () -> Unit,
+    onRepartir: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -356,6 +359,11 @@ private fun TarjetaJornada(
                     // Una pausa olvidada no es "corregir las horas": tiene su
                     // propio botón, y el servidor decide si se aplica o se
                     // pide según el día (ADR 015).
+                    // Repartir por proyecto no es corregir horas: mover horas
+                    // entre proyectos no cambia cuánto se trabajó (ADR 017).
+                    TextButton(onClick = onRepartir) {
+                        Text(stringResource(R.string.reparto_boton))
+                    }
                     TextButton(onClick = onAnadirPausa) {
                         Text(stringResource(R.string.pausa_boton))
                     }

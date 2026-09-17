@@ -4,11 +4,13 @@ import com.nxtime.nxtime.domain.CorrectionStatus;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.dto.AddPauseRequest;
 import com.nxtime.nxtime.dto.AddPauseResponse;
+import com.nxtime.nxtime.dto.AllocationsResponse;
 import com.nxtime.nxtime.dto.AddedPauseDTO;
 import com.nxtime.nxtime.dto.ChangeProjectRequest;
 import com.nxtime.nxtime.dto.ClockProjectsResponse;
 import com.nxtime.nxtime.dto.CorrectionRequestDTO;
 import com.nxtime.nxtime.dto.CorrectionResponse;
+import com.nxtime.nxtime.dto.SetAllocationsRequest;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
@@ -17,6 +19,7 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AddedPauseService;
+import com.nxtime.nxtime.service.AllocationEditService;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.TimeEntryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +43,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,16 +66,19 @@ public class TimeEntryController {
     private final TimeEntryMapper timeEntryMapper;
     private final CorrectionService correctionService;
     private final AddedPauseService addedPauseService;
+    private final AllocationEditService allocationEditService;
 
     public TimeEntryController(
             TimeEntryService timeEntryService,
             TimeEntryMapper timeEntryMapper,
             CorrectionService correctionService,
-            AddedPauseService addedPauseService) {
+            AddedPauseService addedPauseService,
+            AllocationEditService allocationEditService) {
         this.timeEntryService = timeEntryService;
         this.timeEntryMapper = timeEntryMapper;
         this.correctionService = correctionService;
         this.addedPauseService = addedPauseService;
+        this.allocationEditService = allocationEditService;
     }
 
     @Operation(summary = "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
@@ -116,6 +123,64 @@ public class TimeEntryController {
                 .map(timeEntryMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @Operation(summary = "El reparto por proyecto de una jornada",
+            description = "Cuánto de esa jornada va a cada proyecto, cuánto es el neto, con qué proyectos se puede "
+                    + "repartir (los asignados ese día) y si se puede repartir libremente (jornada de esta semana). "
+                    + "El fichaje de otra persona solo con 'fichaje:leer:equipo'.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reparto",
+                    content = @Content(schema = @Schema(implementation = AllocationsResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra empresa, o de otra persona sin permiso",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer')")
+    @GetMapping("/{id}/imputaciones")
+    public ResponseEntity<AllocationsResponse> getImputaciones(
+            @PathVariable long id, @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(allocationEditService.deLaJornada(id, usuario.getUser()));
+    }
+
+    @Operation(summary = "Repartir las horas de una jornada entre proyectos",
+            description = "Si el reparto suma lo trabajado y la jornada es de esta semana, se aplica al momento (200). "
+                    + "Si es de una semana anterior, o suma más horas de las fichadas, se crea una solicitud de "
+                    + "corrección que aprueba un gestor (202) y hace falta motivo. Sumar menos da 400.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reparto aplicado",
+                    content = @Content(schema = @Schema(implementation = AllocationsResponse.class))),
+            @ApiResponse(responseCode = "202", description = "Pendiente de que lo apruebe un gestor",
+                    content = @Content(schema = @Schema(implementation = CorrectionResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Reparto vacío, a cero, con menos horas de las "
+                    + "trabajadas, o sin motivo cuando hace falta",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Fichaje de otra persona, o proyecto que no tenía ese día",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Fichaje no encontrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Jornada abierta, anulada, o con una corrección sin resolver",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
+    @PutMapping("/{id}/imputaciones")
+    public ResponseEntity<?> repartir(
+            @PathVariable long id,
+            @Valid @RequestBody SetAllocationsRequest peticion,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        AllocationEditService.Resultado resultado =
+                allocationEditService.repartir(id, peticion, usuario.getUser());
+        // 202 y no 200 cuando hay que aprobarlo: el reparto todavía no es
+        // verdad, y el cliente tiene que enseñar cosas distintas (mismo
+        // criterio que las pausas de días pasados, ADR 015).
+        return resultado.aplicado() != null
+                ? ResponseEntity.ok(resultado.aplicado())
+                : ResponseEntity.accepted().body(resultado.solicitud());
     }
 
     @Operation(summary = "Mis proyectos para fichar",

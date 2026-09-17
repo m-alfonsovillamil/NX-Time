@@ -68,4 +68,19 @@ public interface ProjectAllocationService {
 
     /** Una pausa fichada acaba de terminar: sus segundos van al tramo en curso. */
     void sumarPausaAlTramo(TimeEntry registro, long segundos);
+
+    // ------------------------------------------------------------------
+    // Reparto a mano (ADR 017)
+    // ------------------------------------------------------------------
+
+    /**
+     * Los proyectos entre los que se pueden repartir las horas de un día: los
+     * que esa persona tenía asignados ese día, estén o no activos hoy. A
+     * diferencia de {@link #proyectosParaFichar}, aquí sí entra un proyecto ya
+     * cerrado: sus horas de entonces existieron.
+     */
+    List<Project> proyectosDelDia(User persona, LocalDate dia);
+
+    /** Guarda un reparto hecho a mano. La suma tiene que ser el neto; lo comprueba quien llama. */
+    void aplicarReparto(TimeEntry registro, java.util.Map<Project, Long> segundosPorProyecto);
 }

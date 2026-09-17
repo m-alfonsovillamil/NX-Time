@@ -217,6 +217,15 @@ private fun TarjetaCorreccion(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            if (correccion.repartoPropuesto.isNotEmpty()) {
+                Text(
+                    text = stringResource(
+                        R.string.correcciones_reparto,
+                        correccion.repartoPropuesto.joinToString(", ") { "${it.codigo} ${it.minutos} min" }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             if (correccion.pausaInicioPropuesta != null && correccion.pausaFinPropuesta != null) {
                 Text(
                     text = stringResource(

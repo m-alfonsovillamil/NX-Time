@@ -68,6 +68,20 @@ interface ApiService {
     @GET("api/v1/fichaje/activo")
     suspend fun getRegistroActivo(): Response<Registro?>
 
+    @GET("api/v1/fichaje/{id}/imputaciones")
+    suspend fun getImputaciones(@Path("id") fichajeId: Long): Response<ImputacionesDTO>
+
+    /**
+     * Devuelve 200 si el reparto se aplica y 202 si lo tiene que aprobar un
+     * gestor, con cuerpos distintos. Como lo único que la app necesita saber
+     * es cuál de los dos ha sido, se lee el código y no se deserializa nada.
+     */
+    @PUT("api/v1/fichaje/{id}/imputaciones")
+    suspend fun repartir(
+        @Path("id") fichajeId: Long,
+        @Body peticion: PeticionReparto
+    ): Response<ResponseBody>
+
     @GET("api/v1/fichaje/proyectos")
     suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO>
 

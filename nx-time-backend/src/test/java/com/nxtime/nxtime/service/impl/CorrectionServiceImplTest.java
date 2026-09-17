@@ -82,7 +82,10 @@ class CorrectionServiceImplTest {
     void setUp() {
         service = new CorrectionServiceImpl(
                 correctionRepository, timeEntryRepository, userRepository,
-                snapshotSerializer, eventPublisher, addedPauseRepository, org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class));
+                snapshotSerializer, eventPublisher, addedPauseRepository,
+                org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class),
+                org.mockito.Mockito.mock(com.nxtime.nxtime.repository.ProposedAllocationRepository.class),
+                org.mockito.Mockito.mock(com.nxtime.nxtime.repository.ProjectRepository.class));
 
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra").build();

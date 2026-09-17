@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Pedir que se corrijan las horas de un fichaje (Fase E).
@@ -35,11 +36,28 @@ public record CorrectionRequestDTO(
          * horaSalida se mandan con los valores actuales del fichaje.
          */
         Instant pausaInicio,
-        Instant pausaFin
+        Instant pausaFin,
+
+        /**
+         * El reparto por proyecto que se propone junto con las horas (ADR 017),
+         * o null si la corrección no toca proyectos. Lo valida quien lo arma
+         * ({@code AllocationEditService}); aquí solo viaja.
+         */
+        List<ProjectShare> reparto
 ) {
 
     /** Para las solicitudes que solo tocan horas, que son todas las de antes. */
     public CorrectionRequestDTO(Instant horaEntrada, Instant horaSalida, String motivo) {
         this(horaEntrada, horaSalida, motivo, null, null);
+    }
+
+    /** Una línea del reparto propuesto: cuántos minutos van a ese proyecto. */
+    public record ProjectShare(long proyectoId, long minutos) {
+    }
+
+    /** Lo que mandan las correcciones que no tocan proyectos. */
+    public CorrectionRequestDTO(
+            Instant horaEntrada, Instant horaSalida, String motivo, Instant pausaInicio, Instant pausaFin) {
+        this(horaEntrada, horaSalida, motivo, pausaInicio, pausaFin, null);
     }
 }
