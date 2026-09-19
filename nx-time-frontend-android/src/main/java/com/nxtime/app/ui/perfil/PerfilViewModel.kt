@@ -292,13 +292,40 @@ class PerfilViewModel(
     }
 
     /**
-     * Cierra la sesión.
+     * Cierra la sesión: primero en el servidor, después en el móvil.
      *
      * Vive aquí desde la Fase B y ya no en `FicharViewModel`: el botón
      * está en esta pantalla, y dejar el método donde estaba el menú
      * viejo habría sido código muerto con test propio.
+     *
+     * Avisar al servidor no es un extra. Borrar las credenciales del móvil
+     * solo esconde la sesión de quien tenga el móvil delante; el refresh
+     * token sigue valiendo hasta 30 días, así que quien lo hubiera copiado
+     * antes podría seguir entrando después de que su dueño creyera haberse
+     * ido. `POST /auth/logout` existía y no lo llamaba nadie.
+     *
+     * El orden importa: se borra ANTES en el móvil y se avisa después, con
+     * el token ya guardado en una variable. Al revés, una llamada lenta
+     * --servidor dormido, hasta 300 s-- dejaría las credenciales puestas
+     * mientras la pantalla ya dice que has salido, y si la app muere en ese
+     * rato la sesión seguiría abierta en el móvil. Que la llamada falle solo
+     * deja el refresh token vivo en el servidor hasta que caduque, que es
+     * exactamente lo que pasaba antes de este arreglo.
      */
-    fun cerrarSesion() = sessionManager.clearAuthData()
+    fun cerrarSesion() {
+        val refreshToken = sessionManager.fetchRefreshToken()
+        sessionManager.clearAuthData()
+        if (refreshToken.isNullOrBlank()) {
+            return
+        }
+        viewModelScope.launch {
+            try {
+                authRepository.cerrarSesionRemota(refreshToken)
+            } catch (e: Exception) {
+                // Salir nunca se queda a medias por un fallo de red.
+            }
+        }
+    }
 
     /** Vacía el estado al cerrar sesión, para no enseñar el perfil del anterior. */
     fun limpiar() {

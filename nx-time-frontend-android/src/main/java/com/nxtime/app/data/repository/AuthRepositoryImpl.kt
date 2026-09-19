@@ -375,6 +375,10 @@ class AuthRepositoryImpl(
         return apiService.cerrarTodasLasSesiones()
     }
 
+    override suspend fun cerrarSesionRemota(refreshToken: String): Response<Unit> {
+        return apiService.cerrarSesionRemota(RefreshTokenRequest(refreshToken))
+    }
+
     override suspend fun getMisEmpleados(): Response<List<EmpleadoSimpleDTO>> {
         return apiService.getMisEmpleados()
     }
