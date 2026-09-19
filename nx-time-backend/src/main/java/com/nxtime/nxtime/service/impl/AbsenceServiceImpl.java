@@ -166,6 +166,41 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
     }
 
+    /**
+     * Al aprobar se vuelve a mirar el saldo, y no es una comprobación
+     * repetida por gusto.
+     *
+     * La de {@link #comprobarSaldoDeVacaciones} ocurre cuando se PIDE, y
+     * para entonces solo sabe lo que hay pedido en ese instante. Entre
+     * pedir y aprobar pueden haberse concedido otras vacaciones, o
+     * haberle cambiado a alguien los días del año. Aquí la pregunta es la
+     * definitiva --cuántos días hay CONCEDIDOS-- y por eso no cuenta lo
+     * pendiente: lo que está sin resolver no ha consumido nada todavía.
+     *
+     * Sin esto, dos peticiones que por separado cabían se aprobaban las
+     * dos y el saldo terminaba en negativo sin que nada avisara.
+     */
+    private void comprobarQueQuedaSaldoAlAprobar(AbsenceRequest peticion) {
+        if (peticion.getTipo() != AbsenceType.VACACIONES) {
+            return;
+        }
+
+        User empleado = peticion.getUsuario();
+        int anio = peticion.getFechaInicio().getYear();
+        int yaAprobados = vacationBalanceService.contarDiasAprobados(empleado, anio);
+        int diasDeEsta = workingDayService.contarDiasHabiles(
+                empleado.getEmpresa(), peticion.getFechaInicio(), peticion.getFechaFin());
+        int derecho = vacationBalanceService.getBalance(empleado, anio).diasTotales();
+
+        if (yaAprobados + diasDeEsta > derecho) {
+            throw new BusinessException(String.format(
+                    "No puedes aprobarla: %s tiene %d días de vacaciones en %d, ya lleva %d aprobados "
+                            + "y esta petición son %d más.",
+                    empleado.getNombre(), derecho, anio, yaAprobados, diasDeEsta),
+                    HttpStatus.CONFLICT);
+        }
+    }
+
     @Override
     public List<AbsenceResponse> getMyRequests(String email) {
         User user = getUser(email);
@@ -207,6 +242,10 @@ public class AbsenceServiceImpl implements AbsenceService {
                 && (request.comentario() == null || request.comentario().isBlank())) {
             throw new BusinessException(
                     "Es obligatorio indicar un motivo al rechazar una petición.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (request.estado() == AbsenceStatus.APROBADA) {
+            comprobarQueQuedaSaldoAlAprobar(absenceRequest);
         }
 
         // Fase 9: antes solo cambiaba el estado -- no quedaba constancia

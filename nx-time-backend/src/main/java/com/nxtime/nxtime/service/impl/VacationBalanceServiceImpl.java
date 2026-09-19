@@ -21,6 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
  * del año (ver {@link VacationBalance} para el porqué). Los días
  * TOTALES sí se guardan, porque son un dato de negocio que alguien
  * decide (convenio, antigüedad...), no algo derivable.
+ *
+ * Y lo PEDIDO pero sin resolver también descuenta. Antes no: se podían
+ * pedir dos tramos que por separado cabían en el saldo y juntos no, y un
+ * gestor aprobaba los dos sin que nada avisara -- el saldo se quedaba en
+ * negativo. Quien tiene quince días pendientes no tiene esos quince días
+ * libres para pedir otra cosa, aunque todavía no se los hayan concedido.
  */
 @Service
 @Transactional(readOnly = true)
@@ -55,19 +61,33 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
                 .map(VacationBalance::getDiasTotales)
                 .orElse(DIAS_POR_DEFECTO);
 
-        int diasConsumidos = contarDiasConsumidos(usuario, anio);
-        return new VacationBalanceResponse(anio, diasTotales, diasConsumidos, diasTotales - diasConsumidos);
+        int diasConsumidos = contarDiasAprobados(usuario, anio);
+        int diasPendientes = contarDiasPendientes(usuario, anio);
+        return new VacationBalanceResponse(anio, diasTotales, diasConsumidos, diasPendientes,
+                diasTotales - diasConsumidos - diasPendientes);
     }
 
-    private int contarDiasConsumidos(User usuario, int anio) {
+    @Override
+    public int contarDiasAprobados(User usuario, int anio) {
         LocalDate inicioDeAnio = LocalDate.of(anio, 1, 1);
         LocalDate finDeAnio = LocalDate.of(anio, 12, 31);
+        return contarDiasHabilesDe(
+                absenceRequestRepository.findVacacionesAprobadasDelAnio(usuario, inicioDeAnio, finDeAnio),
+                usuario, inicioDeAnio, finDeAnio);
+    }
 
-        List<AbsenceRequest> aprobadas =
-                absenceRequestRepository.findVacacionesAprobadasDelAnio(usuario, inicioDeAnio, finDeAnio);
+    private int contarDiasPendientes(User usuario, int anio) {
+        LocalDate inicioDeAnio = LocalDate.of(anio, 1, 1);
+        LocalDate finDeAnio = LocalDate.of(anio, 12, 31);
+        return contarDiasHabilesDe(
+                absenceRequestRepository.findVacacionesPendientesDelAnio(usuario, inicioDeAnio, finDeAnio),
+                usuario, inicioDeAnio, finDeAnio);
+    }
 
+    private int contarDiasHabilesDe(
+            List<AbsenceRequest> peticiones, User usuario, LocalDate inicioDeAnio, LocalDate finDeAnio) {
         int total = 0;
-        for (AbsenceRequest peticion : aprobadas) {
+        for (AbsenceRequest peticion : peticiones) {
             // Una petición a caballo entre dos años (del 28/12 al 3/1)
             // solo consume del año que se está calculando los días que
             // caen dentro de él -- de ahí el recorte del rango.

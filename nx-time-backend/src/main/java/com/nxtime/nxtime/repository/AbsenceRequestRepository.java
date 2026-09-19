@@ -78,6 +78,24 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("finDeAnio") LocalDate finDeAnio);
 
     /**
+     * Vacaciones PEDIDAS y todavía sin resolver que caen dentro del año.
+     *
+     * Hacen falta para el saldo tanto como las aprobadas: quien tiene
+     * quince días pendientes no tiene esos quince días libres para pedir
+     * otra cosa, aunque nadie los haya aprobado aún. Sin esta consulta se
+     * podían pedir dos tramos que individualmente cabían y juntos no, y
+     * aprobar los dos.
+     */
+    @Query("SELECT a FROM peticiones_ausencia a WHERE a.usuario = :usuario "
+            + "AND a.tipo = com.nxtime.nxtime.domain.AbsenceType.VACACIONES "
+            + "AND a.estado = com.nxtime.nxtime.domain.AbsenceStatus.PENDIENTE "
+            + "AND a.fechaInicio <= :finDeAnio AND a.fechaFin >= :inicioDeAnio")
+    List<AbsenceRequest> findVacacionesPendientesDelAnio(
+            @Param("usuario") User usuario,
+            @Param("inicioDeAnio") LocalDate inicioDeAnio,
+            @Param("finDeAnio") LocalDate finDeAnio);
+
+    /**
      * Todas las ausencias APROBADAS que tocan el rango, de cualquier
      * persona (Fase F).
      *

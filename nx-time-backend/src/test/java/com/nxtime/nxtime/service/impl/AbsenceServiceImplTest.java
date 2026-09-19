@@ -105,7 +105,7 @@ class AbsenceServiceImplTest {
 
     private void conSaldoDisponible(int dias) {
         when(vacationBalanceService.getBalance(eq(empleado), anyInt()))
-                .thenReturn(new VacationBalanceResponse(2026, 22, 22 - dias, dias));
+                .thenReturn(new VacationBalanceResponse(2026, 22, 22 - dias, 0, dias));
     }
 
     // ---- createRequest ----
@@ -396,11 +396,73 @@ class AbsenceServiceImplTest {
 
     // ---- Saldo ----
 
+    private AbsenceRequest vacacionesPendientes() {
+        return AbsenceRequest.builder().id(5L).usuario(empleado).empresa(empresa)
+                .tipo(AbsenceType.VACACIONES)
+                .fechaInicio(LocalDate.of(2026, 8, 3)).fechaFin(LocalDate.of(2026, 8, 7))
+                .estado(AbsenceStatus.PENDIENTE).build();
+    }
+
+    /*
+     * El defecto: el saldo solo se miraba al PEDIR. Dos peticiones que por
+     * separado cabían se aprobaban las dos y el empleado acababa con más
+     * vacaciones concedidas que días tiene, sin que nada avisara.
+     */
+    @Test
+    @DisplayName("Aprobar unas vacaciones que se pasan del derecho anual lanza BusinessException 409")
+    void changeRequestStatus_aprobarSinSaldo_lanzaBusinessException() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(vacacionesPendientes()));
+        // Ya lleva 20 de 22 concedidos y esta petición son 5 días hábiles.
+        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(20);
+        when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
+        when(vacationBalanceService.getBalance(empleado, 2026))
+                .thenReturn(new VacationBalanceResponse(2026, 22, 20, 5, -3));
+
+        assertThatThrownBy(() -> service.changeRequestStatus(gestor.getEmail(), 5L,
+                        new UpdateAbsenceStatusRequest(AbsenceStatus.APROBADA, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ya lleva 20 aprobados");
+        verify(absenceRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Si los días caben justos, se aprueba: el límite es pasarse, no llegar")
+    void changeRequestStatus_aprobarConSaldoJusto_seAprueba() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        AbsenceRequest peticion = vacacionesPendientes();
+        when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(peticion));
+        when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+        // 17 concedidos + 5 de esta = 22, que es justo el derecho.
+        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(17);
+        when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
+        when(vacationBalanceService.getBalance(empleado, 2026))
+                .thenReturn(new VacationBalanceResponse(2026, 22, 17, 5, 0));
+
+        service.changeRequestStatus(gestor.getEmail(), 5L,
+                new UpdateAbsenceStatusRequest(AbsenceStatus.APROBADA, null));
+
+        assertThat(peticion.getEstado()).isEqualTo(AbsenceStatus.APROBADA);
+    }
+
+    @Test
+    @DisplayName("Rechazar no mira el saldo: rechazar nunca consume días")
+    void changeRequestStatus_rechazar_noMiraElSaldo() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(vacacionesPendientes()));
+        when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.changeRequestStatus(gestor.getEmail(), 5L,
+                new UpdateAbsenceStatusRequest(AbsenceStatus.RECHAZADA, "Ese mes no puede ser."));
+
+        verify(vacationBalanceService, never()).contarDiasAprobados(any(), anyInt());
+    }
+
     @Test
     @DisplayName("getMyVacationBalance delega en VacationBalanceService con el usuario y año pedidos")
     void getMyVacationBalance_delegaEnElServicioDeSaldo() {
         when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
-        VacationBalanceResponse saldo = new VacationBalanceResponse(2026, 22, 5, 17);
+        VacationBalanceResponse saldo = new VacationBalanceResponse(2026, 22, 5, 0, 17);
         when(vacationBalanceService.getBalance(empleado, 2026)).thenReturn(saldo);
 
         assertThat(service.getMyVacationBalance(empleado.getEmail(), 2026)).isEqualTo(saldo);

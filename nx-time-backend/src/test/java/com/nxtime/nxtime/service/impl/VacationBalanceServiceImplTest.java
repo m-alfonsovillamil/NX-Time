@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -117,7 +118,7 @@ class VacationBalanceServiceImplTest {
     }
 
     @Test
-    @DisplayName("diasDisponibles es siempre diasTotales - diasConsumidos")
+    @DisplayName("diasDisponibles es diasTotales - diasConsumidos - diasPendientes")
     void getBalance_disponiblesEsLaResta() {
         when(vacationBalanceRepository.findByUsuarioAndAnio(eq(empleado), anyInt()))
                 .thenReturn(Optional.of(VacationBalance.builder().anio(2026).diasTotales(25).build()));
@@ -128,6 +129,50 @@ class VacationBalanceServiceImplTest {
 
         VacationBalanceResponse saldo = service.getBalance(empleado, 2026);
 
-        assertThat(saldo.diasDisponibles()).isEqualTo(saldo.diasTotales() - saldo.diasConsumidos()).isEqualTo(20);
+        assertThat(saldo.diasDisponibles())
+                .isEqualTo(saldo.diasTotales() - saldo.diasConsumidos() - saldo.diasPendientes())
+                .isEqualTo(20);
+    }
+
+    /*
+     * El defecto que hizo falta arreglar: lo PEDIDO y sin resolver no
+     * descontaba nada, así que se podían pedir dos tramos que por separado
+     * cabían en el saldo y juntos no.
+     */
+    @Test
+    @DisplayName("Lo pendiente de aprobar también descuenta del saldo disponible")
+    void getBalance_loPendienteDescuenta() {
+        when(vacationBalanceRepository.findByUsuarioAndAnio(empleado, 2026)).thenReturn(Optional.empty());
+        AbsenceRequest aprobada = AbsenceRequest.builder().id(1L)
+                .fechaInicio(LocalDate.of(2026, 1, 5)).fechaFin(LocalDate.of(2026, 1, 9)).build();
+        AbsenceRequest pendiente = AbsenceRequest.builder().id(2L)
+                .fechaInicio(LocalDate.of(2026, 8, 3)).fechaFin(LocalDate.of(2026, 8, 21)).build();
+        when(absenceRequestRepository.findVacacionesAprobadasDelAnio(any(), any(), any()))
+                .thenReturn(List.of(aprobada));
+        when(absenceRequestRepository.findVacacionesPendientesDelAnio(any(), any(), any()))
+                .thenReturn(List.of(pendiente));
+        when(workingDayService.contarDiasHabiles(any(), eq(LocalDate.of(2026, 1, 5)), any())).thenReturn(5);
+        when(workingDayService.contarDiasHabiles(any(), eq(LocalDate.of(2026, 8, 3)), any())).thenReturn(15);
+
+        VacationBalanceResponse saldo = service.getBalance(empleado, 2026);
+
+        assertThat(saldo.diasConsumidos()).as("aprobados, que son los que ya se han gastado").isEqualTo(5);
+        assertThat(saldo.diasPendientes()).as("pedidos y sin resolver, que van aparte").isEqualTo(15);
+        // 22 - 5 - 15: le quedan dos, no diecisiete.
+        assertThat(saldo.diasDisponibles()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("contarDiasAprobados NO cuenta lo pendiente: es lo que mira quien aprueba")
+    void contarDiasAprobados_ignoraLoPendiente() {
+        AbsenceRequest aprobada = AbsenceRequest.builder().id(1L)
+                .fechaInicio(LocalDate.of(2026, 1, 5)).fechaFin(LocalDate.of(2026, 1, 9)).build();
+        when(absenceRequestRepository.findVacacionesAprobadasDelAnio(any(), any(), any()))
+                .thenReturn(List.of(aprobada));
+        when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
+
+        assertThat(service.contarDiasAprobados(empleado, 2026)).isEqualTo(5);
+        // Ni siquiera pregunta por las pendientes.
+        verify(absenceRequestRepository, never()).findVacacionesPendientesDelAnio(any(), any(), any());
     }
 }
