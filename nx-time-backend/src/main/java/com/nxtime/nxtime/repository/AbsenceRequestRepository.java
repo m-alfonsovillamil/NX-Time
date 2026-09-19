@@ -13,6 +13,42 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     List<AbsenceRequest> findByUsuario(User usuario);
 
+    /**
+     * Las ausencias de alguien que tocan un rango de fechas.
+     *
+     * "Mis peticiones" devolvía TODAS las de siempre, sin paginar ni filtrar:
+     * el filtro que añadió la 1.4 es de la app, así que el servidor seguía
+     * mandándolo todo. A los pocos años son cientos de filas en cada apertura
+     * de la pantalla, para enseñar un año.
+     *
+     * Toca el rango = empieza antes de que acabe y acaba después de que
+     * empiece. Una ausencia a caballo del borde cuenta, que es lo que espera
+     * quien mira "este año".
+     */
+    @Query("SELECT a FROM peticiones_ausencia a WHERE a.usuario = :usuario "
+            + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde "
+            + "ORDER BY a.fechaInicio DESC")
+    List<AbsenceRequest> findDeUsuarioEnRango(
+            @Param("usuario") User usuario,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
+    /**
+     * Las APROBADAS de alguien que tocan un rango.
+     *
+     * Hermana de findAprobadasDeUsuarioEnFecha, para cuando se pregunta por
+     * un periodo y no por un día suelto: el detalle de la pantalla de inicio
+     * pinta hasta dos meses y se traía todas las ausencias de la persona para
+     * filtrarlas después en Java.
+     */
+    @Query("SELECT a FROM peticiones_ausencia a WHERE a.usuario = :usuario "
+            + "AND a.estado = com.nxtime.nxtime.domain.AbsenceStatus.APROBADA "
+            + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde")
+    List<AbsenceRequest> findAprobadasDeUsuarioEnRango(
+            @Param("usuario") User usuario,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
     // Filtra por AbsenceRequest.empresa directamente (denormalizado
     // desde la Fase 3) en vez de navegar usuario.empresa.id: más
     // simple y aprovecha el índice (empresa_id, estado) del esquema.

@@ -270,6 +270,51 @@ class AbsenceServiceImplTest {
         assertThat(service.getMyRequests(empleado.getEmail())).containsExactly(RESPUESTA_CUALQUIERA);
     }
 
+    /*
+     * "Mis peticiones" devolvía TODAS las ausencias de la persona desde que
+     * entró en la empresa: el filtro por año que enseña la app era solo de
+     * la app, y el servidor seguía mandándolo todo.
+     */
+    @Test
+    @DisplayName("Con un rango, solo pide a la base las ausencias de ese periodo")
+    void getMyRequests_conRango_consultaSoloEsePeriodo() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        AbsenceRequest request = AbsenceRequest.builder().id(1L).usuario(empleado).empresa(empresa).build();
+        LocalDate desde = LocalDate.of(2026, 1, 1);
+        LocalDate hasta = LocalDate.of(2026, 12, 31);
+        when(absenceRequestRepository.findDeUsuarioEnRango(empleado, desde, hasta)).thenReturn(List.of(request));
+
+        assertThat(service.getMyRequests(empleado.getEmail(), desde, hasta)).containsExactly(RESPUESTA_CUALQUIERA);
+        verify(absenceRequestRepository, never()).findByUsuario(any());
+    }
+
+    @Test
+    @DisplayName("Sin rango se comporta como siempre: lo manda todo, que es lo que espera la app instalada")
+    void getMyRequests_sinRango_devuelveTodas() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        AbsenceRequest request = AbsenceRequest.builder().id(1L).usuario(empleado).empresa(empresa).build();
+        when(absenceRequestRepository.findByUsuario(empleado)).thenReturn(List.of(request));
+
+        assertThat(service.getMyRequests(empleado.getEmail(), null, null)).containsExactly(RESPUESTA_CUALQUIERA);
+    }
+
+    @Test
+    @DisplayName("Un rango al revés o de más de un año se rechaza con 400")
+    void getMyRequests_rangoInvalido_lanzaBusinessException() {
+        assertThatThrownBy(() -> service.getMyRequests(
+                empleado.getEmail(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("no puede ser posterior");
+
+        // 367 días: uno más que el año bisiesto que se permite.
+        assertThatThrownBy(() -> service.getMyRequests(
+                empleado.getEmail(), LocalDate.of(2026, 1, 1), LocalDate.of(2027, 1, 2)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("no puede pasar de un año");
+
+        verify(absenceRequestRepository, never()).findDeUsuarioEnRango(any(), any(), any());
+    }
+
     @Test
     @DisplayName("getPendingRequests filtra por la empresa del gestor y estado PENDIENTE")
     void getPendingRequests_filtraPorEmpresaYPendiente() {

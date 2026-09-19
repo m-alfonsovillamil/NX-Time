@@ -4,6 +4,7 @@ import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface AbsenceService {
@@ -11,6 +12,13 @@ public interface AbsenceService {
     AbsenceResponse createRequest(String email, AbsenceRequestDTO requestDTO);
 
     List<AbsenceResponse> getMyRequests(String email);
+
+    /**
+     * Mis ausencias de un periodo. Las dos fechas son de España y "hasta"
+     * entra. Sin rango se comportan como siempre (lo manda todo), para no
+     * romper la app ya instalada.
+     */
+    List<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta);
 
     List<AbsenceResponse> getPendingRequests(String managerEmail);
 
