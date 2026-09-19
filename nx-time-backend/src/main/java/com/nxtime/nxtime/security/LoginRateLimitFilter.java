@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -10,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -37,6 +39,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * algún día corre en varias instancias a la vez, cada una tendría su
  * propio contador -- limitación conocida, aceptable para el alcance de
  * este proyecto.
+ *
+ * 🚨 De dónde sale la IP importa tanto como el límite. Ver {@link #clientIp}:
+ * hasta el 19/09/2026 se cogía el PRIMER valor de X-Forwarded-For, que lo
+ * pone quien llama, y bastaba con mandar una IP inventada distinta en cada
+ * intento para tener un contador nuevo cada vez. Comprobado contra
+ * producción: sin cabecera el 429 llegaba al intento 11; con una IP falsa
+ * por intento, quince intentos y ningún 429.
  */
 @Component
 public class LoginRateLimitFilter extends OncePerRequestFilter {
@@ -45,11 +54,34 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar");
     private static final int PETICIONES_POR_MINUTO = 10;
 
-    private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    /**
+     * Acotado a propósito: era un Map que crecía sin límite, con una entrada
+     * por cada IP vista y sin que nadie las quitara nunca. Quien quisiera
+     * podía ir llenándolo cambiando de IP en cada intento -- que es
+     * justamente lo que hacía falta para esquivar el límite.
+     */
+    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterAccess(Duration.ofMinutes(5))
+            .build();
     private final ObjectMapper objectMapper;
 
-    public LoginRateLimitFilter(ObjectMapper objectMapper) {
+    /**
+     * Cuántos proxies de confianza hay delante de la aplicación.
+     *
+     * En Render es uno: su balanceador. Si algún día se pone algo delante
+     * (Cloudflare, otro balanceador), hay que subirlo, porque cada salto
+     * añade una entrada a X-Forwarded-For. Quedarse corto hace que todo el
+     * tráfico comparta el contador del proxy y se limiten unos a otros;
+     * pasarse devuelve a confiar en lo que manda el cliente.
+     */
+    private final int proxiesDeConfianza;
+
+    public LoginRateLimitFilter(
+            ObjectMapper objectMapper,
+            @Value("${application.security.rate-limit.trusted-proxies:1}") int proxiesDeConfianza) {
         this.objectMapper = objectMapper;
+        this.proxiesDeConfianza = Math.max(0, proxiesDeConfianza);
     }
 
     @Override
@@ -63,7 +95,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        Bucket bucket = buckets.computeIfAbsent(clientIp(request), ip -> nuevoBucket());
+        Bucket bucket = buckets.get(clientIp(request), ip -> nuevoBucket());
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
@@ -83,10 +115,34 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         return Bucket.builder().addLimit(limite).build();
     }
 
+    /**
+     * La IP en la que se apoya el límite, contando desde el final.
+     *
+     * X-Forwarded-For se lee de izquierda a derecha como "quien llamó
+     * primero, y luego cada proxy por el que pasó". El PRIMER valor lo
+     * escribe el cliente y por lo tanto se lo puede inventar; cada proxy
+     * AÑADE al final la dirección que él ha visto. La única entrada en la
+     * que se puede confiar es la que puso el último proxy de confianza, así
+     * que se cuenta desde el final tantas posiciones como proxies haya.
+     *
+     * Con un proxy delante (Render) y la cabecera
+     * "1.2.3.4, 198.51.100.7", la buena es 198.51.100.7 -- la que vio
+     * Render --, no la 1.2.3.4 que mandó quien llamaba.
+     *
+     * Si la cabecera trae menos entradas de las que deberia, se usa
+     * getRemoteAddr(): es la del salto inmediato y no se puede falsificar.
+     */
     private String clientIp(HttpServletRequest request) {
         String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+        if (forwardedFor != null && !forwardedFor.isBlank() && proxiesDeConfianza > 0) {
+            String[] saltos = forwardedFor.split(",");
+            int posicion = saltos.length - proxiesDeConfianza;
+            if (posicion >= 0 && posicion < saltos.length) {
+                String ip = saltos[posicion].trim();
+                if (!ip.isEmpty()) {
+                    return ip;
+                }
+            }
         }
         return request.getRemoteAddr();
     }

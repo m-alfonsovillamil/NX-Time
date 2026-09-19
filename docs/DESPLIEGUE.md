@@ -80,6 +80,27 @@ El `tr -d '
 retornos de carro, que no son base64 válidos. La aplicación falla al arrancar con
 `Illegal base64 character`.
 
+### Cuántos proxies hay delante
+
+| Variable | Valor |
+|---|---|
+| `APPLICATION_SECURITY_RATE_LIMIT_TRUSTED_PROXIES` | `1` (por defecto; no hace falta ponerla en Render) |
+
+El límite de intentos de login cuenta por IP, y la IP sale de `X-Forwarded-For`.
+Esa cabecera se lee "quien llamó, y luego cada proxy por el que pasó": **el
+primer valor lo escribe quien llama y se lo puede inventar**. Por eso la IP se
+cuenta desde el final, tantas posiciones como proxies de confianza haya.
+
+En Render hay uno, su balanceador. **Si algún día se pone algo delante**
+(Cloudflare, otro balanceador), hay que subir el número: quedarse corto hace que
+todo el tráfico comparta el contador del proxy y se limiten unos a otros.
+
+> 🚨 Hasta el 19/09/2026 se cogía el primer valor, y el límite era esquivable
+> mandando una IP inventada distinta en cada intento. Comprobado contra
+> producción: sin cabecera, el 429 llegaba al intento 11; con una IP falsa por
+> intento, quince intentos y ningún 429. Hay además un límite **por cuenta**,
+> que no depende de ninguna cabecera.
+
 ### Correo
 
 | Variable | Valor |

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +27,7 @@ import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
+import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.service.AccessCodeService;
 import java.time.Instant;
 import java.util.Optional;
@@ -67,13 +69,22 @@ class AuthServiceImplTest {
     @Mock
     private AccessCodeService accessCodeService;
 
+    /*
+     * Real y no simulado: es un contador en memoria sin dependencias, y
+     * simularlo dejaría sin probar que el login pasa por él. Cada test
+     * arranca con uno nuevo, así que los diez intentos por minuto no se
+     * gastan entre tests.
+     */
+    private LimitadorDeIntentosPorCuenta limitadorPorCuenta;
+
     private AuthServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        limitadorPorCuenta = new LimitadorDeIntentosPorCuenta();
         service = new AuthServiceImpl(
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
-                authenticationManager, eventPublisher, accessCodeService);
+                authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta);
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
@@ -131,6 +142,30 @@ class AuthServiceImplTest {
         assertThat(response.rol()).isEqualTo(Role.GESTOR);
         verify(authenticationManager).authenticate(any());
         verify(refreshTokenRepository).save(any(RefreshToken.class));
+    }
+
+    /*
+     * El login tiene que pasar por el limitador POR CUENTA, no solo por el
+     * de IP: ese se esquiva cambiando de sitio, y durante un tiempo se pudo
+     * esquivar además con una cabecera inventada.
+     */
+    @Test
+    @DisplayName("Al pasarse de intentos contra la misma cuenta, login corta con 429 sin llegar a autenticar")
+    void login_demasiadosIntentosContraLaMismaCuenta_corta() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa").build();
+        User user = User.builder().id(1L).email("gestor@nxtime.test").rol(Role.GESTOR).empresa(empresa).build();
+        LoginRequest request = new LoginRequest(user.getEmail(), "password123");
+        lenient().when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+        for (int i = 0; i < 10; i++) {
+            service.login(request);
+        }
+
+        assertThatThrownBy(() -> service.login(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Demasiados intentos");
+        // Y se corta ANTES de comprobar la contraseña: diez llamadas, no once.
+        verify(authenticationManager, times(10)).authenticate(any());
     }
 
     // ---- refreshAccessToken ----
