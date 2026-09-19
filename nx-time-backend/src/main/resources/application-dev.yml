@@ -40,6 +40,11 @@ spring:
 
 application:
   security:
+    rate-limit:
+      # En local no hay ningún proxy delante, así que X-Forwarded-For no es
+      # de fiar: la IP buena es la de la conexión. En producción (Render) es
+      # 1, el balanceador suyo. Ver LoginRateLimitFilter.clientIp.
+      trusted-proxies: 0
     cors:
       # Permisivo a propósito en desarrollo local: no hay frontend web
       # real todavía (la app Android no manda cabecera Origin), y esto

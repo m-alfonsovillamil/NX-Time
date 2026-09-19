@@ -18,6 +18,7 @@ import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
+import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
@@ -63,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final ApplicationEventPublisher eventPublisher;
     private final AccessCodeService accessCodeService;
+    private final LimitadorDeIntentosPorCuenta limitadorPorCuenta;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -75,7 +77,8 @@ public class AuthServiceImpl implements AuthService {
             JwtService jwtService,
             AuthenticationManager authenticationManager,
             ApplicationEventPublisher eventPublisher,
-            AccessCodeService accessCodeService
+            AccessCodeService accessCodeService,
+            LimitadorDeIntentosPorCuenta limitadorPorCuenta
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -85,6 +88,7 @@ public class AuthServiceImpl implements AuthService {
         this.authenticationManager = authenticationManager;
         this.eventPublisher = eventPublisher;
         this.accessCodeService = accessCodeService;
+        this.limitadorPorCuenta = limitadorPorCuenta;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -119,6 +123,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthenticationResponse login(LoginRequest request) {
+        // Además del límite por IP (LoginRateLimitFilter), un límite por
+        // CUENTA: la IP sale de una cabecera y depende de los proxies que
+        // haya delante, el correo al que se intenta entrar no. Es lo que
+        // frena probar contraseñas de alguien desde muchos sitios a la vez.
+        limitadorPorCuenta.comprobar(request.email());
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
 
