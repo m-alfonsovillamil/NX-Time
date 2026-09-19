@@ -2,12 +2,8 @@ package com.nxtime.nxtime.audit;
 
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.HexFormat;
-import java.util.Objects;
+import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -44,17 +40,14 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * carrera al encadenar -- para una única instancia, como esta, no es
  * un problema real.
  *
- * AVISO para quien escriba algún día un verificador de la cadena: el
- * hash se calcula sobre el JSON tal y como lo genera Jackson, ANTES de
- * guardarlo. Las columnas valor_anterior/valor_nuevo son "jsonb", y
- * jsonb NO conserva el texto original: lo normaliza al guardarlo
- * (reordena las claves y añade un espacio tras los dos puntos). Es
- * decir, releer esos campos de la base de datos y volver a pasarlos por
- * computeHash NO reproduce el hash guardado, y parecería que la
- * auditoría ha sido manipulada cuando no lo ha sido. Un verificador
- * correcto tiene que comparar el JSON parseado (o guardar el texto
- * canónico aparte), no las cadenas. Comprobado en
- * IncompleteTimeEntrySchedulerIT.
+ * El hash NO se calcula aquí: lo hace {@link HuellaDeAuditoria}, que es la
+ * misma pieza que usa {@link VerificadorDeAuditoria} para comprobarlo. Tener
+ * dos sitios donde se decide qué se firma sería tener dos verdades, y la que
+ * fallara sería la de verificar -- justo la que tiene que ser de fiar.
+ *
+ * Ahí está explicado, además, por qué hasta septiembre de 2026 la cadena no se
+ * podía comprobar: se firmaban unos nanosegundos que la base trunca y un texto
+ * JSON que jsonb reescribe.
  */
 @Component
 public class TimeEntryAuditListener {
@@ -62,22 +55,28 @@ public class TimeEntryAuditListener {
     private static final Logger log = LoggerFactory.getLogger(TimeEntryAuditListener.class);
 
     private final TimeEntryAuditRepository auditRepository;
+    private final HuellaDeAuditoria huella;
 
-    public TimeEntryAuditListener(TimeEntryAuditRepository auditRepository) {
+    public TimeEntryAuditListener(TimeEntryAuditRepository auditRepository, HuellaDeAuditoria huella) {
         this.auditRepository = auditRepository;
+        this.huella = huella;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onTimeEntryAudit(TimeEntryAuditEvent event) {
         TimeEntryAudit row = event.auditRow();
-        row.setFechaHora(Instant.now());
+        // Truncada a microsegundos: es la precisión de la columna, y firmar
+        // unos nanosegundos que la base va a tirar hacía imposible recalcular
+        // el hash después (ver HuellaDeAuditoria).
+        row.setFechaHora(Instant.now().truncatedTo(ChronoUnit.MICROS));
         row.setIp(currentClientIp());
 
         String hashAnterior = auditRepository.findTopByOrderByIdDesc()
                 .map(TimeEntryAudit::getHash)
                 .orElse(null);
         row.setHashAnterior(hashAnterior);
-        row.setHash(computeHash(row, hashAnterior));
+        row.setVersionHash(HuellaDeAuditoria.VERSION_VERIFICABLE);
+        row.setHash(huella.calcular(row, hashAnterior));
 
         auditRepository.save(row);
         // modificadoPor == null significa "acción automática del
@@ -100,29 +99,4 @@ public class TimeEntryAuditListener {
         }
     }
 
-    private String computeHash(TimeEntryAudit row, String hashAnterior) {
-        String payload = String.join("|",
-                String.valueOf(row.getRegistro().getId()),
-                String.valueOf(row.getUsuario().getId()),
-                // "sistema" para las acciones automáticas sin autor humano.
-                (row.getModificadoPor() != null) ? String.valueOf(row.getModificadoPor().getId()) : "sistema",
-                row.getAccion().name(),
-                Objects.toString(row.getValorAnterior(), ""),
-                Objects.toString(row.getValorNuevo(), ""),
-                Objects.toString(row.getMotivo(), ""),
-                row.getFechaHora().toString(),
-                Objects.toString(hashAnterior, "")
-        );
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 está garantizado en cualquier JVM estándar (JEP
-            // sobre algoritmos obligatorios) -- esto no puede pasar en
-            // la práctica, pero el compilador exige capturar la
-            // excepción comprobada.
-            throw new IllegalStateException("SHA-256 no disponible en esta JVM", e);
-        }
-    }
 }

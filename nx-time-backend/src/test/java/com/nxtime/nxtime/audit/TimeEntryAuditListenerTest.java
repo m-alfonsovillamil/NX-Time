@@ -37,7 +37,10 @@ class TimeEntryAuditListenerTest {
 
     @BeforeEach
     void setUp() {
-        listener = new TimeEntryAuditListener(auditRepository);
+        // La huella va de verdad y no simulada: lo que este test comprueba es
+        // el encadenado, y con un mock devolviendo siempre lo mismo no se
+        // comprobaria nada.
+        listener = new TimeEntryAuditListener(auditRepository, new HuellaDeAuditoria());
     }
 
     private TimeEntryAudit nuevaFilaSinGuardar() {
