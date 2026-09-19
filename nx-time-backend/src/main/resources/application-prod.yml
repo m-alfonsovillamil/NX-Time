@@ -4,16 +4,19 @@
 # Neon (usa el connection string en formato JDBC que ofrece, o compón la
 # URL a partir de host/base/usuario/contraseña).
 #
-# TODO (al desplegar de verdad): en dev, "spring.datasource" (runtime,
-# sin DDL) y "spring.flyway" (migraciones) usan roles de Postgres
-# DISTINTOS -- ver application-dev.yml y docker/postgres/init-app-role.sql
-# -- porque es lo único que hace real la restricción de UPDATE/DELETE
-# sobre auditoria_fichaje (Fase 8, ver V3__audit_trail.sql): contra un
-# superusuario o el propio dueño de la tabla, cualquier REVOKE es papel
-# mojado. Aquí, de momento, las dos cosas comparten un único rol de Neon
-# (DATABASE_USERNAME) -- pendiente crear un segundo rol de mínimo
-# privilegio (solo SELECT/INSERT en auditoria_fichaje, sin CREATE),
-# igual que en local.
+# Los DOS roles, y no es un detalle: "spring.datasource" (runtime, sin
+# DDL) y "spring.flyway" (migraciones) usan roles de Postgres DISTINTOS,
+# igual que en dev -- ver application-dev.yml y
+# docker/postgres/init-app-role.sql. Es lo único que hace real la
+# restricción de UPDATE/DELETE sobre auditoria_fichaje (Fase 8, ver
+# V3__audit_trail.sql): contra el propio dueño de la tabla, cualquier
+# REVOKE es papel mojado.
+#
+# En producción llegan por SPRING_FLYWAY_URL/USER/PASSWORD, que
+# render.yaml pide al crear el servicio (neondb_owner para Flyway,
+# nxtime_app para la aplicación). Si faltaran, el bloque de abajo las
+# heredaría del datasource y Flyway intentaría migrar con el rol de la
+# aplicación: el arranque falla, ruidosamente y a propósito.
 spring:
   datasource:
     url: ${DATABASE_URL}

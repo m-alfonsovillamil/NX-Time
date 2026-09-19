@@ -6,8 +6,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.TimeZone;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -165,4 +167,36 @@ class ReportGeneratorTest {
     void incidencias_seCuentan() {
         assertThat(informeDeEjemplo().incidencias()).isEqualTo(1);
     }
+    /*
+     * El pie del PDF ("Documento generado el ...") usaba LocalDate.now()
+     * sin zona, es decir la de la máquina. El contenedor de producción va
+     * en UTC, así que un informe generado entre medianoche y las dos de la
+     * mañana en España llevaba la fecha del día ANTERIOR. Era el único de
+     * los 34 sitios del proyecto que no nombraba la zona.
+     *
+     * Para que el test sea determinista se elige una zona lejana en la que
+     * AHORA MISMO sea otro día distinto que en España: doce horas por
+     * delante si aquí es tarde, trece por detrás si es temprano.
+     */
+    @Test
+    @DisplayName("La fecha del pie es la de España aunque la máquina vaya en otra zona")
+    void pieLegal_usaLaFechaDeEspana() {
+        ZoneId madrid = ZoneId.of("Europe/Madrid");
+        LocalDate hoyEnEspana = LocalDate.now(madrid);
+        ZoneId otroDia = LocalTime.now(madrid).getHour() >= 12
+                ? ZoneId.of("Pacific/Kiritimati")   // UTC+14: ya es mañana
+                : ZoneId.of("Pacific/Pago_Pago");   // UTC-11: todavía es ayer
+        assertThat(LocalDate.now(otroDia))
+                .as("la zona elegida tiene que estar en otro día, o el test no probaría nada")
+                .isNotEqualTo(hoyEnEspana);
+
+        TimeZone original = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(otroDia));
+            assertThat(pdfGenerator.hoyEnEspana()).isEqualTo(hoyEnEspana);
+        } finally {
+            TimeZone.setDefault(original);
+        }
+    }
+
 }
