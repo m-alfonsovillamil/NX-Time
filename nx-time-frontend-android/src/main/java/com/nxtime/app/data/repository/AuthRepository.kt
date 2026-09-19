@@ -163,6 +163,17 @@ interface AuthRepository {
     /** Cierra la sesión en todos los dispositivos, incluido este. */
     suspend fun cerrarTodasLasSesiones(): Response<Unit>
 
+    /**
+     * Cierra ESTA sesión en el servidor: invalida el refresh token.
+     *
+     * Es lo que faltaba al salir de la app. Borrar las credenciales del
+     * móvil deja de verlas quien tiene el móvil delante, pero el refresh
+     * token sigue valiendo hasta 30 días en el servidor: quien lo hubiera
+     * copiado antes seguiría entrando después de que su dueño creyera
+     * haberse ido.
+     */
+    suspend fun cerrarSesionRemota(refreshToken: String): Response<Unit>
+
 
     /**
      * Llama al ApiService para crear un nuevo co-gestor.

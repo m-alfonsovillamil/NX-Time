@@ -403,6 +403,54 @@ class PerfilViewModelTest {
         verify(sesion).clearAuthData()
     }
 
+    /*
+     * El defecto: cerrar sesión solo borraba las credenciales del móvil. El
+     * refresh token seguía valiendo hasta 30 días en el servidor, así que
+     * quien lo hubiera copiado antes seguía entrando después de que su dueño
+     * creyera haberse ido. El endpoint existía y no lo llamaba nadie.
+     */
+    @Test
+    fun `cerrar sesion tambien la cierra en el servidor`() = runTest {
+        whenever(sesion.fetchRefreshToken()).thenReturn("el-refresh-token")
+        whenever(repositorio.cerrarSesionRemota(any())).thenReturn(Response.success(Unit))
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        viewModel.cerrarSesion()
+        advanceUntilIdle()
+
+        verify(repositorio).cerrarSesionRemota("el-refresh-token")
+        verify(sesion).clearAuthData()
+    }
+
+    @Test
+    fun `si la llamada al servidor falla, se sale igual`() = runTest {
+        whenever(sesion.fetchRefreshToken()).thenReturn("el-refresh-token")
+        whenever(repositorio.cerrarSesionRemota(any())).thenThrow(RuntimeException("sin red"))
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        viewModel.cerrarSesion()
+        advanceUntilIdle()
+
+        // Quien pulsa "cerrar sesión" espera salir: dejarlo dentro por un
+        // fallo de red sería peor que la sesión que queda viva hasta caducar.
+        verify(sesion).clearAuthData()
+    }
+
+    @Test
+    fun `sin refresh token guardado no se llama al servidor`() = runTest {
+        whenever(sesion.fetchRefreshToken()).thenReturn(null)
+        val viewModel = conPerfilCargado()
+        advanceUntilIdle()
+
+        viewModel.cerrarSesion()
+        advanceUntilIdle()
+
+        verify(repositorio, never()).cerrarSesionRemota(any())
+        verify(sesion).clearAuthData()
+    }
+
     @Test
     fun `un fallo de red al cargar deja un mensaje y no la pantalla colgada`() = runTest {
         whenever(repositorio.getMiPerfil()).thenThrow(RuntimeException("sin red"))
