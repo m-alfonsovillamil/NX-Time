@@ -41,6 +41,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * También en el despacho ASÍNCRONO, y no es un detalle.
+     *
+     * {@link OncePerRequestFilter} se salta por defecto los despachos
+     * asíncronos, que es justo lo que usan las descargas
+     * ({@code StreamingResponseBody}: el informe en Excel y el PDF del
+     * registro de jornada). Al terminar de escribir, el contenedor vuelve a
+     * pasar la petición por la cadena de filtros; sin este método, el token
+     * no se vuelve a leer, no hay nadie autenticado, y el
+     * {@code AuthorizationFilter} responde "Access Denied" a una respuesta
+     * que YA está a medio enviar. Resultado: el fichero se corta y el cliente
+     * recibe "transfer closed with outstanding read data remaining".
+     *
+     * Se vio ejecutando (`scripts/e2e.py`), no en los tests: el controlador
+     * está bien y el generador también, el fallo solo existe con la cadena de
+     * filtros real y una respuesta que no cabe en el búfer.
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
