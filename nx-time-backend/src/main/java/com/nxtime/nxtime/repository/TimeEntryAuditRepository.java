@@ -16,6 +16,15 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
     /** Última fila insertada, para encadenar su hash con la siguiente (ver TimeEntryAuditListener). */
     Optional<TimeEntryAudit> findTopByOrderByIdDesc();
 
+    /**
+     * Toda la traza en orden de escritura, para comprobar la cadena.
+     *
+     * Por id y no por fecha: el id es el orden en que se escribieron, que es
+     * el orden en que se encadenaron los hashes. Dos filas de la misma
+     * milésima se ordenarían al azar por fecha y la cadena parecería rota.
+     */
+    List<TimeEntryAudit> findAllByOrderByIdAsc();
+
     /** Línea temporal completa de un fichaje, más antiguo primero. */
     List<TimeEntryAudit> findByRegistro_IdOrderByFechaHoraAsc(long registroId);
 

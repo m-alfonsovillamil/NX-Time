@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -89,6 +90,17 @@ public class TimeEntryAudit {
     private String hashAnterior;
 
     private String hash;
+
+    /**
+     * Cómo se calculó el {@link #hash}: 1 = con el formato viejo, que no se
+     * puede recalcular; 2 = sobre la forma canónica, verificable.
+     *
+     * Existe para que el verificador distinga "esta fila está mal" de "esta
+     * fila no se puede comprobar", que no es lo mismo y confundirlo daría
+     * falsas alarmas de manipulación. Ver {@code HuellaDeAuditoria}.
+     */
+    @Column(name = "version_hash", nullable = false)
+    private short versionHash;
 
     @Override
     public boolean equals(Object o) {

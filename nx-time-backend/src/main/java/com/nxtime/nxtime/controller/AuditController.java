@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.audit.VerificadorDeAuditoria;
+import com.nxtime.nxtime.dto.AuditIntegrityResponse;
 import com.nxtime.nxtime.dto.TimeEntryAuditResponse;
 import com.nxtime.nxtime.mapper.TimeEntryAuditMapper;
 import com.nxtime.nxtime.service.TimeEntryService;
@@ -35,10 +37,15 @@ public class AuditController {
 
     private final TimeEntryService timeEntryService;
     private final TimeEntryAuditMapper auditMapper;
+    private final VerificadorDeAuditoria verificador;
 
-    public AuditController(TimeEntryService timeEntryService, TimeEntryAuditMapper auditMapper) {
+    public AuditController(
+            TimeEntryService timeEntryService,
+            TimeEntryAuditMapper auditMapper,
+            VerificadorDeAuditoria verificador) {
         this.timeEntryService = timeEntryService;
         this.auditMapper = auditMapper;
+        this.verificador = verificador;
     }
 
     @Operation(summary = "Línea temporal de un fichaje",
@@ -62,5 +69,29 @@ public class AuditController {
                 .map(auditMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(trail);
+    }
+
+    @Operation(summary = "Comprobar que la traza no se ha manipulado",
+            description = "Recorre la cadena de hashes y dice si sigue intacta. Es la respuesta a "
+                    + "\"demuéstrame que este registro no se ha tocado\": el RD-ley 8/2019 exige "
+                    + "conservarlo cuatro años y que sea fiable, y una cadena que nadie comprueba nunca "
+                    + "no demuestra nada. Los movimientos anteriores a septiembre de 2026 solo admiten "
+                    + "la comprobación del enlace con el anterior, y se cuentan aparte.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Resultado de la comprobación, intacta o no",
+                    content = @Content(schema = @Schema(implementation = AuditIntegrityResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:auditoria'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:auditoria')")
+    @GetMapping("/integridad")
+    public ResponseEntity<AuditIntegrityResponse> verificarIntegridad() {
+        // Sin parámetros a propósito: la cadena enlaza TODAS las filas de la
+        // tabla, sean de la empresa que sean, así que comprobar un trozo
+        // suelto daría un enlace roto en cada borde. O se comprueba entera, o
+        // no se comprueba.
+        return ResponseEntity.ok(verificador.verificar());
     }
 }

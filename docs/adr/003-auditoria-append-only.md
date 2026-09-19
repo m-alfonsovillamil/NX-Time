@@ -68,6 +68,34 @@ manipulaciones hechas **saltándose la aplicación** (con otras credenciales, o
 restaurando un backup alterado): tocar una fila antigua invalida todas las
 siguientes.
 
+### Y se comprueba, que es lo que faltaba (septiembre 2026)
+
+Durante un año la cadena se escribió sin que nadie pudiera comprobarla, y no
+por falta de ganas: **los datos que hacían falta para recalcular el hash se
+perdían al guardarlos**. Comprobado ejecutando contra una base real: de 18
+filas, **cero** recalculables. Por dos motivos independientes:
+
+1. **La marca de tiempo.** `Instant.now()` tiene precisión de nanosegundos y la
+   columna `TIMESTAMPTZ` guarda microsegundos. Los nanos entraban en el hash y
+   desaparecían al escribir.
+2. **El JSON.** Las columnas son `jsonb`, que no conserva el texto: reordena
+   las claves y añade espacios.
+
+Las dos se quitan en el origen: la hora se trunca a microsegundos **antes** de
+firmarla, y el JSON se pasa a forma canónica (claves ordenadas, sin espacios),
+que se obtiene igual desde el texto original que desde lo que devuelve `jsonb`.
+
+Una sola clase (`HuellaDeAuditoria`) define qué se firma, y la usan los dos
+lados: quien escribe y quien verifica. Con dos definiciones, la que acabaría
+fallando sería la de verificar, que es justo la que tiene que ser de fiar.
+
+`GET /api/v1/auditoria/integridad` (RRHH+) recorre la traza y responde si está
+intacta, cuántos movimientos ha recalculado y cuál es el primero que falla.
+Distingue tres cosas, y no dos: **verificado**, **roto** y **no comprobable**.
+Esa tercera existe porque las filas escritas antes de este cambio
+(`version_hash` = 1, ver V26) no se pueden recalcular nunca --el dato se
+perdió-- y darlas por buenas sería mentir en el sitio donde menos se puede.
+
 ## Consecuencias
 
 **A favor**
@@ -84,12 +112,15 @@ siguientes.
 - Escribir la auditoría en la misma transacción significa que un fallo al
   auditar tumba el fichaje. Es el comportamiento buscado, pero conviene tenerlo
   presente.
-- **El encadenamiento de hashes no se puede verificar releyendo la base de
-  datos.** El hash se calcula sobre el JSON que genera Jackson *antes* de
-  guardarlo, y la columna es `jsonb`, que **normaliza** el texto al almacenarlo
-  (reordena las claves, añade espacios). Un verificador ingenuo obtendría un
-  hash distinto y daría **falsa alarma de manipulación**. Cuando se escriba ese
-  verificador, tendrá que comparar el JSON parseado, no las cadenas.
+- **De las filas anteriores a septiembre de 2026 solo se puede comprobar el
+  enlace**, no su contenido. Es una deuda que no se puede pagar hacia atrás: lo
+  que haría falta para recalcular su hash no está en ninguna parte. El
+  verificador las cuenta aparte en vez de darlas por verificadas.
+- **Una cadena que nadie comprueba no demuestra nada.** Se escribió durante un
+  año creyendo que sí, y el fallo no estaba en la idea sino en un detalle de
+  precisión de la base de datos. La lección: lo que se firma tiene que ser
+  exactamente lo que se guarda, y la única forma de saberlo es **recalcularlo
+  después de que haya pasado por la base**, que es lo que hace ahora un test.
 
 ## Lección general
 
