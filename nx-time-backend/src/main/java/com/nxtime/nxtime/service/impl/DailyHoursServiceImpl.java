@@ -1,7 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
-import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.DailyHoursResponse;
@@ -117,10 +116,7 @@ public class DailyHoursServiceImpl implements DailyHoursService {
     /** Solo las APROBADAS: una pendiente no cambia lo que se espera de ese día. */
     private Map<LocalDate, String> ausencias(User usuario, LocalDate desde, LocalDate hasta) {
         Map<LocalDate, String> porFecha = new HashMap<>();
-        for (AbsenceRequest ausencia : absenceRequestRepository.findByUsuario(usuario)) {
-            if (ausencia.getEstado() != AbsenceStatus.APROBADA) {
-                continue;
-            }
+        for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuarioEnRango(usuario, desde, hasta)) {
             LocalDate inicio = ausencia.getFechaInicio().isBefore(desde) ? desde : ausencia.getFechaInicio();
             LocalDate fin = ausencia.getFechaFin().isAfter(hasta) ? hasta : ausencia.getFechaFin();
             for (LocalDate dia = inicio; !dia.isAfter(fin); dia = dia.plusDays(1)) {

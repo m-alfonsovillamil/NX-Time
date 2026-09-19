@@ -21,6 +21,8 @@ import com.nxtime.nxtime.service.AbsenceService;
 import com.nxtime.nxtime.service.VacationBalanceService;
 import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,9 @@ public class AbsenceServiceImpl implements AbsenceService {
 
     /** La authority que decide a quién se avisa de una petición nueva (ver createRequest). */
     private static final String AUTHORITY_APROBAR = "ausencia:aprobar";
+
+    /** Un año bisiesto entero, el mismo tope que el historial de fichajes. */
+    static final int MAXIMO_DIAS = 366;
 
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
@@ -205,6 +210,32 @@ public class AbsenceServiceImpl implements AbsenceService {
     public List<AbsenceResponse> getMyRequests(String email) {
         User user = getUser(email);
         return absenceRequestRepository.findByUsuario(user).stream().map(this::toResponse).toList();
+    }
+
+    /**
+     * Lo mismo, pero de un periodo.
+     *
+     * Sin esto, "mis peticiones" devolvía todas las ausencias de la persona
+     * desde que entró en la empresa, y el filtro por año que enseña la app
+     * era solo de la app: el servidor mandaba cientos de filas para pintar
+     * doce meses. El límite de un año es el mismo que el del historial de
+     * fichajes, por la misma razón.
+     */
+    @Override
+    public List<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta) {
+        if (desde == null || hasta == null) {
+            return getMyRequests(email);
+        }
+        if (desde.isAfter(hasta)) {
+            throw new BusinessException(
+                    "La fecha de inicio no puede ser posterior a la de fin.", HttpStatus.BAD_REQUEST);
+        }
+        if (ChronoUnit.DAYS.between(desde, hasta) + 1 > MAXIMO_DIAS) {
+            throw new BusinessException("El periodo no puede pasar de un año.", HttpStatus.BAD_REQUEST);
+        }
+        User user = getUser(email);
+        return absenceRequestRepository.findDeUsuarioEnRango(user, desde, hasta)
+                .stream().map(this::toResponse).toList();
     }
 
     @Override

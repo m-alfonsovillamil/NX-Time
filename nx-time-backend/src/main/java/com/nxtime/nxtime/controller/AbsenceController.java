@@ -4,6 +4,7 @@ import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.service.AbsenceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,10 +16,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -67,10 +70,15 @@ public class AbsenceController {
         return ResponseEntity.ok(absenceService.createRequest(authentication.getName(), requestDTO));
     }
 
-    @Operation(summary = "Mis peticiones de ausencia", description = "Todas, en cualquier estado.")
+    @Operation(summary = "Mis peticiones de ausencia",
+            description = "En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) "
+                    + "solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas: es lo que "
+                    + "espera la app ya instalada.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Peticiones del usuario",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = AbsenceResponse.class)))),
+            @ApiResponse(responseCode = "400", description = "Rango incompleto, al revés o de más de un año",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Sin la authority 'ausencia:leer'",
@@ -78,8 +86,17 @@ public class AbsenceController {
     })
     @PreAuthorize("hasAuthority('ausencia:leer')")
     @GetMapping("/mis-peticiones")
-    public ResponseEntity<List<AbsenceResponse>> getMyRequests(Authentication authentication) {
-        return ResponseEntity.ok(absenceService.getMyRequests(authentication.getName()));
+    public ResponseEntity<List<AbsenceResponse>> getMyRequests(
+            @RequestParam(required = false) LocalDate desde,
+            @RequestParam(required = false) LocalDate hasta,
+            Authentication authentication) {
+        // Las dos o ninguna: media fecha es casi siempre una llamada mal
+        // construida, y responder "todo" a eso engaña más que un 400.
+        if ((desde == null) != (hasta == null)) {
+            throw new BusinessException(
+                    "Para filtrar las ausencias hacen falta las dos fechas.", HttpStatus.BAD_REQUEST);
+        }
+        return ResponseEntity.ok(absenceService.getMyRequests(authentication.getName(), desde, hasta));
     }
 
     @Operation(summary = "Peticiones pendientes del equipo (gestor)")
