@@ -96,7 +96,10 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testCompileOnly("org.projectlombok:lombok:1.18.34")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // testImplementation y no testRuntimeOnly: hace falta en compilacion
+    // para el TestExecutionListener que limpia las bases de datos que deja
+    // la suite (ver LimpiezaDeBasesDeTest).
+    testImplementation("org.junit.platform:junit-platform-launcher")
 
     // Testcontainers: PROBADO en la Fase 3 y aparcado por ahora (ver
     // ApiContractTest). Con Docker Desktop 4.87 en Windows, los tres
