@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -110,7 +111,20 @@ class MainActivity : FragmentActivity() {
                  * activo y el móvil puede: si alguien borró sus huellas, la
                  * aplicación no puede quedarse cerrada para siempre.
                  */
-                var desbloqueada by remember {
+                /*
+                 * rememberSaveable y no remember: con `remember`, girar el
+                 * móvil recreaba la Activity, el estado volvía a calcularse
+                 * desde cero y la huella saltaba OTRA VEZ, en mitad de lo
+                 * que estuvieras haciendo. Es una puerta al arrancar, no un
+                 * candado que se cierre cada vez que se gira la pantalla, y
+                 * quien ya ha pasado por ella sigue siendo quien era.
+                 *
+                 * `rememberSaveable` sobrevive a que se recree la Activity
+                 * (giro, cambio de tema, fuente grande) pero NO a cerrar la
+                 * app: al volver a abrirla se vuelve a pedir, que es
+                 * justamente lo que tiene que pasar.
+                 */
+                var desbloqueada by rememberSaveable {
                     mutableStateOf(
                         !(sesionIniciada &&
                                 aplicacion.ajustes.huella.value &&
