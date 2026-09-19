@@ -13,6 +13,7 @@ import org.openpdf.text.pdf.PdfWriter;
 import java.awt.Color;
 import java.io.OutputStream;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +39,17 @@ import org.springframework.stereotype.Component;
 public class PdfReportGenerator {
 
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /**
+     * La zona del documento, fijada y no heredada de la máquina.
+     *
+     * El contenedor de producción corre en UTC, así que un informe generado
+     * de madrugada en España llevaba en el pie la fecha del día ANTERIOR.
+     * Es el único sitio del proyecto donde se escapaba: los otros 33 usos de
+     * la zona la nombran, y el generador del PDF de datos personales ya
+     * tiene su propia constante igual que esta.
+     */
+    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final String[] CABECERAS = {"Fecha", "Entrada", "Salida", "Pausa", "Tiempo efectivo"};
 
     private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
@@ -148,9 +160,20 @@ public class PdfReportGenerator {
         return celda;
     }
 
+    /**
+     * Qué día es hoy AQUÍ, no en la máquina que genera el documento.
+     *
+     * Paquete y no privado para poder probarlo: el fallo solo se ve entre
+     * medianoche y las dos de la mañana, y montar ese momento es mucho más
+     * fácil sobre este método que sobre el PDF entero.
+     */
+    LocalDate hoyEnEspana() {
+        return LocalDate.now(MADRID);
+    }
+
     private Paragraph pieLegal() {
         Paragraph pie = new Paragraph(
-                "Documento generado por NX Time el " + LocalDate.now().format(FECHA)
+                "Documento generado por NX Time el " + hoyEnEspana().format(FECHA)
                         + ". Registro de jornada conforme al RD-ley 8/2019; conservar durante cuatro años.",
                 PIE);
         pie.setSpacingBefore(20);
