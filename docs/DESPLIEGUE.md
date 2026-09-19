@@ -402,6 +402,29 @@ ORDER BY inicio DESC
 LIMIT 20;
 ```
 
+### El recorrido de extremo a extremo
+
+`scripts/e2e.py` recorre el ciclo completo por HTTP contra una base real:
+fichar, pausar, cambiar de proyecto, cerrar, repartir las horas, añadir una
+pausa a posteriori, pedir una corrección y aprobarla, mirar la traza de
+auditoría, descargar los informes y comprobar que nadie ve lo de otra empresa.
+
+```bash
+docker compose up -d postgres mailhog
+python scripts/e2e.py                    # crea base desechable, arranca, limpia
+python scripts/e2e.py --no-arrancar --url http://localhost:8080 --base nxtime
+```
+
+Devuelve 0 si pasa todo y 1 si algo falla. **No está en el CI de cada PR**
+porque necesita Postgres y tarda unos minutos; se lanza a mano antes de
+mergear algo que toque el flujo de fichaje.
+
+Por qué existe, en una frase: **todos los defectos serios de este proyecto han
+salido de ejecutarlo, no de los tests**. El primero que cazó fue el informe en
+Excel, que devolvía 200 con las cabeceras correctas y la descarga se cortaba a
+la mitad; los tests del controlador estaban en verde porque miran el código y
+las cabeceras, no los bytes.
+
 ## 7. Estado actual
 
 - ✅ Esquema creado en Neon: las 5 migraciones aplicadas (PostgreSQL 18).

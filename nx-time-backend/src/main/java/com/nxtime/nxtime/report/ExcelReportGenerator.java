@@ -53,6 +53,11 @@ public class ExcelReportGenerator {
             }
 
             libro.write(salida);
+            // Vaciar lo que quede en el búfer antes de dar por escrito el
+            // fichero. El generador de PDF cierra su documento y con él el
+            // flujo, así que sus descargas terminaban bien; esta no, y si algo
+            // aborta la petición después, lo último del libro no llega nunca.
+            salida.flush();
         }
     }
 

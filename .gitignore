@@ -58,3 +58,6 @@ skills-lock.json
 # Sonda de diagnóstico del correo: vive fuera de git hasta que
 # entre con el trabajo del SMTP, no con el de la huella.
 scripts/probar-smtp.py
+
+# Bytecode de los guiones de verificación (scripts/e2e.py).
+__pycache__/

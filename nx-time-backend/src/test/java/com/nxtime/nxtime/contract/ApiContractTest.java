@@ -30,6 +30,7 @@ import com.nxtime.nxtime.notification.EmailSender;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -38,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -798,6 +800,46 @@ class ApiContractTest {
         assertThat(bodyOf(pendientes)).hasSize(1);
         assertThat(bodyOf(pendientes).get(0).get("puedoResolver").asBoolean()).isTrue();
         assertThat(bodyOf(pendientes).get(0).get("puedoDisputar").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(30)
+    void elInformeEnExcelSeDescargaENTERO_noSoloConEl200() throws Exception {
+        // Este test existe por un defecto REAL que ningun test veia: el
+        // controlador devolvia 200 con las cabeceras correctas y la descarga
+        // se cortaba a la mitad. La causa estaba fuera del controlador --
+        // JwtAuthenticationFilter no corria en el despacho ASINCRONO que usa
+        // StreamingResponseBody, asi que al terminar de escribir nadie estaba
+        // autenticado y el AuthorizationFilter abortaba una respuesta que ya
+        // iba por la mitad.
+        //
+        // Por eso NO se comprueba el codigo ni el content-type, que ya estaban
+        // bien: se comprueba que los bytes que llegan son un .xlsx completo,
+        // que es lo unico que distingue el fallo. MockMvc no lo reproduce
+        // (no hay contenedor ni cadena de filtros de verdad): hace falta un
+        // puerto real, y por eso vive aqui.
+        ResponseEntity<byte[]> respuesta = rest.exchange(
+                url("/api/v1/informes/horas?anio=2026&mes=1"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                byte[].class
+        );
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        byte[] contenido = respuesta.getBody();
+        assertThat(contenido).isNotNull();
+
+        // Un .xlsx es un zip: si la descarga se corto, el directorio central
+        // no llega y no se puede abrir.
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(contenido))) {
+            int entradas = 0;
+            while (zip.getNextEntry() != null) {
+                entradas++;
+            }
+            assertThat(entradas)
+                    .as("el .xlsx llega entero y se puede abrir")
+                    .isGreaterThan(0);
+        }
     }
 
     @Test
