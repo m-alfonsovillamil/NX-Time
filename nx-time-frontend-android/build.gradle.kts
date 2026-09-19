@@ -55,9 +55,14 @@ android {
          * horas por día; aviso al gestor al trabajar en festivo o con una
          * ausencia aprobada; y varios proyectos por persona: elegir proyecto al
          * iniciar jornada, cambiarlo durante el día y repartir las horas.
+         * 6 = 19/09/2026: lo que salió de la auditoría. Cerrar sesión ahora la
+         * cierra también en el servidor (antes el refresh token seguía
+         * valiendo 30 días), la huella ya no vuelve a saltar al girar el
+         * móvil, y el saldo de vacaciones enseña los días pedidos y sin
+         * aprobar, que ya descuentan de los disponibles.
          */
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
