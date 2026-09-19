@@ -150,7 +150,7 @@ class AbsenceControllerTest {
     void getMyVacationBalance_sinAnio_usaElAnioActual() throws Exception {
         int anioActual = Year.now(ZoneId.of("Europe/Madrid")).getValue();
         when(absenceService.getMyVacationBalance("empleado@nxtime.test", anioActual))
-                .thenReturn(new VacationBalanceResponse(anioActual, 22, 5, 17));
+                .thenReturn(new VacationBalanceResponse(anioActual, 22, 5, 0, 17));
 
         mockMvc.perform(get("/api/v1/ausencias/saldo-vacaciones"))
                 .andExpect(status().isOk())
@@ -162,7 +162,7 @@ class AbsenceControllerTest {
     @DisplayName("GET /ausencias/saldo-vacaciones?anio=2025 consulta ese año")
     void getMyVacationBalance_conAnio_consultaEseAnio() throws Exception {
         when(absenceService.getMyVacationBalance("empleado@nxtime.test", 2025))
-                .thenReturn(new VacationBalanceResponse(2025, 22, 22, 0));
+                .thenReturn(new VacationBalanceResponse(2025, 22, 22, 0, 0));
 
         mockMvc.perform(get("/api/v1/ausencias/saldo-vacaciones").param("anio", "2025"))
                 .andExpect(status().isOk())

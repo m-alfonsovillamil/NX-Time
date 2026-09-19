@@ -260,6 +260,7 @@
     <string name="detalle_ausencia">%1$s</string>
     <string name="detalle_vacaciones_disponibles">Días disponibles</string>
     <string name="detalle_vacaciones_consumidos">Días usados</string>
+    <string name="detalle_vacaciones_pendientes">Días pedidos sin aprobar</string>
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>
     <string name="detalle_vacaciones_proximas">Próximas ausencias aprobadas</string>
     <string name="detalle_vacaciones_ninguna">No tienes ninguna.</string>

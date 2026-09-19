@@ -179,6 +179,11 @@ private fun DetalleVacaciones(saldo: SaldoVacacionesDTO?, proximas: List<Respues
     saldo?.let {
         Linea(stringResource(R.string.detalle_vacaciones_disponibles), it.diasDisponibles.toString())
         Linea(stringResource(R.string.detalle_vacaciones_consumidos), it.diasConsumidos.toString())
+        // Solo si hay algo pendiente: una línea con un cero es ruido, y aquí
+        // sirve para explicar por qué quedan menos días de los esperados.
+        if (it.diasPendientes > 0) {
+            Linea(stringResource(R.string.detalle_vacaciones_pendientes), it.diasPendientes.toString())
+        }
         Linea(stringResource(R.string.detalle_vacaciones_totales, it.anio), it.diasTotales.toString())
     }
     Spacer(Modifier.height(12.dp))

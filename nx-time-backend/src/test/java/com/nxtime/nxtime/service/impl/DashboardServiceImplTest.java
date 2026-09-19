@@ -77,7 +77,7 @@ class DashboardServiceImplTest {
                 .empresa(empresa).activo(true).build();
 
         lenient().when(vacationBalanceService.getBalance(any(), anyInt()))
-                .thenReturn(new VacationBalanceResponse(2026, 22, 0, 22));
+                .thenReturn(new VacationBalanceResponse(2026, 22, 0, 0, 22));
     }
 
     private void conUsuario() {
@@ -195,7 +195,7 @@ class DashboardServiceImplTest {
         conUsuario();
         when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
         when(absenceRequestRepository.countByUsuarioAndEstado(empleado, AbsenceStatus.PENDIENTE)).thenReturn(3L);
-        VacationBalanceResponse saldo = new VacationBalanceResponse(2026, 22, 5, 17);
+        VacationBalanceResponse saldo = new VacationBalanceResponse(2026, 22, 5, 0, 17);
         when(vacationBalanceService.getBalance(eq(empleado), anyInt())).thenReturn(saldo);
 
         PersonalDashboardResponse resumen = service.getPersonalDashboard(empleado.getEmail());
