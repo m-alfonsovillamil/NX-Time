@@ -62,6 +62,20 @@ public class HuellaDeAuditoria {
     public static final short VERSION_VERIFICABLE = 2;
 
     /**
+     * La clave del advisory lock con el que se serializa el encadenamiento
+     * (ver {@code TimeEntryAuditRepository#bloquearCadena}).
+     *
+     * Vive aquí y no en el listener porque es parte de lo que define la
+     * cadena, igual que la versión del hash: quien encadene una fila tiene que
+     * pedir <b>esta</b> clave y no otra, o no se estará serializando con nadie.
+     *
+     * El valor en sí es arbitrario --solo tiene que ser estable y no chocar con
+     * otro advisory lock de la aplicación; hoy es el único que hay-- y está
+     * elegido para que se reconozca de un vistazo en {@code pg_locks}.
+     */
+    public static final long CLAVE_DEL_LOCK_DE_CADENA = 8_2019_0312L;
+
+    /**
      * Un mapper aparte del de la aplicación, y con las claves ordenadas: lo
      * que se firma no puede depender de cómo esté configurado el de Spring
      * hoy. Si alguien le cambia una opción al de la aplicación, los hashes de

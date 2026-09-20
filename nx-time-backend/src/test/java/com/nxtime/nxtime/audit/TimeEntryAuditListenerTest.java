@@ -2,6 +2,7 @@ package com.nxtime.nxtime.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -105,6 +107,22 @@ class TimeEntryAuditListenerTest {
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(row));
 
         assertThat(row.getIp()).isNull();
+    }
+
+    @Test
+    @DisplayName("Se pide el lock de la cadena ANTES de leer la última fila")
+    void onTimeEntryAudit_pideElLockAntesDeLeerLaUltimaFila() {
+        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+
+        listener.onTimeEntryAudit(new TimeEntryAuditEvent(nuevaFilaSinGuardar()));
+
+        // El orden es lo único que importa aquí: pedir el lock después de leer
+        // no serializa nada, porque la lectura que se quiere proteger ya se
+        // habría hecho. Ver el comentario de clase del listener.
+        InOrder enOrden = inOrder(auditRepository);
+        enOrden.verify(auditRepository).bloquearCadena(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_CADENA);
+        enOrden.verify(auditRepository).findTopByOrderByIdDesc();
+        enOrden.verify(auditRepository).save(any(TimeEntryAudit.class));
     }
 
     @Test
