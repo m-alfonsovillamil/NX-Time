@@ -21,12 +21,12 @@ import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.service.AllocationEditService;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.ProjectAllocationService;
+import com.nxtime.nxtime.service.ValidadorDeReparto;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.temporal.TemporalAdjusters;
@@ -56,6 +56,7 @@ public class AllocationEditServiceImpl implements AllocationEditService {
     private final CorrectionService correctionService;
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final ApplicationEventPublisher eventPublisher;
+    private final ValidadorDeReparto validadorDeReparto;
     private final Clock clock;
 
     @Autowired
@@ -66,9 +67,10 @@ public class AllocationEditServiceImpl implements AllocationEditService {
             CorrectionRequestRepository correctionRepository,
             CorrectionService correctionService,
             TimeEntrySnapshotSerializer snapshotSerializer,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            ValidadorDeReparto validadorDeReparto) {
         this(timeEntryRepository, allocationRepository, projectAllocationService, correctionRepository,
-                correctionService, snapshotSerializer, eventPublisher, Clock.systemUTC());
+                correctionService, snapshotSerializer, eventPublisher, validadorDeReparto, Clock.systemUTC());
     }
 
     AllocationEditServiceImpl(
@@ -79,6 +81,7 @@ public class AllocationEditServiceImpl implements AllocationEditService {
             CorrectionService correctionService,
             TimeEntrySnapshotSerializer snapshotSerializer,
             ApplicationEventPublisher eventPublisher,
+            ValidadorDeReparto validadorDeReparto,
             Clock clock) {
         this.timeEntryRepository = timeEntryRepository;
         this.allocationRepository = allocationRepository;
@@ -87,6 +90,7 @@ public class AllocationEditServiceImpl implements AllocationEditService {
         this.correctionService = correctionService;
         this.snapshotSerializer = snapshotSerializer;
         this.eventPublisher = eventPublisher;
+        this.validadorDeReparto = validadorDeReparto;
         this.clock = clock;
     }
 
@@ -160,35 +164,16 @@ public class AllocationEditServiceImpl implements AllocationEditService {
     // ------------------------------------------------------------------
 
     /**
-     * El reparto pedido, con los proyectos resueltos. Solo valen los que esa
-     * persona tenía asignados ese día: repartir a un proyecto en el que no
-     * estaba sería inventarse la imputación.
+     * El reparto pedido, con los proyectos resueltos.
+     *
+     * Las reglas viven en {@link ValidadorDeReparto} y no aquí desde
+     * septiembre de 2026: estaban solo en este camino, y el de las
+     * correcciones --que también acepta un reparto-- se las saltaba entero.
      */
     private Map<Project, Long> validarYResolver(TimeEntry fichaje, SetAllocationsRequest peticion) {
-        LocalDate dia = fichaje.getHoraEntrada().atZone(MADRID).toLocalDate();
-        Map<Long, Project> disponibles = new LinkedHashMap<>();
-        projectAllocationService.proyectosDelDia(fichaje.getUsuario(), dia)
-                .forEach(proyecto -> disponibles.put(proyecto.getId(), proyecto));
-
-        Map<Project, Long> reparto = new LinkedHashMap<>();
-        for (SetAllocationsRequest.Linea linea : peticion.lineas()) {
-            Project proyecto = disponibles.get(linea.proyectoId());
-            if (proyecto == null) {
-                throw new BusinessException(
-                        "Ese día no estabas asignado a alguno de los proyectos del reparto.", HttpStatus.FORBIDDEN);
-            }
-            if (reparto.put(proyecto, linea.minutos() * 60) != null) {
-                throw new BusinessException("El mismo proyecto aparece dos veces en el reparto.",
-                        HttpStatus.BAD_REQUEST);
-            }
-        }
-        // Las líneas a cero se quitan: es la forma de sacar un proyecto del
-        // reparto, y guardar un cero solo ensucia los informes.
-        reparto.values().removeIf(segundos -> segundos == 0);
-        if (reparto.isEmpty()) {
-            throw new BusinessException("El reparto no puede ser todo a cero.", HttpStatus.BAD_REQUEST);
-        }
-        return reparto;
+        return validadorDeReparto.validarYResolver(fichaje, peticion.lineas().stream()
+                .map(linea -> new ValidadorDeReparto.Linea(linea.proyectoId(), linea.minutos()))
+                .toList());
     }
 
     /** Lunes a domingo, en hora de España: el plazo del reparto libre. */

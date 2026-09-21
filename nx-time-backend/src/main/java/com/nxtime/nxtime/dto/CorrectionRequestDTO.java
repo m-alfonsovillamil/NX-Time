@@ -1,7 +1,10 @@
 package com.nxtime.nxtime.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
@@ -40,9 +43,16 @@ public record CorrectionRequestDTO(
 
         /**
          * El reparto por proyecto que se propone junto con las horas (ADR 017),
-         * o null si la corrección no toca proyectos. Lo valida quien lo arma
-         * ({@code AllocationEditService}); aquí solo viaja.
+         * o null si la corrección no toca proyectos.
+         *
+         * Hasta septiembre de 2026 aquí ponía que «lo valida quien lo arma
+         * ({@code AllocationEditService}); aquí solo viaja». Era cierto cuando
+         * la petición venía de ese servicio, y falso para quien llamara al
+         * endpoint directamente — que es cualquiera con un cliente HTTP. Lo
+         * valida {@code ValidadorDeReparto}, por los dos caminos.
          */
+        @Valid
+        @Size(max = 50, message = "El reparto no puede tener más de 50 líneas.")
         List<ProjectShare> reparto
 ) {
 
@@ -51,8 +61,20 @@ public record CorrectionRequestDTO(
         this(horaEntrada, horaSalida, motivo, null, null);
     }
 
-    /** Una línea del reparto propuesto: cuántos minutos van a ese proyecto. */
-    public record ProjectShare(long proyectoId, long minutos) {
+    /**
+     * Una línea del reparto propuesto: cuántos minutos van a ese proyecto.
+     *
+     * Mismas restricciones que {@code SetAllocationsRequest.Linea}, porque son
+     * la misma cosa por dos caminos. Cero minutos es válido y significa sacar
+     * el proyecto del reparto.
+     */
+    public record ProjectShare(
+            @Positive(message = "Falta el proyecto.")
+            long proyectoId,
+
+            @PositiveOrZero(message = "Los minutos no pueden ser negativos.")
+            long minutos
+    ) {
     }
 
     /** Lo que mandan las correcciones que no tocan proyectos. */

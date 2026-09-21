@@ -25,13 +25,13 @@ import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
-import com.nxtime.nxtime.repository.ProjectRepository;
 import com.nxtime.nxtime.repository.ProposedAllocationRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.ReglasDePausa;
+import com.nxtime.nxtime.service.ValidadorDeReparto;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -80,8 +80,8 @@ public class CorrectionServiceImpl implements CorrectionService {
     private final ApplicationEventPublisher eventPublisher;
     private final ProjectAllocationService projectAllocationService;
     private final ProposedAllocationRepository proposedAllocationRepository;
-    private final ProjectRepository projectRepository;
     private final AddedPauseRepository addedPauseRepository;
+    private final ValidadorDeReparto validadorDeReparto;
 
     public CorrectionServiceImpl(
             CorrectionRequestRepository correctionRepository,
@@ -92,7 +92,7 @@ public class CorrectionServiceImpl implements CorrectionService {
             AddedPauseRepository addedPauseRepository,
             ProjectAllocationService projectAllocationService,
             ProposedAllocationRepository proposedAllocationRepository,
-            ProjectRepository projectRepository) {
+            ValidadorDeReparto validadorDeReparto) {
         this.correctionRepository = correctionRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
@@ -101,7 +101,10 @@ public class CorrectionServiceImpl implements CorrectionService {
         this.addedPauseRepository = addedPauseRepository;
         this.projectAllocationService = projectAllocationService;
         this.proposedAllocationRepository = proposedAllocationRepository;
-        this.projectRepository = projectRepository;
+        // Sustituye al ProjectRepository que había aquí: ese solo servía para
+        // buscar el proyecto y comprobar la empresa, que era justo la
+        // validación insuficiente que esta fase arregla.
+        this.validadorDeReparto = validadorDeReparto;
     }
 
     // ------------------------------------------------------------------
@@ -617,20 +620,31 @@ public class CorrectionServiceImpl implements CorrectionService {
     private void guardarRepartoPropuesto(
             CorrectionRequest solicitud, List<CorrectionRequestDTO.ProjectShare> reparto) {
         if (reparto == null || reparto.isEmpty()) {
+            // Sin reparto la corrección solo toca horas, que es el caso normal.
             return;
         }
-        for (CorrectionRequestDTO.ProjectShare linea : reparto) {
-            Project proyecto = projectRepository.findById(linea.proyectoId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado."));
-            if (proyecto.getEmpresa().getId() != solicitud.getEmpresa().getId()) {
-                throw new TenantAccessException("Ese proyecto no es de tu empresa.");
-            }
-            proposedAllocationRepository.save(ProposedAllocation.builder()
-                    .solicitud(solicitud)
-                    .proyecto(proyecto)
-                    .segundos(linea.minutos() * 60)
-                    .build());
-        }
+
+        // Hasta septiembre de 2026 aquí solo se comprobaba que el proyecto
+        // fuera de la misma empresa. Con eso, cualquiera con un cliente HTTP
+        // podía imputar sus horas a un proyecto en el que no había estado, y
+        // al aprobarse la corrección se escribía sin volver a mirar: informes
+        // de coste por proyecto contaminados, sin ningún error a la vista.
+        // La regla vive ahora en un solo sitio (ver ValidadorDeReparto).
+        Map<Project, Long> validado = validadorDeReparto.validarYResolver(
+                solicitud.getRegistro(),
+                reparto.stream()
+                        .map(linea -> new ValidadorDeReparto.Linea(linea.proyectoId(), linea.minutos()))
+                        .toList());
+
+        // Un saveAll en vez de un save por línea: el reparto se guarda entero
+        // o no se guarda.
+        proposedAllocationRepository.saveAll(validado.entrySet().stream()
+                .map(entrada -> ProposedAllocation.builder()
+                        .solicitud(solicitud)
+                        .proyecto(entrada.getKey())
+                        .segundos(entrada.getValue())
+                        .build())
+                .toList());
     }
 
     /**
