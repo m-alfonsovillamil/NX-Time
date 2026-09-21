@@ -9,7 +9,7 @@ import com.nxtime.app.R
  * Espeja `HolidayScope.java`. La traducción de la cadena que manda el
  * backend pasa por [de], que devuelve `null` para un valor desconocido:
  * quien llame debe tratarlo como "festivo, sin más detalle", nunca
- * inventarse uno. Es el mismo criterio que `Rol.de` y `AccionAuditoria`.
+ * inventarse uno. Es el mismo criterio que `AccionAuditoria.de`.
  *
  * @param etiqueta cómo se llama en pantalla.
  * @param sePuedeElegir si un gestor puede dar de alta festivos con este

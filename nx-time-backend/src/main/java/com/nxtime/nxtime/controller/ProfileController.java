@@ -69,7 +69,11 @@ public class ProfileController {
 
     @Operation(summary = "Mi perfil",
             description = "Datos personales y laborales, con el nombre completo y las iniciales del "
-                    + "avatar ya calculados para que no los arme cada cliente a su manera.")
+                    + "avatar ya calculados para que no los arme cada cliente a su manera. Incluye "
+                    + "'authorities': lo que esta persona puede hacer, resuelto por el servidor, para "
+                    + "que ningún cliente tenga que copiarse el reparto de permisos a su lenguaje. No "
+                    + "autoriza nada -- eso lo sigue haciendo el @PreAuthorize de cada endpoint --, "
+                    + "solo decide qué menú se le enseña a quien mira.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil",
                     content = @Content(schema = @Schema(implementation = ProfileResponse.class))),

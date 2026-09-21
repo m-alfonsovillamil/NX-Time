@@ -64,3 +64,35 @@ probando el envío de correos de verdad.
 
 De ahí la regla: **quién puede hacer algo lo decide `RoleAuthorities`, nunca una
 lista de roles escrita a mano** — tampoco fuera de los controladores.
+
+## Actualización, septiembre 2026: las authorities viajan al cliente
+
+La regla de arriba —nunca una lista de roles escrita a mano— se cumplía en el
+backend y **se rompía en la app**. `ui/util/Permisos.kt` era un espejo de
+`RoleAuthorities.java`: traducía el rol a capacidades con su propia copia de la
+jerarquía. Funcionaba mientras alguien se acordara de tocar los dos sitios, y
+el defecto que motivó ese fichero —ofrecerle "Crear gestor" a un GESTOR, que
+recibía un 403— era exactamente lo que vuelve a pasar cuando la copia se queda
+atrás. Con la web en camino habría un tercer espejo, en TypeScript.
+
+Así que el servidor manda la lista resuelta: `authorities` va en la respuesta de
+`/auth/login`, en la de `/auth/refresh` y en `GET /api/v1/perfil`, calculada con
+`RoleAuthorities.enOrden(rol)` — la misma fuente que alimenta los
+`@PreAuthorize`, así que no puede decir otra cosa.
+
+Tres detalles que no son obvios:
+
+- **Viaja también en el login, no solo en el perfil.** El cliente arma su menú
+  antes de tener perfil; si hubiera que pedirlo aparte habría un hueco, el
+  primero tras entrar, en el que la aplicación no sabría qué ofrecer.
+- **Sin lista no se enseña nada.** Una sesión abierta con una versión anterior
+  de la app no la tiene guardada. La degradación correcta es apagar el menú
+  hasta que el perfil la rellene, nunca abrirlo por si acaso.
+- **Esto no autoriza.** Autoriza el `@PreAuthorize` contra el token. Lo que
+  viaja solo decide qué se enseña, y por eso da igual que el perfil de un
+  compañero también lo lleve: son función de su `rol`, que ya se enviaba.
+
+Lo que se gana no es una pantalla: es que añadir una authority nueva deje de
+obligar a tocar cada cliente. `RoleAuthoritiesTest` comprueba además que toda
+authority exigida por un `@PreAuthorize` la tenga algún rol — una errata ahí
+crea un endpoint que responde 403 a todo el mundo y un botón que nunca aparece.

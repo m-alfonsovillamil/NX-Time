@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.RefreshToken;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.ChangePasswordRequest;
@@ -218,7 +219,8 @@ public class AuthServiceImpl implements AuthService {
 
         String newAccessToken = jwtService.generateToken(new SecurityUser(user));
         log.info("Access token renovado para {}", user.getEmail());
-        return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol());
+        return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
+                RoleAuthorities.enOrden(user.getRol()));
     }
 
     @Override
@@ -353,7 +355,8 @@ public class AuthServiceImpl implements AuthService {
         // Familia nueva en cada login: así cerrar una sesión comprometida no
         // arrastra a las demás de esa persona.
         TokenEmitido refreshToken = issueRefreshToken(user, origen, UUID.randomUUID());
-        return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol());
+        return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
+                RoleAuthorities.enOrden(user.getRol()));
     }
 
     /**

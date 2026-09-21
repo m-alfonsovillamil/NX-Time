@@ -8,7 +8,8 @@ import com.nxtime.app.R
  *
  * Espeja `CorrectionStatus.java`. [de] devuelve `null` para un valor que
  * esta versión no conozca, y quien llame debe pintarlo como "otro
- * estado" en vez de inventarse uno — mismo criterio que `Rol.de`.
+ * estado" en vez de inventarse uno — mismo criterio que
+ * `EstadoHorasExtra.de`.
  */
 enum class EstadoCorreccion(@param:StringRes val etiqueta: Int) {
     PENDIENTE(R.string.correcciones_estado_pendiente),

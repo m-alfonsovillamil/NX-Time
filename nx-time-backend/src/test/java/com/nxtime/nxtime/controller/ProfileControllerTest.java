@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.controller;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -11,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.dto.ProfileResponse;
 import com.nxtime.nxtime.service.EmployeeProfileService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
@@ -64,7 +67,8 @@ class ProfileControllerTest {
         return new ProfileResponse(
                 10L, "ana@nxtime.test", "Ana", "Fernández", "Ana Fernández", "AF",
                 LocalDate.of(1995, 3, 14), "Analista", 3L, "Operaciones",
-                Role.EMPLEADO, true, new BigDecimal("40.0"), 22);
+                Role.EMPLEADO, true, new BigDecimal("40.0"), 22,
+                RoleAuthorities.enOrden(Role.EMPLEADO));
     }
 
     @Test
@@ -77,7 +81,13 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombreCompleto").value("Ana Fernández"))
                 .andExpect(jsonPath("$.iniciales").value("AF"))
-                .andExpect(jsonPath("$.departamentoNombre").value("Operaciones"));
+                .andExpect(jsonPath("$.departamentoNombre").value("Operaciones"))
+                // Lo que el cliente puede hacer lo dice el servidor. Sin esto,
+                // cada cliente se copiaría RoleAuthorities.java a su lenguaje
+                // y la copia que se quedara atrás ofrecería pantallas que
+                // luego dan 403.
+                .andExpect(jsonPath("$.authorities", hasItem("fichaje:escribir")))
+                .andExpect(jsonPath("$.authorities", not(hasItem("ausencia:aprobar"))));
     }
 
     @Test

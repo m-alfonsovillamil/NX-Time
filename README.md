@@ -379,6 +379,14 @@ un Responsable del Sistema Interno de Información, y dársela también a un GES
 haría que la denuncia sobre un GESTOR la leyera él. Que RRHH tampoco la tenga no
 es un olvido de reparto.
 
+**Los clientes no copian este reparto: lo reciben.** `/auth/login`,
+`/auth/refresh` y `GET /api/v1/perfil` devuelven `authorities`, la lista
+resuelta por el servidor, y la app pinta su menú con ella. Hasta septiembre de
+2026 la app tenía su propia traducción de rol a permisos, y el defecto clásico
+de esa copia —ofrecer un botón que luego da 403— ya había ocurrido una vez. Lo
+que viaja **no autoriza**: autoriza el `@PreAuthorize` contra el token; solo
+decide qué se enseña.
+
 ---
 
 ## Tests
@@ -482,6 +490,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 17. [Las horas de un proyecto se imputan por jornada, no se deducen por día](docs/adr/017-imputacion-por-jornada.md)
 18. [La cadena de auditoría se serializa en PostgreSQL, no en la JVM](docs/adr/018-la-cadena-de-auditoria-se-serializa-en-postgres.md)
 19. [El refresh token se hashea, se rota, y reutilizarlo revoca la familia](docs/adr/019-el-refresh-token-se-hashea-y-se-rota.md)
+20. [Los tokens de la web viven en memoria, y la cookie espera al dominio propio](docs/adr/020-tokens-en-el-navegador.md)
 
 ---
 

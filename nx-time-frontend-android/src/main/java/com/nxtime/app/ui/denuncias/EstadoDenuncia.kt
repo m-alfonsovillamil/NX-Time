@@ -8,7 +8,7 @@ import com.nxtime.app.R
  *
  * Espeja `ComplaintStatus.java`. [de] devuelve `null` para un valor que
  * esta versión no conozca, y quien llame debe pintarlo como "otro
- * estado" en vez de inventarse uno — mismo criterio que `Rol.de` y
+ * estado" en vez de inventarse uno — mismo criterio que
  * `EstadoHorasExtra.de`.
  */
 enum class EstadoDenuncia(@param:StringRes val etiqueta: Int) {

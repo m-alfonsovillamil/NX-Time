@@ -26,7 +26,9 @@ data class PerfilDTO(
     val rol: String,
     val activo: Boolean = true,
     val horasSemanales: String = "40.0",
-    val diasVacaciones: Int = 22
+    val diasVacaciones: Int = 22,
+    /** Ver [RespuestaAutenticacion.authorities]. */
+    val authorities: List<String> = emptyList()
 )
 
 /**

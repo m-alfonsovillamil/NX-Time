@@ -51,18 +51,29 @@ class SessionManager(
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER_NAME = "user_name"
-        private const val KEY_USER_ROLE = "user_role"
+        private const val KEY_AUTHORITIES = "user_authorities"
     }
 
     /**
-     * Guarda el token de acceso, el refresh token, nombre y rol de forma síncrona.
+     * Guarda el token de acceso, el refresh token, el nombre y los
+     * permisos de forma síncrona.
+     *
+     * El **rol** ya no se guarda: desde la Fase C3 nada de la app lo
+     * consulta. Lo que decidía —qué pantallas se ofrecen— lo dice ahora
+     * `authorities`, resuelto por el servidor, y donde hay que escribir
+     * el rol en pantalla se lee del perfil.
      */
-    fun saveAuthData(token: String, refreshToken: String, nombre: String, rol: String) {
+    fun saveAuthData(
+        token: String,
+        refreshToken: String,
+        nombre: String,
+        authorities: Collection<String> = emptyList()
+    ) {
         val editor = prefs.edit()
         editor.putString(KEY_AUTH_TOKEN, token)
         editor.putString(KEY_REFRESH_TOKEN, refreshToken)
         editor.putString(KEY_USER_NAME, nombre)
-        editor.putString(KEY_USER_ROLE, rol)
+        editor.putStringSet(KEY_AUTHORITIES, authorities.toSet())
         // apply() y no commit(): esto se llama al entrar, desde el hilo
         // principal, y commit() escribe en disco de forma bloqueante justo
         // mientras la pantalla está pasando al inicio. apply() actualiza la
@@ -116,10 +127,32 @@ class SessionManager(
     }
 
     /**
-     * Obtiene el rol del usuario guardado.
+     * Lo que el servidor dijo que esta persona puede hacer.
+     *
+     * Devuelve un conjunto vacío si no hay nada guardado, y eso significa
+     * **sin permisos**, nunca "todos": una sesión abierta con una versión
+     * anterior de la app no tiene esta clave, y lo correcto ahí es no
+     * ofrecer nada de gestión hasta que [actualizarAuthorities] la rellene
+     * (lo hace la pantalla de perfil) o la persona vuelva a entrar.
+     *
+     * Se copia el conjunto que devuelve `SharedPreferences`: la
+     * documentación de Android dice explícitamente que no se debe modificar
+     * el que entrega, y que su contenido no está garantizado si se guarda
+     * la referencia.
      */
-    fun fetchUserRole(): String? {
-        return prefs.getString(KEY_USER_ROLE, null)
+    fun fetchAuthorities(): Set<String> {
+        return prefs.getStringSet(KEY_AUTHORITIES, emptySet()).orEmpty().toSet()
+    }
+
+    /**
+     * Refresca los permisos sin tocar la sesión.
+     *
+     * Existe para dos casos: que a alguien le cambien el rol mientras tiene
+     * la app abierta, y que una sesión abierta antes de esta versión no
+     * tenga la clave todavía.
+     */
+    fun actualizarAuthorities(authorities: Collection<String>) {
+        prefs.edit().putStringSet(KEY_AUTHORITIES, authorities.toSet()).apply()
     }
 
     /**
@@ -130,7 +163,7 @@ class SessionManager(
         editor.remove(KEY_AUTH_TOKEN)
         editor.remove(KEY_REFRESH_TOKEN)
         editor.remove(KEY_USER_NAME)
-        editor.remove(KEY_USER_ROLE)
+        editor.remove(KEY_AUTHORITIES)
         // Aquí SÍ se mantiene commit(), al revés que en saveAuthData: una
         // sesión que se cierra tiene que quedar cerrada en el disco antes de
         // seguir. Con apply(), si el proceso muere en ese instante, los tokens

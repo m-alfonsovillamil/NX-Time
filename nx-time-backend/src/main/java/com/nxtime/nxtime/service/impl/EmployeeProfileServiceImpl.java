@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.dto.ProfileResponse;
@@ -209,7 +210,8 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.getRol(),
                 usuario.isActivo(),
                 usuario.getHorasSemanales(),
-                dias);
+                dias,
+                RoleAuthorities.enOrden(usuario.getRol()));
     }
 
     private static String nombreCompleto(User usuario) {

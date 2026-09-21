@@ -3,6 +3,7 @@ package com.nxtime.nxtime.dto;
 import com.nxtime.nxtime.domain.Role;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * La ficha completa de una persona: lo que ella misma ve en su perfil, y
@@ -23,6 +24,11 @@ import java.time.LocalDate;
  *   sitio.
  * @param diasVacaciones los EFECTIVOS del año en curso, con el valor por
  *   defecto ya aplicado (ver SimpleEmployeeDTO).
+ * @param authorities lo que esa persona puede hacer, resuelto por el
+ *   servidor desde su rol, para que ningún cliente tenga que copiarse
+ *   {@code RoleAuthorities} (ver su Javadoc). Va también en el perfil de
+ *   un compañero, y no revela nada que no revelara ya {@code rol}: son
+ *   función suya. <b>No autoriza</b>: autoriza el {@code @PreAuthorize}.
  */
 public record ProfileResponse(
         long id,
@@ -38,6 +44,7 @@ public record ProfileResponse(
         Role rol,
         boolean activo,
         BigDecimal horasSemanales,
-        int diasVacaciones
+        int diasVacaciones,
+        List<String> authorities
 ) {
 }

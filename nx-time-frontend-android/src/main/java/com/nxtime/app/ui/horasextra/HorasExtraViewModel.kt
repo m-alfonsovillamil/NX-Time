@@ -10,7 +10,6 @@ import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.util.MensajeUi
 import com.nxtime.app.ui.util.Permisos
-import com.nxtime.app.ui.util.Rol
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,10 +50,10 @@ class HorasExtraViewModel(
     sessionManager: SessionManager
 ) : ViewModel() {
 
-    private val rol = Rol.de(sessionManager.fetchUserRole())
+    private val authorities = sessionManager.fetchAuthorities()
 
     private val _uiState = MutableStateFlow(
-        HorasExtraUiState(puedeRevisar = Permisos.puedeRevisarHorasExtra(rol))
+        HorasExtraUiState(puedeRevisar = Permisos.puedeRevisarHorasExtra(authorities))
     )
     val uiState: StateFlow<HorasExtraUiState> = _uiState.asStateFlow()
 
@@ -71,7 +70,7 @@ class HorasExtraViewModel(
                 // Solo se pide si el rol lo permite: pedirlo igualmente
                 // daría un 403 previsible y ensuciaría el log del
                 // servidor con errores que no lo son.
-                val equipo = if (Permisos.puedeRevisarHorasExtra(rol)) {
+                val equipo = if (Permisos.puedeRevisarHorasExtra(authorities)) {
                     authRepository.getHorasExtraDelEquipo()
                 } else {
                     null

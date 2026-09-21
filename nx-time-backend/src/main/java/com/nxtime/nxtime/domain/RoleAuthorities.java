@@ -2,6 +2,7 @@ package com.nxtime.nxtime.domain;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -154,6 +155,31 @@ public final class RoleAuthorities {
             case RRHH -> RRHH;
             case ADMIN -> ADMIN;
         };
+    }
+
+    /**
+     * Las authorities de un rol, ordenadas, para mandárselas al cliente.
+     *
+     * Existe para que un cliente <b>no tenga que copiar este fichero</b>. Hasta
+     * septiembre de 2026, {@code ui/util/Permisos.kt} de la app Android era un
+     * espejo a mano de estos conjuntos: funcionaba porque alguien se acordaba
+     * de tocar los dos sitios, y el día que no se acordara el fallo sería una
+     * pantalla ofrecida a quien luego recibe un 403. Con la web habría un
+     * segundo espejo, en TypeScript, y ya serían tres verdades.
+     *
+     * <b>Esto no autoriza nada</b>: sigue autorizando el {@code @PreAuthorize}
+     * de cada endpoint contra el {@code SecurityContext}. Lo que viaja aquí
+     * solo decide qué se le enseña a quien mira, y sale de {@link #forRole},
+     * que es la misma fuente, así que no puede decir otra cosa.
+     *
+     * Van <b>ordenadas</b> a propósito: los conjuntos de {@code Set.of} no
+     * garantizan orden de iteración, así que sin esto la misma persona
+     * recibiría el mismo permiso en distinto orden entre dos peticiones. No
+     * rompería a un cliente sensato, pero sí hace ilegible cualquier diff y
+     * convierte en intermitente cualquier test que compare el JSON entero.
+     */
+    public static List<String> enOrden(Role role) {
+        return forRole(role).stream().sorted().toList();
     }
 
     /**

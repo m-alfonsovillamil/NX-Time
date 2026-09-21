@@ -38,7 +38,7 @@ class AuthRepositoryImpl(
             token = authResponse.token,
             refreshToken = authResponse.refreshToken,
             nombre = authResponse.nombre,
-            rol = authResponse.rol
+            authorities = authResponse.authorities
         )
     }
 
