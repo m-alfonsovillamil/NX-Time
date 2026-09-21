@@ -32,13 +32,19 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * "si no se puede auditar, no se ficha", en vez de arriesgarse a un
  * fichaje real sin traza de auditoría.
  *
- * Limitación conocida (aceptable para el alcance de este proyecto, ver
- * el comentario equivalente en LoginRateLimitFilter): el hash de la
- * fila "anterior" se calcula con una simple consulta SELECT ... ORDER
- * BY id DESC LIMIT 1, sin bloqueo. Con varias instancias de la
- * aplicación escribiendo a la vez podría haber una condición de
- * carrera al encadenar -- para una única instancia, como esta, no es
- * un problema real.
+ * Leer la fila anterior y escribir la nueva van dentro de un advisory
+ * lock (ver TimeEntryAuditRepository#bloquearCadena). Hasta septiembre
+ * de 2026 no lo estaban, y aquí ponía que con una sola instancia la
+ * carrera no era un problema real: era falso. No hacen falta varias
+ * instancias -- dos hilos de Tomcat atendiendo dos fichajes a la vez,
+ * en READ COMMITTED, leen los dos la misma "última fila" y anotan el
+ * mismo hashAnterior. El UNIQUE sobre el hash no lo impide, porque los
+ * contenidos de las dos filas son distintos y sus hashes también. Lo
+ * que queda es una cadena bifurcada, y VerificadorDeAuditoria
+ * informando de "el enlace con la fila anterior no cuadra" sobre un
+ * registro con valor legal que nadie había tocado: la peor forma de
+ * fallar que tiene esta tabla, porque miente en la dirección que
+ * importa.
  *
  * El hash NO se calcula aquí: lo hace {@link HuellaDeAuditoria}, que es la
  * misma pieza que usa {@link VerificadorDeAuditoria} para comprobarlo. Tener
@@ -70,6 +76,11 @@ public class TimeEntryAuditListener {
         // el hash después (ver HuellaDeAuditoria).
         row.setFechaHora(Instant.now().truncatedTo(ChronoUnit.MICROS));
         row.setIp(currentClientIp());
+
+        // A partir de aquí y hasta el commit, nadie más encadena: leer la
+        // última fila y escribir la siguiente es una sola operación o no es
+        // nada (ver el comentario de clase y bloquearCadena).
+        auditRepository.bloquearCadena(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_CADENA);
 
         String hashAnterior = auditRepository.findTopByOrderByIdDesc()
                 .map(TimeEntryAudit::getHash)

@@ -27,3 +27,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [015](015-pausas-anadidas-a-posteriori.md) | Añadir una pausa después: un libro al lado del contador |
 | [016](016-borrar-sin-borrar-el-registro-horario.md) | Borrar los datos de alguien sin borrar su registro horario |
 | [017](017-imputacion-por-jornada.md) | Las horas de un proyecto se imputan por jornada, no se deducen por día |
+| [018](018-la-cadena-de-auditoria-se-serializa-en-postgres.md) | La cadena de auditoría se serializa en PostgreSQL, no en la JVM |

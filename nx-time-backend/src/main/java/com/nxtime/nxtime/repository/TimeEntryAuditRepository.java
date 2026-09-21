@@ -4,6 +4,8 @@ import com.nxtime.nxtime.domain.TimeEntryAudit;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Solo lectura + inserción desde el código Java (ver TimeEntryAudit):
@@ -15,6 +17,27 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
 
     /** Última fila insertada, para encadenar su hash con la siguiente (ver TimeEntryAuditListener). */
     Optional<TimeEntryAudit> findTopByOrderByIdDesc();
+
+    /**
+     * Serializa a quien vaya a encadenar una fila nueva, hasta el commit.
+     *
+     * Leer la última fila y escribir la siguiente tienen que ser una sola
+     * operación: si dos transacciones leen a la vez, las dos anotan el mismo
+     * {@code hashAnterior} y la cadena queda bifurcada -- y entonces
+     * {@link com.nxtime.nxtime.audit.VerificadorDeAuditoria} denuncia una
+     * manipulación que nadie ha hecho. No hace falta que haya varias
+     * instancias: dos hilos de Tomcat en READ COMMITTED bastan.
+     *
+     * Es un advisory lock y no un {@code SELECT ... FOR UPDATE} porque
+     * {@code FOR UPDATE} exige privilegio UPDATE sobre la tabla, y
+     * V3__audit_trail.sql se lo revoca a propósito al rol de la aplicación:
+     * ahí un FOR UPDATE fallaría con "permission denied". El advisory lock lo
+     * puede pedir PUBLIC, se suelta solo al hacer commit o rollback --no hay
+     * forma de olvidarse de liberarlo-- y, al vivir en PostgreSQL y no en la
+     * JVM, protege también si algún día hay más de una instancia.
+     */
+    @Query(value = "SELECT pg_advisory_xact_lock(:clave)", nativeQuery = true)
+    void bloquearCadena(@Param("clave") long clave);
 
     /**
      * Toda la traza en orden de escritura, para comprobar la cadena.
