@@ -171,7 +171,7 @@ siembra `DemoDataSeeder`.
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
 | Build | Gradle (Kotlin DSL), monorepo de dos módulos + la web, que va aparte |
 | App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · tema propio de color, formas y tipografía · Retrofit |
-| Cliente web | **Empezando** (`nx-time-frontend-web/`, fuera de Gradle): tipos TypeScript generados del OpenAPI y *design tokens* generados del tema de Android |
+| Cliente web | React 19 · TypeScript *strict* · Vite · react-router · `openapi-fetch` (**fuera de Gradle**, `nx-time-frontend-web/`): tipos generados del OpenAPI y *design tokens* generados del tema de Android · Vitest + Playwright |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
 
 ---
@@ -502,6 +502,12 @@ Lo que está hecho y lo que no, sin adornos:
 **Funcionando:** la API completa y **desplegada en Render contra Neon**, la app
 Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
+
+**Empezando:** el cliente web (`nx-time-frontend-web/`), con login y fichar de
+punta a punta contra el mismo backend. Todavía **no está desplegado**: falta su
+job de CI, el *static site* de Render y poner `CORS_ALLOWED_ORIGINS` en el panel
+del backend. Los tokens viven en memoria, así que recargar la página cierra la
+sesión ([ADR 020](docs/adr/020-tokens-en-el-navegador.md)).
 
 **Pendiente:**
 

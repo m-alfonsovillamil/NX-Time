@@ -14,3 +14,9 @@ coverage/
 .env.*.local
 
 *.log
+
+# Playwright: el informe y las capturas de un fallo son de esa ejecucion.
+test-results/
+playwright-report/
+blob-report/
+.playwright/
