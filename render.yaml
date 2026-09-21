@@ -105,8 +105,16 @@ services:
       - key: MAIL_FROM
         sync: false
 
-      # Orígenes permitidos para CORS. Vacío mientras no haya un cliente
-      # web: la app Android no manda cabecera Origin y CORS no le afecta.
+      # Orígenes permitidos para CORS, separados por comas y SIN barra final
+      # ("https://nxtime-web.onrender.com", no ".../"). Vacío mientras no haya
+      # un cliente web: la app Android no manda cabecera Origin y CORS no le
+      # afecta.
+      #
+      # 🚨 El día que se despliegue una web hay que poner esto A MANO en el
+      # panel de Render. Si se olvida, la web compila, despliega y no funciona:
+      # el navegador da un error de CORS en su consola y en los logs del
+      # backend no aparece NADA, porque la petición ni siquiera llega. Por eso
+      # el backend avisa con un WARN al arrancar en producción si está vacío.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 

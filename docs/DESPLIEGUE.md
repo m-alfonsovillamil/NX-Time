@@ -152,6 +152,23 @@ no hace falta buzón, solo enviar.
 |---|---|
 | `CORS_ALLOWED_ORIGINS` | vacío mientras no haya cliente web |
 
+Lista separada por comas y **sin barra final**: `https://nxtime-web.onrender.com`,
+no `https://nxtime-web.onrender.com/`. Un origen con barra no casa nunca y el
+fallo se ve igual que si la variable estuviera vacía.
+
+🚨 **El día que se despliegue una web, esto hay que ponerlo a mano aquí.** Si se
+olvida, la web compila, despliega y no funciona: el navegador da un error de CORS
+en su consola y **en los logs del backend no aparece nada**, porque la petición
+ni siquiera llega al servidor. Para que no pase desapercibido, el backend deja un
+`WARN` al arrancar en producción cuando la lista está vacía:
+
+```
+CORS sin orígenes permitidos en producción: ningún navegador podrá usar esta API.
+```
+
+La app Android no se ve afectada: no manda cabecera `Origin`, así que CORS no
+interviene. Por eso el arranque solo avisa en vez de fallar.
+
 La app Android no manda cabecera `Origin`, así que CORS no le afecta.
 
 ## 2. Crear el servicio en Render
