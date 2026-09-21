@@ -123,7 +123,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         // y no conviene volver a colarlo por aquí.
         // Si no hay nadie con esa authority, no se manda nada: no es un
         // error, simplemente no hay a quién avisar.
-        Destinatarios.conAuthority(userRepository.findByEmpresa(user.getEmpresa()), AUTHORITY_APROBAR)
+        Destinatarios.conAuthority(userRepository, user.getEmpresa(), AUTHORITY_APROBAR, null)
                 .forEach(aprobador -> eventPublisher.publishEvent(
                         new NotificationEvents.AbsenceRequested(saved, aprobador)));
 
