@@ -17,6 +17,10 @@ import java.util.List;
 public record SetAllocationsRequest(
         @NotEmpty(message = "Hay que indicar el reparto.")
         @Valid
+        // El mismo tope que CorrectionRequestDTO.reparto: no es una regla de
+        // negocio sino un freno, para no recorrer miles de líneas antes de
+        // rechazarlas. Ver ValidadorDeReparto.MAX_LINEAS.
+        @Size(max = 50, message = "El reparto no puede tener más de 50 líneas.")
         List<Linea> lineas,
 
         @Size(max = 500, message = "El motivo no puede pasar de 500 caracteres.")

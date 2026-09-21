@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -26,10 +27,13 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.repository.AddedPauseRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
+import com.nxtime.nxtime.repository.ProposedAllocationRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.service.ValidadorDeReparto;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -64,6 +68,10 @@ class CorrectionServiceImplTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private AddedPauseRepository addedPauseRepository;
+    @Mock
+    private ProposedAllocationRepository proposedAllocationRepository;
+    @Mock
+    private ValidadorDeReparto validadorDeReparto;
 
     private CorrectionServiceImpl service;
 
@@ -84,8 +92,7 @@ class CorrectionServiceImplTest {
                 correctionRepository, timeEntryRepository, userRepository,
                 snapshotSerializer, eventPublisher, addedPauseRepository,
                 org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class),
-                org.mockito.Mockito.mock(com.nxtime.nxtime.repository.ProposedAllocationRepository.class),
-                org.mockito.Mockito.mock(com.nxtime.nxtime.repository.ProjectRepository.class));
+                proposedAllocationRepository, validadorDeReparto);
 
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra").build();
@@ -107,6 +114,12 @@ class CorrectionServiceImplTest {
 
     private CorrectionRequestDTO peticion() {
         return new CorrectionRequestDTO(ENTRADA, SALIDA.plusSeconds(3600), "Olvidé fichar la salida");
+    }
+
+    /** La misma petición, pero llevando dentro un reparto por proyecto (ADR 017). */
+    private CorrectionRequestDTO peticionConReparto(long proyectoId, long minutos) {
+        return new CorrectionRequestDTO(ENTRADA, SALIDA.plusSeconds(3600), "Olvidé fichar la salida",
+                null, null, List.of(new CorrectionRequestDTO.ProjectShare(proyectoId, minutos)));
     }
 
     private CorrectionRequest solicitudDe(User solicitante, CorrectionStatus estado) {
@@ -139,6 +152,63 @@ class CorrectionServiceImplTest {
         // Lo esencial de la fase: el registro se queda como estaba.
         assertThat(fichajeDelEmpleado.isAnulado()).isFalse();
         verify(timeEntryRepository, never()).save(any());
+    }
+
+    /**
+     * La comprobación que faltaba (Fase A3).
+     *
+     * El endpoint de correcciones acepta un reparto por proyecto, y hasta
+     * septiembre de 2026 aquí solo se miraba que el proyecto fuera de la misma
+     * empresa: bastaba un cliente HTTP para imputar horas a un proyecto en el
+     * que nunca se estuvo, y al aprobarse se escribía sin volver a mirar.
+     * Ahora pasa por el mismo validador que el reparto libre.
+     */
+    @Test
+    @DisplayName("Una corrección con reparto lo valida antes de guardarlo")
+    void solicitar_conReparto_pasaPorElValidador() {
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
+        when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
+        alGuardarDevolverLoMismo();
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+        when(validadorDeReparto.validarYResolver(any(), any())).thenReturn(Map.of());
+
+        service.solicitar(5L, peticionConReparto(7L, 120), empleado);
+
+        verify(validadorDeReparto).validarYResolver(
+                eq(fichajeDelEmpleado), eq(List.of(new ValidadorDeReparto.Linea(7L, 120))));
+    }
+
+    @Test
+    @DisplayName("Si el reparto no vale, la corrección no se guarda con él")
+    void solicitar_conRepartoInvalido_propagaElError() {
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
+        when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
+        alGuardarDevolverLoMismo();
+        when(validadorDeReparto.validarYResolver(any(), any())).thenThrow(new BusinessException(
+                "Ese día no estabas asignado a alguno de los proyectos del reparto.", HttpStatus.FORBIDDEN));
+
+        assertThatThrownBy(() -> service.solicitar(5L, peticionConReparto(99L, 120), empleado))
+                .isInstanceOf(BusinessException.class);
+
+        // El reparto no llega a la base. La solicitud sí se habrá guardado
+        // antes, pero la transacción del servicio hace rollback: por eso este
+        // test mira el reparto y no la solicitud.
+        verify(proposedAllocationRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("Una corrección sin reparto no molesta al validador")
+    void solicitar_sinReparto_niSiquieraValida() {
+        when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
+        when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
+        alGuardarDevolverLoMismo();
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+
+        // El caso normal: corregir solo las horas.
+        service.solicitar(5L, peticion(), empleado);
+
+        verify(validadorDeReparto, never()).validarYResolver(any(), any());
+        verify(proposedAllocationRepository, never()).saveAll(any());
     }
 
     @Test

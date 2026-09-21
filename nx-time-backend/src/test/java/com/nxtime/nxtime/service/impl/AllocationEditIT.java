@@ -12,6 +12,7 @@ import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AllocationsResponse;
+import com.nxtime.nxtime.dto.CorrectionRequestDTO;
 import com.nxtime.nxtime.dto.ResolveCorrectionRequest;
 import com.nxtime.nxtime.dto.SetAllocationsRequest;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -246,6 +247,67 @@ class AllocationEditIT {
 
         assertThatThrownBy(() -> service.repartir(registro.getId(), reparto(240, 240, null), gestora))
                 .isInstanceOf(TenantAccessException.class);
+    }
+
+    /**
+     * El agujero que tenía el otro camino (Fase A3).
+     *
+     * La regla «solo los proyectos que tenías asignados ese día» se comprobaba
+     * al repartir, pero no al pedir una corrección con el reparto dentro — y
+     * {@code POST /api/v1/fichaje/{id}/correcciones} acepta ese reparto del
+     * cliente. Bastaba un cliente HTTP para imputar horas a cualquier proyecto
+     * de la empresa, y al aprobarse la corrección se escribía sin volver a
+     * mirar.
+     *
+     * Este caso va junto al de arriba a propósito: son la misma regla, y
+     * separarlos es como una de las dos se quedó atrás.
+     */
+    @Test
+    @DisplayName("La corrección con reparto exige lo mismo: un proyecto no asignado ese día es 403")
+    void correccionConRepartoAProyectoNoAsignado_da403() {
+        TimeEntry registro = jornada(lunesDeEstaSemana());
+        Project enElQueNuncaEstuvo = proyecto("NUNCA");
+
+        // De la misma empresa: lo único que el código comprobaba antes.
+        assertThat(enElQueNuncaEstuvo.getEmpresa().getId()).isEqualTo(empresa.getId());
+
+        // Por delta y no en absoluto: este IT no hace rollback entre casos, así
+        // que la tabla ya trae filas de los anteriores.
+        long repartosAntes = repartosPropuestos();
+
+        assertThatThrownBy(() -> correctionService.solicitar(registro.getId(),
+                new CorrectionRequestDTO(registro.getHoraEntrada(), registro.getHoraSalida(),
+                        "Me equivoqué de proyecto", null, null,
+                        List.of(new CorrectionRequestDTO.ProjectShare(enElQueNuncaEstuvo.getId(), 480))),
+                ana))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("no estabas asignado")
+                .satisfies(e -> assertThat(((BusinessException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+
+        // Y no queda ni rastro: la transacción del servicio se deshace entera,
+        // así que tampoco se guarda el reparto rechazado.
+        assertThat(repartosPropuestos())
+                .as("un reparto rechazado no puede dejar filas")
+                .isEqualTo(repartosAntes);
+    }
+
+    private long repartosPropuestos() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM repartos_propuestos", Long.class);
+    }
+
+    @Test
+    @DisplayName("La corrección con reparto a un proyecto sí asignado se acepta")
+    void correccionConRepartoValido_seAcepta() {
+        TimeEntry registro = jornada(lunesDeEstaSemana());
+
+        var solicitud = correctionService.solicitar(registro.getId(),
+                new CorrectionRequestDTO(registro.getHoraEntrada(), registro.getHoraSalida(),
+                        "Repartir entre los dos", null, null,
+                        List.of(new CorrectionRequestDTO.ProjectShare(core.getId(), 240),
+                                new CorrectionRequestDTO.ProjectShare(app.getId(), 240))),
+                ana);
+
+        assertThat(solicitud.repartoPropuesto()).hasSize(2);
     }
 
     @Test
