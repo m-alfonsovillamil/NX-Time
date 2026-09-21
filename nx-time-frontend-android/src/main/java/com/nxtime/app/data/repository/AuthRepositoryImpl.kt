@@ -292,6 +292,10 @@ class AuthRepositoryImpl(
         return apiService.getAuditoriaFichaje(fichajeId)
     }
 
+    override suspend fun getUltimaComprobacionDeIntegridad(): Response<ComprobacionDeIntegridadDTO> {
+        return apiService.getUltimaComprobacionDeIntegridad()
+    }
+
     override suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO> {
         return apiService.getPanelEmpresa()
     }

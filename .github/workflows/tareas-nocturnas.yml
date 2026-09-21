@@ -1,8 +1,10 @@
 # ¿Han corrido las tareas nocturnas? (paso 5 del piloto, 09/2026)
 #
-# Las dos tareas programadas del backend -- el cierre de jornadas olvidadas
-# a las 3:00 y el barrido de horas extra a las 3:30, hora española -- corren
-# dentro del proceso. Si a esa hora Render tiene el servicio dormido, se
+# Las tareas programadas del backend -- el cierre de jornadas olvidadas a
+# las 3:00, el barrido de horas extra a las 3:30, la anonimización de datos
+# a las 3:45 y la comprobación de la cadena de auditoría a las 3:50, hora
+# española -- corren dentro del proceso. Si a esa hora Render tiene el
+# servicio dormido, se
 # está reiniciando o se está desplegando, no corren, y nada lo dice: te
 # enterarías semanas después, al echar de menos un aviso.
 #

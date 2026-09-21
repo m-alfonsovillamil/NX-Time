@@ -352,7 +352,8 @@ fallos eran invisibles: un error solo existía en los logs de Render, que duran
 |---|---|---|
 | Un error del backend: un 500, un correo que no sale, una tarea que falla | correo de Sentry | `SENTRY_DSN` en el panel de Render |
 | Un cierre de la app Android | correo de Sentry | `nxtime.sentry.dsn` en `~/.gradle/gradle.properties` al compilar |
-| Que las tareas de las 3:00 y las 3:30 no hayan corrido | correo de GitHub (workflow en rojo) | nada: `.github/workflows/tareas-nocturnas.yml` |
+| Que las tareas nocturnas (3:00, 3:30, 3:45 y 3:50) no hayan corrido | correo de GitHub (workflow en rojo) | nada: `.github/workflows/tareas-nocturnas.yml` |
+| Que la cadena de auditoría se haya roto | correo de GitHub (la tarea de las 3:50 acaba en ERROR) + Sentry | nada: se comprueba sola cada noche |
 
 ### Sentry
 

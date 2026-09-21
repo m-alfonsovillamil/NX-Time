@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +33,7 @@ import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.AccionAuditoria
 import com.nxtime.app.data.dto.AuditoriaFichajeDTO
+import com.nxtime.app.data.dto.ComprobacionDeIntegridadDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.EstadoCargando
 import com.nxtime.app.ui.components.EstadoErrorPantalla
@@ -77,12 +79,71 @@ fun AuditoriaScreen(
                 modifier = modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp)
             ) {
+                // El estado de la cadena va arriba del todo: la pregunta que
+                // trae a alguien a esta pantalla es "¿esto es de fiar?", y la
+                // respuesta no debería estar al final de una lista.
+                estado.integridad?.let { comprobacion ->
+                    item(key = "integridad") {
+                        EstadoDeLaCadena(comprobacion)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
                 itemsIndexed(estado.entradas, key = { _, e -> e.id }) { indice, entrada ->
                     PasoDeAuditoria(
                         entrada = entrada,
                         esUltimo = indice == estado.entradas.lastIndex
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Cuándo se comprobó por última vez que la cadena de hashes sigue intacta.
+ *
+ * La traza vale lo que valga su comprobación: una cadena que nadie repasa no
+ * demuestra nada. Desde septiembre de 2026 el servidor la repasa solo cada
+ * noche, y esto es lo que lo hace visible -- antes el endpoint existía y no lo
+ * llamaba nadie.
+ *
+ * Los movimientos pendientes se dicen cuando los hay, y no es un detalle: sin
+ * eso, "comprobada anoche" suena a que está comprobado todo, cuando lo de hoy
+ * todavía no se ha mirado.
+ */
+@Composable
+private fun EstadoDeLaCadena(comprobacion: ComprobacionDeIntegridadDTO) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.auditoria_cadena_intacta),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(
+                    R.string.auditoria_cadena_comprobada,
+                    DateFormats.fechaYHora(comprobacion.verificadoEn),
+                    comprobacion.movimientos
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (comprobacion.pendientes > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    // Plural y no una frase fija: "Hay 1 movimientos" canta.
+                    text = pluralStringResource(
+                        R.plurals.auditoria_cadena_pendientes,
+                        comprobacion.pendientes.toInt(),
+                        comprobacion.pendientes
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import static com.nxtime.nxtime.domain.ScheduledTask.ANONIMIZACION;
 import static com.nxtime.nxtime.domain.ScheduledTask.CIERRE_JORNADAS;
 import static com.nxtime.nxtime.domain.ScheduledTask.HORAS_EXTRA;
+import static com.nxtime.nxtime.domain.ScheduledTask.VERIFICACION_INTEGRIDAD;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.EN_CURSO;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.ERROR;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.OK;
@@ -167,12 +168,14 @@ class TaskMonitorServiceImplTest {
                 HORAS_EXTRA, OK, madrid("2026-09-12T03:30:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 ANONIMIZACION, OK, madrid("2026-09-12T03:45:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                VERIFICACION_INTEGRIDAD, OK, madrid("2026-09-12T03:50:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T05:15:00").estado();
 
         assertThat(estado.ok()).isTrue();
         assertThat(estado.tareas()).extracting(SystemStatusResponse.TaskStatus::tarea)
-                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, ANONIMIZACION);
+                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, ANONIMIZACION, VERIFICACION_INTEGRIDAD);
     }
 
     @Test
@@ -201,6 +204,8 @@ class TaskMonitorServiceImplTest {
                 HORAS_EXTRA, OK, madrid("2026-09-11T03:30:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 ANONIMIZACION, OK, madrid("2026-09-11T03:45:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                VERIFICACION_INTEGRIDAD, OK, madrid("2026-09-11T03:50:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T03:10:00").estado();
 
