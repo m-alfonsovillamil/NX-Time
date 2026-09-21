@@ -3,6 +3,7 @@ package com.nxtime.nxtime.repository;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,13 +41,26 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
     void bloquearCadena(@Param("clave") long clave);
 
     /**
-     * Toda la traza en orden de escritura, para comprobar la cadena.
+     * Un bloque de la traza a partir de un id, en orden de escritura.
      *
      * Por id y no por fecha: el id es el orden en que se escribieron, que es
      * el orden en que se encadenaron los hashes. Dos filas de la misma
      * milésima se ordenarían al azar por fecha y la cadena parecería rota.
+     *
+     * Sustituye al {@code findAllByOrderByIdAsc()} que había: ese traía la
+     * tabla entera --cuatro años de traza de todas las empresas, con sus dos
+     * columnas JSONB por fila-- a memoria de una vez. Recorrerla por bloques
+     * con {@code WHERE id > :desde} y no con {@code Pageable} es deliberado:
+     * un OFFSET creciente obliga a PostgreSQL a descartar cada vez más filas,
+     * mientras que esto entra siempre por la clave primaria.
+     *
+     * @param desdeId exclusivo; 0 para empezar por el principio
      */
-    List<TimeEntryAudit> findAllByOrderByIdAsc();
+    @Query("select a from auditoria_fichaje a where a.id > :desdeId order by a.id asc")
+    List<TimeEntryAudit> findBloqueDesde(@Param("desdeId") long desdeId, Pageable bloque);
+
+    /** Cuántas filas quedan por detrás de un punto de control. */
+    long countByIdGreaterThan(long id);
 
     /** Línea temporal completa de un fichaje, más antiguo primero. */
     List<TimeEntryAudit> findByRegistro_IdOrderByFechaHoraAsc(long registroId);

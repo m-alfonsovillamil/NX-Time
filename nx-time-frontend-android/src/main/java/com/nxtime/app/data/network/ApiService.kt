@@ -362,6 +362,16 @@ interface ApiService {
         @Path("id") fichajeId: Long
     ): Response<List<AuditoriaFichajeDTO>>
 
+    /**
+     * La última comprobación automática de la cadena de hashes.
+     *
+     * **204 mientras no se haya comprobado nunca**, así que el cuerpo puede
+     * venir vacío con la respuesta en éxito: hay que mirar el código, no solo
+     * `isSuccessful`.
+     */
+    @GET("api/v1/auditoria/integridad/ultima")
+    suspend fun getUltimaComprobacionDeIntegridad(): Response<ComprobacionDeIntegridadDTO>
+
     /*  Panel de empresa y gestión de altas/bajas  */
 
     @GET("api/v1/dashboard/empresa")

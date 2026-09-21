@@ -33,7 +33,17 @@ public enum ScheduledTask {
      * todas las noches no encuentra nada, y eso también se registra: una
      * tarea que no deja rastro no se distingue de una que no corrió.
      */
-    ANONIMIZACION(ScheduledTask.CRON_ANONIMIZACION);
+    ANONIMIZACION(ScheduledTask.CRON_ANONIMIZACION),
+
+    /**
+     * {@code AuditIntegrityScheduler}: comprueba la cadena de hashes de la
+     * auditoría y deja un punto de control (Fase A4).
+     *
+     * La última de la noche a propósito: repasa lo que han escrito las
+     * anteriores, y así una manipulación no espera a que alguien se acuerde de
+     * pulsar el botón de verificar.
+     */
+    VERIFICACION_INTEGRIDAD(ScheduledTask.CRON_VERIFICACION_INTEGRIDAD);
 
     /*
      * Constantes y no solo el campo de cada valor: {@code @Scheduled} solo
@@ -48,6 +58,22 @@ public enum ScheduledTask {
      * la tarea quedaría justo en el borde de la gracia de 15 minutos.
      */
     public static final String CRON_ANONIMIZACION = "0 45 3 * * *";
+
+    /*
+     * 3:50: la última de la noche, cinco minutos después de la anonimización,
+     * para repasar lo que han escrito las otras tres.
+     *
+     * Sigue por debajo de las 4:00 por el mismo motivo que la anterior. El
+     * monitor pregunta por "la última hora programada antes de ahora menos la
+     * gracia de 15 minutos" (ver TaskMonitorServiceImpl.GRACIA), y el workflow
+     * consulta a las 03:15 UTC, que en invierno son las 04:15 en Madrid: una
+     * tarea a partir de las 4:00 caería fuera y se daría por no ejecutada
+     * cada día de invierno.
+     *
+     * Es incremental --solo mira lo escrito desde el último punto de control--
+     * así que los 25 minutos reales de margen sobran holgadamente.
+     */
+    public static final String CRON_VERIFICACION_INTEGRIDAD = "0 50 3 * * *";
 
     /** Todas corren en hora española, con el sistema en calma. */
     public static final String ZONA = "Europe/Madrid";

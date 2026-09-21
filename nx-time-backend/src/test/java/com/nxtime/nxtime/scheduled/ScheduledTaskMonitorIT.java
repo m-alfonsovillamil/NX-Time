@@ -62,6 +62,8 @@ class ScheduledTaskMonitorIT {
     @Autowired
     private DataDeletionScheduler anonimizacion;
     @Autowired
+    private AuditIntegrityScheduler integridad;
+    @Autowired
     private TaskMonitorService taskMonitorService;
     @Autowired
     private ScheduledTaskRunRepository repository;
@@ -74,6 +76,11 @@ class ScheduledTaskMonitorIT {
         // La de anonimización, además, prueba que el CHECK de V20 la admite:
         // sin ampliarlo, fallaría al registrar su propia ejecución.
         anonimizacion.anonimizar();
+        // Y la de integridad, lo mismo con el CHECK de V28. El bucle de abajo
+        // recorre ScheduledTask.values(), así que añadir una tarea al enum sin
+        // lanzarla aquí pone este test en rojo: es lo que impide que una tarea
+        // nueva se quede sin cablear y nadie se entere hasta producción.
+        integridad.verificarLaCadena();
 
         for (ScheduledTask tarea : ScheduledTask.values()) {
             ScheduledTaskRun ultima = repository.findFirstByTareaOrderByInicioDesc(tarea).orElseThrow();

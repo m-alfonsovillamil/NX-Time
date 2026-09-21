@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.audit.VerificadorDeAuditoria;
+import com.nxtime.nxtime.dto.AuditCheckpointResponse;
 import com.nxtime.nxtime.dto.AuditIntegrityResponse;
 import com.nxtime.nxtime.dto.TimeEntryAuditResponse;
 import com.nxtime.nxtime.mapper.TimeEntryAuditMapper;
@@ -92,6 +93,38 @@ public class AuditController {
         // tabla, sean de la empresa que sean, así que comprobar un trozo
         // suelto daría un enlace roto en cada borde. O se comprueba entera, o
         // no se comprueba.
+        //
+        // Desde la Fase A4 se recorre por bloques en vez de traérsela entera a
+        // memoria, así que sigue siendo la comprobación completa pero ya no
+        // crece sin techo con los años de traza.
         return ResponseEntity.ok(verificador.verificar());
+    }
+
+    @Operation(summary = "Cuándo se comprobó la traza por última vez",
+            description = "La verificación completa cuesta, y lo que costaba se pedía poco. Desde "
+                    + "septiembre de 2026 una tarea nocturna la comprueba sola y deja un punto de "
+                    + "control; esto lo devuelve, para poder decir \"comprobada anoche, intacta\" sin "
+                    + "volver a recorrer nada. Devuelve 204 mientras no se haya comprobado ninguna vez.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "La última comprobación automática",
+                    content = @Content(schema = @Schema(implementation = AuditCheckpointResponse.class))),
+            @ApiResponse(responseCode = "204", description = "Todavía no se ha comprobado nunca"),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:auditoria'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:auditoria')")
+    @GetMapping("/integridad/ultima")
+    public ResponseEntity<AuditCheckpointResponse> ultimaComprobacion() {
+        return verificador.ultimoPuntoDeControl()
+                .map(punto -> ResponseEntity.ok(new AuditCheckpointResponse(
+                        punto.getVerificadoEn(),
+                        punto.getHastaId(),
+                        punto.getFilas(),
+                        punto.getComprobadas(),
+                        punto.getSoloEnlace(),
+                        verificador.movimientosSinRevisar(punto))))
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

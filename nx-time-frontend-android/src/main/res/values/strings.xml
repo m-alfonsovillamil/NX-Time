@@ -206,6 +206,16 @@
     <string name="auditoria_vacio_texto">
         Este fichaje no ha sufrido ninguna modificación desde que se creó.
     </string>
+    <!-- Estado de la cadena de hashes (comprobacion automatica nocturna) -->
+    <string name="auditoria_cadena_intacta">Traza verificada</string>
+    <string name="auditoria_cadena_comprobada">
+        Comprobada el %1$s: %2$d movimientos sin alteraciones.
+    </string>
+    <plurals name="auditoria_cadena_pendientes">
+        <item quantity="one">Hay 1 movimiento posterior aún sin comprobar.</item>
+        <item quantity="other">Hay %1$d movimientos posteriores aún sin comprobar.</item>
+    </plurals>
+
     <string name="auditoria_por">Por %1$s</string>
     <string name="auditoria_desde_ip">Desde %1$s</string>
     <string name="auditoria_entrada_cambio">Entrada: %1$s → %2$s</string>

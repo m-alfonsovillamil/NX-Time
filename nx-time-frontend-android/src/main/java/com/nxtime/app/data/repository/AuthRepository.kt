@@ -124,6 +124,9 @@ interface AuthRepository {
 
     suspend fun getAuditoriaFichaje(fichajeId: Long): Response<List<AuditoriaFichajeDTO>>
 
+    /** La última comprobación automática de la cadena. 204 si no se ha hecho ninguna. */
+    suspend fun getUltimaComprobacionDeIntegridad(): Response<ComprobacionDeIntegridadDTO>
+
     /* Panel de empresa, altas/bajas e informes */
     suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
 
