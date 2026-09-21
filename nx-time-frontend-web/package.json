@@ -5,17 +5,36 @@
   "type": "module",
   "description": "Cliente web de NX Time. Fuera del build de Gradle: npm propio y su propio job de CI.",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "api:types": "openapi-typescript ../docs/openapi.json -o src/api/schema.d.ts",
     "tokens": "node scripts/tokens.mjs",
     "generar": "npm run api:types && npm run tokens",
     "verificar:generado": "npm run generar && git diff --exit-code -- src/api/schema.d.ts src/estilos/tokens.css",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && npm run typecheck:contrato",
-    "typecheck:contrato": "tsc --noEmit --strict --skipLibCheck false --target ES2022 --lib ES2022,DOM --module ESNext --moduleResolution bundler src/api/schema.d.ts"
+    "typecheck:contrato": "tsc --noEmit --strict --skipLibCheck false --target ES2022 --lib ES2022,DOM --module ESNext --moduleResolution bundler src/api/schema.d.ts",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.1.0",
     "openapi-typescript": "^7.4.4",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
+  },
+  "dependencies": {
+    "@fontsource/sora": "^5.3.0",
+    "openapi-fetch": "^0.17.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0"
   }
 }
