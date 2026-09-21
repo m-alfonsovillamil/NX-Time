@@ -709,6 +709,33 @@ public class NotificationListener {
     }
 
     /**
+     * El código para volver a entrar (Fase A9).
+     *
+     * Solo correo: quien no puede entrar tampoco puede leer un aviso dentro de
+     * la aplicación.
+     *
+     * Va por aquí, y no desde el servicio, para que el envío ocurra
+     * {@code AFTER_COMMIT} y {@code @Async}: la petición contesta enseguida y
+     * la conexión de base de datos vuelve al pool sin esperar al servidor de
+     * correo. Ver {@link NotificationEvents.AccessCodeRequested}.
+     *
+     * Se usa {@code enviar} y no {@code enviarObligatorio}: aquí un fallo no
+     * puede propagarse. La respuesta de /auth/recuperar es la misma exista o
+     * no la cuenta --si no, diría cuáles existen--, así que un error tiene que
+     * quedarse en el log, que con Sentry es un aviso a quien mantiene el
+     * servicio.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAccessCodeRequested(NotificationEvents.AccessCodeRequested evento) {
+        emailSender.enviar(
+                evento.email(),
+                "Tu código para entrar en NX Time",
+                "access-code-recovery",
+                evento.variables());
+    }
+
+    /**
      * "el martes 3 de marzo" o "la semana del 2 al 8 de marzo".
      *
      * Se compone aquí y no en la plantilla porque las dos plantillas y

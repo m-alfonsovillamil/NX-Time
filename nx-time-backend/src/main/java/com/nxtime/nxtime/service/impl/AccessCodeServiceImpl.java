@@ -11,6 +11,7 @@ import com.nxtime.nxtime.repository.AccessCodeRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.AccessCodeService;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -26,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Ver {@link AccessCodeService} y ADR 014.
@@ -63,6 +65,8 @@ public class AccessCodeServiceImpl implements AccessCodeService {
      */
     private final String hashDeRelleno;
 
+    private final ApplicationEventPublisher eventPublisher;
+
     @Autowired
     public AccessCodeServiceImpl(
             AccessCodeRepository accessCodeRepository,
@@ -70,9 +74,10 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             EmailSender emailSender,
+            ApplicationEventPublisher eventPublisher,
             @Value("${application.app.download-url:}") String urlDescargaApp) {
         this(accessCodeRepository, userRepository, refreshTokenRepository, passwordEncoder, emailSender,
-                Clock.systemUTC(), urlDescargaApp);
+                eventPublisher, Clock.systemUTC(), urlDescargaApp);
     }
 
     AccessCodeServiceImpl(
@@ -81,6 +86,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             EmailSender emailSender,
+            ApplicationEventPublisher eventPublisher,
             Clock clock,
             String urlDescargaApp) {
         this.accessCodeRepository = accessCodeRepository;
@@ -88,11 +94,38 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailSender = emailSender;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.urlDescargaApp = urlDescargaApp == null ? "" : urlDescargaApp.trim();
         this.hashDeRelleno = passwordEncoder.encode("000000");
     }
 
+    /**
+     * El alta SÍ manda el correo dentro de la transacción, y se queda así.
+     *
+     * Es el único envío que lo hace, al revés que la recuperación (ver
+     * {@link #solicitarRecuperacion}, Fase A9). La diferencia no es un
+     * descuido:
+     *
+     * <ul>
+     *   <li><b>La garantía vale más aquí.</b> Si el correo no sale, la cuenta
+     *       no se crea (ADR 014). Lo contrario deja a alguien dado de alta sin
+     *       forma de entrar y sin que nadie se entere, que es peor que un alta
+     *       que falla a la cara de quien la hace.</li>
+     *   <li><b>El riesgo es mucho menor.</b> Esto no es público: exige la
+     *       authority {@code empleado:crear} y lo hace una persona de una en
+     *       una. La recuperación era un endpoint abierto con diez peticiones
+     *       por minuto y por IP, y ahí la transacción larga era un vector para
+     *       dejar sin conexiones al resto de la aplicación.</li>
+     * </ul>
+     *
+     * Se valoró sacarlo con una transacción compensatoria --confirmar, enviar
+     * fuera y borrar la cuenta si falla-- y se descartó: cambia una garantía
+     * atómica por una ventana en la que, si el proceso muere entre el commit y
+     * la compensación, queda una cuenta a la que nunca se le mandó el código.
+     * Lo que sí se ha hecho es acotar la espera bajando los timeouts SMTP de
+     * 5 s a 3 s (ver application.yml).
+     */
     @Override
     @Transactional
     public void emitirCodigoDeAlta(User usuario, String nombreEmpresa) {
@@ -136,23 +169,33 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         }
 
         /*
-         * Primero el correo y después el código, al revés que en el alta. Si
-         * el correo falla no se guarda nada, así que el código anterior, si lo
-         * había, sigue valiendo. Y no se lanza: un error solo para los correos
-         * que SÍ tienen cuenta diría cuáles la tienen. Queda en el log, que
-         * con Sentry es un aviso a quien mantiene el servicio.
+         * El código se guarda y el correo sale DESPUÉS de confirmar, a través
+         * de un evento AFTER_COMMIT + @Async (Fase A9).
+         *
+         * Antes se mandaba aquí mismo, dentro de la transacción, y primero:
+         * si el correo fallaba no se guardaba nada, así que el código anterior
+         * seguía valiendo. Esa propiedad era bonita y salía cara. Este
+         * endpoint es PÚBLICO y admite diez peticiones por minuto y por IP;
+         * con el SMTP dentro, cada una retenía una conexión del pool --que en
+         * producción es de cinco-- durante todo lo que tardara el servidor de
+         * correo en contestar o en agotar sus esperas. Bastaba con que el SMTP
+         * se atascara para dejar sin conexiones al resto de la aplicación.
+         *
+         * Lo que se pierde: si el correo no sale, el código nuevo ya ha
+         * anulado al anterior y esta persona tiene que volver a pedirlo. Es
+         * una molestia, y la alternativa era un vector para tumbar el
+         * servicio entero desde fuera.
+         *
+         * Lo que NO cambia: la respuesta sigue siendo la misma exista o no la
+         * cuenta, y un fallo de envío sigue quedándose en el log en vez de
+         * propagarse --un error solo para los correos que SÍ tienen cuenta
+         * diría cuáles la tienen--.
          */
         String codigo = generarCodigo();
-        try {
-            emailSender.enviarObligatorio(usuario.getEmail(), "Tu código para entrar en NX Time",
-                    "access-code-recovery", variables(usuario, codigo, AccessCodeType.RECUPERACION));
-        } catch (EmailNotSentException e) {
-            log.error("No se pudo enviar el código de recuperación a {}: {}",
-                    usuario.getEmail(), e.getCause().getMessage());
-            return;
-        }
         guardar(usuario, AccessCodeType.RECUPERACION, codigo);
-        log.info("Código de recuperación enviado a {}", usuario.getEmail());
+        eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
+                usuario.getEmail(), variables(usuario, codigo, AccessCodeType.RECUPERACION)));
+        log.info("Código de recuperación emitido para {}", usuario.getEmail());
     }
 
     /*

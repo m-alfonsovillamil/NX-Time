@@ -22,6 +22,7 @@ import com.nxtime.nxtime.notification.EmailSender;
 import com.nxtime.nxtime.repository.AccessCodeRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -63,6 +64,8 @@ class AccessCodeServiceImplTest {
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
     private EmailSender emailSender;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
@@ -74,8 +77,16 @@ class AccessCodeServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new AccessCodeServiceImpl(accessCodeRepository, userRepository, refreshTokenRepository,
-                passwordEncoder, emailSender, Clock.fixed(AHORA, ZoneOffset.UTC), URL_APP);
+                passwordEncoder, emailSender, eventPublisher, Clock.fixed(AHORA, ZoneOffset.UTC), URL_APP);
         ana = User.builder().id(10L).email(EMAIL).nombre("Ana").activo(true).build();
+    }
+
+    /** Las variables del evento de recuperación: es donde viaja ahora el código (Fase A9). */
+    private Map<String, Object> variablesDelEventoDeRecuperacion() {
+        ArgumentCaptor<NotificationEvents.AccessCodeRequested> evento =
+                ArgumentCaptor.forClass(NotificationEvents.AccessCodeRequested.class);
+        verify(eventPublisher).publishEvent(evento.capture());
+        return evento.getValue().variables();
     }
 
     /** El código que salió en el correo: la única forma de verlo, porque en la base solo queda el hash. */
@@ -137,7 +148,7 @@ class AccessCodeServiceImplTest {
         // Con espacios, como llega a veces desde un formulario.
         service.solicitarRecuperacion("  " + EMAIL + " ");
 
-        Map<String, Object> variables = variablesDelCorreo("access-code-recovery");
+        Map<String, Object> variables = variablesDelEventoDeRecuperacion();
         String codigo = (String) variables.get("codigo");
         assertThat(codigo).matches("\\d{6}");
         assertThat(variables).containsEntry("validez", "15 minutos");
@@ -174,17 +185,26 @@ class AccessCodeServiceImplTest {
         verify(accessCodeRepository, never()).save(any());
     }
 
+    /*
+     * Desde la Fase A9 el correo de recuperación NO se manda desde aquí: se
+     * publica un evento y lo envía NotificationListener, AFTER_COMMIT y
+     * @Async. Este test comprueba lo que hace este servicio -- no tocar el
+     * SMTP dentro de la transacción --, y que el fallo de envío no se
+     * propague lo garantiza el listener, que usa `enviar` y no
+     * `enviarObligatorio`.
+     */
     @Test
-    @DisplayName("Si el correo no sale no se lanza (diría que la cuenta existe) y no se guarda el código")
-    void solicitar_siElCorreoFalla_noLanzaNiGuarda() {
+    @DisplayName("La recuperación no habla con el SMTP: publica un evento y el correo sale tras confirmar")
+    void solicitar_noEnviaDentroDeLaTransaccion() {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(ana));
-        doThrow(new EmailNotSentException("SMTP caído", new RuntimeException("Connection refused")))
-                .when(emailSender).enviarObligatorio(anyString(), anyString(), anyString(), anyMap());
+        when(accessCodeRepository.findByUsuarioAndUsadoEnIsNullAndAnuladoEnIsNull(ana)).thenReturn(List.of());
 
-        assertThatCode(() -> service.solicitarRecuperacion(EMAIL)).doesNotThrowAnyException();
+        service.solicitarRecuperacion(EMAIL);
 
-        verify(accessCodeRepository, never()).save(any());
-        verify(accessCodeRepository, never()).findByUsuarioAndUsadoEnIsNullAndAnuladoEnIsNull(any());
+        // Lo que arregla la fase: ni una llamada al servidor de correo
+        // mientras la transacción --y su conexión del pool-- siguen abiertas.
+        verifyNoInteractions(emailSender);
+        assertThat(variablesDelEventoDeRecuperacion()).containsKey("codigo");
     }
 
     // ---- emitirCodigoDeAlta ----

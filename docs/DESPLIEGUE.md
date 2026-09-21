@@ -119,12 +119,20 @@ todo el tráfico comparta el contador del proxy y se limiten unos a otros.
 
 **1. Render bloquea la salida por el puerto 587** en el plan gratuito, y Gmail no
 ofrece otro. No es la contraseña ni el código: desde tu PC funciona y desde Render
-no. La señal es el tiempo — un `POST /auth/recuperar` que tarda **~15 s** son tres
-esperas de 5 s agotándose; una credencial rechazada habría fallado en ~1 s. La
-salida es un proveedor con **puerto 2525**, pensado justo para esto:
+no. La señal es el tiempo: un alta de empleado (`POST /api/v1/gestor/empleados`)
+que tarda **~9 s** son tres esperas de 3 s agotándose; una credencial rechazada
+habría fallado en ~1 s. La salida es un proveedor con **puerto 2525**, pensado
+justo para esto:
 `MAIL_HOST=smtp-relay.brevo.com`, `MAIL_PORT=2525`. Ojo, el `MAIL_USERNAME` de
 Brevo **no es tu correo**, es el *login* que enseña su pantalla de SMTP
 (`9xxxxxx001@smtp-brevo.com`); confundirlos da un `535`.
+
+> ⚠️ **Ojo con el endpoint que uses para medir.** Hasta septiembre de 2026 la
+> señal era `POST /auth/recuperar`, que tardaba ~15 s. Ya no sirve: desde la
+> Fase A9 ese correo sale **después** de responder, de forma asíncrona, así que
+> la petición contesta enseguida aunque el SMTP esté muerto. El alta de empleado
+> sí espera al correo a propósito (si no sale, la cuenta no se crea — ADR 014),
+> y es la que hay que cronometrar. El fallo también queda en Sentry.
 
 **2. `MAIL_FROM` tiene que coincidir EXACTAMENTE con el remitente verificado,
 mayúsculas incluidas.** Brevo compara la cadena tal cual: con

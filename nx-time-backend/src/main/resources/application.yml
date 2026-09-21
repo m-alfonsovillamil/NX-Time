@@ -61,9 +61,17 @@ spring:
             enable: "${MAIL_SMTP_STARTTLS:false}"
           # Sin esto, una caída del servidor SMTP dejaría el hilo del
           # executor de correo colgado indefinidamente (ver AsyncConfig).
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+          #
+          # 3 s y no 5 (Fase A9): son TRES esperas que se suman, así que el
+          # peor caso baja de 15 s a 9. Importa sobre todo en el alta de un
+          # empleado, que es el único envío que sigue dentro de la transacción
+          # a propósito --si el correo no sale, la cuenta no se crea (ADR
+          # 014)-- y por tanto el único que retiene una conexión del pool
+          # mientras espera. Un SMTP sano contesta en decenas de milisegundos;
+          # 3 s ya es "no está respondiendo".
+          connectiontimeout: 3000
+          timeout: 3000
+          writetimeout: 3000
 
 # Cada línea de log lleva el requestId de CorrelationIdFilter, para
 # poder seguir todas las líneas de una misma petición aunque pasen por

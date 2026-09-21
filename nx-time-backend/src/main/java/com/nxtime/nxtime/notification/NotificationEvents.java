@@ -285,4 +285,23 @@ public final class NotificationEvents {
     public record DeletionExecuted(
             String email, String nombre, String nombreEmpresa, LocalDate anonimizarDesde) {
     }
+
+    /**
+     * Un código para volver a entrar, pedido desde /auth/recuperar (Fase A9).
+     *
+     * <b>Solo correo, sin aviso in-app</b>: quien no puede entrar tampoco
+     * puede leer un aviso dentro de la aplicación.
+     *
+     * Existe para sacar el envío de la transacción. Ese endpoint es público y
+     * admite diez peticiones por minuto y por IP; con el SMTP dentro de la
+     * transacción, cada una retenía una conexión del pool --que en producción
+     * es de cinco-- durante todo lo que tardara el servidor de correo en
+     * contestar o en agotar sus tiempos de espera. Bastaba con que el SMTP se
+     * atascara para dejar sin conexiones al resto de la aplicación.
+     *
+     * Lleva los datos copiados y no el {@link User} porque el listener corre
+     * {@code @Async}, con la sesión de JPA ya cerrada.
+     */
+    public record AccessCodeRequested(String email, java.util.Map<String, Object> variables) {
+    }
 }

@@ -106,6 +106,7 @@ import static org.mockito.Mockito.verify;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@org.springframework.context.annotation.Import(ApiContractTest.CapturaDeCodigos.class)
 class ApiContractTest {
 
     private static final String ADMIN_URL = "jdbc:postgresql://localhost:5433/nxtime";
@@ -424,10 +425,40 @@ class ApiContractTest {
     @MockitoBean
     private EmailSender emailSender;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private CapturaDeCodigos capturaDeCodigos;
+
     private String codigoEnviadoA(String email) {
         ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
         verify(emailSender).enviarObligatorio(eq(email), anyString(), anyString(), variables.capture());
         return (String) variables.getValue().get("codigo");
+    }
+
+    /**
+     * El codigo de RECUPERACION, que desde la Fase A9 no sale por aqui.
+     *
+     * El alta sigue mandando el correo dentro de la transaccion, asi que se
+     * captura del EmailSender. La recuperacion publica un evento y el correo
+     * se manda despues, AFTER_COMMIT y @Async: mirar el EmailSender seria una
+     * carrera con otro hilo. El evento es deterministico.
+     */
+    private String codigoDeRecuperacionA(String email) {
+        return capturaDeCodigos.codigos.stream()
+                .filter(evento -> evento.email().equals(email))
+                .reduce((primero, ultimo) -> ultimo)
+                .map(evento -> (String) evento.variables().get("codigo"))
+                .orElseThrow(() -> new AssertionError("No se pidio ningun codigo de recuperacion para " + email));
+    }
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class CapturaDeCodigos {
+        final List<com.nxtime.nxtime.notification.NotificationEvents.AccessCodeRequested> codigos =
+                new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        @org.springframework.context.event.EventListener
+        void capturar(com.nxtime.nxtime.notification.NotificationEvents.AccessCodeRequested evento) {
+            codigos.add(evento);
+        }
     }
 
     /**
@@ -3204,7 +3235,7 @@ class ApiContractTest {
                 String.class
         );
         assertThat(solicitud.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        String codigo = codigoEnviadoA(email);
+        String codigo = codigoDeRecuperacionA(email);
 
         String incorrecto = codigo.equals("000000") ? "111111" : "000000";
         ResponseEntity<String> fallo = elegirContrasena(email, incorrecto, "recordada12345", "203.0.113.65");
