@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.TimeZone;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -77,6 +78,46 @@ class ReportGeneratorTest {
 
             // Fila 6: la jornada con incidencia va marcada.
             assertThat(hoja.getRow(6).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");
+        }
+    }
+
+    /**
+     * Un informe grande cruza muchas veces la ventana de SXSSF (Fase A8).
+     *
+     * Con {@code XSSFWorkbook} el libro entero se construía en memoria antes
+     * de escribir el primer byte, lo que hacía del {@code
+     * StreamingResponseBody} del controlador una contradicción. Con SXSSF solo
+     * conviven cien filas, y este test comprueba lo único que se puede
+     * comprobar de forma fiable: que el fichero resultante sigue siendo un
+     * XLSX válido y completo cuando las filas ya no caben en la ventana.
+     *
+     * No mide memoria a propósito: un umbral de heap en un test es
+     * intermitente por naturaleza --depende del GC, del recolector y de la
+     * máquina-- y un test que falla a veces se acaba ignorando siempre.
+     */
+    @Test
+    @DisplayName("Un informe de miles de filas sigue produciendo un XLSX válido y completo")
+    void excel_muchasFilas_siguenSiendoValidas() throws Exception {
+        int filas = 5_000;
+        List<ReportRow> lineas = IntStream.rangeClosed(1, filas)
+                .mapToObj(i -> new ReportRow("Empleado " + i, LocalDate.of(2026, 6, 1).plusDays(i % 28),
+                        LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450 * 60, false))
+                .toList();
+        MonthlyReport informe = new MonthlyReport(
+                "Empresa grande", "Todos", YearMonth.of(2026, 6), lineas);
+
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(informe, salida);
+
+        try (Workbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            Sheet hoja = libro.getSheetAt(0);
+            // Las cabeceras están en la fila 3, así que los datos van de la 4
+            // en adelante. La última fila de datos tiene que estar entera: si
+            // el volcado a disco se hubiera comido algo, faltaría el final.
+            assertThat(hoja.getRow(4).getCell(0).getStringCellValue()).isEqualTo("Empleado 1");
+            assertThat(hoja.getRow(3 + filas).getCell(0).getStringCellValue())
+                    .isEqualTo("Empleado " + filas);
+            assertThat(hoja.getRow(3 + filas).getCell(5).getStringCellValue()).isEqualTo("7h 30m");
         }
     }
 

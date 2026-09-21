@@ -12,7 +12,7 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,9 +35,50 @@ public class ExcelReportGenerator {
             "Empleado", "Fecha", "Entrada", "Salida", "Pausa (min)", "Tiempo efectivo", "Incidencia"
     };
 
+    /**
+     * Anchos de columna, en caracteres.
+     *
+     * A mano y no con {@code autoSizeColumn} porque SXSSF no puede medir filas
+     * que ya ha mandado al disco: para autoajustar habría que retener todas en
+     * memoria, que es justo lo que se está evitando. Están calculados sobre el
+     * contenido real de cada columna -- un nombre completo, una fecha ISO, una
+     * hora "HH:mm" -- y son de sobra.
+     */
+    private static final int[] ANCHOS = {28, 12, 10, 10, 12, 16, 20};
+
+    /**
+     * Filas que se quedan en memoria antes de ir volcándose al disco.
+     *
+     * Cien es la ventana habitual de SXSSF: suficiente para que escribir sea
+     * secuencial y barato, y poco para que el libro no crezca con el número de
+     * jornadas.
+     */
+    private static final int VENTANA_DE_FILAS = 100;
+
     public void generar(MonthlyReport informe, OutputStream salida) throws IOException {
-        try (Workbook libro = new XSSFWorkbook()) {
+        // SXSSF y no XSSF: XSSFWorkbook construye el libro ENTERO en memoria
+        // antes de escribir el primer byte, lo que convertía en una
+        // contradicción el StreamingResponseBody del controlador -- el
+        // streaming era solo de cara al socket, mientras que dentro el informe
+        // se materializaba dos veces (las entidades y luego el libro). Con
+        // SXSSF solo conviven VENTANA_DE_FILAS filas.
+        // El try-with-resources no es opcional aquí: SXSSF respalda las filas
+        // que saca de memoria en ficheros temporales del disco, y close() es
+        // lo que los borra (así lo documenta POI 5.5: "disposes of the
+        // temporary files backing this workbook on disk"). Sin cerrarlo se
+        // acumularían hasta llenar el disco efímero del contenedor. El
+        // dispose() que hacía falta en versiones antiguas está deprecado.
+        try (SXSSFWorkbook libro = new SXSSFWorkbook(VENTANA_DE_FILAS)) {
+            // Los temporales van comprimidos: el disco de Render es efímero y
+            // pequeño, y un informe anual de una empresa grande no es poca
+            // cosa. No afecta al fichero que se entrega, solo a lo que SXSSF
+            // deja en el disco mientras lo construye.
+            libro.setCompressTempFiles(true);
+
             Sheet hoja = libro.createSheet("Horas " + informe.mes());
+            for (int i = 0; i < ANCHOS.length; i++) {
+                hoja.setColumnWidth(i, ANCHOS[i] * 256);
+            }
 
             CellStyle estiloCabecera = estiloCabecera(libro);
             CellStyle estiloTotal = estiloTotal(libro);
@@ -47,10 +88,6 @@ public class ExcelReportGenerator {
             numeroFila = escribirCabeceras(hoja, estiloCabecera, numeroFila);
             numeroFila = escribirFilas(hoja, informe, numeroFila);
             escribirTotales(hoja, informe, estiloTotal, numeroFila);
-
-            for (int i = 0; i < CABECERAS.length; i++) {
-                hoja.autoSizeColumn(i);
-            }
 
             libro.write(salida);
             // Vaciar lo que quede en el búfer antes de dar por escrito el

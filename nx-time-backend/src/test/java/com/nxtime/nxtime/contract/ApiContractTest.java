@@ -31,7 +31,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -39,7 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -831,14 +833,30 @@ class ApiContractTest {
 
         // Un .xlsx es un zip: si la descarga se corto, el directorio central
         // no llega y no se puede abrir.
-        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(contenido))) {
-            int entradas = 0;
-            while (zip.getNextEntry() != null) {
-                entradas++;
+        //
+        // Se lee con ZipFile y no con ZipInputStream, y eso importa por dos
+        // motivos que van en la misma direccion:
+        //
+        //  1. ZipFile lee el DIRECTORIO CENTRAL, que esta al final del
+        //     fichero, asi que exige que haya llegado hasta el ultimo byte.
+        //     ZipInputStream va entrada por entrada desde el principio y
+        //     puede dar por buenas las primeras aunque falte el final --
+        //     justo lo contrario de lo que este test dice comprobar.
+        //  2. Es ademas como lo abren Excel, LibreOffice y el explorador de
+        //     Windows. ZipInputStream es una lectura secuencial que rechaza
+        //     los zip escritos en streaming (los que dejan el tamanio de cada
+        //     entrada para el final, como hace POI en modo SXSSF), aunque
+        //     sean perfectamente validos.
+        File descargado = File.createTempFile("informe-contrato", ".xlsx");
+        try {
+            Files.write(descargado.toPath(), contenido);
+            try (ZipFile zip = new ZipFile(descargado)) {
+                assertThat(zip.size())
+                        .as("el .xlsx llega entero y se puede abrir")
+                        .isGreaterThan(0);
             }
-            assertThat(entradas)
-                    .as("el .xlsx llega entero y se puede abrir")
-                    .isGreaterThan(0);
+        } finally {
+            Files.deleteIfExists(descargado.toPath());
         }
     }
 
