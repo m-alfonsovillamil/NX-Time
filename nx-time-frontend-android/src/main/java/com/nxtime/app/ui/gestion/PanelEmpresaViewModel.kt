@@ -10,6 +10,7 @@ import com.nxtime.app.data.dto.HorasProyectoDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,10 @@ data class PanelEmpresaUiState(
     val cargando: Boolean = true,
     val panel: PanelEmpresaDTO? = null,
     val empleados: List<EmpleadoSimpleDTO> = emptyList(),
-    val mes: YearMonth = YearMonth.now(),
+    // En hora de España y no del dispositivo: un movil en otro huso, el dia
+    // 1 a las 00:30, abriria el panel en el mes anterior. Misma politica que
+    // el resto de la app (ver DateFormats).
+    val mes: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA),
     val descargando: Boolean = false,
     val departamentos: List<DepartamentoDTO> = emptyList(),
     /**
@@ -71,7 +75,7 @@ class PanelEmpresaViewModel(
                 // selector de informes: ese selector es solo para las
                 // descargas, y los indicadores de arriba también hablan
                 // del mes en curso.
-                val ahora = YearMonth.now()
+                val ahora = YearMonth.now(DateFormats.ZONA_ESPANA)
                 val proyectosDiferido =
                     async { authRepository.getHorasPorProyecto(ahora.year, ahora.monthValue) }
                 val panel = panelDiferido.await()
@@ -314,7 +318,9 @@ class PanelEmpresaViewModel(
          * adelante no hay nada que informar, y un selector abierto
          * invitaría a pedir un informe vacío.
          */
-        fun mesesDisponibles(hoy: LocalDate = LocalDate.now()): List<YearMonth> {
+        fun mesesDisponibles(
+            hoy: LocalDate = LocalDate.now(DateFormats.ZONA_ESPANA)
+        ): List<YearMonth> {
             val actual = YearMonth.from(hoy)
             return (0..11).map { actual.minusMonths(it.toLong()) }
         }

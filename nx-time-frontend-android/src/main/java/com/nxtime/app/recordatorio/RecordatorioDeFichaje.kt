@@ -15,6 +15,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.nxtime.app.MainActivity
 import com.nxtime.app.NxTimeApplication
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.R
 import java.time.LocalDate
 import java.time.LocalTime
@@ -42,17 +43,32 @@ object RecordatorioDeFichaje {
     fun programar(context: Context, activo: Boolean, entrada: String, salida: String) {
         val work = WorkManager.getInstance(context)
         if (!activo) {
-            work.cancelUniqueWork(TRABAJO_ENTRADA)
-            work.cancelUniqueWork(TRABAJO_SALIDA)
+            cancelar(context)
             return
         }
         encolar(work, TRABAJO_ENTRADA, TipoDeAviso.ENTRADA, entrada)
         encolar(work, TRABAJO_SALIDA, TipoDeAviso.SALIDA, salida)
     }
 
+    /**
+     * Quita los recordatorios encolados.
+     *
+     * Hay que llamarlo al cerrar sesión. El trabajo periódico sobrevive a la
+     * sesión --vive en WorkManager, no en la app-- y hasta ahora nadie lo
+     * cancelaba: se salvaba de avisar a quien ya no tenía cuenta solo porque
+     * el Worker comprueba si hay token antes de hacer nada. Pero si en ese
+     * móvil entra **otra persona**, hereda los recordatorios y las horas de
+     * la anterior, que además son dato suyo.
+     */
+    fun cancelar(context: Context) {
+        val work = WorkManager.getInstance(context)
+        work.cancelUniqueWork(TRABAJO_ENTRADA)
+        work.cancelUniqueWork(TRABAJO_SALIDA)
+    }
+
     private fun encolar(work: WorkManager, nombre: String, tipo: TipoDeAviso, horaTexto: String) {
         val hora = ReglaDelRecordatorio.hora(horaTexto) ?: return
-        val retardo = ReglaDelRecordatorio.minutosHasta(hora, LocalTime.now())
+        val retardo = ReglaDelRecordatorio.minutosHasta(hora, LocalTime.now(DateFormats.ZONA_ESPANA))
 
         val peticion = PeriodicWorkRequestBuilder<RecordatorioWorker>(24, TimeUnit.HOURS)
             .setInitialDelay(retardo, TimeUnit.MINUTES)
@@ -107,7 +123,7 @@ class RecordatorioWorker(
             return Result.success()
         }
 
-        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now().dayOfWeek)) {
+        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now(DateFormats.ZONA_ESPANA).dayOfWeek)) {
             return Result.success()
         }
 

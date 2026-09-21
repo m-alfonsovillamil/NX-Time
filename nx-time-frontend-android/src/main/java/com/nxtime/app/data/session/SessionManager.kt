@@ -10,7 +10,22 @@ import kotlinx.coroutines.flow.asSharedFlow
  * Clase auxiliar para guardar datos de sesión en el móvil
  */
 
-class SessionManager(context: Context) {
+class SessionManager(
+    context: Context,
+    /**
+     * Lo que hay que deshacer fuera de estas preferencias al cerrar sesión.
+     *
+     * Hoy cancela los recordatorios de fichaje, que viven en WorkManager y
+     * sobreviven a la sesión: sin esto seguían encolados con las horas de
+     * quien se fue, y si en ese móvil entra otra persona los hereda.
+     *
+     * Se recibe como función en vez de llamar a WorkManager desde aquí para
+     * no atar el almacén de la sesión a la programación de tareas -- y para
+     * que valga por los tres caminos de salida sin tener que acordarse en
+     * cada uno.
+     */
+    private val alCerrarSesion: () -> Unit = {}
+) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("NXTIME_PREFS", Context.MODE_PRIVATE)
@@ -48,7 +63,12 @@ class SessionManager(context: Context) {
         editor.putString(KEY_REFRESH_TOKEN, refreshToken)
         editor.putString(KEY_USER_NAME, nombre)
         editor.putString(KEY_USER_ROLE, rol)
-        editor.commit()
+        // apply() y no commit(): esto se llama al entrar, desde el hilo
+        // principal, y commit() escribe en disco de forma bloqueante justo
+        // mientras la pantalla está pasando al inicio. apply() actualiza la
+        // copia en memoria al instante --así que el fetchAuthToken() de la
+        // petición siguiente ya ve el token-- y escribe en segundo plano.
+        editor.apply()
     }
 
     /**
@@ -70,7 +90,7 @@ class SessionManager(context: Context) {
      * (el refresh token no cambia).
      */
     fun updateAccessToken(token: String) {
-        prefs.edit().putString(KEY_AUTH_TOKEN, token).commit()
+        prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
     }
 
     /**
@@ -96,7 +116,14 @@ class SessionManager(context: Context) {
         editor.remove(KEY_REFRESH_TOKEN)
         editor.remove(KEY_USER_NAME)
         editor.remove(KEY_USER_ROLE)
+        // Aquí SÍ se mantiene commit(), al revés que en saveAuthData: una
+        // sesión que se cierra tiene que quedar cerrada en el disco antes de
+        // seguir. Con apply(), si el proceso muere en ese instante, los tokens
+        // seguirían escritos y quien cogiera el móvil después entraría solo.
+        // Es una operación única y bloquear unos milisegundos sale barato.
         editor.commit()
+
+        alCerrarSesion()
     }
 
     /**
