@@ -174,9 +174,22 @@ public class AuthServiceImpl implements AuthService {
      * así que se cierra la familia entera y los dos vuelven al login. Es
      * ruidoso a propósito: un robo silencioso dura treinta días; esto se nota
      * el mismo día.
+     *
+     * <b>{@code noRollbackFor} es lo más importante de este método</b>, igual
+     * que en {@code AccessCodeServiceImpl#confirmar} y por la misma razón:
+     * revocar la familia ES un cambio que tiene que persistir, y además se
+     * lanza. Con un {@code @Transactional} normal, la excepción deshace el
+     * UPDATE y la protección no protege nada -- el token robado queda revocado
+     * durante el tiempo que dura la transacción y vuelve a estar vivo al
+     * salir.
+     *
+     * No es teoría: se verificó contra producción. Rotar, reutilizar el token
+     * viejo y volver a usar el nuevo devolvía 200 cuando tenía que devolver
+     * 401. Los tests unitarios no lo veían porque con mocks no hay transacción
+     * que deshacer.
      */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = BadCredentialsException.class)
     public AuthenticationResponse refreshAccessToken(String refreshToken) {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hashDe(refreshToken))
                 .orElseThrow(() -> new BadCredentialsException("Refresh token inválido o caducado."));
