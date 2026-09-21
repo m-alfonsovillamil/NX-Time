@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -29,7 +30,23 @@ import org.springframework.context.annotation.Configuration;
                 description = "API REST del backend de NX Time: registro horario (fichaje), "
                         + "gestión de ausencias y administración de empleados, multi-tenant "
                         + "por empresa.",
-                contact = @Contact(name = "NX Time")))
+                contact = @Contact(name = "NX Time")),
+        /*
+         * Los servidores, declarados (Fase C1).
+         *
+         * Sin esto springdoc pone el "Generated server url", que es la
+         * dirección desde la que se pidió la spec. En docs/openapi.json quedó
+         * congelado como http://localhost:8099 --el puerto de la máquina donde
+         * se volcó aquella vez-- y cualquier cliente generado a partir de ese
+         * fichero apuntaría a un puerto que no existe en ningún sitio.
+         *
+         * Producción primero: es lo que hay que elegir por defecto al abrir
+         * Swagger UI desde el enlace del README.
+         */
+        servers = {
+                @Server(url = "https://nxtime-backend.onrender.com", description = "Producción"),
+                @Server(url = "http://localhost:8080", description = "Local (docker compose)")
+        })
 @SecurityScheme(
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,

@@ -101,6 +101,10 @@ jobs:
           path: |
             nx-time-backend/build/reports/tests/
             nx-time-backend/build/reports/jacoco/
+            # El contrato que el backend expone AHORA, cuando no coincide con
+            # docs/openapi.json (ver OpenApiSnapshotTest). Así se puede ver qué
+            # ha cambiado sin tener que reproducir el fallo en local.
+            nx-time-backend/build/openapi.json
           retention-days: 7
 
       # Reintento de Testcontainers, aparcado desde la Fase 3.

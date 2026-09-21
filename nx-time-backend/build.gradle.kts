@@ -157,6 +157,36 @@ tasks.withType<Test> {
 }
 
 /*
+ * Regenera docs/openapi.json (Fase C1).
+ *
+ * Es el mismo OpenApiSnapshotTest que corre en `check`, pero con la propiedad
+ * que le dice que ESCRIBA el fichero en vez de fallar cuando no coincide. Así
+ * hay un solo sitio que sabe cómo se normaliza la spec: si la generación y la
+ * comprobación fueran dos piezas distintas, la que se quedara atrás sería la
+ * de comprobar.
+ *
+ * Después del cambio, `git diff docs/openapi.json` enseña qué ha cambiado del
+ * contrato -- que es la revisión que antes no existía, porque el fichero se
+ * copiaba a mano.
+ *
+ * Requiere el PostgreSQL de docker-compose, como el resto de los tests que
+ * levantan el contexto.
+ */
+tasks.register<Test>("actualizarOpenApi") {
+    group = "documentation"
+    description = "Regenera docs/openapi.json a partir de los controladores."
+
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    filter { includeTestsMatching("*OpenApiSnapshotTest") }
+    systemProperty("openapi.escribir", "true")
+
+    // Sin esto Gradle lo daría por hecho si nada cambió desde la última vez, y
+    // el objetivo de lanzarlo a mano es justo volver a generarlo.
+    outputs.upToDateWhen { false }
+}
+
+/*
  * Cobertura de tests (JaCoCo). El umbral de la Fase 5 del plan de
  * profesionalización: que el build falle si la cobertura de "service"
  * o "controller" (las capas con lógica de negocio y autorización real)
