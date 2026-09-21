@@ -25,6 +25,7 @@ import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -61,6 +62,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * Requisito: `docker compose up -d postgres` (ver ApiContractTest).
  */
 @SpringBootTest
+@org.springframework.context.annotation.Import(AccessCodeIT.CapturaDeCodigos.class)
 class AccessCodeIT {
 
     @DynamicPropertySource
@@ -98,6 +100,8 @@ class AccessCodeIT {
     private RefreshTokenRepository refreshTokenRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private CapturaDeCodigos capturas;
 
     private User crearUsuario(String email, Role rol, String contrasena) {
         Company empresa = companyRepository.save(Company.builder().nombre("Empresa " + email).build());
@@ -106,10 +110,39 @@ class AccessCodeIT {
                 .rol(rol).empresa(empresa).build());
     }
 
+    /**
+     * El código que se le ha mandado a alguien.
+     *
+     * El alta sigue enviando dentro de la transacción, así que ahí se captura
+     * del propio EmailSender. La recuperación publica un evento y el correo
+     * sale después, AFTER_COMMIT y @Async (Fase A9): mirar el EmailSender ahí
+     * sería una carrera con otro hilo, así que se captura el evento, que es
+     * determinista.
+     */
     private String ultimoCodigoEnviadoA(String email) {
+        var delEvento = capturas.codigos.stream()
+                .filter(evento -> evento.email().equals(email))
+                .reduce((primero, ultimo) -> ultimo);
+        if (delEvento.isPresent()) {
+            return (String) delEvento.get().variables().get("codigo");
+        }
         ArgumentCaptor<Map<String, Object>> variables = ArgumentCaptor.captor();
         verify(emailSender, atLeastOnce()).enviarObligatorio(eq(email), anyString(), anyString(), variables.capture());
         return (String) variables.getValue().get("codigo");
+    }
+
+    /**
+     * Recoge los códigos de recuperación sin pasar por el envío asíncrono.
+     * Mismo patrón que {@code OvertimeServiceIT.CapturaDeResumenes}.
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class CapturaDeCodigos {
+        final List<NotificationEvents.AccessCodeRequested> codigos = new java.util.ArrayList<>();
+
+        @org.springframework.context.event.EventListener
+        void capturar(NotificationEvents.AccessCodeRequested evento) {
+            codigos.add(evento);
+        }
     }
 
     private List<AccessCode> codigosDe(User usuario) {
