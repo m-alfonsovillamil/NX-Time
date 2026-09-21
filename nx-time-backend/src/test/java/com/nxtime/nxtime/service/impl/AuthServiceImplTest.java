@@ -9,6 +9,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.RefreshToken;
@@ -42,6 +45,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Unitarios (Mockito) de autenticación, refresh tokens y gestión de
@@ -168,78 +172,176 @@ class AuthServiceImplTest {
         verify(authenticationManager, times(10)).authenticate(any());
     }
 
-    // ---- refreshAccessToken ----
+    // ---- refreshAccessToken (rotacion, Fase A11) ----
+
+    /** Como lo guarda el servicio: por el hash, nunca por el token. */
+    private RefreshToken guardado(String token, User user, java.util.UUID familia) {
+        return RefreshToken.builder()
+                .id(1L)
+                .tokenHash(AuthServiceImpl.hashDe(token))
+                .usuario(user)
+                .familia(familia)
+                .origen(RefreshToken.Origen.ANDROID)
+                .expiraEn(Instant.now().plusSeconds(3600))
+                .revocado(false)
+                .build();
+    }
 
     @Test
-    @DisplayName("refreshAccessToken con un token vivo emite un access token nuevo y reutiliza el mismo refresh token")
-    void refreshAccessToken_tokenVivo_emiteAccessTokenNuevo() {
+    @DisplayName("Renovar emite un refresh NUEVO y deja el anterior rotado y apuntando a su sucesor")
+    void refreshAccessToken_tokenVivo_rotaElRefresh() {
         User user = User.builder().id(1L).email("empleado@nxtime.test").rol(Role.EMPLEADO).build();
-        RefreshToken stored = RefreshToken.builder().id(1L).token("refresh-abc").usuario(user)
-                .expiraEn(Instant.now().plusSeconds(3600)).revocado(false).build();
-        when(refreshTokenRepository.findByToken("refresh-abc")).thenReturn(Optional.of(stored));
+        java.util.UUID familia = java.util.UUID.randomUUID();
+        RefreshToken stored = guardado("refresh-abc", user, familia);
+        when(refreshTokenRepository.findByTokenHash(AuthServiceImpl.hashDe("refresh-abc")))
+                .thenReturn(Optional.of(stored));
+        // El sucesor sale del save(), no de releerlo: dentro de la misma
+        // transacción el INSERT todavía no se ha volcado y una consulta por su
+        // hash no lo encontraría.
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AuthenticationResponse response = service.refreshAccessToken("refresh-abc");
 
         assertThat(response.token()).isEqualTo("access-token");
-        assertThat(response.refreshToken()).isEqualTo("refresh-abc");
+        // Lo que cambia respecto a antes: ya no devuelve el mismo.
+        assertThat(response.refreshToken()).isNotEqualTo("refresh-abc").isNotBlank();
+        assertThat(stored.estaRotado()).isTrue();
+        assertThat(stored.getSustituidoPor()).isNotNull();
     }
 
     @Test
-    @DisplayName("refreshAccessToken con un token que no existe lanza BadCredentialsException")
+    @DisplayName("El sucesor hereda la familia y el origen: sigue siendo la misma sesion")
+    void refreshAccessToken_elSucesorHeredaFamiliaYOrigen() {
+        User user = User.builder().id(1L).email("empleado@nxtime.test").rol(Role.EMPLEADO).build();
+        java.util.UUID familia = java.util.UUID.randomUUID();
+        RefreshToken stored = guardado("refresh-abc", user, familia);
+        stored.setOrigen(RefreshToken.Origen.WEB);
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(stored));
+
+        service.refreshAccessToken("refresh-abc");
+
+        ArgumentCaptor<RefreshToken> emitido = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository, atLeastOnce()).save(emitido.capture());
+        RefreshToken sucesor = emitido.getAllValues().get(0);
+        assertThat(sucesor.getFamilia()).isEqualTo(familia);
+        assertThat(sucesor.getOrigen()).isEqualTo(RefreshToken.Origen.WEB);
+    }
+
+    /*
+     * El caso que da sentido a toda la fase.
+     *
+     * Dos clientes con el mismo token rotado significa que alguien tiene una
+     * copia. No hay forma de saber cual es el legitimo, asi que caen los dos.
+     */
+    @Test
+    @DisplayName("Reutilizar un token YA ROTADO revoca la familia entera")
+    void refreshAccessToken_tokenReutilizado_revocaLaFamilia() {
+        User user = User.builder().id(1L).email("empleado@nxtime.test").build();
+        java.util.UUID familia = java.util.UUID.randomUUID();
+        RefreshToken rotado = guardado("refresh-viejo", user, familia);
+        rotado.setRotadoEn(Instant.now().minusSeconds(60));
+        rotado.setSustituidoPor(RefreshToken.builder().id(2L).build());
+        when(refreshTokenRepository.findByTokenHash(AuthServiceImpl.hashDe("refresh-viejo")))
+                .thenReturn(Optional.of(rotado));
+
+        assertThatThrownBy(() -> service.refreshAccessToken("refresh-viejo"))
+                .isInstanceOf(BadCredentialsException.class);
+
+        verify(refreshTokenRepository).revocarLaFamilia(eq(familia), any());
+    }
+
+    @Test
+    @DisplayName("Un token que no existe lanza BadCredentialsException, y no revoca nada")
     void refreshAccessToken_tokenInexistente_lanzaBadCredentialsException() {
-        when(refreshTokenRepository.findByToken("no-existe")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.refreshAccessToken("no-existe"))
                 .isInstanceOf(BadCredentialsException.class);
+        // Un token inventado no puede cerrarle la sesion a nadie.
+        verify(refreshTokenRepository, never()).revocarLaFamilia(any(), any());
     }
 
     @Test
-    @DisplayName("refreshAccessToken con un token revocado lanza BadCredentialsException")
+    @DisplayName("Un token revocado lanza BadCredentialsException")
     void refreshAccessToken_tokenRevocado_lanzaBadCredentialsException() {
         User user = User.builder().id(1L).email("empleado@nxtime.test").build();
-        RefreshToken stored = RefreshToken.builder().id(1L).token("refresh-abc").usuario(user)
-                .expiraEn(Instant.now().plusSeconds(3600)).revocado(true).build();
-        when(refreshTokenRepository.findByToken("refresh-abc")).thenReturn(Optional.of(stored));
+        RefreshToken stored = guardado("refresh-abc", user, java.util.UUID.randomUUID());
+        stored.revocar(Instant.now());
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> service.refreshAccessToken("refresh-abc"))
                 .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
-    @DisplayName("refreshAccessToken con un token caducado lanza BadCredentialsException")
+    @DisplayName("Un token caducado lanza BadCredentialsException")
     void refreshAccessToken_tokenCaducado_lanzaBadCredentialsException() {
         User user = User.builder().id(1L).email("empleado@nxtime.test").build();
-        RefreshToken stored = RefreshToken.builder().id(1L).token("refresh-abc").usuario(user)
-                .expiraEn(Instant.now().minusSeconds(1)).revocado(false).build();
-        when(refreshTokenRepository.findByToken("refresh-abc")).thenReturn(Optional.of(stored));
+        RefreshToken stored = guardado("refresh-abc", user, java.util.UUID.randomUUID());
+        stored.setExpiraEn(Instant.now().minusSeconds(1));
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(stored));
 
         assertThatThrownBy(() -> service.refreshAccessToken("refresh-abc"))
                 .isInstanceOf(BadCredentialsException.class);
+    }
+
+    @Test
+    @DisplayName("El token no se guarda en claro: en la base solo queda su sha256")
+    void login_guardaSoloElHashDelRefresh() {
+        User user = User.builder().id(1L).email("empleado@nxtime.test").rol(Role.EMPLEADO).build();
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+        AuthenticationResponse respuesta = service.login(new LoginRequest(user.getEmail(), "password"));
+
+        ArgumentCaptor<RefreshToken> emitido = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(emitido.capture());
+        assertThat(emitido.getValue().getTokenHash())
+                .isEqualTo(AuthServiceImpl.hashDe(respuesta.refreshToken()))
+                .isNotEqualTo(respuesta.refreshToken());
+    }
+
+    @Test
+    @DisplayName("Un login desde la web da un refresh de 12 horas, no de 30 dias")
+    void login_desdeWeb_duraMenos() {
+        User user = User.builder().id(1L).email("empleado@nxtime.test").rol(Role.EMPLEADO).build();
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+        service.login(new LoginRequest(user.getEmail(), "password", "WEB"));
+
+        ArgumentCaptor<RefreshToken> emitido = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(emitido.capture());
+        assertThat(emitido.getValue().getOrigen()).isEqualTo(RefreshToken.Origen.WEB);
+        // Un navegador es una maquina que carga codigo de terceros y que a
+        // menudo se comparte.
+        assertThat(emitido.getValue().getExpiraEn())
+                .isBefore(Instant.now().plus(java.time.Duration.ofHours(13)));
     }
 
     // ---- logout ----
 
     @Test
-    @DisplayName("logout de un token existente lo revoca")
-    void logout_tokenExistente_loRevoca() {
+    @DisplayName("logout revoca la FAMILIA entera, no solo el token que trae el cliente")
+    void logout_tokenExistente_revocaLaFamilia() {
         User user = User.builder().id(1L).email("empleado@nxtime.test").build();
-        RefreshToken stored = RefreshToken.builder().id(1L).token("refresh-abc").usuario(user).revocado(false).build();
-        when(refreshTokenRepository.findByToken("refresh-abc")).thenReturn(Optional.of(stored));
+        java.util.UUID familia = java.util.UUID.randomUUID();
+        RefreshToken stored = guardado("refresh-abc", user, familia);
+        when(refreshTokenRepository.findByTokenHash(AuthServiceImpl.hashDe("refresh-abc")))
+                .thenReturn(Optional.of(stored));
 
         service.logout("refresh-abc");
 
-        assertThat(stored.isRevocado()).isTrue();
-        verify(refreshTokenRepository).save(stored);
+        // Si cayera solo este, un token anterior de la cadena podria reabrirla.
+        verify(refreshTokenRepository).revocarLaFamilia(eq(familia), any());
     }
 
     @Test
     @DisplayName("logout de un token que no existe es idempotente (no lanza, no revela nada)")
     void logout_tokenInexistente_esIdempotente() {
-        when(refreshTokenRepository.findByToken("no-existe")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
         service.logout("no-existe");
 
-        verify(refreshTokenRepository, never()).save(any());
+        verify(refreshTokenRepository, never()).revocarLaFamilia(any(), any());
     }
 
     // ---- createEmployee / createManager ----
@@ -349,14 +451,14 @@ class AuthServiceImplTest {
     @DisplayName("cerrarTodasLasSesiones revoca los refresh tokens y no toca la contraseña")
     void cerrarTodasLasSesiones_revocaLosRefreshTokens() {
         User user = User.builder().id(1L).email("ana@nxtime.test").contrasena("hash").build();
-        when(refreshTokenRepository.revocarTodasLasDe(user)).thenReturn(3);
+        when(refreshTokenRepository.revocarTodasLasDe(eq(user), any())).thenReturn(3);
 
         service.cerrarTodasLasSesiones(user);
 
         // Lo que se corta es la capacidad de RENOVAR: la contraseña sigue
         // valiendo, porque esto no es un robo de credenciales sino "quiero
         // echar a quien haya quedado dentro en otro móvil".
-        verify(refreshTokenRepository).revocarTodasLasDe(user);
+        verify(refreshTokenRepository).revocarTodasLasDe(eq(user), any());
         assertThat(user.getContrasena()).isEqualTo("hash");
         verify(userRepository, never()).save(any());
     }

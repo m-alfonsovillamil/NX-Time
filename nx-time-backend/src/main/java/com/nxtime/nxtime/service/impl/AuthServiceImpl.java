@@ -23,8 +23,12 @@ import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.HexFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -136,32 +140,83 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + request.email()));
 
         log.info("Login correcto: {}", user.getEmail());
-        return buildAuthResponse(user);
+        return buildAuthResponse(user, origenDe(request.origen()));
     }
 
+    /**
+     * El origen que declara el cliente, o ANDROID si no dice nada.
+     *
+     * Un valor desconocido tampoco es un error: se trata como "no lo ha
+     * dicho". Rechazar el login por un campo que solo decide una caducidad
+     * sería dejar fuera a alguien por algo que no importa.
+     */
+    private RefreshToken.Origen origenDe(String declarado) {
+        if (declarado == null || declarado.isBlank()) {
+            return RefreshToken.Origen.ANDROID;
+        }
+        try {
+            return RefreshToken.Origen.valueOf(declarado.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException desconocido) {
+            log.warn("Origen de login desconocido: '{}'. Se trata como ANDROID.", declarado);
+            return RefreshToken.Origen.ANDROID;
+        }
+    }
+
+    /**
+     * Renueva el access token y ROTA el refresh (Fase A11).
+     *
+     * Devuelve siempre un refresh nuevo: el que se presenta queda marcado y no
+     * vuelve a valer. Quien llame tiene que guardarlo, o su siguiente
+     * renovación fallará.
+     *
+     * Si el token que llega ya estaba rotado, hay dos clientes usando la misma
+     * cadena y solo uno puede ser el legítimo. No hay forma de distinguirlos,
+     * así que se cierra la familia entera y los dos vuelven al login. Es
+     * ruidoso a propósito: un robo silencioso dura treinta días; esto se nota
+     * el mismo día.
+     */
     @Override
     @Transactional
     public AuthenticationResponse refreshAccessToken(String refreshToken) {
-        RefreshToken stored = refreshTokenRepository.findByToken(refreshToken)
+        RefreshToken stored = refreshTokenRepository.findByTokenHash(hashDe(refreshToken))
                 .orElseThrow(() -> new BadCredentialsException("Refresh token inválido o caducado."));
+
+        if (stored.estaRotado()) {
+            int cerradas = refreshTokenRepository.revocarLaFamilia(stored.getFamilia(), Instant.now());
+            // warn y no error: es un escenario previsto, y probablemente el
+            // que más interesa ver en Sentry de todo el módulo de sesiones.
+            log.warn("Refresh token REUTILIZADO por {}: esa cadena ya se había rotado. "
+                    + "Cerradas {} sesiones de la familia.", stored.getUsuario().getEmail(), cerradas);
+            throw new BadCredentialsException("Refresh token inválido o caducado.");
+        }
 
         if (!stored.estaVivo()) {
             throw new BadCredentialsException("Refresh token inválido o caducado.");
         }
 
         User user = stored.getUsuario();
-        String newAccessToken = jwtService.generateToken(new SecurityUser(user));
+        // El sucesor conserva familia y origen: es la misma sesión, con otro
+        // token.
+        TokenEmitido sucesor = issueRefreshToken(user, stored.getOrigen(), stored.getFamilia());
 
+        stored.setRotadoEn(Instant.now());
+        stored.setSustituidoPor(sucesor.fila());
+        refreshTokenRepository.save(stored);
+
+        String newAccessToken = jwtService.generateToken(new SecurityUser(user));
         log.info("Access token renovado para {}", user.getEmail());
-        return new AuthenticationResponse(newAccessToken, stored.getToken(), user.getNombre(), user.getRol());
+        return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol());
     }
 
     @Override
     @Transactional
     public void logout(String refreshToken) {
-        refreshTokenRepository.findByToken(refreshToken).ifPresent(stored -> {
-            stored.setRevocado(true);
-            refreshTokenRepository.save(stored);
+        refreshTokenRepository.findByTokenHash(hashDe(refreshToken)).ifPresent(stored -> {
+            // Se revoca la FAMILIA entera y no solo este token: cerrar sesion
+            // tiene que cerrar la sesion, no el eslabon que el cliente tuviera
+            // a mano. Si cayera solo este, un token anterior de la cadena
+            // seguiria pudiendo reabrirla.
+            refreshTokenRepository.revocarLaFamilia(stored.getFamilia(), Instant.now());
             log.info("Sesión cerrada para {}", stored.getUsuario().getEmail());
         });
         // Si el token no existe, no pasa nada -- logout es idempotente y
@@ -243,7 +298,7 @@ public class AuthServiceImpl implements AuthService {
         // (ver AccessCodeServiceImpl), y por el mismo motivo: si alguien
         // pudo entrar con tu cuenta, lo que hay que cortar es su capacidad
         // de RENOVAR el acceso, que es lo que la hace duradera.
-        int cerradas = refreshTokenRepository.revocarTodasLasDe(user);
+        int cerradas = refreshTokenRepository.revocarTodasLasDe(user, Instant.now());
         log.info("{} ha cerrado la sesión en todos sus dispositivos ({} revocadas)",
                 user.getEmail(), cerradas);
     }
@@ -277,23 +332,72 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private AuthenticationResponse buildAuthResponse(User user) {
-        String accessToken = jwtService.generateToken(new SecurityUser(user));
-        String refreshToken = issueRefreshToken(user);
-        return new AuthenticationResponse(accessToken, refreshToken, user.getNombre(), user.getRol());
+        return buildAuthResponse(user, RefreshToken.Origen.ANDROID);
     }
 
-    private String issueRefreshToken(User user) {
+    private AuthenticationResponse buildAuthResponse(User user, RefreshToken.Origen origen) {
+        String accessToken = jwtService.generateToken(new SecurityUser(user));
+        // Familia nueva en cada login: así cerrar una sesión comprometida no
+        // arrastra a las demás de esa persona.
+        TokenEmitido refreshToken = issueRefreshToken(user, origen, UUID.randomUUID());
+        return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol());
+    }
+
+    /**
+     * Un token recién emitido: su valor en claro y la fila que lo representa.
+     *
+     * Van juntos porque quien rota necesita las dos cosas --el valor para
+     * devolverlo y la fila para enlazarla como sucesor-- y releer la fila por
+     * su hash justo después de guardarla no funciona: dentro de la misma
+     * transacción el INSERT todavía no se ha volcado, así que la consulta no
+     * lo encuentra.
+     */
+    private record TokenEmitido(String token, RefreshToken fila) {
+    }
+
+    /**
+     * Emite un refresh token. El valor EN CLARO solo existe en lo que
+     * devuelve: en la base queda su sha256.
+     *
+     * La vida la decide el origen y no la configuración: un navegador dura
+     * doce horas y un móvil treinta días (ver {@link RefreshToken.Origen}). La
+     * propiedad {@code refresh-expiration} sigue marcando el techo, para que
+     * bajarla siga sirviendo de freno global.
+     */
+    private TokenEmitido issueRefreshToken(User user, RefreshToken.Origen origen, UUID familia) {
         String token = UUID.randomUUID().toString();
         Instant now = Instant.now();
 
-        RefreshToken refreshToken = RefreshToken.builder()
-                .token(token)
-                .usuario(user)
-                .creadoEn(now)
-                .expiraEn(now.plus(refreshExpirationMillis, ChronoUnit.MILLIS))
-                .build();
+        Duration porOrigen = origen.duracion();
+        Duration techo = Duration.ofMillis(refreshExpirationMillis);
+        Duration vida = porOrigen.compareTo(techo) <= 0 ? porOrigen : techo;
 
-        refreshTokenRepository.save(refreshToken);
-        return token;
+        RefreshToken fila = refreshTokenRepository.save(RefreshToken.builder()
+                .tokenHash(hashDe(token))
+                .usuario(user)
+                .familia(familia)
+                .origen(origen)
+                .creadoEn(now)
+                .expiraEn(now.plus(vida))
+                .build());
+        return new TokenEmitido(token, fila);
+    }
+
+    /**
+     * El sha256 de un token, en hexadecimal.
+     *
+     * Ver {@link RefreshToken#getTokenHash()} para por qué SHA-256 y no
+     * BCrypt: esto no es una contraseña elegida por nadie sino un UUID
+     * aleatorio, y lo que se busca es que la base no contenga nada
+     * reutilizable, no resistir un diccionario.
+     */
+    static String hashDe(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 está garantizado en cualquier JVM estándar.
+            throw new IllegalStateException("SHA-256 no disponible en esta JVM", e);
+        }
     }
 }

@@ -536,6 +536,15 @@ interface ApiService {
     @GET("api/v1/perfil")
     suspend fun getMiPerfil(): Response<PerfilDTO>
 
+    /**
+     * Comprueba la contraseña de quien ya está dentro. 204 si es correcta,
+     * 401 si no. No emite tokens ni abre sesión.
+     */
+    @POST("api/v1/perfil/verificar-contrasena")
+    suspend fun verificarContrasena(
+        @Body peticion: VerificarContrasenaRequest
+    ): Response<Unit>
+
     @PATCH("api/v1/perfil")
     suspend fun actualizarMiPerfil(@Body cambios: ActualizarPerfilRequest): Response<PerfilDTO>
 

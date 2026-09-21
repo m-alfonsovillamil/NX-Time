@@ -4,6 +4,7 @@ import com.nxtime.nxtime.dto.PersonalDataExport;
 import com.nxtime.nxtime.dto.ProfileResponse;
 import com.nxtime.nxtime.report.PersonalDataPdfGenerator;
 import com.nxtime.nxtime.dto.UpdateProfileRequest;
+import com.nxtime.nxtime.dto.VerifyPasswordRequest;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.EmployeeProfileService;
 import com.nxtime.nxtime.service.PersonalDataExportService;
@@ -30,6 +31,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.BadCredentialsException;
 
 /**
  * El perfil propio y el de los compañeros (Fase B).
@@ -50,14 +54,17 @@ public class ProfileController {
     private final EmployeeProfileService employeeProfileService;
     private final PersonalDataExportService exportService;
     private final PersonalDataPdfGenerator exportPdfGenerator;
+    private final PasswordEncoder passwordEncoder;
 
     public ProfileController(
             EmployeeProfileService employeeProfileService,
             PersonalDataExportService exportService,
-            PersonalDataPdfGenerator exportPdfGenerator) {
+            PersonalDataPdfGenerator exportPdfGenerator,
+            PasswordEncoder passwordEncoder) {
         this.employeeProfileService = employeeProfileService;
         this.exportService = exportService;
         this.exportPdfGenerator = exportPdfGenerator;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Operation(summary = "Mi perfil",
@@ -94,6 +101,32 @@ public class ProfileController {
             @Valid @RequestBody UpdateProfileRequest request,
             @AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(employeeProfileService.updateMyProfile(request, usuario.getUser()));
+    }
+
+    @Operation(summary = "Comprobar mi propia contraseña",
+            description = "Responde 204 si es correcta y 401 si no, y no hace nada más: no emite "
+                    + "tokens, no abre sesión y no consume el límite de intentos del login. Lo usa "
+                    + "la app para activar la huella, que antes hacía un /auth/login completo -- y "
+                    + "eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "La contraseña es correcta"),
+            @ApiResponse(responseCode = "400", description = "Contraseña vacía",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado, o la contraseña no es correcta",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/verificar-contrasena")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> verificarContrasena(
+            @Valid @RequestBody VerifyPasswordRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        // La comprobación es contra el hash de ESTA persona, la que trae el
+        // token: no se acepta un email, así que esto no sirve para probar
+        // contraseñas de nadie más.
+        if (!passwordEncoder.matches(request.contrasena(), usuario.getUser().getContrasena())) {
+            throw new BadCredentialsException("Credenciales incorrectas.");
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "El perfil de un compañero",

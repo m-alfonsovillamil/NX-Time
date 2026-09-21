@@ -408,6 +408,10 @@ class AuthRepositoryImpl(
         )
     }
 
+    override suspend fun verificarContrasena(contrasena: String): Response<Unit> {
+        return apiService.verificarContrasena(VerificarContrasenaRequest(contrasena))
+    }
+
     override suspend fun getMiPerfil(): Response<PerfilDTO> {
         return apiService.getMiPerfil()
     }

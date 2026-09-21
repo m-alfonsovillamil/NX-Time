@@ -14,7 +14,23 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "La contraseña es obligatoria.")
-        String contrasena
+        String contrasena,
+
+        /**
+         * Desde dónde se entra: ANDROID, IOS o WEB (Fase A11).
+         *
+         * Decide cuánto vive el refresh token, y por eso lo dice el cliente y
+         * no se adivina de la cabecera {@code User-Agent}: un navegador dura
+         * doce horas y un móvil treinta días (ver
+         * {@code RefreshToken.Origen}).
+         *
+         * <b>Opcional, y con ANDROID por defecto</b>: la app publicada no lo
+         * manda y no tiene por qué cambiar de comportamiento por esto. Un
+         * cliente que mienta solo se perjudica a sí mismo --nadie consigue más
+         * permisos declarando otro origen, solo otra caducidad--, así que no
+         * hace falta comprobarlo.
+         */
+        String origen
 ) {
 
     /**
@@ -24,5 +40,10 @@ public record LoginRequest(
      */
     public LoginRequest {
         email = Emails.normalizar(email);
+    }
+
+    /** Lo que mandan los clientes que no declaran de dónde vienen. */
+    public LoginRequest(String email, String contrasena) {
+        this(email, contrasena, null);
     }
 }

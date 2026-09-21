@@ -94,6 +94,21 @@ class SessionManager(
     }
 
     /**
+     * Guarda el par que devuelve `/auth/refresh` desde que el servidor rota.
+     *
+     * Los dos juntos y en una sola escritura, no dos llamadas seguidas: si el
+     * proceso muriera entre medias quedaría un access nuevo con un refresh ya
+     * rotado, y la siguiente renovación cerraría la sesión entera al
+     * interpretarse como una reutilización.
+     */
+    fun actualizarTokens(token: String, refreshToken: String) {
+        prefs.edit()
+            .putString(KEY_AUTH_TOKEN, token)
+            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .apply()
+    }
+
+    /**
      * Obtiene el nombre del usuario guardado.
      */
     fun fetchUserName(): String? {

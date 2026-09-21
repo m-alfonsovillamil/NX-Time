@@ -153,7 +153,7 @@ class AccessCodeIT {
         User actualizado = userRepository.findByEmail(usuario.getEmail()).orElseThrow();
         assertThat(passwordEncoder.matches("nuevaSegura123", actualizado.getContrasena())).isTrue();
         assertThat(codigosDe(usuario).get(0).getUsadoEn()).isNotNull();
-        assertThat(refreshTokenRepository.findByToken(sesion.refreshToken()).orElseThrow().isRevocado()).isTrue();
+        assertThat(refreshTokenRepository.findByTokenHash(com.nxtime.nxtime.service.impl.AuthServiceImpl.hashDe(sesion.refreshToken())).orElseThrow().isRevocado()).isTrue();
         assertThatThrownBy(() -> authService.refreshAccessToken(sesion.refreshToken()))
                 .isInstanceOf(BadCredentialsException.class);
         assertThat(authService.login(new LoginRequest(usuario.getEmail(), "nuevaSegura123")).token()).isNotBlank();

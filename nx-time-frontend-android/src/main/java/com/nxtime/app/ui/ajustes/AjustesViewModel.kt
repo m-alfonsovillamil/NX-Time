@@ -129,16 +129,22 @@ class AjustesViewModel(
         _uiState.update { it.copy(verificandoContrasena = true, error = null) }
         viewModelScope.launch {
             try {
-                val perfil = authRepository.getMiPerfil()
-                val correo = perfil.body()?.email
-                if (!perfil.isSuccessful || correo == null) {
-                    _uiState.update {
-                        it.copy(verificandoContrasena = false, error = ApiErrorParser.mensajeDe(perfil))
-                    }
-                    return@launch
-                }
-
-                val respuesta = authRepository.login(PeticionLogin(correo, contrasena))
+                // Un endpoint que solo dice sí o no, en vez de un login
+                // completo (Fase A11). Hacer login para comprobar la
+                // contraseña tenía tres efectos que nadie quería: emitía
+                // tokens nuevos y los guardaba encima de los que había, dejaba
+                // vivo en el servidor el refresh anterior --sesiones abiertas
+                // acumulándose-- y consumía el límite de intentos del login,
+                // así que activar la huella varias veces podía dejar a alguien
+                // sin poder entrar.
+                //
+                // Con la rotación de refresh tokens el segundo punto pasa de
+                // molesto a incorrecto, así que esto dejó de ser una comodidad.
+                //
+                // De paso se ahorra la consulta del perfil: ya no hace falta
+                // saber el correo, porque el servidor comprueba contra quien
+                // trae el token.
+                val respuesta = authRepository.verificarContrasena(contrasena)
                 if (respuesta.isSuccessful) {
                     ajustes.cambiarHuella(true)
                     _uiState.update {

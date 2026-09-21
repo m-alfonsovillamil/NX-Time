@@ -28,3 +28,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [016](016-borrar-sin-borrar-el-registro-horario.md) | Borrar los datos de alguien sin borrar su registro horario |
 | [017](017-imputacion-por-jornada.md) | Las horas de un proyecto se imputan por jornada, no se deducen por día |
 | [018](018-la-cadena-de-auditoria-se-serializa-en-postgres.md) | La cadena de auditoría se serializa en PostgreSQL, no en la JVM |
+| [019](019-el-refresh-token-se-hashea-y-se-rota.md) | El refresh token se hashea, se rota, y reutilizarlo revoca la familia |
