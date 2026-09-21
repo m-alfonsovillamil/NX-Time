@@ -96,6 +96,24 @@ class UserRepositoryDestinatariosIT extends AbstractRepositoryTest {
                 .containsExactly(admin);
     }
 
+    /*
+     * Lo que el panel de empresa cuenta como "empleados activos" (Fase A6).
+     * Antes traía a toda la plantilla y filtraba con un stream, así que esa
+     * regla se podía probar sin base de datos; ahora la aplica la consulta, y
+     * este es el sitio donde se comprueba de verdad.
+     */
+    @Test
+    @DisplayName("El contador de empleados activos no cuenta bajas, otros roles ni otras empresas")
+    void contarEmpleadosActivos() {
+        alta(empresa, "otra_empleada", Role.EMPLEADO, true);
+        alta(empresa, "empleado_de_baja", Role.EMPLEADO, false);
+        alta(otraEmpresa, "empleado_ajeno", Role.EMPLEADO, true);
+
+        // La de arriba más la 'ana' del setUp: dos. Ni la de baja, ni la de la
+        // otra empresa, ni gestor/rrhh/admin, que no son EMPLEADO.
+        assertThat(userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO)).isEqualTo(2);
+    }
+
     @Test
     @DisplayName("La plantilla activa de una empresa excluye bajas y ajenos")
     void plantillaActiva() {

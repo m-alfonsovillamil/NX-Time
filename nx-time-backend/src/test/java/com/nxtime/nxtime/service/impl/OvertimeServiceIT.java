@@ -584,6 +584,36 @@ class OvertimeServiceIT {
                 .isZero();
     }
 
+    /**
+     * El contador del panel y la bandeja tienen que decir lo mismo (Fase A6).
+     *
+     * El contador pasó a ser un COUNT en SQL en vez de traerse la bandeja
+     * entera y medir la lista. Eso obliga a repetir en la consulta dos
+     * condiciones que el listado aplica en Java --el estado, y que los avisos
+     * propios no entran en la bandeja de revisión porque sobre lo tuyo no
+     * decides tú--. Este test es lo que impide que las dos copias se separen:
+     * compara las dos respuestas sobre los mismos datos, incluido el caso que
+     * las distingue (el gestor con un exceso suyo).
+     */
+    @Test
+    @DisplayName("el contador de pendientes coincide con la bandeja, incluidos los avisos propios del gestor")
+    void contadorYBandejaCoinciden() {
+        fichar(empleado, LUNES, 11);
+        // Un exceso del propio gestor: está en la base, pero NO es de su
+        // bandeja. Si el COUNT se olvidara de excluirlo, diría uno de más.
+        fichar(gestor, LUNES, 11);
+        detectarLaSemana();
+
+        long deLaBandeja = overtimeService.delEquipo(gestor, LUNES.getYear()).stream()
+                .filter(aviso -> OvertimeStatus.ABIERTO.name().equals(aviso.estado()))
+                .count();
+
+        assertThat(overtimeService.contarAbiertosDelEquipo(gestor, LUNES.getYear()))
+                .as("el contador del panel no puede discrepar de la bandeja")
+                .isEqualTo(deLaBandeja)
+                .isPositive();
+    }
+
     @Test
     @DisplayName("un aviso de otra empresa no se puede revisar")
     void aislamientoEntreEmpresas() {

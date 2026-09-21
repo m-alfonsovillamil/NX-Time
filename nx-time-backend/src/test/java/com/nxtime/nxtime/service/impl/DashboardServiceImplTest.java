@@ -223,10 +223,12 @@ class DashboardServiceImplTest {
         User gestor = User.builder().id(20L).email("gestor@nxtime.test")
                 .rol(Role.GESTOR).empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
-        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of(
-                User.builder().id(1L).activo(true).build(),
-                User.builder().id(2L).activo(true).build(),
-                User.builder().id(3L).activo(false).build())); // dado de baja
+        // Desde la Fase A6 el filtro de "activo" lo hace la consulta, no un
+        // stream: aquí se comprueba que el panel usa el contador que lo aplica
+        // y propaga su resultado. Que la consulta cuente de verdad solo a los
+        // dados de alta lo comprueba UserRepositoryDestinatariosIT contra
+        // PostgreSQL real.
+        when(userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO)).thenReturn(2L);
         when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
 
         CompanyDashboardResponse resumen = service.getCompanyDashboard(gestor.getEmail());
@@ -242,7 +244,7 @@ class DashboardServiceImplTest {
         User gestor = User.builder().id(20L).email("gestor@nxtime.test")
                 .rol(Role.GESTOR).empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
-        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
+        when(userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO)).thenReturn(0L);
         when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
         when(timeEntryRepository.contarIncidenciasAbiertas(empresa)).thenReturn(4L);
         when(absenceRequestRepository.countByEmpresa_IdAndEstado(empresa.getId(), AbsenceStatus.PENDIENTE))
@@ -263,7 +265,7 @@ class DashboardServiceImplTest {
         User gestor = User.builder().id(20L).email("gestor@nxtime.test")
                 .rol(Role.GESTOR).empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
-        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
+        when(userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO)).thenReturn(0L);
         when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
 
         CompanyDashboardResponse resumen = service.getCompanyDashboard(gestor.getEmail());
@@ -278,7 +280,7 @@ class DashboardServiceImplTest {
         User admin = User.builder().id(21L).email("admin@nxtime.test")
                 .rol(Role.ADMIN).empresa(empresa).build();
         when(userRepository.findByEmail(admin.getEmail())).thenReturn(Optional.of(admin));
-        when(userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO)).thenReturn(List.of());
+        when(userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO)).thenReturn(0L);
         when(timeEntryRepository.sumarSegundosPorEmpleado(anyLong(), any(), any())).thenReturn(List.of());
         when(complaintRepository.contarAbiertas(empresa.getId())).thenReturn(3L);
 

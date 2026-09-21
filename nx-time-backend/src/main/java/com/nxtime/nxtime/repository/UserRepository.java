@@ -21,6 +21,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByEmpresaAndRol(Company empresa, Role rol);
 
     /**
+     * Cuánta gente activa hay con ese rol (Fase A6).
+     *
+     * El panel de empresa contaba con {@code findByEmpresaAndRol(...).stream()
+     * .filter(User::isActivo).count()}: traía a toda la plantilla para devolver
+     * un número.
+     */
+    long countByEmpresaAndRolAndActivoTrue(Company empresa, Role rol);
+
+    /**
      * A quién hay que avisar de algo, resuelto en la base (Fase A5).
      *
      * Sustituye al patrón de traer {@code findByEmpresa(empresa)} entero y

@@ -68,19 +68,22 @@ public class PendingWorkServiceImpl implements PendingWorkService {
 
         // Sin la authority de una bandeja, 0 y no un 403: el panel pide los
         // tres de una vez, y un GESTOR sin alguna no debe quedarse sin los otros.
+        // Contadores, no listas (Fase A6). Los tres pedían la bandeja entera
+        // --con sus entidades y su mapeo a DTO-- para quedarse con el tamaño.
+        // El de correcciones era el peor: el mapeo consulta el reparto por
+        // proyecto de CADA solicitud.
         int ausencias = authorities.contains("ausencia:aprobar")
-                ? absenceService.getPendingRequests(actor.getEmail()).size()
+                ? (int) absenceService.contarPendientes(actor)
                 : 0;
 
-        int correcciones = correctionService.pendientesParaMi(actor).size();
+        int correcciones = (int) correctionService.contarPendientesParaMi(actor);
 
         // El mismo año que la bandeja cuando no se le pasa ninguno (ver
         // OvertimeController.anioOEsteAnio), y solo los ABIERTO: los ya
         // aceptados o justificados no esperan nada.
         int horasExtra = authorities.contains("horasextra:revisar")
-                ? (int) overtimeService.delEquipo(actor, LocalDate.now(clock.withZone(MADRID)).getYear()).stream()
-                        .filter(aviso -> OvertimeStatus.ABIERTO.name().equals(aviso.estado()))
-                        .count()
+                ? (int) overtimeService.contarAbiertosDelEquipo(
+                        actor, LocalDate.now(clock.withZone(MADRID)).getYear())
                 : 0;
 
         // Todas las de la empresa, como la bandeja: no hay reparto de quién

@@ -64,13 +64,16 @@ class PendingWorkServiceImplTest {
     }
 
     @Test
-    @DisplayName("Cada contador es el tamaño de lo que devuelve su bandeja")
+    @DisplayName("Cada contador viene del contador de su bandeja, no de medir la lista")
     void cuentaLoMismoQueLasBandejas() {
         User gestora = con(Role.GESTOR);
-        when(absenceService.getPendingRequests("alguien@test"))
-                .thenReturn(List.of(mock(AbsenceResponse.class), mock(AbsenceResponse.class)));
-        when(correctionService.pendientesParaMi(gestora)).thenReturn(List.of(mock(CorrectionResponse.class)));
-        when(overtimeService.delEquipo(eq(gestora), anyInt())).thenReturn(List.of(aviso("ABIERTO")));
+        // Desde la Fase A6 el panel NO pide las bandejas: pide sus contadores.
+        // Pedirlas para hacer size() traía cada petición, cada solicitud y cada
+        // aviso --y, en correcciones, una consulta más por solicitud para el
+        // reparto por proyecto-- solo para devolver cuatro números.
+        when(absenceService.contarPendientes(gestora)).thenReturn(2L);
+        when(correctionService.contarPendientesParaMi(gestora)).thenReturn(1L);
+        when(overtimeService.contarAbiertosDelEquipo(eq(gestora), anyInt())).thenReturn(1L);
 
         PendingWorkResponse contadores = service.contar(gestora);
 
@@ -80,13 +83,18 @@ class PendingWorkServiceImplTest {
     /*
      * La bandeja de horas extra enseña TODOS los avisos del año, también los
      * ya decididos. El contador dice lo que espera una decisión: solo ABIERTO.
+     *
+     * Desde la Fase A6 ese filtro va dentro de la consulta en vez de aplicarse
+     * sobre la bandeja ya cargada, así que aquí se comprueba que el panel usa
+     * el contador y propaga su resultado. Que el contador y la bandeja no
+     * puedan discrepar lo vigila OvertimeServiceIT, que compara los dos sobre
+     * los mismos datos.
      */
     @Test
-    @DisplayName("Las horas extra ya aceptadas o justificadas no cuentan como pendientes")
+    @DisplayName("Las horas extra pendientes salen del contador, que ya excluye las decididas")
     void horasExtra_soloLasAbiertas() {
         User gestora = con(Role.GESTOR);
-        when(overtimeService.delEquipo(eq(gestora), anyInt()))
-                .thenReturn(List.of(aviso("ABIERTO"), aviso("ACEPTADO"), aviso("JUSTIFICADO"), aviso("ABIERTO")));
+        when(overtimeService.contarAbiertosDelEquipo(eq(gestora), anyInt())).thenReturn(2L);
 
         assertThat(service.contar(gestora).horasExtra()).isEqualTo(2);
     }
@@ -98,7 +106,7 @@ class PendingWorkServiceImplTest {
 
         service.contar(gestora);
 
-        verify(overtimeService).delEquipo(gestora, 2027);
+        verify(overtimeService).contarAbiertosDelEquipo(gestora, 2027);
     }
 
     /*
@@ -109,11 +117,11 @@ class PendingWorkServiceImplTest {
     @DisplayName("Sin permiso para una bandeja su contador es 0, y no se llega a consultar")
     void sinPermiso_ceroSinConsultar() {
         User empleado = con(Role.EMPLEADO);
-        when(correctionService.pendientesParaMi(any())).thenReturn(List.of());
+        when(correctionService.contarPendientesParaMi(any())).thenReturn(0L);
 
         assertThat(service.contar(empleado)).isEqualTo(new PendingWorkResponse(0, 0, 0, 0));
-        verify(absenceService, never()).getPendingRequests(anyString());
-        verify(overtimeService, never()).delEquipo(any(), anyInt());
+        verify(absenceService, never()).contarPendientes(any());
+        verify(overtimeService, never()).contarAbiertosDelEquipo(any(), anyInt());
         verify(dataDeletionService, never()).contarPendientes(any());
     }
 

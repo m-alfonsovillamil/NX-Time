@@ -4,6 +4,7 @@ import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
+import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,6 +22,9 @@ public interface AbsenceService {
     List<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta);
 
     List<AbsenceResponse> getPendingRequests(String managerEmail);
+
+    /** Cuántas peticiones esperan decisión, sin traerlas ni mapearlas (Fase A6). */
+    long contarPendientes(User actor);
 
     /**
      * Aprueba o rechaza una petición PENDIENTE, dejando constancia de
