@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +36,7 @@ data class HistorialUiState(
 class HistorialViewModel(
     private val authRepository: AuthRepository,
     /** "Hoy" en España. Se inyecta para poder probar la semana y el mes. */
-    private val hoy: () -> LocalDate = { LocalDate.now(ZoneId.of("Europe/Madrid")) }
+    private val hoy: () -> LocalDate = { LocalDate.now(DateFormats.ZONA_ESPANA) }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistorialUiState())

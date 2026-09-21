@@ -8,6 +8,7 @@ import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.repository.AuthRepositoryImpl
 import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.recordatorio.RecordatorioDeFichaje
 import io.sentry.android.core.SentryAndroid
 
 /**
@@ -48,7 +49,11 @@ class NxTimeApplication : Application() {
         iniciarSentry()
 
         // 1. Creamos el gestor de sesión (guarda el token).
-        sessionManager = SessionManager(this)
+        sessionManager = SessionManager(this) {
+            // Al cerrar sesión, los recordatorios de fichaje tienen que irse
+            // con ella: viven en WorkManager y no en la app.
+            RecordatorioDeFichaje.cancelar(this)
+        }
 
         // 2. Creamos RetrofitClient y le pasamos el sessionManager, y el
         //    vigilante del arranque en frío que decide cuánto esperar.

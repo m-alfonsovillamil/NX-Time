@@ -352,6 +352,26 @@ fun NxTimeNavHost(
         }
     }
 
+    /**
+     * Ir adonde apunta un aviso.
+     *
+     * No es un `navigate` pelado, y la diferencia se nota: el destino de un
+     * aviso puede ser una pestaña principal (fichar, historial...), y
+     * apilarla encima de Avisos dejaba la barra de navegación marcando esa
+     * pestaña mientras "atrás" devolvía a Avisos en vez de salir. Con varios
+     * avisos seguidos se acumulaban varias copias de la misma pantalla.
+     *
+     * `popUpTo(FICHAR)` con `saveState`, igual que [irAPestana]: la raíz de
+     * la zona con sesión vuelve a anclar la pila.
+     */
+    fun irAAviso(ruta: String) {
+        navController.navigate(ruta) {
+            popUpTo(Pantalla.FICHAR.ruta) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     val entradaActual by navController.currentBackStackEntryAsState()
     val rutaActual = entradaActual?.destination?.route
 
@@ -572,7 +592,7 @@ fun NxTimeNavHost(
                 LaunchedEffect(Unit) { avisosViewModel.cargar() }
                 AvisosScreen(
                     onVolver = navController::navigateUp,
-                    onNavegar = { ruta -> navController.navigate(ruta) },
+                    onNavegar = { ruta -> irAAviso(ruta) },
                     viewModel = avisosViewModel
                 )
             }

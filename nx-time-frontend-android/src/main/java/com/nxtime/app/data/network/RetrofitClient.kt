@@ -107,24 +107,22 @@ class RetrofitClient(
             return@Authenticator null
         }
 
-        val refreshToken = sessionManager.fetchRefreshToken() ?: return@Authenticator null
+        // Quién decide y cómo, en RefrescoDeToken: aquí solo se traduce de
+        // Response a Request. Lo que hay que garantizar --un solo refresco
+        // aunque lleguen varios 401 a la vez-- se prueba allí con hilos, sin
+        // necesitar servidor.
+        val tokenQueFallo = response.request.header("Authorization")?.removePrefix("Bearer ")
+        val nuevoAccessToken = refrescoDeToken.tokenParaReintentar(tokenQueFallo)
+            ?: return@Authenticator null
 
-        val nuevoAccessToken = try {
-            val respuesta = runBlocking { refreshApiService.refrescarToken(RefreshTokenRequest(refreshToken)) }
-            if (respuesta.isSuccessful) respuesta.body()?.token else null
-        } catch (e: Exception) {
-            null
-        }
-
-        if (nuevoAccessToken == null) {
-            sessionManager.expirarSesion()
-            return@Authenticator null
-        }
-
-        sessionManager.updateAccessToken(nuevoAccessToken)
         response.request.newBuilder()
             .header("Authorization", "Bearer $nuevoAccessToken")
             .build()
+    }
+
+    private val refrescoDeToken = RefrescoDeToken(sessionManager) { refreshToken ->
+        val respuesta = runBlocking { refreshApiService.refrescarToken(RefreshTokenRequest(refreshToken)) }
+        if (respuesta.isSuccessful) respuesta.body()?.token else null
     }
 
     /*
