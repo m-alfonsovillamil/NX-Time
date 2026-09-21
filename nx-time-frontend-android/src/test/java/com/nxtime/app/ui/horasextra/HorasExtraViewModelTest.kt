@@ -91,7 +91,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `un empleado no pide la bandeja del equipo`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("EMPLEADO")
+        whenever(sesion.fetchAuthorities()).thenReturn(SIN_REVISAR)
         conRespuestasNormales()
 
         val vm = HorasExtraViewModel(repositorio, sesion)
@@ -107,7 +107,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `un gestor si la pide`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("GESTOR")
+        whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
 
         val vm = HorasExtraViewModel(repositorio, sesion)
@@ -118,11 +118,12 @@ class HorasExtraViewModelTest {
     }
 
     @Test
-    fun `un rol que la app no conoce se trata como el mas bajo`() = runTest {
-        // Pasará en cuanto el backend desplegado vaya por delante de la
-        // app instalada. La degradación correcta es enseñar de menos, no
-        // de más.
-        whenever(sesion.fetchUserRole()).thenReturn("DIRECTOR_GENERAL")
+    fun `una lista que la app no entiende se trata como la mas baja`() = runTest {
+        // Pasa cuando el backend desplegado va por delante de la app
+        // instalada, y desde la Fase C3 también cuando la sesión se abrió
+        // con una versión anterior que no guardaba la lista. La
+        // degradación correcta es enseñar de menos, no de más.
+        whenever(sesion.fetchAuthorities()).thenReturn(setOf("cuadrante:gestionar"))
         conRespuestasNormales()
 
         val vm = HorasExtraViewModel(repositorio, sesion)
@@ -134,7 +135,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `si falla la bolsa la pantalla sigue enseñando los avisos`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("EMPLEADO")
+        whenever(sesion.fetchAuthorities()).thenReturn(SIN_REVISAR)
         whenever(repositorio.getMisHorasExtra(anyOrNull()))
             .thenReturn(Response.success(listOf(aviso(1))))
         whenever(repositorio.getBolsaHorasExtra(anyOrNull(), anyOrNull()))
@@ -151,7 +152,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `si fallan mis avisos si se enseña el error`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("EMPLEADO")
+        whenever(sesion.fetchAuthorities()).thenReturn(SIN_REVISAR)
         whenever(repositorio.getMisHorasExtra(anyOrNull()))
             .thenReturn(error<List<HorasExtraDTO>>(500))
         whenever(repositorio.getBolsaHorasExtra(anyOrNull(), anyOrNull()))
@@ -166,7 +167,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `aceptar recarga tambien la bolsa`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("GESTOR")
+        whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
         whenever(repositorio.revisarHorasExtra(eq(2L), eq(true), anyOrNull()))
             .thenReturn(Response.success(aviso(2, estado = "ACEPTADO")))
@@ -186,7 +187,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `justificar manda el motivo`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("GESTOR")
+        whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
         whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull()))
             .thenReturn(Response.success(aviso(2, estado = "JUSTIFICADO")))
@@ -204,7 +205,7 @@ class HorasExtraViewModelTest {
 
     @Test
     fun `un fallo al revisar deja el error y no dice que se haya hecho`() = runTest {
-        whenever(sesion.fetchUserRole()).thenReturn("GESTOR")
+        whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
         whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull()))
             .thenReturn(error<HorasExtraDTO>(409))
@@ -218,4 +219,13 @@ class HorasExtraViewModelTest {
         assertNotNull(vm.uiState.value.error)
         assertEquals(null, vm.uiState.value.aviso)
     }
+
+    private companion object {
+        /** Lo que manda el servidor a quien solo ve sus propias horas. */
+        val SIN_REVISAR = setOf("fichaje:leer", "fichaje:escribir")
+
+        /** Lo mismo, más la authority que abre la bandeja del equipo. */
+        val CON_REVISAR = SIN_REVISAR + "horasextra:revisar"
+    }
+
 }

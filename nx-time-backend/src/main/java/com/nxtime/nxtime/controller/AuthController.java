@@ -68,7 +68,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.registerManager(request));
     }
 
-    @Operation(summary = "Iniciar sesión", description = "Devuelve un access token (15 min) y un refresh token (30 días).")
+    @Operation(summary = "Iniciar sesión",
+            description = "Devuelve un access token (15 min) y un refresh token, cuya duración depende de "
+                    + "'origen': 30 días desde ANDROID o IOS, 12 horas desde WEB. Devuelve también "
+                    + "'authorities', lo que esta persona puede hacer, para que el cliente arme su menú "
+                    + "sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en "
+                    + "GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que "
+                    + "la aplicación no sabría qué ofrecer.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login correcto",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
@@ -85,7 +91,11 @@ public class AuthController {
     }
 
     @Operation(summary = "Renovar el access token",
-            description = "Emite un access token nuevo a partir de un refresh token vivo. Reutiliza el mismo refresh token.")
+            description = "Emite un access token nuevo a partir de un refresh token vivo, y **rota el refresh**: "
+                    + "el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe "
+                    + "guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la "
+                    + "sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin "
+                    + "necesidad de volver a entrar.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Access token renovado",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),

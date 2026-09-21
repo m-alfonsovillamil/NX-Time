@@ -75,7 +75,6 @@ import com.nxtime.app.ui.perfil.PerfilViewModel
 import com.nxtime.app.ui.proyectos.ProyectosScreen
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
 import com.nxtime.app.ui.util.Permisos
-import com.nxtime.app.ui.util.Rol
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -257,12 +256,17 @@ fun NxTimeNavHost(
     val inicio = if (sesionIniciada) Pantalla.FICHAR.ruta else Pantalla.LOGIN.ruta
 
     /*
-     * El rol se guarda en estado y se relee SOLO al entrar o salir de la
-     * sesión, por el mismo motivo que `sesionIniciada` se lee una vez:
-     * consultarlo en cada recomposición devolvería null a mitad del
-     * cierre de sesión y la barra parpadearía mientras se navega.
+     * Lo que esta persona puede hacer, según el SERVIDOR: desde la Fase C3
+     * la lista llega en el login y en el perfil, y `Permisos` solo mira si
+     * una cadena está dentro. La app ya no tiene su propia copia del
+     * reparto de permisos.
+     *
+     * Se guarda en estado y se relee SOLO al entrar o salir de la sesión,
+     * por el mismo motivo que `sesionIniciada` se lee una vez: consultarlo
+     * en cada recomposición devolvería vacío a mitad del cierre de sesión
+     * y la barra parpadearía mientras se navega.
      */
-    var rol by remember { mutableStateOf(Rol.de(sessionManager.fetchUserRole())) }
+    var authorities by remember { mutableStateOf(sessionManager.fetchAuthorities()) }
 
     /*
      * El ViewModel de avisos se pide AQUÍ, fuera de cualquier
@@ -297,7 +301,7 @@ fun NxTimeNavHost(
      * token está borrado.
      */
     fun entrarA(destino: Pantalla) {
-        rol = Rol.de(sessionManager.fetchUserRole())
+        authorities = sessionManager.fetchAuthorities()
         /*
          * El ViewModel de avisos vive en la Activity, así que sobrevive
          * al cierre de sesión: sin este limpiar(), quien entrase después
@@ -335,6 +339,27 @@ fun NxTimeNavHost(
         if (sesionIniciada) {
             perfilViewModel.cargar()
             avisosViewModel.refrescarContador()
+        }
+    }
+
+    /*
+     * El perfil es la otra fuente de los permisos, y aquí hace dos cosas
+     * que el login no puede hacer.
+     *
+     * Una: una sesión abierta con una versión anterior de la app no tiene
+     * la lista guardada -- se abrió cuando la app la deducía del rol --, y
+     * sin esto se quedaría sin menú de gestión hasta volver a entrar.
+     * Dos: si a alguien le cambian el rol con la app abierta, se entera en
+     * el siguiente arranque en vez de en el siguiente login.
+     *
+     * La lista vacía NO se propaga: significa "todavía no se sabe", y
+     * dejarla entrar apagaría el menú mientras carga el perfil.
+     */
+    LaunchedEffect(estadoPerfil.perfil) {
+        val delServidor = estadoPerfil.perfil?.authorities.orEmpty().toSet()
+        if (delServidor.isNotEmpty() && delServidor != authorities) {
+            sessionManager.actualizarAuthorities(delServidor)
+            authorities = delServidor
         }
     }
 
@@ -376,7 +401,7 @@ fun NxTimeNavHost(
     val rutaActual = entradaActual?.destination?.route
 
     val destinos = DestinoPrincipal.entries.filter {
-        it != DestinoPrincipal.GESTION || Permisos.puedeGestionarEquipo(rol)
+        it != DestinoPrincipal.GESTION || Permisos.puedeGestionarEquipo(authorities)
     }
     val destinoActual = destinos.firstOrNull { it.pantalla.ruta == rutaActual }
 
@@ -541,11 +566,11 @@ fun NxTimeNavHost(
                     // Añadir y quitar festivos es `calendario:gestionar`.
                     // Aun teniéndola, los festivos nacionales no se tocan:
                     // eso lo decide el campo `editable` de cada festivo.
-                    puedeGestionar = Permisos.puedeGestionarCalendario(rol),
+                    puedeGestionar = Permisos.puedeGestionarCalendario(authorities),
                     // Y ver las ausencias de los compañeros es otra
                     // authority distinta (`ausencia:leer:equipo`), que es
                     // la que decide si sale el interruptor "ver al equipo".
-                    puedeVerEquipo = Permisos.puedeVerAusenciasDelEquipo(rol)
+                    puedeVerEquipo = Permisos.puedeVerAusenciasDelEquipo(authorities)
                 )
             }
 
@@ -620,20 +645,20 @@ fun NxTimeNavHost(
                     // Solo ADMIN tiene la authority `gestor:crear`. Antes
                     // la opción se le ofrecía a cualquier gestor y el
                     // backend respondía 403 sin falta.
-                    puedeCrearGestores = Permisos.puedeCrearGestores(rol),
+                    puedeCrearGestores = Permisos.puedeCrearGestores(authorities),
                     // El panel de empresa lo ve cualquier rol de gestión;
                     // lo que hay DENTRO (informes y altas/bajas) se gatea
                     // aparte, porque son authorities de RRHH.
-                    puedeVerPanelEmpresa = Permisos.puedeVerPanelEmpresa(rol),
+                    puedeVerPanelEmpresa = Permisos.puedeVerPanelEmpresa(authorities),
                     onIrPanelEmpresa = { navController.navigate(Pantalla.EMPRESA.ruta) },
                     onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
                     onIrCorrecciones = { navController.navigate(Pantalla.CORRECCIONES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     // Solo ADMIN: la denuncia puede ser sobre el gestor
                     // que estuviera mirando esta pantalla.
-                    puedeInstruirDenuncias = Permisos.puedeInstruirDenuncias(rol),
+                    puedeInstruirDenuncias = Permisos.puedeInstruirDenuncias(authorities),
                     onIrCanalDenuncias = { navController.navigate(Pantalla.CANAL_DENUNCIAS.ruta) },
-                    puedePublicarOfertas = Permisos.puedePublicarOfertas(rol),
+                    puedePublicarOfertas = Permisos.puedePublicarOfertas(authorities),
                     onIrGestionOfertas = { navController.navigate(Pantalla.GESTION_OFERTAS.ruta) },
                     onIrHistorialEquipo = { navController.navigate(Pantalla.EQUIPO.ruta) },
                     onIrPendientes = {
@@ -650,7 +675,7 @@ fun NxTimeNavHost(
                     },
                     // RRHH y ADMIN, como dar de baja: ejecutar un borrado
                     // desactiva la cuenta, y más cosas.
-                    puedeGestionarBorrados = Permisos.puedeGestionarEmpleados(rol),
+                    puedeGestionarBorrados = Permisos.puedeGestionarEmpleados(authorities),
                     onIrBorrados = { navController.navigate(Pantalla.BORRADOS.ruta) }
                 )
             }
@@ -699,7 +724,7 @@ fun NxTimeNavHost(
                     // ser GESTOR, así que hoy esto siempre es true. Se
                     // pasa igualmente para que la pantalla no dé por
                     // supuesto quién la abre (ver ProyectosScreen).
-                    puedeGestionar = Permisos.puedeGestionarProyectos(rol)
+                    puedeGestionar = Permisos.puedeGestionarProyectos(authorities)
                 )
             }
 
@@ -709,8 +734,8 @@ fun NxTimeNavHost(
                     // Corregir y auditar son operaciones de cumplimiento
                     // normativo: `fichaje:corregir` y `fichaje:auditoria`
                     // las tienen RRHH y ADMIN, no un GESTOR cualquiera.
-                    puedeCorregir = Permisos.puedeCorregirFichajes(rol),
-                    puedeAuditar = Permisos.puedeVerAuditoria(rol),
+                    puedeCorregir = Permisos.puedeCorregirFichajes(authorities),
+                    puedeAuditar = Permisos.puedeVerAuditoria(authorities),
                     onCorregir = { registro ->
                         navController.navigate(
                             Pantalla.correccion(
@@ -730,12 +755,12 @@ fun NxTimeNavHost(
             composable(Pantalla.EMPRESA.ruta) {
                 PanelEmpresaScreen(
                     onVolver = navController::navigateUp,
-                    puedeGestionarEmpleados = Permisos.puedeGestionarEmpleados(rol),
+                    puedeGestionarEmpleados = Permisos.puedeGestionarEmpleados(authorities),
                     // Dar de baja y configurar la ficha son authorities
                     // distintas en el backend aunque hoy coincidan sus
                     // roles: van por separado también aquí.
-                    puedeConfigurarEmpleados = Permisos.puedeConfigurarEmpleados(rol),
-                    puedeExportar = Permisos.puedeExportarInformes(rol)
+                    puedeConfigurarEmpleados = Permisos.puedeConfigurarEmpleados(authorities),
+                    puedeExportar = Permisos.puedeExportarInformes(authorities)
                 )
             }
 

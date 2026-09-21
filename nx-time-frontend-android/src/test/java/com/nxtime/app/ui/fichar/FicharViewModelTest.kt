@@ -50,7 +50,6 @@ class FicharViewModelTest {
     @Before
     fun configurarSesion() {
         whenever(sesion.fetchUserName()).thenReturn("Ana")
-        whenever(sesion.fetchUserRole()).thenReturn("EMPLEADO")
     }
 
     private fun registro(

@@ -7,8 +7,7 @@ import com.nxtime.app.R
  * En qué punto está una oferta interna, visto desde la app (Fase H).
  *
  * Espeja `JobPostingStatus.java`. [de] devuelve `null` para un valor que
- * esta versión no conozca — mismo criterio que `Rol.de` y
- * `EstadoDenuncia.de`.
+ * esta versión no conozca — mismo criterio que `EstadoDenuncia.de`.
  *
  * **`ABIERTA` no significa que admita candidaturas.** Eso depende
  * además de la fecha de cierre, y llega resuelto desde el servidor en

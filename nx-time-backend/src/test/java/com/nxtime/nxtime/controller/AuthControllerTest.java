@@ -8,9 +8,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.service.AccessCodeService;
@@ -49,7 +52,8 @@ class AuthControllerTest {
     @DisplayName("POST /auth/register-manager con datos válidos (sin autenticar) devuelve 200")
     void registerManager_datosValidos_devuelve200() throws Exception {
         when(authService.registerManager(any()))
-                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN));
+                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
+                        RoleAuthorities.enOrden(Role.ADMIN)));
 
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,12 +89,19 @@ class AuthControllerTest {
     @DisplayName("POST /auth/login con datos válidos devuelve 200")
     void login_datosValidos_devuelve200() throws Exception {
         when(authService.login(any()))
-                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.GESTOR));
+                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.GESTOR,
+                        RoleAuthorities.enOrden(Role.GESTOR)));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"ada@nxtime.test\",\"contrasena\":\"password123\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                // Las authorities viajan ya en el login, y no solo en
+                // GET /perfil: el cliente arma su menu con esto antes de
+                // tener perfil, y sin ellas habria un hueco --el primero
+                // despues de entrar-- sin saber que ofrecer.
+                .andExpect(jsonPath("$.authorities", hasItem("ausencia:aprobar")))
+                .andExpect(jsonPath("$.authorities", not(hasItem("gestor:crear"))));
     }
 
     @Test
