@@ -65,6 +65,18 @@ Es ruidoso a propósito. Un robo silencioso dura un mes; esto se nota el mismo
 día, y lo que se paga es un login de más en el caso raro de que dos peticiones
 de refresco se crucen de verdad.
 
+> ⚠️ **La revocación va con `noRollbackFor`**, igual que el contador de intentos
+> de los códigos de acceso y por la misma razón: se revoca **y** se lanza, y sin
+> eso la excepción deshace el UPDATE. La familia queda cerrada mientras dura la
+> transacción y vuelve a estar viva al salir — es decir, la protección no
+> protege nada.
+>
+> No es teoría. La primera versión salió a producción sin ello y se detectó
+> verificando el despliegue: rotar, reutilizar el token viejo y volver a usar el
+> nuevo devolvía 200 donde tenía que devolver 401. Los tests unitarios no lo
+> veían porque con mocks no hay transacción que deshacer; lo cubre ahora
+> `RefreshTokenRotadoIT`.
+
 ### La vida depende del origen
 
 | Origen | Duración |
