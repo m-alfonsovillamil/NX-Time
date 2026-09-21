@@ -329,6 +329,14 @@ error documentados endpoint por endpoint. La especificación versionada está en
 [`docs/openapi.json`](docs/openapi.json) y se puede importar en Postman o
 Insomnia directamente.
 
+Ese fichero **no se copia a mano**: un test del `check` lo compara con lo que
+expone el backend y pone el build en rojo si se han separado. Para actualizarlo:
+
+```bash
+./gradlew :nx-time-backend:actualizarOpenApi
+git diff docs/openapi.json     # qué ha cambiado del contrato
+```
+
 Todos los errores siguen **RFC 7807 (`ProblemDetail`)**:
 
 ```json
@@ -511,7 +519,6 @@ informes en Excel y PDF.
 - **El proceso nocturno cierra jornadas olvidadas de más de 16 h**, así que una
   abierta de madrugada puede seguir bloqueando al empleado hasta ~24 h. El fallo
   grave (quedar bloqueado *indefinidamente*) sí está resuelto y verificado.
-- **`docs/openapi.json` se regenera a mano** tras cambiar un controlador.
 
 ---
 
