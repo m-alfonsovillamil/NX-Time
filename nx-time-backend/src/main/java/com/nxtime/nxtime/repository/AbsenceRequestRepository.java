@@ -164,6 +164,9 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     // Agregados del dashboard (Fase 10): contar en la base de datos, no
     // traerse las filas para hacer size() sobre la lista.
+    //
+    // El contador de trabajo pendiente NO los usaba y hacía justo eso
+    // (getPendingRequests(...).size()); desde la Fase A6 pasa por aquí.
     long countByUsuarioAndEstado(User usuario, AbsenceStatus estado);
 
     long countByEmpresa_IdAndEstado(long empresaId, AbsenceStatus estado);

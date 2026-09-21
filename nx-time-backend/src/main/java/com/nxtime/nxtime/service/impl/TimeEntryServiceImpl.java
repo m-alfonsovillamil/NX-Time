@@ -31,6 +31,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -406,14 +408,29 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      * aparecía sin procedencia ante quien viniera a comprobarla.
      */
     private List<Long> cadenaDeCorrecciones(TimeEntry entry) {
+        // Hacia atrás hasta el original. Los dos recorridos llevan un registro
+        // de por dónde han pasado (Fase A6): sin él, un ciclo en los datos
+        // --A corrige a B y B corrige a A-- deja este bucle girando PARA
+        // SIEMPRE y con él el hilo que atiende la petición. No hay nada en la
+        // base que impida ese ciclo, así que la defensa tiene que estar aquí.
+        Set<Long> vistos = new LinkedHashSet<>();
         TimeEntry raiz = entry;
         while (raiz.getRegistroOriginal() != null) {
+            if (!vistos.add(raiz.getId())) {
+                throw new IllegalStateException(
+                        "La cadena de correcciones del fichaje " + entry.getId() + " tiene un ciclo.");
+            }
             raiz = raiz.getRegistroOriginal();
         }
 
         List<Long> ids = new ArrayList<>();
+        vistos.clear();
         for (TimeEntry actual = raiz; actual != null;
                 actual = timeEntryRepository.findByRegistroOriginal_Id(actual.getId()).orElse(null)) {
+            if (!vistos.add(actual.getId())) {
+                throw new IllegalStateException(
+                        "La cadena de correcciones del fichaje " + entry.getId() + " tiene un ciclo.");
+            }
             ids.add(actual.getId());
         }
         return ids;

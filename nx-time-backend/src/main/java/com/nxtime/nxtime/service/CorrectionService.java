@@ -44,6 +44,17 @@ public interface CorrectionService {
     /** Las que le toca resolver a quien pregunta, ya sean suyas o de su equipo. */
     List<CorrectionResponse> pendientesParaMi(User actor);
 
+    /**
+     * Cuántas esperan MI decisión (Fase A6).
+     *
+     * Sigue aplicando {@code puedeResolver} en Java, y eso es deliberado:
+     * contar en SQL exigiría repetir esa regla en JPQL, que es justo lo que
+     * {@link #pendientesParaMi} explica que no se quiere. Lo que se ahorra es
+     * el mapeo a DTO, que consultaba el reparto por proyecto de CADA solicitud
+     * solo para acabar devolviendo un número.
+     */
+    long contarPendientesParaMi(User actor);
+
     /** Las que ha pedido, para ver en qué han quedado. */
     List<CorrectionResponse> mias(User actor);
 }

@@ -55,6 +55,31 @@ public interface OvertimeAlertRepository extends JpaRepository<OvertimeAlert, Lo
             @Param("hasta") LocalDate hasta);
 
     /**
+     * Cuántos avisos de la bandeja de revisión están sin resolver (Fase A6).
+     *
+     * El contador del panel traía la bandeja entera --con su JOIN FETCH del
+     * usuario y del registro--, la mapeaba a DTO y contaba los ABIERTO sobre la
+     * lista resultante.
+     *
+     * Las dos condiciones que van aquí son las mismas que aplica
+     * {@code delEquipo}: el estado y, sobre todo, que los avisos propios NO
+     * entran en la bandeja de revisión --sobre lo tuyo no decides tú--. Que el
+     * contador y el listado no puedan discrepar lo vigila un test que compara
+     * los dos sobre los mismos datos.
+     */
+    @Query("SELECT COUNT(a) FROM avisos_horas_extra a "
+            + "WHERE a.empresa.id = :empresaId "
+            + "AND a.fecha >= :desde AND a.fecha <= :hasta "
+            + "AND a.usuario.id <> :actorId "
+            + "AND a.estado = :estado")
+    long contarDeEmpresaEnRango(
+            @Param("empresaId") long empresaId,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            @Param("actorId") long actorId,
+            @Param("estado") OvertimeStatus estado);
+
+    /**
      * <b>La bolsa anual del art. 35.2 ET, calculada al leer.</b>
      *
      * No hay tabla de contadores (ver la nota en V12): un contador

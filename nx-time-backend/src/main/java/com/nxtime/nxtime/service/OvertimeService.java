@@ -42,6 +42,9 @@ public interface OvertimeService {
      */
     List<OvertimeAlertResponse> delEquipo(User actor, int anio);
 
+    /** Cuántos avisos de la bandeja de revisión siguen abiertos (Fase A6). */
+    long contarAbiertosDelEquipo(User actor, int anio);
+
     /**
      * Revisa un aviso: lo justifica (no eran horas extra) o lo acepta
      * (sí lo eran, y descuentan de la bolsa).

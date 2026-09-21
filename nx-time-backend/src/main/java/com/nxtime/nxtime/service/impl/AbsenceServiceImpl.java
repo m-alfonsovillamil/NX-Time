@@ -247,6 +247,12 @@ public class AbsenceServiceImpl implements AbsenceService {
     }
 
     @Override
+    public long contarPendientes(User actor) {
+        return absenceRequestRepository.countByEmpresa_IdAndEstado(
+                actor.getEmpresa().getId(), AbsenceStatus.PENDIENTE);
+    }
+
+    @Override
     @Transactional
     public AbsenceResponse changeRequestStatus(String managerEmail, long requestId, UpdateAbsenceStatusRequest request) {
         User manager = getUser(managerEmail);

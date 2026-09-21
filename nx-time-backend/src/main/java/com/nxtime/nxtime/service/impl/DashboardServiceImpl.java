@@ -131,9 +131,8 @@ public class DashboardServiceImpl implements DashboardService {
                                 fila.getUsuarioId(), fila.getNombre(), aMinutos(fila.getSegundos())))
                         .toList();
 
-        int empleadosActivos = (int) userRepository.findByEmpresaAndRol(empresa, Role.EMPLEADO).stream()
-                .filter(User::isActivo)
-                .count();
+        // Un COUNT y no toda la plantilla en memoria para contarla (Fase A6).
+        int empleadosActivos = (int) userRepository.countByEmpresaAndRolAndActivoTrue(empresa, Role.EMPLEADO);
 
         return new CompanyDashboardResponse(
                 empleadosActivos,

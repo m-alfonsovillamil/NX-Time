@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -142,6 +143,17 @@ public class OvertimeServiceImpl implements OvertimeService {
                 .filter(aviso -> aviso.getUsuario().getId() != actor.getId())
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Override
+    public long contarAbiertosDelEquipo(User actor, int anio) {
+        // La exclusión de los avisos propios va dentro de la consulta, igual
+        // que el filtro de arriba: no son la bandeja de nadie, porque sobre lo
+        // tuyo no decides tú. Que el contador y el listado no discrepen lo
+        // vigila un test que compara los dos sobre los mismos datos.
+        return overtimeRepository.contarDeEmpresaEnRango(
+                actor.getEmpresa().getId(), primerDia(anio), ultimoDia(anio),
+                actor.getId(), OvertimeStatus.ABIERTO);
     }
 
     @Override
@@ -284,8 +296,15 @@ public class OvertimeServiceImpl implements OvertimeService {
         Barrido barrido = new Barrido();
         int nuevos = 0;
 
+        // Todas las personas de una vez, no una consulta por vuelta (Fase A6).
+        // Este bucle recorre a TODA la plantilla que haya fichado en la
+        // ventana de 14 días: un findById por iteración son tantas consultas
+        // como empleados, cada noche.
+        Map<Long, User> personas = userRepository.findAllById(porUsuario.keySet()).stream()
+                .collect(Collectors.toMap(User::getId, persona -> persona));
+
         for (Map.Entry<Long, List<TimeEntryRepository.DailyWorkProjection>> entrada : porUsuario.entrySet()) {
-            Optional<User> quizaUsuario = userRepository.findById(entrada.getKey());
+            Optional<User> quizaUsuario = Optional.ofNullable(personas.get(entrada.getKey()));
             if (quizaUsuario.isEmpty()) {
                 continue;
             }

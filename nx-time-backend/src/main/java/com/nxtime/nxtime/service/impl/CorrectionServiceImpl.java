@@ -299,6 +299,18 @@ public class CorrectionServiceImpl implements CorrectionService {
     }
 
     @Override
+    public long contarPendientesParaMi(User actor) {
+        // Misma consulta y MISMO filtro que pendientesParaMi, a propósito: la
+        // regla de quién puede resolver qué vive en puedeResolver y en ningún
+        // otro sitio. Lo que no se hace es el toResponse, que consulta el
+        // reparto por proyecto de cada solicitud -- una consulta por fila para
+        // acabar devolviendo un número.
+        return correctionRepository.findVivasDeEmpresa(actor.getEmpresa().getId()).stream()
+                .filter(solicitud -> puedeResolver(solicitud, actor))
+                .count();
+    }
+
+    @Override
     public List<CorrectionResponse> mias(User actor) {
         return correctionRepository.findMias(actor.getId()).stream()
                 .map(solicitud -> toResponse(solicitud, actor))

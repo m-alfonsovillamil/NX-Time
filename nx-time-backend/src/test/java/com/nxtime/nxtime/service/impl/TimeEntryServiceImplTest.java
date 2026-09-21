@@ -8,6 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -442,6 +443,37 @@ class TimeEntryServiceImplTest {
 
         assertThat(service.getAuditTrail(rrhh.getEmail(), 6L))
                 .containsExactly(filaCreacion, filaCorreccion);
+    }
+
+    /**
+     * Un ciclo en los datos no puede colgar el hilo (Fase A6).
+     *
+     * El recorrido de la cadena de correcciones era un {@code while} sin corte:
+     * si por un fallo de datos A apuntara a B y B a A, giraba PARA SIEMPRE y
+     * con él se quedaba el hilo que atiende la petición. No hay ningún CHECK ni
+     * trigger que impida ese ciclo, así que la defensa tiene que estar en el
+     * recorrido.
+     *
+     * El {@code assertTimeout} es la mitad del test: sin él, una regresión no
+     * fallaría -- se quedaría colgada, que es peor.
+     */
+    @Test
+    @DisplayName("Un ciclo en la cadena de correcciones da error, no cuelga el hilo")
+    void getAuditTrail_cadenaConCiclo_noSeQuedaColgado() {
+        User rrhh = User.builder().id(30L).email("rrhh@nxtime.test").empresa(empresa).build();
+        // A dice que corrige a B y B dice que corrige a A: imposible por
+        // diseño, pero nada en la base lo impide.
+        TimeEntry a = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa).build();
+        TimeEntry b = TimeEntry.builder().id(6L).usuario(empleado).empresa(empresa).registroOriginal(a).build();
+        a.setRegistroOriginal(b);
+
+        when(userRepository.findByEmail(rrhh.getEmail())).thenReturn(Optional.of(rrhh));
+        when(timeEntryRepository.findById(6L)).thenReturn(Optional.of(b));
+
+        assertTimeoutPreemptively(java.time.Duration.ofSeconds(5), () ->
+                assertThatThrownBy(() -> service.getAuditTrail(rrhh.getEmail(), 6L))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("ciclo"));
     }
 
     @Test
