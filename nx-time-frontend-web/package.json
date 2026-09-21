@@ -1,0 +1,21 @@
+{
+  "name": "nx-time-frontend-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente web de NX Time. Fuera del build de Gradle: npm propio y su propio job de CI.",
+  "scripts": {
+    "api:types": "openapi-typescript ../docs/openapi.json -o src/api/schema.d.ts",
+    "tokens": "node scripts/tokens.mjs",
+    "generar": "npm run api:types && npm run tokens",
+    "verificar:generado": "npm run generar && git diff --exit-code -- src/api/schema.d.ts src/estilos/tokens.css",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && npm run typecheck:contrato",
+    "typecheck:contrato": "tsc --noEmit --strict --skipLibCheck false --target ES2022 --lib ES2022,DOM --module ESNext --moduleResolution bundler src/api/schema.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.4",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

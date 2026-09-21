@@ -1,0 +1,172 @@
+/* GENERADO POR scripts/tokens.mjs. No editar a mano.
+ *
+ * La fuente es el tema de la app Android (ui/theme/Color.kt y Type.kt): el
+ * color de un botón no puede tener dos verdades. Para cambiar algo, cámbialo
+ * allí y ejecuta `npm run tokens`.
+ *
+ * AVISO DE CONTRASTE, copiado de Color.kt:
+ * El par más justo de esta paleta es `primary` sobre el inicio del degradado claro, a 4.67:1. Si alguien aclara el fondo o oscurece el primario, ese es el que cae primero.
+ */
+
+:root {
+  /* Sora solo en titulares y cifras; el cuerpo usa la fuente del sistema para
+     respetar el tamaño accesible de quien lee (ver Type.kt). */
+  --nx-font-titular: 'Sora', system-ui, sans-serif;
+  --nx-font-cuerpo: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --nx-fs-display-medium: 34px;
+  --nx-lh-display-medium: 40px;
+  --nx-ls-display-medium: -0.5px;
+  --nx-ff-display-medium: var(--nx-font-titular);
+  --nx-fs-headline-medium: 26px;
+  --nx-lh-headline-medium: 34px;
+  --nx-ls-headline-medium: -0.3px;
+  --nx-ff-headline-medium: var(--nx-font-titular);
+  --nx-fs-headline-small: 22px;
+  --nx-lh-headline-small: 30px;
+  --nx-ff-headline-small: var(--nx-font-titular);
+  --nx-fs-title-large: 21px;
+  --nx-lh-title-large: 28px;
+  --nx-ff-title-large: var(--nx-font-titular);
+  --nx-fs-title-medium: 16px;
+  --nx-lh-title-medium: 22px;
+  --nx-ff-title-medium: var(--nx-font-titular);
+  --nx-fs-body-large: 16px;
+  --nx-lh-body-large: 24px;
+  --nx-ff-body-large: var(--nx-font-cuerpo);
+  --nx-fs-label-large: 14px;
+  --nx-lh-label-large: 20px;
+  --nx-ff-label-large: var(--nx-font-cuerpo);
+
+  --nx-primary: #0e7c86;
+  --nx-on-primary: #ffffff;
+  --nx-primary-container: #cdebee;
+  --nx-on-primary-container: #00363b;
+  --nx-secondary: #44646a;
+  --nx-on-secondary: #ffffff;
+  --nx-secondary-container: #c9e7eb;
+  --nx-on-secondary-container: #042023;
+  --nx-tertiary: #5b5bd6;
+  --nx-on-tertiary: #ffffff;
+  --nx-tertiary-container: #e2e1ff;
+  --nx-on-tertiary-container: #161268;
+  --nx-error: #ba1a1a;
+  --nx-on-error: #ffffff;
+  --nx-error-container: #ffdad6;
+  --nx-on-error-container: #410002;
+  --nx-background: #f2fafb;
+  --nx-on-background: #0f1b1d;
+  --nx-surface: #ffffff;
+  --nx-on-surface: #0f1b1d;
+  --nx-surface-variant: #d9e7e9;
+  --nx-on-surface-variant: #4a5c5e;
+  --nx-outline: #6c7e80;
+  --nx-outline-variant: #bfd2d4;
+  --nx-surface-container: #ffffff;
+  --nx-surface-container-high: #f4fafb;
+  --nx-surface-container-lowest: #ffffff;
+  --nx-surface-container-low: #ffffff;
+  --nx-surface-container-highest: #e9f3f5;
+  --nx-fondo-arriba: #f4fcfd;
+  --nx-fondo-abajo: #d9edf0;
+
+  --nx-jornada-trabajando: #2e6b34;
+  --nx-jornada-on-trabajando: #ffffff;
+  --nx-jornada-en-pausa: #8a5100;
+  --nx-jornada-on-en-pausa: #ffffff;
+  --nx-jornada-parado: #b3261e;
+  --nx-jornada-on-parado: #ffffff;
+}
+
+/* El degradado del fondo es una decisión del tema, no decoración: las
+   superficies flotan sobre él y los Scaffold van transparentes. */
+.nx-fondo {
+  background: linear-gradient(to bottom, var(--nx-fondo-arriba), var(--nx-fondo-abajo));
+  min-height: 100%;
+}
+
+/* Oscuro por preferencia del sistema, salvo que la página pida claro a mano. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+  --nx-primary: #5fd4de;
+  --nx-on-primary: #00363b;
+  --nx-primary-container: #00525a;
+  --nx-on-primary-container: #8ff2fa;
+  --nx-secondary: #accbd0;
+  --nx-on-secondary: #163438;
+  --nx-secondary-container: #2d4b4f;
+  --nx-on-secondary-container: #c9e7eb;
+  --nx-tertiary: #afaff7;
+  --nx-on-tertiary: #1c1c63;
+  --nx-tertiary-container: #3a3a9e;
+  --nx-on-tertiary-container: #e2e1ff;
+  --nx-error: #ffb4ab;
+  --nx-on-error: #690005;
+  --nx-error-container: #93000a;
+  --nx-on-error-container: #ffdad6;
+  --nx-background: #0c1416;
+  --nx-on-background: #e2ebec;
+  --nx-surface: #182325;
+  --nx-on-surface: #e2ebec;
+  --nx-surface-variant: #3e4e50;
+  --nx-on-surface-variant: #a8babb;
+  --nx-outline: #869899;
+  --nx-outline-variant: #3e4e50;
+  --nx-surface-container: #182325;
+  --nx-surface-container-high: #1f2c2e;
+  --nx-surface-container-lowest: #0a1113;
+  --nx-surface-container-low: #131e20;
+  --nx-surface-container-highest: #283a3c;
+  --nx-fondo-arriba: #0a1113;
+  --nx-fondo-abajo: #16292c;
+
+  --nx-jornada-trabajando: #7adb84;
+  --nx-jornada-on-trabajando: #07230b;
+  --nx-jornada-en-pausa: #ffb865;
+  --nx-jornada-on-en-pausa: #4a2800;
+  --nx-jornada-parado: #ffb4ab;
+  --nx-jornada-on-parado: #601410;
+  }
+}
+
+/* Oscuro elegido a mano, que manda sobre la preferencia del sistema. */
+:root[data-tema='oscuro'] {
+  --nx-primary: #5fd4de;
+  --nx-on-primary: #00363b;
+  --nx-primary-container: #00525a;
+  --nx-on-primary-container: #8ff2fa;
+  --nx-secondary: #accbd0;
+  --nx-on-secondary: #163438;
+  --nx-secondary-container: #2d4b4f;
+  --nx-on-secondary-container: #c9e7eb;
+  --nx-tertiary: #afaff7;
+  --nx-on-tertiary: #1c1c63;
+  --nx-tertiary-container: #3a3a9e;
+  --nx-on-tertiary-container: #e2e1ff;
+  --nx-error: #ffb4ab;
+  --nx-on-error: #690005;
+  --nx-error-container: #93000a;
+  --nx-on-error-container: #ffdad6;
+  --nx-background: #0c1416;
+  --nx-on-background: #e2ebec;
+  --nx-surface: #182325;
+  --nx-on-surface: #e2ebec;
+  --nx-surface-variant: #3e4e50;
+  --nx-on-surface-variant: #a8babb;
+  --nx-outline: #869899;
+  --nx-outline-variant: #3e4e50;
+  --nx-surface-container: #182325;
+  --nx-surface-container-high: #1f2c2e;
+  --nx-surface-container-lowest: #0a1113;
+  --nx-surface-container-low: #131e20;
+  --nx-surface-container-highest: #283a3c;
+  --nx-fondo-arriba: #0a1113;
+  --nx-fondo-abajo: #16292c;
+
+  --nx-jornada-trabajando: #7adb84;
+  --nx-jornada-on-trabajando: #07230b;
+  --nx-jornada-en-pausa: #ffb865;
+  --nx-jornada-on-en-pausa: #4a2800;
+  --nx-jornada-parado: #ffb4ab;
+  --nx-jornada-on-parado: #601410;
+}

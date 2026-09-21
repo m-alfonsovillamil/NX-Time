@@ -169,8 +169,9 @@ siembra `DemoDataSeeder`.
 | Informes | Apache POI (Excel) · OpenPDF (PDF) |
 | Caché | Caffeine |
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
-| Build | Gradle (Kotlin DSL), monorepo de dos módulos |
+| Build | Gradle (Kotlin DSL), monorepo de dos módulos + la web, que va aparte |
 | App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · tema propio de color, formas y tipografía · Retrofit |
+| Cliente web | **Empezando** (`nx-time-frontend-web/`, fuera de Gradle): tipos TypeScript generados del OpenAPI y *design tokens* generados del tema de Android |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
 
 ---
