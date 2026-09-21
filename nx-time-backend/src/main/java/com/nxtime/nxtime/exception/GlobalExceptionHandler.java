@@ -1,9 +1,13 @@
 package com.nxtime.nxtime.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import java.sql.SQLException;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -38,6 +42,61 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /** SQLSTATE de PostgreSQL: dos filas que no pueden convivir. */
+    private static final String UNIQUE_VIOLATION = "23505";
+    /** SQLSTATE de PostgreSQL: se apunta a algo que no existe, o se borra algo al que se apunta. */
+    private static final String FOREIGN_KEY_VIOLATION = "23503";
+
+    /**
+     * Qué decirle a quien está delante cuando gana el índice en vez de la
+     * comprobación previa del servicio.
+     *
+     * Son literalmente los mismos mensajes que lanza esa comprobación, y eso
+     * es lo importante: el resultado no puede depender de cuál de las dos
+     * barreras llegó primero. Si alguien cambia el texto en el servicio, tiene
+     * que cambiarlo aquí -- {@code ConflictosDeIntegridadTest} lo comprueba.
+     *
+     * Los constraints que no están aquí caen en el mensaje genérico. Está bien
+     * que así sea: la lista cubre lo que un cliente puede provocar por una
+     * carrera, y no hace falta inventar una frase para cada índice del
+     * esquema.
+     */
+    private static final Map<String, String> MENSAJES_POR_CONSTRAINT = Map.ofEntries(
+            // Fichar dos veces a la vez (V1, índice parcial sobre jornada abierta).
+            Map.entry("uq_registros_jornada_abierta", "Ya hay una jornada activa."),
+            // Registrar la misma empresa dos veces. /auth/register-manager es público.
+            Map.entry("uq_empresas_nombre", "La empresa ya existe. Solicita acceso al administrador."),
+            // El correo, por sus dos índices: el original de V1 y el de V17, que
+            // lo hace insensible a mayúsculas.
+            Map.entry("uq_usuarios_email", "El email ya está registrado."),
+            Map.entry("ux_usuarios_email_lower", "El email ya está registrado."),
+            // Festivos (V4). Aquí el mensaje pierde el "...: Nochebuena" que sí
+            // da la comprobación previa: desde el constraint no se puede saber
+            // con qué festivo se ha chocado sin ir a buscarlo.
+            Map.entry("uq_festivos_empresa_fecha", "Esa fecha ya es festivo para la empresa."),
+            Map.entry("uq_festivos_nacional_fecha", "Esa fecha ya es festivo."),
+            Map.entry("uq_departamentos_empresa_nombre", "Ya existe un departamento con ese nombre."),
+            Map.entry("uq_proyectos_empresa_codigo", "Ya existe un proyecto con ese código."),
+            Map.entry("uq_correcciones_una_viva_por_registro",
+                    "Ese fichaje ya tiene una solicitud de corrección pendiente."),
+            Map.entry("uq_borrados_una_pendiente_por_usuario", "Ya hay una solicitud de borrado pendiente."),
+            Map.entry("uq_candidaturas_oferta_usuario", "Ya te has presentado a esa oferta."),
+            // La cadena de auditoría (V27). Que esto salte significa que el
+            // advisory lock de TimeEntryAuditListener no se pidió: el dato está
+            // a salvo, pero es un fallo nuestro, así que además se registra
+            // como error.
+            Map.entry("uq_auditoria_hash_anterior",
+                    "No se ha podido registrar la operación. Vuelve a intentarlo."));
+
+    /**
+     * Choques que no son una carrera entre dos usuarios sino una barrera
+     * interna que ha fallado. Se contestan igual --un 409 reintentable, que es
+     * lo que le sirve a quien está delante-- pero se registran con
+     * {@code log.error} para que lleguen a Sentry en vez de perderse entre los
+     * avisos normales.
+     */
+    private static final Set<String> CONSTRAINTS_QUE_SON_FALLO_NUESTRO = Set.of("uq_auditoria_hash_anterior");
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail handleResourceNotFound(ResourceNotFoundException ex) {
@@ -107,6 +166,93 @@ public class GlobalExceptionHandler {
         log.warn("Edición concurrente sobre {}: {}", ex.getPersistentClassName(), ex.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "Otra persona ha modificado estos datos mientras los editabas. Vuelve a cargarlos e inténtalo de nuevo.");
+    }
+
+    /**
+     * Un índice o una clave ajena de la base ha parado la operación (Fase A2).
+     *
+     * Varias reglas están protegidas dos veces a propósito: el servicio
+     * comprueba antes ("¿ya hay una jornada activa?") y la base lo garantiza
+     * con un índice único parcial. La comprobación previa no es inútil --da el
+     * mensaje bueno-- pero tampoco basta: entre el SELECT y el INSERT cabe
+     * otra petición, así que en una carrera gana el índice.
+     *
+     * Sin este manejador, ganar el índice caía en el 500 genérico de abajo, y
+     * eso es mentira dos veces: no ha fallado nada del servidor, y el cliente
+     * no se entera de que lo que pedía choca con algo que ya existe. En
+     * TimeEntryServiceImpl significaba que fichar dos veces a la vez devolvía
+     * 500 en lugar de "ya hay una jornada activa"; en /auth/register-manager,
+     * que es PÚBLICO, significaba un 500 provocable desde internet con solo
+     * registrar dos veces la misma empresa.
+     *
+     * Los mensajes son deliberadamente los MISMOS que los de la comprobación
+     * previa: a quien está delante le da igual cuál de las dos barreras saltó.
+     *
+     * No todo lo que llega aquí es un conflicto del cliente. Un NOT NULL o un
+     * CHECK violados son un fallo de validación nuestro --un bug-- y decirle
+     * al cliente "conflicto" le invitaría a reintentar algo que nunca va a
+     * funcionar. Esos se quedan en 500, que es lo honesto, y con log.error
+     * para que se vean.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
+        String constraint = nombreDelConstraint(ex);
+        String sqlState = estadoSql(ex);
+
+        if (UNIQUE_VIOLATION.equals(sqlState)) {
+            String mensaje = MENSAJES_POR_CONSTRAINT.getOrDefault(
+                    constraint, "Eso choca con algo que ya existe. Vuelve a cargar los datos e inténtalo de nuevo.");
+            // El nombre del constraint no sale al cliente: no le dice nada y
+            // describe el esquema. Al log sí, que es donde hace falta.
+            if (CONSTRAINTS_QUE_SON_FALLO_NUESTRO.contains(constraint)) {
+                // Al cliente se le da un 409 reintentable, pero esto no es una
+                // carrera normal entre dos usuarios: es que una barrera interna
+                // no hizo su trabajo. Tiene que verse en Sentry.
+                log.error("Choque que no debería poder ocurrir ({}): {}",
+                        constraint, ex.getMostSpecificCause().getMessage());
+            } else {
+                log.warn("Conflicto de unicidad ({}): {}", constraint, ex.getMostSpecificCause().getMessage());
+            }
+            return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, mensaje);
+        }
+
+        if (FOREIGN_KEY_VIOLATION.equals(sqlState)) {
+            log.warn("Conflicto de referencia ({}): {}", constraint, ex.getMostSpecificCause().getMessage());
+            return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                    "No se puede hacer eso porque hay datos que dependen de ello.");
+        }
+
+        log.error("Violación de integridad no esperada ({}, SQLSTATE {})", constraint, sqlState, ex);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "Ha ocurrido un error inesperado.");
+    }
+
+    /**
+     * El nombre del constraint que ha saltado, o {@code "desconocido"}.
+     *
+     * Hibernate lo expone en su propia {@code ConstraintViolationException},
+     * que viaja envuelta en la de Spring. Si algún día cambia el envoltorio,
+     * esto devuelve "desconocido" y el manejador sigue funcionando con el
+     * mensaje genérico: el SQLSTATE, que es lo que decide el código de estado,
+     * no depende de esto.
+     */
+    private String nombreDelConstraint(DataIntegrityViolationException ex) {
+        for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
+            if (causa instanceof org.hibernate.exception.ConstraintViolationException hibernate
+                    && hibernate.getConstraintName() != null) {
+                return hibernate.getConstraintName();
+            }
+        }
+        return "desconocido";
+    }
+
+    /** El SQLSTATE de PostgreSQL, que es lo que distingue un choque de un bug. */
+    private String estadoSql(DataIntegrityViolationException ex) {
+        for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
+            if (causa instanceof SQLException sql && sql.getSQLState() != null) {
+                return sql.getSQLState();
+            }
+        }
+        return null;
     }
 
     @ExceptionHandler(AuthenticationException.class)
