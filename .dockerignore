@@ -12,6 +12,7 @@ build
 *.iml
 out
 nx-time-frontend-android
+nx-time-frontend-web
 docs
 *.log
 *.md

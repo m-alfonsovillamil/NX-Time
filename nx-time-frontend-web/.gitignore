@@ -1,0 +1,16 @@
+# Lo que NO se ignora, y a propósito: `src/api/schema.d.ts` y
+# `src/estilos/tokens.css`. Están generados, pero se versionan para que el
+# CI pueda regenerarlos y comparar con `git diff --exit-code`: así, el día
+# que cambie el contrato del backend o el tema de Android, el build de la
+# web se entera en vez de desincronizarse en silencio.
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Variables locales. `.env.example` sí se versiona.
+.env
+.env.local
+.env.*.local
+
+*.log
