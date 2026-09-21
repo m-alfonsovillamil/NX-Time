@@ -30,6 +30,7 @@ import com.nxtime.nxtime.repository.ComplaintMessageRepository;
 import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TrackingCode;
+import com.nxtime.nxtime.support.MockDeDestinatarios;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -124,7 +125,7 @@ class ComplaintServiceImplTest {
         @Test
         @DisplayName("anónima: el id del denunciante NO se guarda, aunque el actor esté autenticado")
         void anonima_noGuardaAlDenunciante() {
-            when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, admin));
+            MockDeDestinatarios.plantilla(userRepository, empresa, empleado, admin);
 
             service.presentar(new CreateComplaintRequest(
                     ComplaintCategory.ACOSO, "Los hechos.", true), empleado);
@@ -138,7 +139,7 @@ class ComplaintServiceImplTest {
         @Test
         @DisplayName("identificada: sí se guarda quién la puso")
         void identificada_guardaAlDenunciante() {
-            when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(admin));
+            MockDeDestinatarios.plantilla(userRepository, empresa, admin);
 
             service.presentar(new CreateComplaintRequest(
                     ComplaintCategory.FRAUDE, "Los hechos.", false), empleado);
@@ -151,7 +152,7 @@ class ComplaintServiceImplTest {
         @Test
         @DisplayName("el código se devuelve una vez y de él solo se guarda el hash")
         void devuelveElCodigoYGuardaSoloElHash() {
-            when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(admin));
+            MockDeDestinatarios.plantilla(userRepository, empresa, admin);
 
             ComplaintCreatedResponse respuesta = service.presentar(new CreateComplaintRequest(
                     ComplaintCategory.SEGURIDAD, "Los hechos.", true), empleado);
@@ -175,8 +176,7 @@ class ComplaintServiceImplTest {
             // quién es la denuncia anónima por quién falta en la lista.
             User otroAdmin = User.builder().id(21L).email("otro@nxtime.test").nombre("Otro")
                     .rol(Role.ADMIN).empresa(empresa).activo(true).build();
-            when(userRepository.findByEmpresa(empresa))
-                    .thenReturn(List.of(empleado, admin, otroAdmin));
+            MockDeDestinatarios.plantilla(userRepository, empresa, empleado, admin, otroAdmin);
 
             service.presentar(new CreateComplaintRequest(
                     ComplaintCategory.ACOSO, "Los hechos.", true), admin);
@@ -193,7 +193,7 @@ class ComplaintServiceImplTest {
         void noAvisaACuentasDeBaja() {
             User adminDeBaja = User.builder().id(22L).email("baja@nxtime.test").nombre("Baja")
                     .rol(Role.ADMIN).empresa(empresa).activo(false).build();
-            when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(admin, adminDeBaja));
+            MockDeDestinatarios.plantilla(userRepository, empresa, admin, adminDeBaja);
 
             service.presentar(new CreateComplaintRequest(
                     ComplaintCategory.ACOSO, "Los hechos.", true), empleado);

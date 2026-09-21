@@ -31,6 +31,7 @@ import com.nxtime.nxtime.repository.ProposedAllocationRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.ValidadorDeReparto;
+import com.nxtime.nxtime.support.MockDeDestinatarios;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +145,7 @@ class CorrectionServiceImplTest {
         when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
         when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor);
 
         CorrectionResponse respuesta = service.solicitar(5L, peticion(), empleado);
 
@@ -169,7 +170,7 @@ class CorrectionServiceImplTest {
         when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
         when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor);
         when(validadorDeReparto.validarYResolver(any(), any())).thenReturn(Map.of());
 
         service.solicitar(5L, peticionConReparto(7L, 120), empleado);
@@ -202,7 +203,7 @@ class CorrectionServiceImplTest {
         when(timeEntryRepository.findById(5L)).thenReturn(Optional.of(fichajeDelEmpleado));
         when(correctionRepository.findVivaDelRegistro(5L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor);
 
         // El caso normal: corregir solo las horas.
         service.solicitar(5L, peticion(), empleado);
@@ -233,7 +234,7 @@ class CorrectionServiceImplTest {
                 .horaEntrada(ENTRADA).horaSalida(SALIDA).anulado(false).build();
         when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
         // El gestor es el único con permiso de aprobar: el empleado no lo tiene.
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, empleado));
+        MockDeDestinatarios.plantilla(userRepository, empresa, gestor, empleado);
         when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
         when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -258,7 +259,7 @@ class CorrectionServiceImplTest {
         when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
         when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, rrhh, empleado));
+        MockDeDestinatarios.plantilla(userRepository, empresa, gestor, rrhh, empleado);
 
         CorrectionResponse respuesta = service.solicitar(7L, peticion(), gestor);
 
@@ -282,7 +283,7 @@ class CorrectionServiceImplTest {
         TimeEntry suyo = TimeEntry.builder().id(7L).usuario(gestor).empresa(empresa)
                 .horaEntrada(ENTRADA).horaSalida(SALIDA).anulado(false).build();
         when(timeEntryRepository.findById(7L)).thenReturn(Optional.of(suyo));
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(gestor, empleado));
+        MockDeDestinatarios.plantilla(userRepository, empresa, gestor, empleado);
         when(correctionRepository.findVivaDelRegistro(7L)).thenReturn(Optional.empty());
         alGuardarDevolverLoMismo();
         when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -554,7 +555,7 @@ class CorrectionServiceImplTest {
         CorrectionRequest solicitud = solicitudDe(gestor, CorrectionStatus.PENDIENTE);
         when(correctionRepository.findById(77L)).thenReturn(Optional.of(solicitud));
         when(correctionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor, rrhh));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor, rrhh);
 
         CorrectionResponse respuesta =
                 service.disputar(77L, new DisputeRequest("Ese día salí a las 15:00"), empleado);

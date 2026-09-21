@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.domain;
 
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Traduce cada {@link Role} a un conjunto de authorities granulares
@@ -164,6 +166,29 @@ public final class RoleAuthorities {
      */
     public static boolean tiene(User usuario, String authority) {
         return forRole(usuario.getRol()).contains(authority);
+    }
+
+    /**
+     * Qué roles tienen una authority.
+     *
+     * Es {@link #tiene} del revés, y existe para poder preguntar por los
+     * destinatarios de un aviso <b>en SQL</b>. Hasta septiembre de 2026 eso se
+     * hacía trayendo toda la plantilla de la empresa a memoria y filtrándola en
+     * Java con {@code tiene}, una vez por cada petición de ausencia, corrección
+     * o denuncia --y también al fichar en día no laborable, que es camino
+     * caliente--. Con una consulta {@code WHERE rol IN (...)} la base devuelve
+     * solo a quien hay que avisar.
+     *
+     * <b>Se calcula, no se escribe a mano.</b> Recorre los mismos conjuntos que
+     * alimentan {@link #forRole}, así que una authority nueva aparece aquí sola.
+     * Una lista paralela sería una segunda verdad, y la que se quedara atrás
+     * sería esta -- justo la que decide a quién se avisa, donde el fallo es
+     * silencioso: nadie se entera de un correo que no se manda.
+     */
+    public static Set<Role> rolesCon(String authority) {
+        return Arrays.stream(Role.values())
+                .filter(rol -> forRole(rol).contains(authority))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private static Set<String> union(Set<String> base, Set<String> extra) {

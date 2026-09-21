@@ -309,8 +309,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private void avisarSiNoEsLaborable(User user) {
         LocalDate hoy = LocalDate.now(MADRID);
         nonWorkingDayService.motivo(user, hoy).ifPresent(motivo -> {
-            List<User> destinatarios = Destinatarios.conAuthorityMenos(
-                    userRepository.findByEmpresa(user.getEmpresa()), "ausencia:aprobar", user);
+            List<User> destinatarios = Destinatarios.conAuthority(
+                    userRepository, user.getEmpresa(), "ausencia:aprobar", user);
             eventPublisher.publishEvent(new NotificationEvents.WorkedOnNonWorkingDay(
                     user.getEmpresa().getId(), user.getNombre(), hoy,
                     motivo.texto(), motivo.vacaciones(), destinatarios));

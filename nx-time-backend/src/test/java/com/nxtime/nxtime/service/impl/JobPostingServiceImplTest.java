@@ -32,6 +32,7 @@ import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.JobApplicationRepository;
 import com.nxtime.nxtime.repository.JobPostingRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.support.MockDeDestinatarios;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -252,7 +253,7 @@ class JobPostingServiceImplTest {
             verify(eventPublisher).publishEvent(evento.capture());
             assertThat(evento.getValue().destinatarios()).containsExactly(gestor);
             // Ni una consulta a la plantilla: la vacante es de alguien.
-            verify(userRepository, never()).findByEmpresa(any());
+            verify(userRepository, never()).findDestinatarios(any(), any());
         }
     }
 
@@ -393,7 +394,7 @@ class JobPostingServiceImplTest {
         void publicar_avisaALaPlantilla() {
             when(jobPostingRepository.findConDetalle(5L))
                     .thenReturn(Optional.of(oferta(JobPostingStatus.BORRADOR, null)));
-            when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestor));
+            MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor);
 
             service.cambiarEstado(5L,
                     new UpdateJobPostingStatusRequest(JobPostingStatus.ABIERTA), gestor);
@@ -420,7 +421,7 @@ class JobPostingServiceImplTest {
 
             verify(eventPublisher, never())
                     .publishEvent(any(NotificationEvents.JobPostingPublished.class));
-            verify(userRepository, never()).findByEmpresa(any());
+            verify(userRepository, never()).findDestinatarios(any(), any());
         }
 
         @Test

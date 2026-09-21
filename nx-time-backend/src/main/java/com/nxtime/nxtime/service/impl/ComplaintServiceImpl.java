@@ -442,7 +442,7 @@ public class ComplaintServiceImpl implements ComplaintService {
      */
     private List<User> quienInstruye(Company empresa) {
         // conAuthority y NO conAuthorityMenos: ver el Javadoc de arriba.
-        return Destinatarios.conAuthority(userRepository.findByEmpresa(empresa), INSTRUIR);
+        return Destinatarios.conAuthority(userRepository, empresa, INSTRUIR, null);
     }
 
     // ------------------------------------------------------------------

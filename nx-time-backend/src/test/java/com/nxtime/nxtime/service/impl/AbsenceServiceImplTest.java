@@ -31,6 +31,7 @@ import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.VacationBalanceService;
 import com.nxtime.nxtime.service.WorkingDayService;
+import com.nxtime.nxtime.support.MockDeDestinatarios;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -225,8 +226,7 @@ class AbsenceServiceImplTest {
                 .rol(Role.GESTOR).empresa(empresa).activo(false).build();
         User otroEmpleado = User.builder().id(70L).email("otro@nxtime.test").nombre("Otro")
                 .rol(Role.EMPLEADO).empresa(empresa).activo(true).build();
-        when(userRepository.findByEmpresa(empresa))
-                .thenReturn(List.of(admin, rrhh, gestorActivo, gestorDeBaja, otroEmpleado, empleado));
+        MockDeDestinatarios.plantilla(userRepository, empresa, admin, rrhh, gestorActivo, gestorDeBaja, otroEmpleado, empleado);
 
         service.createRequest(empleado.getEmail(), vacaciones(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5)));
 

@@ -597,7 +597,7 @@ public class CorrectionServiceImpl implements CorrectionService {
      * Las reglas (solo activos, por authority) viven en {@link Destinatarios}.
      */
     private List<User> conAuthority(Company empresa, String authority, User excluido) {
-        return Destinatarios.conAuthorityMenos(userRepository.findByEmpresa(empresa), authority, excluido);
+        return Destinatarios.conAuthority(userRepository, empresa, authority, excluido);
     }
 
 

@@ -97,8 +97,8 @@ public class DataDeletionServiceImpl implements DataDeletionService {
         // Dentro de la transacción: el listener corre @Async y sin sesión.
         // Se excluye a la persona: un ADMIN que pide lo suyo no tiene que
         // recibir el aviso de que "alguien" lo pide.
-        List<User> destinatarios = Destinatarios.conAuthorityMenos(
-                userRepository.findByEmpresa(persona.getEmpresa()), AUTHORITY_EJECUTAR, persona);
+        List<User> destinatarios = Destinatarios.conAuthority(
+                userRepository, persona.getEmpresa(), AUTHORITY_EJECUTAR, persona);
         if (destinatarios.isEmpty()) {
             // Nadie más con la authority: nadie podrá ejecutarla. No se
             // impide pedirla -- el derecho existe igual --, pero tiene que
@@ -144,8 +144,8 @@ public class DataDeletionServiceImpl implements DataDeletionService {
 
         // A los demás que pueden ejecutarla, para que haya otro par de ojos.
         // Ni a quien la registra (ya lo sabe) ni a la persona.
-        List<User> destinatarios = Destinatarios.conAuthorityMenos(
-                        userRepository.findByEmpresa(persona.getEmpresa()), AUTHORITY_EJECUTAR, actor).stream()
+        List<User> destinatarios = Destinatarios.conAuthority(
+                        userRepository, persona.getEmpresa(), AUTHORITY_EJECUTAR, actor).stream()
                 .filter(u -> u.getId() != persona.getId())
                 .toList();
         eventPublisher.publishEvent(new NotificationEvents.DeletionRequested(solicitud, destinatarios));

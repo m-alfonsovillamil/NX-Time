@@ -641,7 +641,7 @@ public class OvertimeServiceImpl implements OvertimeService {
      * los eventos de {@link NotificationEvents}.
      */
     private List<User> revisoresDe(Company empresa) {
-        return Destinatarios.conAuthority(userRepository.findByEmpresa(empresa), REVISAR);
+        return Destinatarios.conAuthority(userRepository, empresa, REVISAR, null);
     }
 
 

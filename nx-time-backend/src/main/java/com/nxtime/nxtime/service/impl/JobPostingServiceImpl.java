@@ -374,7 +374,11 @@ public class JobPostingServiceImpl implements JobPostingService {
      * de la lista no revela nada.
      */
     private List<User> laPlantilla(JobPosting oferta, User autor) {
-        return Destinatarios.activosMenos(userRepository.findByEmpresa(oferta.getEmpresa()), autor);
+        // Aqui no hay authority que filtre --la oferta se anuncia a toda la
+        // plantilla--, asi que se pide la plantilla ACTIVA en vez de traer
+        // tambien a los inactivos para descartarlos despues.
+        return Destinatarios.activosMenos(
+                userRepository.findByEmpresaAndActivoTrue(oferta.getEmpresa()), autor);
     }
 
     private JobPosting deLaMismaEmpresa(long id, User actor) {

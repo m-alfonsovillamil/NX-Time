@@ -28,6 +28,7 @@ import com.nxtime.nxtime.mapper.TimeEntryMapper;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.support.MockDeDestinatarios;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -123,7 +124,7 @@ class TimeEntryServiceImplTest {
         when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
         when(nonWorkingDayService.motivo(eq(empleado), any()))
                 .thenReturn(Optional.of(new com.nxtime.nxtime.service.NonWorkingDayService.Motivo("Vacaciones", true)));
-        when(userRepository.findByEmpresa(empresa)).thenReturn(java.util.List.of(empleado, gestora, companero));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestora, companero);
 
         service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
 
