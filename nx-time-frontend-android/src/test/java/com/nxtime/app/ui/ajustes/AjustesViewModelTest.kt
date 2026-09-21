@@ -119,17 +119,21 @@ class AjustesViewModelTest {
 
     @Test
     fun `con la contrasena correcta se activa, y se verifica contra el servidor`() = runTest {
-        whenever(repositorio.getMiPerfil()).thenReturn(Response.success(perfil()))
-        whenever(repositorio.login(any())).thenReturn(Response.success(mock<RespuestaAutenticacion>()))
+        whenever(repositorio.verificarContrasena(any())).thenReturn(Response.success(Unit))
         val vm = viewModel()
 
         vm.cambiarHuella(true)
         vm.confirmarHuellaCon("demo1234")
         advanceUntilIdle()
 
-        // El correo sale del perfil: SessionManager guarda nombre y rol,
-        // pero no el correo.
-        verify(repositorio).login(eq(PeticionLogin("marta@techcorp.demo", "demo1234")))
+        // Un endpoint que solo dice si o no, no un login completo (A11): hacer
+        // login emitia tokens nuevos, dejaba vivo el refresh anterior en el
+        // servidor y gastaba el limite de intentos del login.
+        verify(repositorio).verificarContrasena("demo1234")
+        verify(repositorio, never()).login(any())
+        // Y ya no hace falta consultar el perfil para saber el correo: el
+        // servidor comprueba contra quien trae el token.
+        verify(repositorio, never()).getMiPerfil()
         verify(ajustes).cambiarHuella(true)
         assertTrue(vm.uiState.value.huella)
         assertFalse(vm.uiState.value.confirmandoHuella)
@@ -137,8 +141,7 @@ class AjustesViewModelTest {
 
     @Test
     fun `con la contrasena equivocada no se activa y se explica`() = runTest {
-        whenever(repositorio.getMiPerfil()).thenReturn(Response.success(perfil()))
-        whenever(repositorio.login(any())).thenReturn(
+        whenever(repositorio.verificarContrasena(any())).thenReturn(
             Response.error(401, "{}".toResponseBody("application/json".toMediaType()))
         )
         val vm = viewModel()

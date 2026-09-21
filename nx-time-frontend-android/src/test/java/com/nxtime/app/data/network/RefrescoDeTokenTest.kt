@@ -33,7 +33,9 @@ class RefrescoDeTokenTest {
         init {
             whenever(mock.fetchAuthToken()).thenAnswer { synchronized(this) { accessToken } }
             whenever(mock.fetchRefreshToken()).thenReturn("refresh")
-            whenever(mock.updateAccessToken(any())).thenAnswer { invocacion ->
+            // Desde la rotación (A11 del backend) el refresco guarda los DOS
+            // tokens de una vez: el que se presentó ya no vale.
+            whenever(mock.actualizarTokens(any(), any())).thenAnswer { invocacion ->
                 synchronized(this) { accessToken = invocacion.getArgument(0) }
                 null
             }
@@ -49,7 +51,7 @@ class RefrescoDeTokenTest {
             // Un refresco real tarda: sin esta pausa los hilos podrían no
             // llegar a solaparse y el test pasaría sin probar nada.
             Thread.sleep(50)
-            "token-nuevo"
+            RefrescoDeToken.TokensRenovados("token-nuevo", "refresh-nuevo")
         }
 
         val hilos = 8
@@ -88,7 +90,7 @@ class RefrescoDeTokenTest {
         val refrescos = AtomicInteger()
         val refresco = RefrescoDeToken(sesion.mock) {
             refrescos.incrementAndGet()
-            "token-nuevo"
+            RefrescoDeToken.TokensRenovados("token-nuevo", "refresh-nuevo")
         }
 
         // Primero uno refresca de verdad.
@@ -107,7 +109,7 @@ class RefrescoDeTokenTest {
         whenever(sesion.fetchRefreshToken()).thenReturn(null)
         val refrescos = AtomicInteger()
 
-        val resultado = RefrescoDeToken(sesion) { refrescos.incrementAndGet(); "x" }
+        val resultado = RefrescoDeToken(sesion) { refrescos.incrementAndGet(); RefrescoDeToken.TokensRenovados("x", "y") }
             .tokenParaReintentar("token-viejo")
 
         assertNull(resultado)

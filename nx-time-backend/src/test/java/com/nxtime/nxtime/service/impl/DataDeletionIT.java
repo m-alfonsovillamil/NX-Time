@@ -135,8 +135,10 @@ class DataDeletionIT {
                 + "VALUES (?, 'Oferta', 'Descripción', ?) RETURNING id", Long.class, empresa.getId(), rrhh.getId());
         jdbc.update("INSERT INTO candidaturas (oferta_id, usuario_id, adjunto_cv_id, carta) VALUES (?, ?, ?, ?)",
                 oferta, id, cv, "Carta de " + n);
-        jdbc.update("INSERT INTO refresh_tokens (token, usuario_id, expira_en, creado_en) "
-                + "VALUES (?, ?, now() + interval '1 day', now())", "token-" + n + System.nanoTime(), id);
+        // token_hash y familia desde V30: el token en claro ya no se guarda.
+        jdbc.update("INSERT INTO refresh_tokens (token_hash, familia, usuario_id, expira_en, creado_en) "
+                + "VALUES (?, gen_random_uuid(), ?, now() + interval '1 day', now())",
+                "hash-" + n + System.nanoTime(), id);
         jdbc.update("INSERT INTO codigos_acceso (usuario_id, tipo, codigo_hash, creado_en, expira_en) "
                 + "VALUES (?, 'RECUPERACION', ?, now(), now() + interval '1 hour')", id, "hash-" + n);
         jdbc.update("INSERT INTO peticiones_ausencia (usuario_id, empresa_id, fecha_inicio, fecha_fin, tipo, estado, "

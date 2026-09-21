@@ -122,7 +122,14 @@ class RetrofitClient(
 
     private val refrescoDeToken = RefrescoDeToken(sessionManager) { refreshToken ->
         val respuesta = runBlocking { refreshApiService.refrescarToken(RefreshTokenRequest(refreshToken)) }
-        if (respuesta.isSuccessful) respuesta.body()?.token else null
+        val cuerpo = respuesta.body()
+        if (respuesta.isSuccessful && cuerpo != null) {
+            // El refresh que viene NO es el que se mandó: el servidor rota en
+            // cada renovación. Hay que quedarse con los dos.
+            RefrescoDeToken.TokensRenovados(cuerpo.token, cuerpo.refreshToken)
+        } else {
+            null
+        }
     }
 
     /*

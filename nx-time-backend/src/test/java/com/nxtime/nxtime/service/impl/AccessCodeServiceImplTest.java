@@ -243,14 +243,14 @@ class AccessCodeServiceImplTest {
     void confirmar_codigoCorrecto_fijaContrasenaYCierraSesiones() {
         AccessCode codigo = vigente("012345");
         anaTieneElCodigo(codigo);
-        when(refreshTokenRepository.revocarTodasLasDe(ana)).thenReturn(2);
+        when(refreshTokenRepository.revocarTodasLasDe(eq(ana), any())).thenReturn(2);
 
         service.confirmar(EMAIL, " 012345 ", "nuevaSegura123");
 
         assertThat(passwordEncoder.matches("nuevaSegura123", ana.getContrasena())).isTrue();
         assertThat(codigo.getUsadoEn()).isEqualTo(AHORA);
         verify(userRepository).save(ana);
-        verify(refreshTokenRepository).revocarTodasLasDe(ana);
+        verify(refreshTokenRepository).revocarTodasLasDe(eq(ana), any());
     }
 
     @Test
@@ -267,7 +267,7 @@ class AccessCodeServiceImplTest {
         assertThat(codigo.getAnuladoEn()).isNull();
         assertThat(ana.getContrasena()).isNull();
         verify(accessCodeRepository).save(codigo);
-        verify(refreshTokenRepository, never()).revocarTodasLasDe(any());
+        verify(refreshTokenRepository, never()).revocarTodasLasDe(any(), any());
     }
 
     @Test

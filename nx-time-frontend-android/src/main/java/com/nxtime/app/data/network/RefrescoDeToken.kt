@@ -29,14 +29,26 @@ import com.nxtime.app.data.session.SessionManager
 class RefrescoDeToken(
     private val sessionManager: SessionManager,
     /**
-     * Cómo se pide el token nuevo. Se inyecta para poder probar esta clase sin
-     * red: en producción es la llamada a `/auth/refresh`.
+     * Cómo se piden los tokens nuevos. Se inyecta para poder probar esta clase
+     * sin red: en producción es la llamada a `/auth/refresh`.
      *
-     * Recibe el refresh token y devuelve el access token nuevo, o null si no se
+     * Recibe el refresh token actual y devuelve el par nuevo, o null si no se
      * pudo renovar.
      */
-    private val pedirTokenNuevo: (String) -> String?
+    private val pedirTokenNuevo: (String) -> TokensRenovados?
 ) {
+
+    /**
+     * Lo que devuelve /auth/refresh desde que el servidor rota (fase A11 del
+     * backend): un access token **y un refresh nuevo**.
+     *
+     * Antes el refresh se reutilizaba y bastaba con guardar el access. Ahora el
+     * que se presentó deja de valer, así que **hay que guardar los dos**: si se
+     * guardara solo el access, la siguiente renovación llegaría con un token ya
+     * rotado, el servidor lo leería como que alguien tiene una copia y cerraría
+     * la sesión entera.
+     */
+    data class TokensRenovados(val accessToken: String, val refreshToken: String)
 
     private val cerrojo = Any()
 
@@ -73,7 +85,9 @@ class RefrescoDeToken(
             return null
         }
 
-        sessionManager.updateAccessToken(nuevo)
-        return nuevo
+        // Los DOS, y en una sola escritura: el refresh que se acaba de usar ya
+        // no vale.
+        sessionManager.actualizarTokens(nuevo.accessToken, nuevo.refreshToken)
+        return nuevo.accessToken
     }
 }

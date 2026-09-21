@@ -3130,8 +3130,14 @@ class ApiContractTest {
         JsonNode body = bodyOf(refresh);
         String nuevoAccessToken = body.get("token").asText();
         assertThat(nuevoAccessToken).isNotBlank();
-        // El refresh token no rota en esta implementación: sigue siendo el mismo.
-        assertThat(body.get("refreshToken").asText()).isEqualTo(empleadoRefreshToken);
+        // CONTRATO CAMBIADO a proposito (Fase A11): el refresh ROTA. Cada
+        // renovacion devuelve uno nuevo y el anterior deja de valer, asi que
+        // el cliente tiene que guardarlo. Presentar el viejo otra vez ya no es
+        // un reintento inofensivo: se interpreta como que alguien tiene una
+        // copia y cierra la sesion entera.
+        String refreshRotado = body.get("refreshToken").asText();
+        assertThat(refreshRotado).isNotBlank().isNotEqualTo(empleadoRefreshToken);
+        empleadoRefreshToken = refreshRotado;
 
         // El access token nuevo funciona de verdad contra un endpoint protegido.
         ResponseEntity<String> activo = rest.exchange(

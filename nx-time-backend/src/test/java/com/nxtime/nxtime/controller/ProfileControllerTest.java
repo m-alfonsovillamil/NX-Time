@@ -50,6 +50,16 @@ class ProfileControllerTest {
     @MockitoBean
     private com.nxtime.nxtime.report.PersonalDataPdfGenerator exportPdfGenerator;
 
+    /**
+     * Lo usa {@code POST /perfil/verificar-contrasena} (Fase A11).
+     *
+     * En este slice no hay contexto de seguridad completo, así que va
+     * simulado: lo que se comprueba aquí es el enrutado y las authorities. Que
+     * la comparación sea correcta lo cubre el test del propio endpoint.
+     */
+    @MockitoBean
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     private static ProfileResponse perfil() {
         return new ProfileResponse(
                 10L, "ana@nxtime.test", "Ana", "Fernández", "Ana Fernández", "AF",

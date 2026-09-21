@@ -195,6 +195,9 @@ interface AuthRepository {
 
     /* Funciones de Perfil (Fase B) */
     suspend fun getMiPerfil(): Response<PerfilDTO>
+
+    /** Comprueba la contraseña propia sin abrir sesión. 204 si es correcta. */
+    suspend fun verificarContrasena(contrasena: String): Response<Unit>
     /** Exportación de datos personales (RGPD). */
     suspend fun descargarMisDatosJson(): Response<ResponseBody>
     suspend fun descargarMisDatosPdf(): Response<ResponseBody>

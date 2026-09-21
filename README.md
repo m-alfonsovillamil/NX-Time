@@ -473,6 +473,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 16. [Borrar los datos de alguien sin borrar su registro horario](docs/adr/016-borrar-sin-borrar-el-registro-horario.md)
 17. [Las horas de un proyecto se imputan por jornada, no se deducen por día](docs/adr/017-imputacion-por-jornada.md)
 18. [La cadena de auditoría se serializa en PostgreSQL, no en la JVM](docs/adr/018-la-cadena-de-auditoria-se-serializa-en-postgres.md)
+19. [El refresh token se hashea, se rota, y reutilizarlo revoca la familia](docs/adr/019-el-refresh-token-se-hashea-y-se-rota.md)
 
 ---
 
