@@ -63,7 +63,8 @@ export const T = {
     conflicto: 'Esa operación choca con el estado actual.',
     demasiadosIntentos: 'Demasiados intentos. Espera un momento y vuelve a probar.',
     servidor: 'El servidor ha fallado. Inténtalo dentro de un momento.',
-    red: 'No se ha podido conectar. Comprueba tu conexión.',
+    red: 'No hay conexión a internet. Comprueba tu red.',
+    sinServidor: 'No se ha podido contactar con el servidor. Inténtalo dentro de un momento.',
     inesperado: 'Ha ocurrido un error inesperado.',
   },
 

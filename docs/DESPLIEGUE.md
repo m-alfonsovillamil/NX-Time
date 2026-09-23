@@ -166,8 +166,11 @@ fallo se ve igual que si la variable estuviera vacía.
 
 🚨 **El día que se despliegue una web, esto hay que ponerlo a mano aquí.** Si se
 olvida, la web compila, despliega y no funciona: el navegador da un error de CORS
-en su consola y **en los logs del backend no aparece nada**, porque la petición
-ni siquiera llega al servidor. Para que no pase desapercibido, el backend deja un
+en su consola y **en los logs del backend no aparece nada**. La petición de
+verdad no llega a salir; lo que llega es el *preflight* (`OPTIONS`) que el
+navegador manda antes, y Spring lo rechaza con un **403 sin
+`Access-Control-Allow-Origin`** que no deja rastro en el log (comprobado contra
+producción el 23/09/2026). Para que no pase desapercibido, el backend deja un
 `WARN` al arrancar en producción cuando la lista está vacía:
 
 ```
@@ -184,6 +187,68 @@ La app Android no manda cabecera `Origin`, así que CORS no le afecta.
 1. *New* → *Blueprint*, apuntando a este repositorio: Render lee `render.yaml`.
 2. Rellenar las variables de arriba cuando las pida.
 3. El health check ya apunta a `/actuator/health`.
+
+### La web
+
+`render.yaml` declara un segundo servicio, `nxtime-web`: un **static site**, no
+un segundo servicio web. Un static site no es una instancia y no gasta las 750
+horas al mes del plan gratuito; otro `type: web` con Node sirviendo ficheros sí,
+y dejaría al backend sin margen.
+
+**Lo que hace falta, en este orden:**
+
+1. **Crear el servicio.** Al entrar en `main` el cambio de `render.yaml`, el
+   Blueprint lo detecta. Mirar en *Blueprints* → el de NX Time si pide aprobar
+   el servicio nuevo antes de crearlo. No pide ninguna variable: la única,
+   `VITE_API_URL`, va con su valor en el propio fichero porque no es un secreto
+   (se ve en las herramientas del navegador).
+2. **Apuntar la URL que le haya tocado.** Si el nombre `nxtime-web` estaba
+   cogido, Render le pone un sufijo; la URL real es la que sale en el panel del
+   servicio, no la que se supone.
+3. **Ponerla en `CORS_ALLOWED_ORIGINS` del backend**, en su *Environment*: con
+   `https://` y **sin barra final**. Guardar reinicia el backend.
+4. **Comprobarlo** con lo de abajo. No dar por hecho que funciona porque la web
+   cargue: la web carga perfectamente sin CORS, lo que no hace es entrar.
+
+**Comprobaciones tras el despliegue** (sustituir la URL si Render le puso otra):
+
+```bash
+WEB=https://nxtime-web.onrender.com
+
+# CORS: tiene que responder 200 y devolver el origen de la web. Con la variable
+# sin poner responde 403 y no hay ninguna cabecera Access-Control-*.
+curl -s -o /dev/null -D - -X OPTIONS https://nxtime-backend.onrender.com/auth/login \
+  -H "Origin: $WEB" -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: content-type" | grep -iE "^HTTP|access-control-allow-origin"
+
+# La regla de reescritura: /fichar no es un fichero, y tiene que dar 200 y no el
+# 404 de Render. Y llevar la CSP.
+curl -s -o /dev/null -D - "$WEB/fichar" | grep -iE "^HTTP|content-security-policy"
+
+# Qué caché le pone Render al HTML. render.yaml no puede fijarla: las cabeceras
+# van por ruta pedida, y / y /fichar sirven index.html a través de la
+# reescritura. Si aquí sale un max-age largo, un despliegue nuevo no llegaría a
+# quien ya tuviera la página abierta.
+curl -s -o /dev/null -D - "$WEB/" | grep -i "cache-control"
+```
+
+Y en el navegador: entrar, fichar y comprobar que la jornada aparece en el
+historial de la app Android. **Pulsar F5 en `/fichar` lleva al login**, y es lo
+esperado: la página carga (eso prueba la reescritura) pero la sesión vive en
+memoria y se pierde al recargar
+([ADR 020](adr/020-tokens-en-el-navegador.md)).
+
+**Si al entrar sale «No se ha podido contactar con el servidor»** pero el
+backend responde a `/actuator/health`, casi seguro es CORS. El navegador no deja
+a la página distinguir un rechazo de CORS de una caída de red, así que el
+mensaje no puede decirlo; la consola del navegador (F12) sí lo dice claramente.
+
+La CSP de `render.yaml` se comprobó contra el build real antes de escribirla,
+sirviendo `dist/` con esas mismas cabeceras en Chromium: `/`, `/fichar` y una
+ruta inexistente pintan, Sora carga, la llamada al backend sale, y **cero
+violaciones**. Si se añade una fuente externa, un script de terceros o se cambia
+la URL del backend, hay que tocarla: el síntoma sería una página en blanco o sin
+estilos, con el aviso en la consola.
 
 ## 3. Compilar Android contra producción
 

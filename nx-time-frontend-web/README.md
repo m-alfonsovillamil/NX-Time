@@ -30,8 +30,12 @@ y un módulo con estado; se añadirá cuando haya una pantalla que lo pida.
 Los dos se versionan aunque estén generados, y esa es la parte importante:
 `npm run verificar:generado` los regenera y compara con `git diff
 --exit-code`, así que **desincronizarse rompe el build en vez de pasar
-desapercibido**. El job de CI que ejecuta ese comando —y que se dispara
-también al tocar `ui/theme/` de Android— llega con el despliegue de la web.
+desapercibido**. Lo ejecuta `.github/workflows/web.yml` en cada PR que toque
+la web, **`docs/openapi.json` o el tema de Android** — esas dos últimas son lo
+importante: quien deja desfasado un fichero generado casi nunca es un cambio en
+la web, sino en lo que la web genera. El 21/09/2026 dos PR con el CI en verde
+por separado dejaron el contrato desfasado al juntarse en `main`, porque quien
+movió `docs/openapi.json` era un PR de backend.
 
 | Fichero | Se genera desde | Comando |
 |---|---|---|
@@ -65,6 +69,15 @@ npm run typecheck   # tsc del proyecto + el contrato generado
 npm run build       # bundle de produccion en dist/
 npm run e2e         # Playwright, y necesita backend (ver abajo)
 ```
+
+La versión de Node está en `.node-version`, y la leen los tres sitios que la
+usan —tu máquina con `fnm`/`nvm`, el CI y Render—, así que no pueden divergir sin
+que se vea en un diff.
+
+**Despliegue**: un *static site* de Render declarado en `render.yaml`, con la
+CSP, la reescritura a `index.html` y las cabeceras de seguridad. Los pasos, y
+el que hay que hacer a mano en el backend (CORS), están en
+[`docs/DESPLIEGUE.md`](../docs/DESPLIEGUE.md#la-web).
 
 El servidor de desarrollo manda `/api` y `/auth` al backend de `localhost:8080`
 con su proxy, así que **no hay CORS mientras se desarrolla**. El precio es que

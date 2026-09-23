@@ -125,6 +125,89 @@ services:
       - key: SENTRY_DSN
         sync: false
 
+  # -------------------------------------------------------------------
+  # El cliente web (Fase C5). Un STATIC SITE, no un segundo `type: web`
+  # con Node sirviendo ficheros: un static site no es una instancia y no
+  # consume las 750 horas al mes del plan gratuito. Un segundo servicio
+  # web sí, y dejaría al backend sin margen -- que ya gasta bastante con
+  # keep-alive.yml manteniéndolo despierto.
+  #
+  # 🚨 Desplegar esto NO basta. Hay que poner su URL en CORS_ALLOWED_ORIGINS
+  # del backend (arriba), a mano, en el panel. Ver docs/DESPLIEGUE.md.
+  # -------------------------------------------------------------------
+  - type: web
+    name: nxtime-web
+    runtime: static
+    branch: main
+    # Con rootDir, Render solo despliega cuando cambia algo dentro de este
+    # directorio: un cambio en el backend no reconstruye la web.
+    rootDir: nx-time-frontend-web
+    # `--include=dev` no es de adorno. Vite, TypeScript y el plugin de React
+    # son devDependencies, y si el entorno de build tuviera NODE_ENV en
+    # `production`, `npm ci` a secas se las saltaría y el build fallaría con
+    # "vite: not found". Así da igual lo que ponga el entorno.
+    #
+    # La versión de Node sale de nx-time-frontend-web/.node-version, el mismo
+    # fichero que lee el CI.
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: dist
+
+    envVars:
+      # Se hornea en el JavaScript al construir: cambiarlo exige volver a
+      # desplegar la web, no basta con reiniciar nada. No es un secreto --
+      # cualquiera lo ve en las herramientas del navegador --, así que va
+      # aquí con su valor.
+      - key: VITE_API_URL
+        value: https://nxtime-backend.onrender.com
+
+    # Es una SPA: /fichar no existe como fichero, lo resuelve react-router
+    # en el navegador. Sin esta regla, pulsar F5 en /fichar da un 404 de
+    # Render. Los ficheros que sí existen (/assets/...) se sirven antes de
+    # llegar aquí.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      # La CSP más estricta que admite la aplicación, comprobada contra el
+      # build real antes de escribirla aquí:
+      #  - script-src/style-src 'self': Vite no mete ni un script en línea
+      #    en index.html, y los estilos van en un .css aparte.
+      #  - font-src 'self': Sora va empaquetada (@fontsource), no se pide a
+      #    Google Fonts.
+      #  - connect-src: el propio origen y el backend. Si el backend cambia
+      #    de URL, hay que tocarlo aquí Y en VITE_API_URL.
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://nxtime-backend.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      # Las mismas que manda el backend (A10), para que la web no sea el
+      # eslabón flojo.
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      # Vite pone un hash del contenido en el nombre de cada fichero de
+      # /assets, así que uno de ellos no cambia nunca: si cambia el
+      # contenido, cambia el nombre. Se puede guardar para siempre.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # index.html NO lleva regla propia, y es a propósito. Las cabeceras se
+      # asignan por la ruta PEDIDA, no por el fichero servido: una regla en
+      # /index.html no alcanzaría a / ni a /fichar, que sirven ese mismo
+      # fichero a través de la reescritura de arriba. Sería una protección
+      # que no protege. Lo que devuelve Render ahí se comprueba tras el
+      # despliegue (docs/DESPLIEGUE.md, "La web").
+
 # ---------------------------------------------------------------------
 # Dos avisos del plan gratuito, que conviene saber ANTES de enseñar
 # esto en una entrevista:

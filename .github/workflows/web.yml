@@ -1,0 +1,79 @@
+# Integración continua del cliente web (Fase C5 del plan de septiembre).
+#
+# Aparte de ci.yml a propósito: la web no usa Gradle, no necesita Postgres ni
+# el SDK de Android, y no tiene por qué esperar siete minutos a que terminen
+# los tests del backend para decir si un botón compila.
+#
+# Playwright NO corre aquí. Su único test va contra un backend levantado con
+# datos de demostración, y montarlo en CI sería repetir la mitad de ci.yml
+# para comprobar tres pantallas. Se ejecuta a mano con `npm run e2e` (ver
+# nx-time-frontend-web/README.md).
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths: &rutas
+      - 'nx-time-frontend-web/**'
+      # Las dos de abajo son la razón de ser de este bloque.
+      #
+      # La web versiona dos ficheros GENERADOS: los tipos, desde el contrato
+      # del backend, y los tokens de diseño, desde el tema de la app Android.
+      # Quien los deja desfasados casi nunca es un cambio en la web: es un
+      # cambio en lo que la web genera. El 21/09/2026 pasó exactamente eso
+      # -- #85 y #86 tenían el CI en verde por separado, y al juntarse en
+      # main el contrato de la web quedó desfasado porque quien había movido
+      # docs/openapi.json era un PR de backend. Con solo
+      # 'nx-time-frontend-web/**' aquí, este workflow ni se habría enterado.
+      - 'docs/openapi.json'
+      - 'nx-time-frontend-android/src/main/java/com/nxtime/app/ui/theme/**'
+      - '.github/workflows/web.yml'
+  # Cualquier pull request, sin filtro de rama: mismo motivo que en ci.yml
+  # (un PR encadenado sobre otra rama también tiene que pasar por aquí).
+  pull_request:
+    paths: *rutas
+
+jobs:
+  web:
+    name: Build y tests de la web
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: nx-time-frontend-web
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          # La misma versión que en local y en Render: las tres leen este
+          # fichero, así que no pueden divergir sin que se vea en un diff.
+          node-version-file: nx-time-frontend-web/.node-version
+          cache: npm
+          cache-dependency-path: nx-time-frontend-web/package-lock.json
+
+      # `npm ci` y no `npm install`: instala EXACTAMENTE el lockfile y falla
+      # si package.json y el lockfile no cuadran, en vez de "arreglarlo" en
+      # silencio y compilar contra otras versiones que las del portátil.
+      - name: Dependencias
+        run: npm ci
+
+      # Primero, y antes que los tests: si el contrato o los tokens están
+      # desfasados, el resto de la ejecución estaría comprobando una web que
+      # no es la que se desplegaría.
+      - name: Los ficheros generados están al día
+        run: npm run verificar:generado
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # El mismo comando que usa Render. Un build que falla aquí es un
+      # despliegue que habría fallado allí, y aquí se ve el porqué.
+      - name: Build
+        run: npm run build

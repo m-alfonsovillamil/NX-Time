@@ -56,7 +56,20 @@ describe('el mensaje de un fallo de red', () => {
     expect(mensajeDeRed(new DOMException('', 'AbortError'))).toBe(T.errores.servidor);
   });
 
-  it('lo demás es un problema de conexión', () => {
-    expect(mensajeDeRed(new TypeError('Failed to fetch'))).toBe(T.errores.red);
+  it('sin red, se dice que no hay red', () => {
+    expect(mensajeDeRed(new TypeError('Failed to fetch'), false)).toBe(T.errores.red);
+  });
+
+  /*
+   * El caso que motivó distinguirlo. Un CORS mal configurado llega al código
+   * como el mismo `TypeError: Failed to fetch` que una caída de red, y el
+   * navegador no deja diferenciarlos. Pero si el navegador cree tener red,
+   * mandar a quien lo lee a revisar su wifi es mandarle a buscar donde no
+   * está: el problema está en el servidor o en su configuración.
+   */
+  it('con red, el problema está en el otro lado, no en tu wifi', () => {
+    const mensaje = mensajeDeRed(new TypeError('Failed to fetch'), true);
+    expect(mensaje).toBe(T.errores.sinServidor);
+    expect(mensaje).not.toContain('conexión');
   });
 });
