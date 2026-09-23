@@ -494,6 +494,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 19. [El refresh token se hashea, se rota, y reutilizarlo revoca la familia](docs/adr/019-el-refresh-token-se-hashea-y-se-rota.md)
 20. [Los tokens de la web viven en memoria, y la cookie espera al dominio propio](docs/adr/020-tokens-en-el-navegador.md)
 21. [La web es un proyecto aparte, y lo que comparte con el resto se genera](docs/adr/021-la-web-es-un-proyecto-aparte.md)
+22. [La web empieza por los cimientos, y lo que queda fuera tiene nombre](docs/adr/022-alcance-de-la-web.md)
 
 ---
 
