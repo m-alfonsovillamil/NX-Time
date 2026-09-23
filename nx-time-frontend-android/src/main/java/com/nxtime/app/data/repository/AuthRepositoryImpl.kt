@@ -97,6 +97,11 @@ class AuthRepositoryImpl(
         return apiService.getResumenPersonal()
     }
 
+    override suspend fun getMiCuadrante(
+        desde: java.time.LocalDate,
+        hasta: java.time.LocalDate
+    ): Response<List<DiaTeoricoDTO>> = apiService.getMiCuadrante(desde.toString(), hasta.toString())
+
     override suspend fun solicitarCorreccion(
         fichajeId: Long,
         peticion: CorreccionFichajeRequest

@@ -72,6 +72,9 @@
     <!-- Fichar -->
     <string name="fichar_titulo">Mi jornada</string>
     <string name="fichar_saludo">Hola, %1$s</string>
+    <!-- Fase B1: el cuadrante de hoy, solo a quien tiene cuadrante. -->
+    <string name="fichar_entrada_prevista">Entrada prevista: %1$s · Ver mi cuadrante</string>
+    <string name="fichar_sin_turno_hoy">Hoy no tienes turno · Ver mi cuadrante</string>
     <string name="fichar_iniciar">Iniciar jornada</string>
     <string name="fichar_finalizar">Finalizar jornada</string>
     <string name="fichar_pausar">Iniciar pausa</string>
@@ -814,6 +817,13 @@
 
     <!-- Horas extra (Fase F) -->
     <string name="horas_extra_titulo">Horas extra</string>
+
+    <!-- Fase B1: mi cuadrante, en solo lectura. El editor va a la web. -->
+    <string name="cuadrante_titulo">Mi cuadrante</string>
+    <string name="cuadrante_vacio">No tienes cuadrante asignado. Tu jornada es la contratada, sin un horario fijo por días.</string>
+    <string name="cuadrante_libre">Libre</string>
+    <string name="cuadrante_no_laborable">No laborable</string>
+    <string name="cuadrante_sin_cuadrante">Sin cuadrante</string>
     <string name="horas_extra_mios">Mis excesos de jornada</string>
     <string name="horas_extra_del_equipo">Pendientes de revisar</string>
     <!--

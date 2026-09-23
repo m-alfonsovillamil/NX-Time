@@ -126,7 +126,11 @@ public enum NoticeType {
      * Alguien ha empezado a trabajar en un festivo o con una ausencia
      * aprobada. A quien aprueba ausencias; lleva al historial del equipo.
      */
-    TRABAJO_EN_DIA_NO_LABORABLE("equipo");
+    TRABAJO_EN_DIA_NO_LABORABLE("equipo"),
+
+    // B1. A quien lleva los contratos: la jornada es suya, el cuadrante lo
+    // puede poner un gestor. Ver ScheduleServiceImpl.asignar.
+    CUADRANTE_DISTINTO_DE_JORNADA("equipo");
 
     private final String rutaDestinoPorDefecto;
 

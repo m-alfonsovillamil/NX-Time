@@ -99,6 +99,12 @@ import java.util.stream.Collectors;
  * pueda anunciar su vacante sin valorar a quien opta —porque lo valore
  * RRHH— ese cambio es una línea aquí. Y como en la fase F, la authority
  * NO alcanza a la candidatura de uno mismo: eso lo corta el servicio.
+ * "cuadrante:leer" (Fase B1) la tiene todo el mundo -- saber a qué hora te
+ * toca entrar es parte de tu propia jornada -- y "cuadrante:gestionar"
+ * empieza en GESTOR, que es quien organiza los turnos de su equipo. Nótese
+ * que NO alcanza a la jornada contratada, que sigue en "empleado:configurar"
+ * (RRHH): un gestor pone el CUÁNDO, no el CUÁNTO. Por eso, si el cuadrante
+ * que asigna no suma la jornada, se avisa a quien sí la fija.
  */
 public final class RoleAuthorities {
 
@@ -116,7 +122,8 @@ public final class RoleAuthorities {
             "correccion:solicitar",
             "denuncia:crear",
             "oferta:leer",
-            "candidatura:crear"
+            "candidatura:crear",
+            "cuadrante:leer"
     );
 
     private static final Set<String> GESTOR = union(EMPLEADO, Set.of(
@@ -130,7 +137,8 @@ public final class RoleAuthorities {
             "correccion:aprobar",
             "horasextra:revisar",
             "oferta:publicar",
-            "candidatura:gestionar"
+            "candidatura:gestionar",
+            "cuadrante:gestionar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

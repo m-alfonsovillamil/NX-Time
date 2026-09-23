@@ -18,8 +18,10 @@ import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
+import com.nxtime.nxtime.repository.ScheduleAssignmentRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.service.JornadaTeoricaService;
 import com.nxtime.nxtime.service.OvertimeCalculator;
 import com.nxtime.nxtime.service.OvertimeService;
 import com.nxtime.nxtime.service.WorkingDayService;
@@ -95,6 +97,8 @@ public class OvertimeServiceImpl implements OvertimeService {
     private final UserRepository userRepository;
     private final WorkingDayService workingDayService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ScheduleAssignmentRepository scheduleAssignmentRepository;
+    private final JornadaTeoricaService jornadaTeoricaService;
 
     public OvertimeServiceImpl(
             OvertimeAlertRepository overtimeRepository,
@@ -102,13 +106,17 @@ public class OvertimeServiceImpl implements OvertimeService {
             AbsenceRequestRepository absenceRepository,
             UserRepository userRepository,
             WorkingDayService workingDayService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            ScheduleAssignmentRepository scheduleAssignmentRepository,
+            JornadaTeoricaService jornadaTeoricaService) {
         this.overtimeRepository = overtimeRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.absenceRepository = absenceRepository;
         this.userRepository = userRepository;
         this.workingDayService = workingDayService;
         this.eventPublisher = eventPublisher;
+        this.scheduleAssignmentRepository = scheduleAssignmentRepository;
+        this.jornadaTeoricaService = jornadaTeoricaService;
     }
 
     // ------------------------------------------------------------------
@@ -290,6 +298,12 @@ public class OvertimeServiceImpl implements OvertimeService {
 
         Map<Long, Set<LocalDate>> ausencias = ausenciasPorUsuario(desde, hasta);
 
+        // Quién tiene cuadrante en la ventana (Fase B1), en una consulta. A
+        // esas personas la semana se les mide contra su horario teórico; a las
+        // demás, exactamente como siempre.
+        Set<Long> conCuadrante =
+                scheduleAssignmentRepository.findUsuarioIdsConCuadranteEnRango(desde, hasta);
+
         // Lo que este barrido ha encontrado, y a quién. Lo primero sirve
         // para retirar los avisos ABIERTO que ya no proceden; lo segundo,
         // para el resumen que se manda a quien revisa.
@@ -314,7 +328,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             nuevos += revisarDiasDe(usuario, dias, barrido);
             nuevos += revisarSemanasDe(
                     usuario, dias, ausencias.getOrDefault(usuario.getId(), Set.of()),
-                    desde, hasta, barrido);
+                    conCuadrante.contains(usuario.getId()), desde, hasta, barrido);
         }
 
         retirarLosQueYaNoProceden(desde, hasta, barrido.encontrados());
@@ -364,6 +378,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             User usuario,
             List<TimeEntryRepository.DailyWorkProjection> dias,
             Set<LocalDate> diasDeAusencia,
+            boolean tieneCuadrante,
             LocalDate desde,
             LocalDate hasta,
             Barrido barrido) {
@@ -387,15 +402,26 @@ public class OvertimeServiceImpl implements OvertimeService {
                 continue;
             }
 
-            int habiles = diasHabilesDeLaSemana(usuario.getEmpresa(), lunes, domingo, diasDeAusencia);
-            int exceso = OvertimeCalculator.excesoSemanal(
-                    semana.getValue(), usuario.getHorasSemanales(), habiles);
+            // Dos caminos, y el de siempre queda EXACTAMENTE como estaba: quien
+            // no tiene cuadrante no pasa por el código nuevo, ni siquiera por
+            // uno equivalente. Es la forma de garantizar que la Fase B1 no le
+            // cambia nada, en vez de confiar en que dos cálculos coincidan.
+            long esperados;
+            int exceso;
+            if (tieneCuadrante) {
+                esperados = jornadaTeoricaService.minutosTeoricosSemana(usuario, lunes);
+                exceso = OvertimeCalculator.excesoSobreObjetivo(semana.getValue(), esperados);
+            } else {
+                int habiles = diasHabilesDeLaSemana(usuario.getEmpresa(), lunes, domingo, diasDeAusencia);
+                exceso = OvertimeCalculator.excesoSemanal(
+                        semana.getValue(), usuario.getHorasSemanales(), habiles);
+                esperados = OvertimeCalculator.objetivoSemanal(usuario.getHorasSemanales(), habiles);
+            }
             if (exceso == 0) {
                 continue;
             }
 
             barrido.encontrados().add(clave(usuario.getId(), lunes, OvertimeType.SEMANAL));
-            long esperados = OvertimeCalculator.objetivoSemanal(usuario.getHorasSemanales(), habiles);
             ResultadoDelGuardado resultado =
                     guardar(usuario, lunes, OvertimeType.SEMANAL, exceso, (int) esperados, null);
             if (resultado.huboCambio()) {

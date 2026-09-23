@@ -11,10 +11,13 @@ import com.nxtime.nxtime.repository.JobApplicationRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
+import com.nxtime.nxtime.repository.ScheduleAssignmentRepository;
+import com.nxtime.nxtime.repository.ScheduleExceptionRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
 import com.nxtime.nxtime.service.PersonalDataExportService;
+import com.nxtime.nxtime.service.ReglasDeCuadrante;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -64,6 +67,8 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private final CorrectionRequestRepository correctionRepository;
     private final OvertimeAlertRepository overtimeRepository;
     private final ProjectAssignmentRepository assignmentRepository;
+    private final ScheduleAssignmentRepository scheduleAssignmentRepository;
+    private final ScheduleExceptionRepository scheduleExceptionRepository;
     private final NoticeRepository noticeRepository;
     private final AttachmentRepository attachmentRepository;
     private final JobApplicationRepository applicationRepository;
@@ -80,6 +85,8 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
             CorrectionRequestRepository correctionRepository,
             OvertimeAlertRepository overtimeRepository,
             ProjectAssignmentRepository assignmentRepository,
+            ScheduleAssignmentRepository scheduleAssignmentRepository,
+            ScheduleExceptionRepository scheduleExceptionRepository,
             NoticeRepository noticeRepository,
             AttachmentRepository attachmentRepository,
             JobApplicationRepository applicationRepository,
@@ -92,6 +99,8 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
         this.correctionRepository = correctionRepository;
         this.overtimeRepository = overtimeRepository;
         this.assignmentRepository = assignmentRepository;
+        this.scheduleAssignmentRepository = scheduleAssignmentRepository;
+        this.scheduleExceptionRepository = scheduleExceptionRepository;
         this.noticeRepository = noticeRepository;
         this.attachmentRepository = attachmentRepository;
         this.applicationRepository = applicationRepository;
@@ -159,6 +168,21 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                         .map(a -> new PersonalDataExport.Proyecto(
                                 a.getProyecto().getCodigo(), a.getProyecto().getNombre(),
                                 a.getFechaInicio(), a.getFechaFin()))
+                        .toList(),
+
+                // El horario teórico también es un dato de la persona: dice a
+                // qué hora tenía que estar en el trabajo cada día.
+                scheduleAssignmentRepository.findDeUsuario(id).stream()
+                        .map(c -> new PersonalDataExport.Cuadrante(
+                                c.getPlantilla().getNombre(), c.getFechaInicio(), c.getFechaFin()))
+                        .toList(),
+
+                scheduleExceptionRepository.findByUsuario_IdOrderByFechaDesc(id).stream()
+                        .map(e -> new PersonalDataExport.ExcepcionDeCuadrante(
+                                e.getFecha(), e.getTipo().name(),
+                                e.getInicio() != null ? ReglasDeCuadrante.hora(e.getInicio()) : null,
+                                e.getFin() != null ? ReglasDeCuadrante.hora(e.getFin()) : null,
+                                e.getMotivo()))
                         .toList(),
 
                 noticeRepository.findByDestinatarioOrderByCreadoEnDesc(p).stream()

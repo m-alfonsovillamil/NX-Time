@@ -65,6 +65,7 @@ object DateFormats {
 
     /** En el orden de `DayOfWeek`: lunes primero, como la rejilla. */
     private val INICIALES_DIA = arrayOf("L", "M", "X", "J", "V", "S", "D")
+    private val NOMBRES_DIA = arrayOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
 
     /** "29 de agosto, 2026" a partir del instante ISO que manda el backend. */
     fun fechaLarga(instanteIso: String?): String = conInstante(instanteIso) {
@@ -169,6 +170,12 @@ object DateFormats {
      * por qué no se le pregunta al sistema.
      */
     fun inicialDelDia(dia: DayOfWeek): String = INICIALES_DIA[dia.ordinal]
+
+    /**
+     * El nombre de un día de la semana ("Lunes"), escrito aquí por lo mismo
+     * que [INICIALES_DIA]: sin datos de idioma, el sistema devuelve un número.
+     */
+    fun nombreDelDia(dia: DayOfWeek): String = NOMBRES_DIA[dia.ordinal]
 
     /**
      * Cuántas celdas vacías van antes del día 1 en la rejilla del mes.

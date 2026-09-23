@@ -33,6 +33,10 @@ interface AuthRepository {
         hasta: java.time.LocalDate? = null
     ): Response<List<Registro>>
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
+    suspend fun getMiCuadrante(
+        desde: java.time.LocalDate,
+        hasta: java.time.LocalDate
+    ): Response<List<DiaTeoricoDTO>>
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
     suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO>
     suspend fun getImputaciones(fichajeId: Long): Response<ImputacionesDTO>

@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -47,6 +49,14 @@ public class GlobalExceptionHandler {
     private static final String UNIQUE_VIOLATION = "23505";
     /** SQLSTATE de PostgreSQL: se apunta a algo que no existe, o se borra algo al que se apunta. */
     private static final String FOREIGN_KEY_VIOLATION = "23503";
+    /**
+     * SQLSTATE de PostgreSQL: un EXCLUDE. Es un conflicto igual que un UNIQUE
+     * --dos filas que no pueden convivir--, pero con otro código, y hasta la
+     * Fase B1 caía en la rama del 500. No se notaba porque el único EXCLUDE que
+     * existía (el de asignaciones_proyecto) lo captura su propio servicio antes
+     * de llegar aquí; los de los cuadrantes dependen de este manejador.
+     */
+    private static final String EXCLUSION_VIOLATION = "23P01";
 
     /**
      * Qué decirle a quien está delante cuando gana el índice en vez de la
@@ -82,6 +92,16 @@ public class GlobalExceptionHandler {
                     "Ese fichaje ya tiene una solicitud de corrección pendiente."),
             Map.entry("uq_borrados_una_pendiente_por_usuario", "Ya hay una solicitud de borrado pendiente."),
             Map.entry("uq_candidaturas_oferta_usuario", "Ya te has presentado a esa oferta."),
+            // Proyectos (V10) y cuadrantes (V31): los EXCLUDE de las vigencias.
+            Map.entry("ex_asignaciones_sin_solape",
+                    "Esa persona ya está en ese proyecto en alguna de esas fechas."),
+            Map.entry("uq_plantillas_horario_empresa_nombre", "Ya existe una plantilla de horario con ese nombre."),
+            Map.entry("ex_tramos_sin_solape", "Hay dos tramos del mismo día que se pisan."),
+            Map.entry("ex_asignaciones_horario_sin_solape",
+                    "Esa persona ya tiene un cuadrante en alguna de esas fechas. "
+                            + "Cierra el anterior antes de asignar el nuevo."),
+            Map.entry("ex_excepciones_horario_sin_solape",
+                    "Ese día ya tiene una excepción que choca con esta. Bórrala antes."),
             // La cadena de auditoría (V27). Que esto salte significa que el
             // advisory lock de TimeEntryAuditListener no se pidió: el dato está
             // a salvo, pero es un fallo nuestro, así que además se registra
@@ -199,7 +219,7 @@ public class GlobalExceptionHandler {
         String constraint = nombreDelConstraint(ex);
         String sqlState = estadoSql(ex);
 
-        if (UNIQUE_VIOLATION.equals(sqlState)) {
+        if (UNIQUE_VIOLATION.equals(sqlState) || EXCLUSION_VIOLATION.equals(sqlState)) {
             String mensaje = MENSAJES_POR_CONSTRAINT.getOrDefault(
                     constraint, "Eso choca con algo que ya existe. Vuelve a cargar los datos e inténtalo de nuevo.");
             // El nombre del constraint no sale al cliente: no le dice nada y
@@ -235,11 +255,33 @@ public class GlobalExceptionHandler {
      * mensaje genérico: el SQLSTATE, que es lo que decide el código de estado,
      * no depende de esto.
      */
+    /**
+     * El nombre de la restricción que ha saltado, o {@code "desconocido"}.
+     *
+     * Dos fuentes, por este orden. La de Hibernate sirve para UNIQUE, claves
+     * ajenas y CHECK, pero <b>no sabe sacarlo de un EXCLUDE</b> (SQLSTATE
+     * 23P01): lo deja a null. Se descubrió ejecutando la Fase B1 contra el
+     * backend levantado, no en los tests, porque los tests construían la
+     * excepción con el nombre ya puesto: los 409 de los cuadrantes salían con
+     * el mensaje genérico en vez del suyo.
+     *
+     * La segunda fuente es el campo estructurado que manda PostgreSQL en el
+     * propio error ({@link ServerErrorMessage#getConstraint()}), que no depende
+     * de cómo esté redactado el mensaje ni del idioma del servidor.
+     */
     private String nombreDelConstraint(DataIntegrityViolationException ex) {
         for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
             if (causa instanceof org.hibernate.exception.ConstraintViolationException hibernate
                     && hibernate.getConstraintName() != null) {
                 return hibernate.getConstraintName();
+            }
+        }
+        for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
+            if (causa instanceof PSQLException postgres) {
+                ServerErrorMessage detalle = postgres.getServerErrorMessage();
+                if (detalle != null && detalle.getConstraint() != null) {
+                    return detalle.getConstraint();
+                }
             }
         }
         return "desconocido";

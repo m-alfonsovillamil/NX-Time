@@ -248,6 +248,29 @@ public final class NotificationEvents {
     }
 
     // ------------------------------------------------------------------
+    // B1: un cuadrante que no suma la jornada contratada
+    // ------------------------------------------------------------------
+
+    /**
+     * Se ha asignado a alguien una plantilla cuyas horas semanales se separan
+     * de su jornada contratada más de la tolerancia.
+     *
+     * No es un error y no bloquea nada: un turno rotatorio puede cuadrar al mes
+     * y no a la semana. Pero la jornada contratada la fija quien lleva los
+     * contratos, y el cuadrante lo puede poner un gestor: si no dicen lo mismo,
+     * el primero tiene que enterarse.
+     */
+    public record ScheduleDiffersFromContract(
+            long empresaId,
+            String empleado,
+            String plantilla,
+            long minutosPlantilla,
+            long minutosContrato,
+            LocalDate desde,
+            List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
     // 09/2026: borrado de datos personales (ADR 016)
     // ------------------------------------------------------------------
 

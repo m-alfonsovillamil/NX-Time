@@ -95,6 +95,7 @@ fun FicharScreen(
     contadorAvisos: Int,
     onIrAvisos: () -> Unit,
     iniciales: String,
+    onIrCuadrante: () -> Unit,
     viewModel: FicharViewModel = viewModel(factory = AppViewModelProvider.Factory),
     detalleViewModel: DetalleDeTiempoViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -205,6 +206,24 @@ fun FicharScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp, start = 24.dp, end = 24.dp)
             )
+
+            /*
+             * El cuadrante de hoy (Fase B1), y el camino a verlo entero. Solo
+             * aparece a quien tiene cuadrante: para el resto la pantalla queda
+             * exactamente como estaba.
+             */
+            estado.avisoDeCuadrante?.let { aviso ->
+                TextButton(onClick = onIrCuadrante) {
+                    Text(
+                        text = when (aviso) {
+                            is AvisoDeCuadrante.EntradaPrevista ->
+                                stringResource(R.string.fichar_entrada_prevista, aviso.hora)
+                            AvisoDeCuadrante.SinTurno -> stringResource(R.string.fichar_sin_turno_hoy)
+                        },
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
 

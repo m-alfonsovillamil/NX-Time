@@ -80,6 +80,16 @@ la bolsa anual de 80 h (art. 35.2 ET) cuando una persona lo acepta, y esa bolsa
 pasado no la deje mintiendo
 ([ADR](docs/adr/011-horas-extra-detectadas-no-imputadas.md)).
 
+**Cuadrantes que no reescriben el pasado.** A qué hora debía trabajar cada
+persona cada día: plantillas semanales asignadas **con vigencia**, como los
+proyectos, así que cambiar el turno en marzo no toca febrero —que ya está
+informado—. Los tramos van en minutos desde medianoche, lo que permite guardar
+un turno de 22:00 a 06:00 en una sola fila y comprobar solapes con enteros,
+incluido el del domingo que pisa el lunes. Y a quien no tiene cuadrante, las
+horas extra se le siguen calculando **por el mismo código de siempre**, no por
+uno equivalente: es la forma de garantizar que la fase no le cambia nada
+([ADR](docs/adr/023-cuadrantes-con-vigencia.md)).
+
 **Canal de denuncias con anonimato estructural.** El canal interno que obliga la
 Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
 leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
@@ -363,7 +373,7 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 | Rol | Además de lo anterior, puede |
 |---|---|
 | **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias, optar a vacantes internas |
-| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario y los proyectos, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
+| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
 | **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
@@ -495,6 +505,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 20. [Los tokens de la web viven en memoria, y la cookie espera al dominio propio](docs/adr/020-tokens-en-el-navegador.md)
 21. [La web es un proyecto aparte, y lo que comparte con el resto se genera](docs/adr/021-la-web-es-un-proyecto-aparte.md)
 22. [La web empieza por los cimientos, y lo que queda fuera tiene nombre](docs/adr/022-alcance-de-la-web.md)
+23. [Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato](docs/adr/023-cuadrantes-con-vigencia.md)
 
 ---
 

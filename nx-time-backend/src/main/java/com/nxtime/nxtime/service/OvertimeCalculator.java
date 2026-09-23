@@ -68,6 +68,24 @@ public final class OvertimeCalculator {
     }
 
     /**
+     * Minutos que sobran sobre un objetivo semanal ya calculado, o 0 si no
+     * llega a la tolerancia.
+     *
+     * Para quien tiene cuadrante (Fase B1): su objetivo no sale de prorratear
+     * la jornada contratada sino de sumar su horario teórico, y lo calcula
+     * {@code JornadaTeoricaService}. La guarda es la misma que la de
+     * {@link #excesoSemanal}: una semana sin nada que trabajar —vacaciones,
+     * festivos, días libres— no genera horas extra semanales. Las diarias
+     * siguen su propia regla.
+     */
+    public static int excesoSobreObjetivo(long minutosTrabajados, long objetivo) {
+        if (objetivo <= 0) {
+            return 0;
+        }
+        return exceso(minutosTrabajados, objetivo);
+    }
+
+    /**
      * Los minutos que se esperan de una semana con {@code diasHabiles}
      * días.
      *

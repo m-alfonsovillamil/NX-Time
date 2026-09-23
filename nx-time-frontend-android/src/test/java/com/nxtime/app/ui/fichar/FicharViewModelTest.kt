@@ -3,10 +3,12 @@ package com.nxtime.app.ui.fichar
 import app.cash.turbine.test
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
+import com.nxtime.app.data.dto.DiaTeoricoDTO
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.ResumenPersonalDTO
 import com.nxtime.app.data.dto.TipoFichaje
+import com.nxtime.app.data.dto.TramoTeoricoDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.util.MensajeUi
@@ -462,5 +464,75 @@ class FicharViewModelTest {
         val estado = FicharUiState(resumen = null, segundosEnCurso = 60)
 
         assertEquals(1L, estado.minutosHoy)
+    }
+
+    // ------------------------------------------------------------------
+    // El cuadrante de hoy (Fase B1)
+    // ------------------------------------------------------------------
+
+    private suspend fun conCuadranteDeHoy(dia: DiaTeoricoDTO?): FicharViewModel {
+        whenever(repositorio.getMiCuadrante(any(), any()))
+            .thenReturn(Response.success(listOfNotNull(dia)))
+        return viewModelCon(activo = null)
+    }
+
+    private fun dia(origen: String, entrada: String? = null) = DiaTeoricoDTO(
+        fecha = "2026-10-05",
+        origen = origen,
+        minutos = if (entrada != null) 480 else 0,
+        entrada = entrada,
+        tramos = if (entrada != null) listOf(TramoTeoricoDTO(entrada, "17:00", 480)) else emptyList()
+    )
+
+    @Test
+    fun `con cuadrante se dice a que hora tocaba entrar`() = runTest {
+        val viewModel = conCuadranteDeHoy(dia("CUADRANTE", entrada = "09:00"))
+        advanceUntilIdle()
+
+        assertEquals(
+            AvisoDeCuadrante.EntradaPrevista("09:00"),
+            viewModel.uiState.value.avisoDeCuadrante
+        )
+    }
+
+    @Test
+    fun `con cuadrante pero sin turno hoy se dice que no toca`() = runTest {
+        val viewModel = conCuadranteDeHoy(dia("EXCEPCION"))
+        advanceUntilIdle()
+
+        assertEquals(AvisoDeCuadrante.SinTurno, viewModel.uiState.value.avisoDeCuadrante)
+    }
+
+    /**
+     * La mayoría no tiene cuadrante, y para ellos la pantalla tiene que quedar
+     * exactamente como estaba: ni un horario inventado ni un "hoy no tienes
+     * turno" que no es verdad.
+     */
+    @Test
+    fun `sin cuadrante no se dice nada`() = runTest {
+        val viewModel = conCuadranteDeHoy(dia("SIN_CUADRANTE"))
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.avisoDeCuadrante)
+    }
+
+    @Test
+    fun `en un festivo tampoco, de eso ya se encarga el aviso de dia no laborable`() = runTest {
+        val viewModel = conCuadranteDeHoy(dia("NO_LABORABLE"))
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.avisoDeCuadrante)
+    }
+
+    /** Como el resumen: un extra que falla no puede impedir fichar ni pintar un error. */
+    @Test
+    fun `si el cuadrante falla se ficha igual y no sale ningun error`() = runTest {
+        whenever(repositorio.getMiCuadrante(any(), any())).thenThrow(RuntimeException("sin red"))
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.avisoDeCuadrante)
+        assertNull(viewModel.uiState.value.error)
+        assertEquals(EstadoJornada.SIN_JORNADA, viewModel.uiState.value.estado)
     }
 }
