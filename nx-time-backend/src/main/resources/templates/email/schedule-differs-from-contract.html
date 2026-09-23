@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--/*
+  Se ha asignado a alguien un cuadrante que no suma su jornada contratada
+  (Fase B1). Va a quien lleva los contratos (empleado:configurar).
+
+  No acusa a nadie ni pide deshacer nada: un turno rotatorio puede cuadrar al
+  mes y no a la semana. Dice la diferencia y deja la decisión a quien la tiene.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Cuadrante distinto de la jornada', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        A <strong th:text="${empleado}">Persona</strong> se le ha asignado la plantilla de horario
+        <strong th:text="${plantilla}">Oficina</strong> desde el
+        <strong th:text="${#temporals.format(desde, 'dd/MM/yyyy')}">01/10/2026</strong>.
+    </p>
+
+    <p>
+        Esa plantilla suma <strong th:text="${horasPlantilla}">40 h</strong> a la semana, y su jornada
+        contratada es de <strong th:text="${horasContrato}">37 h 30 min</strong>.
+    </p>
+
+    <p style="margin: 0;">
+        No tiene por qué ser un error: un turno que rota puede cuadrar al mes y no a la semana.
+        Pero si no lo es, habría que ajustar el cuadrante o la jornada, porque las horas extra
+        de esa persona se calcularán contra su cuadrante.
+    </p>
+</div>
+</body>
+</html>

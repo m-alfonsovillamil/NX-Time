@@ -123,7 +123,12 @@ dependencies {
     /*
      * Base de datos: PostgreSQL (antes SQLite, ver Fase 3 del plan).
      */
-    runtimeOnly("org.postgresql:postgresql")
+    // implementation y no runtimeOnly desde la Fase B1: GlobalExceptionHandler
+    // lee el nombre de la restricción del campo estructurado del error de
+    // PostgreSQL (ServerErrorMessage), porque Hibernate no sabe sacarlo de un
+    // EXCLUDE (SQLSTATE 23P01) y el texto del mensaje cambia con el idioma del
+    // servidor. El proyecto solo habla PostgreSQL (ADR 001).
+    implementation("org.postgresql:postgresql")
 
     /*
      * Dependencias para JSON Web Tokens (JWT). 0.12.x desde la Fase 4

@@ -117,6 +117,17 @@ public class PersonalDataPdfGenerator {
                 new String[] {"Código", "Nombre", "Desde", "Hasta"},
                 pr -> new String[] {pr.codigo(), pr.nombre(), fechaLocal(pr.desde()), fechaLocal(pr.hasta())});
 
+        tabla(documento, "Cuadrantes de horario", datos.cuadrantes(),
+                new String[] {"Plantilla", "Desde", "Hasta"},
+                c -> new String[] {c.plantilla(), fechaLocal(c.desde()), fechaLocal(c.hasta())});
+
+        tabla(documento, "Días fuera del cuadrante", datos.excepcionesDeCuadrante(),
+                new String[] {"Fecha", "Tipo", "Horario", "Motivo"},
+                e -> new String[] {
+                        fechaLocal(e.fecha()), e.tipo(),
+                        e.horaInicio() != null ? e.horaInicio() + "–" + e.horaFin() : "",
+                        texto(e.motivo())});
+
         tabla(documento, "Avisos recibidos (" + datos.avisos().size() + ")", datos.avisos(),
                 new String[] {"Fecha", "Aviso", "Leído"},
                 av -> new String[] {fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});

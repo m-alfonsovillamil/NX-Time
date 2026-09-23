@@ -26,6 +26,7 @@ import com.nxtime.app.ui.denuncias.DenunciasViewModel
 import com.nxtime.app.ui.ofertas.GestionOfertasViewModel
 import com.nxtime.app.ui.ofertas.OfertasViewModel
 import com.nxtime.app.ui.horasextra.HorasExtraViewModel
+import com.nxtime.app.ui.cuadrante.MiCuadranteViewModel
 import com.nxtime.app.ui.calendario.CalendarioViewModel
 import com.nxtime.app.ui.fichar.FicharViewModel
 import com.nxtime.app.ui.gestion.AltaUsuarioViewModel
@@ -73,6 +74,7 @@ object AppViewModelProvider {
         initializer { CorreccionesViewModel(app().authRepository) }
         initializer { BorradosViewModel(app().authRepository) }
         initializer { HorasExtraViewModel(app().authRepository, app().sessionManager) }
+        initializer { MiCuadranteViewModel(app().authRepository) }
         initializer { DenunciasViewModel(app().authRepository) }
         initializer { CanalDenunciasViewModel(app().authRepository) }
         initializer { OfertasViewModel(app().authRepository) }

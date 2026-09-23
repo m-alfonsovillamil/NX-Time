@@ -46,6 +46,9 @@
     "name" : "Informes",
     "description" : "Exportación de registros horarios en Excel y PDF (RD-ley 8/2019)."
   }, {
+    "name" : "Cuadrantes",
+    "description" : "Plantillas de horario, asignaciones con vigencia, excepciones por día y el horario teórico que resulta."
+  }, {
     "name" : "Fichaje",
     "description" : "Registro horario: iniciar/finalizar jornada, pausas e historial."
   }, {
@@ -327,6 +330,141 @@
           },
           "409" : {
             "description" : "Jornada abierta, anulada, o con una corrección sin resolver",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/plantillas/{plantillaId}" : {
+      "put" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Editar una plantilla de horario",
+        "description" : "Renombrarla siempre se puede. Cambiar sus tramos, solo si todavía no se ha aplicado a ningún día pasado: si no, reescribiría su horario teórico. En ese caso se crea otra plantilla y se asigna desde la fecha que sea.",
+        "operationId" : "editarPlantilla",
+        "parameters" : [ {
+          "name" : "plantillaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScheduleTemplateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Actualizada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Tramos inválidos o que se pisan",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Plantilla no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya aplicada al pasado, o nombre repetido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Borrar una plantilla de horario",
+        "description" : "Solo si nadie la tiene ni la ha tenido asignada.",
+        "operationId" : "borrarPlantilla",
+        "parameters" : [ {
+          "name" : "plantillaId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Borrada"
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Plantilla no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Alguien la tiene o la ha tenido asignada",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -2310,6 +2448,241 @@
         } ]
       }
     },
+    "/api/v1/cuadrantes/plantillas" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Plantillas de horario de la empresa",
+        "operationId" : "plantillas",
+        "responses" : {
+          "200" : {
+            "description" : "Plantillas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleTemplateResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Crear una plantilla de horario",
+        "description" : "Los tramos no pueden pisarse, tampoco entre días: un turno del lunes de 22:00 a 06:00 choca con un tramo del martes que empiece antes de las 06:00.",
+        "operationId" : "crearPlantilla",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScheduleTemplateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Creada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleTemplateResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Tramos inválidos o que se pisan",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya hay una plantilla con ese nombre",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/excepciones" : {
+      "post" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Poner una excepción en un día",
+        "description" : "LIBRE (sin tramos) o TRAMO (uno o varios, que sustituyen a los de la plantilla ese día). De hoy en adelante, y solo a quien tenga cuadrante ese día. Los festivos y las ausencias no van aquí: ya salen del calendario y de las ausencias aprobadas.",
+        "operationId" : "crearExcepcion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScheduleExceptionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Creada: una fila por tramo, o una para LIBRE",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleExceptionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Día pasado, sin cuadrante, o tramos inválidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Choca con otra excepción de ese día",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/asignaciones" : {
+      "post" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Asignar una plantilla a una persona",
+        "description" : "Desde hoy o una fecha futura, nunca pasada. Si la plantilla se separa de la jornada contratada más de 30 minutos a la semana, se asigna igual, la respuesta lo dice en 'aviso' y se avisa a quien lleva los contratos.",
+        "operationId" : "asignar_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScheduleAssignmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Asignada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleAssignmentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Fecha pasada o fechas al revés",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Empleado o plantilla no encontrados",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya tiene un cuadrante en alguna de esas fechas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/correcciones/{id}/disputa" : {
       "post" : {
         "tags" : [ "Correcciones" ],
@@ -3666,7 +4039,7 @@
         "tags" : [ "Departamentos" ],
         "summary" : "Poner a un empleado en un departamento",
         "description" : "Con departamentoId a null se le saca del que tuviera. Va aquí y no en el perfil propio a propósito: a qué departamento perteneces no lo decides tú.",
-        "operationId" : "asignar_1",
+        "operationId" : "asignar_2",
         "parameters" : [ {
           "name" : "usuarioId",
           "in" : "path",
@@ -3791,6 +4164,141 @@
           },
           "409" : {
             "description" : "Ya estaba cerrada, o ya estaba en ese estado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/asignaciones/{asignacionId}" : {
+      "delete" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Borrar una asignación que aún no ha empezado",
+        "description" : "Para deshacer un error. Una que ya ha estado en vigor no se borra: se cierra.",
+        "operationId" : "borrarAsignacion",
+        "parameters" : [ {
+          "name" : "asignacionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Borrada"
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Asignación no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya ha estado en vigor",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "patch" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Cerrar una asignación de cuadrante",
+        "description" : "Pone el último día en que aplica. No puede ser anterior a ayer.",
+        "operationId" : "cerrarAsignacion",
+        "parameters" : [ {
+          "name" : "asignacionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CloseScheduleAssignmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Cerrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleAssignmentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Fecha anterior a ayer o al inicio",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Asignación no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya terminó antes de ayer",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -5682,6 +6190,305 @@
         } ]
       }
     },
+    "/api/v1/cuadrantes/usuarios/{usuarioId}" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "El horario teórico de otra persona",
+        "description" : "De la misma empresa. Como mucho 62 días.",
+        "operationId" : "deUnaPersona",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "desde",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Días",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TheoreticalDayResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Rango al revés o de más de 62 días",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Empleado no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/usuarios/{usuarioId}/excepciones" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Las excepciones de una persona",
+        "description" : "De la más reciente a la más antigua.",
+        "operationId" : "excepcionesDe",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Excepciones",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleExceptionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Empleado no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/usuarios/{usuarioId}/asignaciones" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Las asignaciones de cuadrante de una persona",
+        "description" : "De la más reciente a la más antigua.",
+        "operationId" : "asignacionesDe",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Asignaciones",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleAssignmentResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Empleado no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/mio" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Mi horario teórico, día a día",
+        "description" : "Como mucho 62 días. Cada día dice de dónde sale: NO_LABORABLE (festivo o ausencia aprobada, que mandan sobre el cuadrante), EXCEPCION, CUADRANTE o SIN_CUADRANTE.",
+        "operationId" : "mio",
+        "parameters" : [ {
+          "name" : "desde",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Días",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TheoreticalDayResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Rango al revés o de más de 62 días",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/cuadrantes/equipo" : {
+      "get" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Quién tiene cuadrante un día, y qué le toca",
+        "description" : "Solo las personas activas con un cuadrante vigente ese día.",
+        "operationId" : "equipo",
+        "parameters" : [ {
+          "name" : "fecha",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Personas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TeamScheduleEntryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'fichaje:leer:equipo'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/correcciones/pendientes" : {
       "get" : {
         "tags" : [ "Correcciones" ],
@@ -6423,6 +7230,61 @@
           "bearerAuth" : [ ]
         } ]
       }
+    },
+    "/api/v1/cuadrantes/excepciones/{excepcionId}" : {
+      "delete" : {
+        "tags" : [ "Cuadrantes" ],
+        "summary" : "Quitar una excepción",
+        "description" : "Solo de hoy en adelante.",
+        "operationId" : "borrarExcepcion",
+        "parameters" : [ {
+          "name" : "excepcionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Quitada"
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:gestionar', o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Excepción no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Es de un día pasado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
     }
   },
   "components" : {
@@ -6717,6 +7579,94 @@
         "properties" : {
           "nombre" : {
             "type" : "string"
+          }
+        }
+      },
+      "ScheduleTemplateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "descripcion" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          },
+          "tramos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tramo"
+            },
+            "maxItems" : 50,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "nombre", "tramos" ]
+      },
+      "Tramo" : {
+        "type" : "object",
+        "properties" : {
+          "diaSemana" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "inicio" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "fin" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "horaInicio" : {
+            "type" : "string",
+            "example" : "09:00"
+          },
+          "horaFin" : {
+            "type" : "string",
+            "example" : "14:00"
+          },
+          "minutos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cruzaMedianoche" : {
+            "type" : "boolean",
+            "description" : "Si termina al día siguiente: el turno de noche."
+          }
+        }
+      },
+      "ScheduleTemplateResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "minutosSemanales" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "tramosEditables" : {
+            "type" : "boolean"
+          },
+          "borrable" : {
+            "type" : "boolean"
+          },
+          "tramos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tramo"
+            }
           }
         }
       },
@@ -7461,6 +8411,136 @@
           }
         }
       },
+      "ScheduleExceptionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "LIBRE", "TRAMO" ]
+          },
+          "tramos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tramo"
+            },
+            "maxItems" : 6,
+            "minItems" : 0
+          },
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 300,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "fecha", "tipo", "usuarioId" ]
+      },
+      "ScheduleExceptionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "LIBRE", "TRAMO" ]
+          },
+          "inicio" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "fin" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32"
+          },
+          "horaInicio" : {
+            "type" : [ "string", "null" ],
+            "example" : "08:00"
+          },
+          "horaFin" : {
+            "type" : [ "string", "null" ],
+            "example" : "14:00"
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "ScheduleAssignmentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "plantillaId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "fechaInicio" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "fechaFin" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "fechaInicio", "plantillaId", "usuarioId" ]
+      },
+      "ScheduleAssignmentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioNombre" : {
+            "type" : "string"
+          },
+          "plantillaId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "plantillaNombre" : {
+            "type" : "string"
+          },
+          "fechaInicio" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "fechaFin" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "vigente" : {
+            "type" : "boolean"
+          },
+          "aviso" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
       "DisputeRequest" : {
         "type" : "object",
         "properties" : {
@@ -7865,6 +8945,16 @@
         },
         "required" : [ "estado" ]
       },
+      "CloseScheduleAssignmentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fechaFin" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        },
+        "required" : [ "fechaFin" ]
+      },
       "ResolveCorrectionRequest" : {
         "type" : "object",
         "properties" : {
@@ -8172,6 +9262,22 @@
           }
         }
       },
+      "Cuadrante" : {
+        "type" : "object",
+        "properties" : {
+          "plantilla" : {
+            "type" : "string"
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "hasta" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
       "Denuncia" : {
         "type" : "object",
         "properties" : {
@@ -8195,6 +9301,27 @@
           "resueltaEn" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "ExcepcionDeCuadrante" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "horaInicio" : {
+            "type" : "string"
+          },
+          "horaFin" : {
+            "type" : "string"
+          },
+          "motivo" : {
+            "type" : "string"
           }
         }
       },
@@ -8383,6 +9510,18 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/Proyecto"
+            }
+          },
+          "cuadrantes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Cuadrante"
+            }
+          },
+          "excepcionesDeCuadrante" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ExcepcionDeCuadrante"
             }
           },
           "avisos" : {
@@ -8749,6 +9888,54 @@
           }
         }
       },
+      "TheoreticalDayResponse" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "origen" : {
+            "type" : "string",
+            "enum" : [ "NO_LABORABLE", "EXCEPCION", "CUADRANTE", "SIN_CUADRANTE" ]
+          },
+          "minutos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "entrada" : {
+            "type" : [ "string", "null" ],
+            "example" : "09:00"
+          },
+          "tramos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tramo"
+            }
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          },
+          "plantilla" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "TeamScheduleEntryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "dia" : {
+            "$ref" : "#/components/schemas/TheoreticalDayResponse"
+          }
+        }
+      },
       "CalendarAbsenceDTO" : {
         "type" : "object",
         "properties" : {
@@ -8839,7 +10026,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA" ]
           },
           "titulo" : {
             "type" : "string"

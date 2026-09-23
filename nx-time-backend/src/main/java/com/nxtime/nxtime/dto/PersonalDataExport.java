@@ -33,6 +33,8 @@ public record PersonalDataExport(
         List<Correccion> correccionesPedidas,
         List<HorasExtra> horasExtra,
         List<Proyecto> proyectos,
+        List<Cuadrante> cuadrantes,
+        List<ExcepcionDeCuadrante> excepcionesDeCuadrante,
         List<Aviso> avisos,
         List<Adjunto> adjuntos,
         List<Candidatura> candidaturas,
@@ -76,6 +78,15 @@ public record PersonalDataExport(
     }
 
     public record Proyecto(String codigo, String nombre, LocalDate desde, LocalDate hasta) {
+    }
+
+    /** Qué plantilla de horario se tuvo y cuándo (Fase B1). Hasta null = sigue vigente. */
+    public record Cuadrante(String plantilla, LocalDate desde, LocalDate hasta) {
+    }
+
+    /** Un día que se salió del cuadrante. Horas null en un día libre. */
+    public record ExcepcionDeCuadrante(
+            LocalDate fecha, String tipo, String horaInicio, String horaFin, String motivo) {
     }
 
     public record Aviso(String tipo, String titulo, String cuerpo, boolean leido, Instant creadoEn) {

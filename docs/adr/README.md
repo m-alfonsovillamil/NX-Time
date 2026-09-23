@@ -32,3 +32,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [020](020-tokens-en-el-navegador.md) | Los tokens de la web viven en memoria, y la cookie espera al dominio propio |
 | [021](021-la-web-es-un-proyecto-aparte.md) | La web es un proyecto aparte, y lo que comparte con el resto se genera |
 | [022](022-alcance-de-la-web.md) | La web empieza por los cimientos, y lo que queda fuera tiene nombre |
+| [023](023-cuadrantes-con-vigencia.md) | Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato |

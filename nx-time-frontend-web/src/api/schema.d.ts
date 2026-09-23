@@ -52,6 +52,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cuadrantes/plantillas/{plantillaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar una plantilla de horario
+         * @description Renombrarla siempre se puede. Cambiar sus tramos, solo si todavía no se ha aplicado a ningún día pasado: si no, reescribiría su horario teórico. En ese caso se crea otra plantilla y se asigna desde la fecha que sea.
+         */
+        put: operations["editarPlantilla"];
+        post?: never;
+        /**
+         * Borrar una plantilla de horario
+         * @description Solo si nadie la tiene ni la ha tenido asignada.
+         */
+        delete: operations["borrarPlantilla"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register-manager": {
         parameters: {
             query?: never;
@@ -633,6 +657,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cuadrantes/plantillas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plantillas de horario de la empresa */
+        get: operations["plantillas"];
+        put?: never;
+        /**
+         * Crear una plantilla de horario
+         * @description Los tramos no pueden pisarse, tampoco entre días: un turno del lunes de 22:00 a 06:00 choca con un tramo del martes que empiece antes de las 06:00.
+         */
+        post: operations["crearPlantilla"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/excepciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Poner una excepción en un día
+         * @description LIBRE (sin tramos) o TRAMO (uno o varios, que sustituyen a los de la plantilla ese día). De hoy en adelante, y solo a quien tenga cuadrante ese día. Los festivos y las ausencias no van aquí: ya salen del calendario y de las ausencias aprobadas.
+         */
+        post: operations["crearExcepcion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/asignaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Asignar una plantilla a una persona
+         * @description Desde hoy o una fecha futura, nunca pasada. Si la plantilla se separa de la jornada contratada más de 30 minutos a la semana, se asigna igual, la respuesta lo dice en 'aviso' y se avisa a quien lleva los contratos.
+         */
+        post: operations["asignar_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/correcciones/{id}/disputa": {
         parameters: {
             query?: never;
@@ -963,7 +1048,7 @@ export interface paths {
          * Poner a un empleado en un departamento
          * @description Con departamentoId a null se le saca del que tuviera. Va aquí y no en el perfil propio a propósito: a qué departamento perteneces no lo decides tú.
          */
-        patch: operations["asignar_1"];
+        patch: operations["asignar_2"];
         trace?: never;
     };
     "/api/v1/denuncias/{id}/estado": {
@@ -984,6 +1069,30 @@ export interface paths {
          * @description Cerrarla (RESUELTA o ARCHIVADA) exige escribir la conclusión: la ley obliga a responder, no a dar la razón. Un expediente cerrado no se reabre por aquí.
          */
         patch: operations["cambiarEstado_2"];
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/asignaciones/{asignacionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Borrar una asignación que aún no ha empezado
+         * @description Para deshacer un error. Una que ya ha estado en vigor no se borra: se cierra.
+         */
+        delete: operations["borrarAsignacion"];
+        options?: never;
+        head?: never;
+        /**
+         * Cerrar una asignación de cuadrante
+         * @description Pone el último día en que aplica. No puede ser anterior a ayer.
+         */
+        patch: operations["cerrarAsignacion"];
         trace?: never;
     };
     "/api/v1/correcciones/{id}/estado": {
@@ -1665,6 +1774,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cuadrantes/usuarios/{usuarioId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * El horario teórico de otra persona
+         * @description De la misma empresa. Como mucho 62 días.
+         */
+        get: operations["deUnaPersona"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/usuarios/{usuarioId}/excepciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las excepciones de una persona
+         * @description De la más reciente a la más antigua.
+         */
+        get: operations["excepcionesDe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/usuarios/{usuarioId}/asignaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las asignaciones de cuadrante de una persona
+         * @description De la más reciente a la más antigua.
+         */
+        get: operations["asignacionesDe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/mio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi horario teórico, día a día
+         * @description Como mucho 62 días. Cada día dice de dónde sale: NO_LABORABLE (festivo o ausencia aprobada, que mandan sobre el cuadrante), EXCEPCION, CUADRANTE o SIN_CUADRANTE.
+         */
+        get: operations["mio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cuadrantes/equipo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién tiene cuadrante un día, y qué le toca
+         * @description Solo las personas activas con un cuadrante vigente ese día.
+         */
+        get: operations["equipo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/correcciones/pendientes": {
         parameters: {
             query?: never;
@@ -1964,6 +2173,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cuadrantes/excepciones/{excepcionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar una excepción
+         * @description Solo de hoy en adelante.
+         */
+        delete: operations["borrarExcepcion"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2081,6 +2310,38 @@ export interface components {
         };
         SimpleUserDTO: {
             nombre?: string;
+        };
+        ScheduleTemplateRequest: {
+            nombre: string;
+            descripcion?: string;
+            tramos: components["schemas"]["Tramo"][];
+        };
+        Tramo: {
+            /** Format: int32 */
+            diaSemana?: number;
+            /** Format: int32 */
+            inicio?: number;
+            /** Format: int32 */
+            fin?: number;
+            /** @example 09:00 */
+            horaInicio?: string;
+            /** @example 14:00 */
+            horaFin?: string;
+            /** Format: int32 */
+            minutos?: number;
+            /** @description Si termina al día siguiente: el turno de noche. */
+            cruzaMedianoche?: boolean;
+        };
+        ScheduleTemplateResponse: {
+            /** Format: int64 */
+            id?: number;
+            nombre?: string;
+            descripcion?: string;
+            /** Format: int64 */
+            minutosSemanales?: number;
+            tramosEditables?: boolean;
+            borrable?: boolean;
+            tramos?: components["schemas"]["Tramo"][];
         };
         RegisterManagerRequest: {
             nombreEmpresa: string;
@@ -2357,6 +2618,61 @@ export interface components {
             diasHastaRespuesta?: number;
             mensajes?: components["schemas"]["ComplaintMessageResponse"][];
         };
+        ScheduleExceptionRequest: {
+            /** Format: int64 */
+            usuarioId: number;
+            /** Format: date */
+            fecha: string;
+            /** @enum {string} */
+            tipo: "LIBRE" | "TRAMO";
+            tramos?: components["schemas"]["Tramo"][];
+            motivo?: string;
+        };
+        ScheduleExceptionResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            /** Format: date */
+            fecha?: string;
+            /** @enum {string} */
+            tipo?: "LIBRE" | "TRAMO";
+            /** Format: int32 */
+            inicio?: number | null;
+            /** Format: int32 */
+            fin?: number | null;
+            /** @example 08:00 */
+            horaInicio?: string | null;
+            /** @example 14:00 */
+            horaFin?: string | null;
+            motivo?: string | null;
+        };
+        ScheduleAssignmentRequest: {
+            /** Format: int64 */
+            usuarioId: number;
+            /** Format: int64 */
+            plantillaId: number;
+            /** Format: date */
+            fechaInicio: string;
+            /** Format: date */
+            fechaFin?: string;
+        };
+        ScheduleAssignmentResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNombre?: string;
+            /** Format: int64 */
+            plantillaId?: number;
+            plantillaNombre?: string;
+            /** Format: date */
+            fechaInicio?: string;
+            /** Format: date */
+            fechaFin?: string;
+            vigente?: boolean;
+            aviso?: string | null;
+        };
         DisputeRequest: {
             motivo: string;
         };
@@ -2511,6 +2827,10 @@ export interface components {
             estado: "RECIBIDA" | "EN_INVESTIGACION" | "RESUELTA" | "ARCHIVADA";
             conclusion?: string;
         };
+        CloseScheduleAssignmentRequest: {
+            /** Format: date */
+            fechaFin: string;
+        };
         ResolveCorrectionRequest: {
             aprobada: boolean;
             comentario?: string;
@@ -2631,6 +2951,13 @@ export interface components {
             fechaResolucion?: string;
             comentarioResolucion?: string;
         };
+        Cuadrante: {
+            plantilla?: string;
+            /** Format: date */
+            desde?: string;
+            /** Format: date */
+            hasta?: string;
+        };
         Denuncia: {
             categoria?: string;
             descripcion?: string;
@@ -2641,6 +2968,14 @@ export interface components {
             acuseReciboEn?: string;
             /** Format: date-time */
             resueltaEn?: string;
+        };
+        ExcepcionDeCuadrante: {
+            /** Format: date */
+            fecha?: string;
+            tipo?: string;
+            horaInicio?: string;
+            horaFin?: string;
+            motivo?: string;
         };
         Fichaje: {
             /** Format: int64 */
@@ -2710,6 +3045,8 @@ export interface components {
             correccionesPedidas?: components["schemas"]["Correccion"][];
             horasExtra?: components["schemas"]["HorasExtra"][];
             proyectos?: components["schemas"]["Proyecto"][];
+            cuadrantes?: components["schemas"]["Cuadrante"][];
+            excepcionesDeCuadrante?: components["schemas"]["ExcepcionDeCuadrante"][];
             avisos?: components["schemas"]["Aviso"][];
             adjuntos?: components["schemas"]["Adjunto"][];
             candidaturas?: components["schemas"]["Candidatura"][];
@@ -2866,6 +3203,25 @@ export interface components {
             /** Format: int64 */
             minutos?: number;
         };
+        TheoreticalDayResponse: {
+            /** Format: date */
+            fecha?: string;
+            /** @enum {string} */
+            origen?: "NO_LABORABLE" | "EXCEPCION" | "CUADRANTE" | "SIN_CUADRANTE";
+            /** Format: int32 */
+            minutos?: number;
+            /** @example 09:00 */
+            entrada?: string | null;
+            tramos?: components["schemas"]["Tramo"][];
+            motivo?: string | null;
+            plantilla?: string | null;
+        };
+        TeamScheduleEntryResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nombre?: string;
+            dia?: components["schemas"]["TheoreticalDayResponse"];
+        };
         CalendarAbsenceDTO: {
             /** Format: int64 */
             id?: number;
@@ -2902,7 +3258,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
-            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE";
+            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA";
             titulo?: string;
             cuerpo?: string;
             rutaDestino?: string;
@@ -3193,6 +3549,115 @@ export interface operations {
                 };
             };
             /** @description Jornada abierta, anulada, o con una corrección sin resolver */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    editarPlantilla: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plantillaId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Actualizada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleTemplateResponse"];
+                };
+            };
+            /** @description Tramos inválidos o que se pisan */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Plantilla no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya aplicada al pasado, o nombre repetido */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    borrarPlantilla: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plantillaId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Borrada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Plantilla no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Alguien la tiene o la ha tenido asignada */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4808,6 +5273,197 @@ export interface operations {
             };
         };
     };
+    plantillas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plantillas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleTemplateResponse"][];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    crearPlantilla: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Creada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleTemplateResponse"];
+                };
+            };
+            /** @description Tramos inválidos o que se pisan */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya hay una plantilla con ese nombre */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    crearExcepcion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Creada: una fila por tramo, o una para LIBRE */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleExceptionResponse"][];
+                };
+            };
+            /** @description Día pasado, sin cuadrante, o tramos inválidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Choca con otra excepción de ese día */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    asignar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Asignada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleAssignmentResponse"];
+                };
+            };
+            /** @description Fecha pasada o fechas al revés */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Empleado o plantilla no encontrados */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya tiene un cuadrante en alguna de esas fechas */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     disputar: {
         parameters: {
             query?: never;
@@ -5865,7 +6521,7 @@ export interface operations {
             };
         };
     };
-    asignar_1: {
+    asignar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5961,6 +6617,115 @@ export interface operations {
                 };
             };
             /** @description Ya estaba cerrada, o ya estaba en ese estado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    borrarAsignacion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asignacionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Borrada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Asignación no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya ha estado en vigor */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    cerrarAsignacion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asignacionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseScheduleAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Cerrada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleAssignmentResponse"];
+                };
+            };
+            /** @description Fecha anterior a ayer o al inicio */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Asignación no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya terminó antes de ayer */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7448,6 +8213,210 @@ export interface operations {
             };
         };
     };
+    deUnaPersona: {
+        parameters: {
+            query: {
+                desde: string;
+                hasta: string;
+            };
+            header?: never;
+            path: {
+                usuarioId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Días */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TheoreticalDayResponse"][];
+                };
+            };
+            /** @description Rango al revés o de más de 62 días */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Empleado no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    excepcionesDe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                usuarioId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Excepciones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleExceptionResponse"][];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Empleado no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    asignacionesDe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                usuarioId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asignaciones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleAssignmentResponse"][];
+                };
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Empleado no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    mio: {
+        parameters: {
+            query: {
+                desde: string;
+                hasta: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Días */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TheoreticalDayResponse"][];
+                };
+            };
+            /** @description Rango al revés o de más de 62 días */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    equipo: {
+        parameters: {
+            query: {
+                fecha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Personas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamScheduleEntryResponse"][];
+                };
+            };
+            /** @description Sin 'fichaje:leer:equipo' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     pendientes: {
         parameters: {
             query?: never;
@@ -8017,6 +8986,53 @@ export interface operations {
                 };
             };
             /** @description Jornada ya cerrada, o pausa ya deshecha */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    borrarExcepcion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                excepcionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quitada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'cuadrante:gestionar', o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Excepción no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Es de un día pasado */
             409: {
                 headers: {
                     [name: string]: unknown;

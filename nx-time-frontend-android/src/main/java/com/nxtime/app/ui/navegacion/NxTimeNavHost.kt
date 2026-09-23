@@ -58,6 +58,7 @@ import com.nxtime.app.ui.reparto.RepartoScreen
 import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
 import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
+import com.nxtime.app.ui.cuadrante.MiCuadranteScreen
 import com.nxtime.app.ui.ofertas.GestionOfertasScreen
 import com.nxtime.app.ui.ofertas.OfertasScreen
 import com.nxtime.app.ui.calendario.CalendarioScreen
@@ -118,6 +119,9 @@ enum class Pantalla(val ruta: String) {
     // misma pantalla porque para quien la abre es la misma cosa; lo que
     // cambia es cuanto de ella se le ensena.
     HORAS_EXTRA("horas-extra"),
+    // Fase B1. Hoja de "Mi jornada", en solo lectura: el editor de
+    // plantillas va a la web (ADR 022).
+    CUADRANTE("cuadrante"),
     // Fase G. Dos hojas y no una: presentar/seguir una denuncia y
     // instruir el canal son dos trabajos distintos con dos permisos
     // distintos, y la segunda solo la abre un ADMIN.
@@ -515,7 +519,8 @@ fun NxTimeNavHost(
                     onIrPerfil = irAPerfil,
                     contadorAvisos = estadoAvisos.noLeidos,
                     onIrAvisos = irAAvisos,
-                    iniciales = iniciales
+                    iniciales = iniciales,
+                    onIrCuadrante = { navController.navigate(Pantalla.CUADRANTE.ruta) }
                 )
             }
 
@@ -686,6 +691,10 @@ fun NxTimeNavHost(
 
             composable(Pantalla.CORRECCIONES.ruta) {
                 CorreccionesScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(Pantalla.CUADRANTE.ruta) {
+                MiCuadranteScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.HORAS_EXTRA.ruta) {

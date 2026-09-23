@@ -2,6 +2,8 @@ package com.nxtime.app.ui.fichar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nxtime.app.data.dto.DiaTeoricoDTO
+import com.nxtime.app.data.dto.OrigenDelDia
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.ProyectosParaFicharDTO
 import com.nxtime.app.data.dto.Registro
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /** En qué punto de la jornada está el empleado. */
 enum class EstadoJornada { SIN_JORNADA, TRABAJANDO, EN_PAUSA }
@@ -58,8 +61,30 @@ data class FicharUiState(
      * quedarse a `null` sin que sea un error: el resumen es un extra, y
      * si falla no debe impedir fichar (ver [cargarResumen]).
      */
-    val resumen: ResumenPersonalDTO? = null
+    val resumen: ResumenPersonalDTO? = null,
+
+    /**
+     * El horario teórico de hoy (Fase B1): a qué hora tocaba entrar. Es
+     * `null` si no ha llegado o si falló, y como el resumen, no impide fichar:
+     * quien no tiene cuadrante —la mayoría— ficha exactamente igual que antes.
+     */
+    val hoyTeorico: DiaTeoricoDTO? = null
 ) {
+    /**
+     * Lo que la pantalla dice del cuadrante de hoy, o `null` si no hay nada
+     * que decir.
+     *
+     * Solo se habla cuando HAY cuadrante. Sin él no se inventa un horario
+     * repartiendo la jornada contratada entre los días, y en un festivo o con
+     * vacaciones ya se encarga el diálogo de día no laborable.
+     */
+    val avisoDeCuadrante: AvisoDeCuadrante?
+        get() {
+            val hoy = hoyTeorico ?: return null
+            val origen = OrigenDelDia.de(hoy.origen)
+            if (origen != OrigenDelDia.CUADRANTE && origen != OrigenDelDia.EXCEPCION) return null
+            return hoy.entrada?.let { AvisoDeCuadrante.EntradaPrevista(it) } ?: AvisoDeCuadrante.SinTurno
+        }
     /**
      * Trabajado hoy, contando la jornada que está abierta ahora mismo.
      *
@@ -105,6 +130,25 @@ class FicharViewModel(
     init {
         _uiState.update { it.copy(nombreUsuario = sessionManager.fetchUserName().orEmpty()) }
         comprobarEstadoJornada()
+        cargarCuadranteDeHoy()
+    }
+
+    /**
+     * Una vez al abrir, no tras cada fichaje: fichar no cambia a qué hora
+     * tocaba entrar. Si falla se queda sin decir nada, como el resumen.
+     */
+    private fun cargarCuadranteDeHoy() {
+        viewModelScope.launch {
+            val hoy = LocalDate.now(DateFormats.ZONA_ESPANA)
+            val dia = try {
+                authRepository.getMiCuadrante(hoy, hoy).takeIf { it.isSuccessful }?.body()?.firstOrNull()
+            } catch (e: Exception) {
+                null
+            }
+            if (dia != null) {
+                _uiState.update { it.copy(hoyTeorico = dia) }
+            }
+        }
     }
 
     /**
@@ -413,8 +457,18 @@ class FicharViewModel(
      * brocha se pintaban permisos que el backend distingue mucho más
      * fino: por eso se le ofrecía "Crear gestor" a un GESTOR, que no
      * tiene esa authority. Ahora lo resuelve `ui/util/Permisos.kt`, que
-     * es un espejo de `RoleAuthorities.java`, y lo consulta el grafo de
-     * navegación, que es quien decide qué pestañas existen.
+     * pregunta por las authorities que manda el servidor (Fase C3), y lo
+     * consulta el grafo de navegación, que es quien decide qué pestañas
+     * existen.
      */
 
+}
+
+/** Qué decir del cuadrante de hoy en "Mi jornada". */
+sealed interface AvisoDeCuadrante {
+    /** "Entrada prevista: 09:00". */
+    data class EntradaPrevista(val hora: String) : AvisoDeCuadrante
+
+    /** Tiene cuadrante, pero hoy no le toca: día libre en la plantilla o por excepción. */
+    data object SinTurno : AvisoDeCuadrante
 }

@@ -8,6 +8,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -29,11 +31,36 @@ class GlobalExceptionHandlerTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-    /** Una violación como la que llega de verdad: Spring envolviendo a Hibernate envolviendo a JDBC. */
+    /**
+     * Una violación como la que llega de un UNIQUE o de una clave ajena: Spring
+     * envolviendo a Hibernate envolviendo a JDBC, con el nombre de la
+     * restricción ya extraído por Hibernate.
+     */
     private DataIntegrityViolationException violacion(String sqlState, String constraint) {
         SQLException jdbc = new SQLException("detalle de PostgreSQL", sqlState);
         ConstraintViolationException hibernate =
                 new ConstraintViolationException("no se pudo ejecutar", jdbc, constraint);
+        return new DataIntegrityViolationException("no se pudo ejecutar", hibernate);
+    }
+
+    /**
+     * Una violación como la que llega DE VERDAD de un EXCLUDE: Hibernate no sabe
+     * extraer el nombre de la restricción del SQLSTATE 23P01 y lo deja a null.
+     * El nombre solo viaja en el campo estructurado del error de PostgreSQL
+     * (el campo 'n' del protocolo).
+     *
+     * Hasta la Fase B1 este caso se probaba con {@link #violacion}, que rellena
+     * el nombre como si Hibernate lo supiera sacar: el test pasaba y en
+     * producción los 409 salían con el mensaje genérico. Se vio levantando el
+     * backend y haciendo peticiones.
+     */
+    private DataIntegrityViolationException violacionDePostgres(String sqlState, String constraint) {
+        ServerErrorMessage servidor = new ServerErrorMessage(
+                "SERROR\0C" + sqlState + "\0Mconflicting key value violates exclusion constraint \""
+                        + constraint + "\"\0n" + constraint + "\0");
+        PSQLException postgres = new PSQLException(servidor);
+        ConstraintViolationException hibernate =
+                new ConstraintViolationException("no se pudo ejecutar", postgres, null);
         return new DataIntegrityViolationException("no se pudo ejecutar", hibernate);
     }
 
@@ -53,6 +80,28 @@ class GlobalExceptionHandlerTest {
     })
     void unique_contestaConflictoYElMensajeDelServicio(String constraint, String mensajeEsperado) {
         ProblemDetail problema = handler.handleDataIntegrity(violacion("23505", constraint));
+
+        assertThat(problema.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(problema.getDetail()).isEqualTo(mensajeEsperado);
+    }
+
+    /**
+     * Un EXCLUDE es un conflicto igual que un UNIQUE, pero con otro SQLSTATE
+     * (23P01), y hasta la Fase B1 caía en la rama del 500. No se notaba porque
+     * el único EXCLUDE que había lo capturaba su propio servicio; los de los
+     * cuadrantes dependen de este manejador.
+     */
+    @ParameterizedTest(name = "{0} -> \"{1}\"")
+    @DisplayName("Un EXCLUDE es 409, no 500, y con su mensaje")
+    @CsvSource(delimiter = '|', value = {
+            "ex_asignaciones_horario_sin_solape | Esa persona ya tiene un cuadrante en alguna de esas fechas. "
+                    + "Cierra el anterior antes de asignar el nuevo.",
+            "ex_excepciones_horario_sin_solape | Ese día ya tiene una excepción que choca con esta. Bórrala antes.",
+            "ex_tramos_sin_solape | Hay dos tramos del mismo día que se pisan.",
+            "ex_asignaciones_sin_solape | Esa persona ya está en ese proyecto en alguna de esas fechas.",
+    })
+    void exclude_contestaConflicto(String constraint, String mensajeEsperado) {
+        ProblemDetail problema = handler.handleDataIntegrity(violacionDePostgres("23P01", constraint));
 
         assertThat(problema.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
         assertThat(problema.getDetail()).isEqualTo(mensajeEsperado);

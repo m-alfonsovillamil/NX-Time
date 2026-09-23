@@ -121,6 +121,15 @@ interface ApiService {
     @GET("api/v1/dashboard/resumen")
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
 
+    /*  Cuadrante (Fase B1, `cuadrante:leer`: todo el mundo)  */
+
+    /** El horario teórico propio, día a día. Como mucho 62 días. */
+    @GET("api/v1/cuadrantes/mio")
+    suspend fun getMiCuadrante(
+        @Query("desde") desde: String,
+        @Query("hasta") hasta: String
+    ): Response<List<DiaTeoricoDTO>>
+
     /*
      *  Cumplimiento normativo (RRHH/ADMIN)
      *

@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service;
 
 import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -32,4 +33,16 @@ public interface NonWorkingDayService {
     }
 
     Optional<Motivo> motivo(User persona, LocalDate dia);
+
+    /**
+     * Lo mismo que {@link #motivo}, para todos los días de un rango a la vez
+     * (ambos incluidos). Solo trae los días que NO son laborables.
+     *
+     * Existe para el horario teórico (Fase B1), que pregunta por semanas y
+     * meses enteros: con {@code motivo} serían treinta consultas de ausencias
+     * para pintar un mes. Vive aquí, junto a la versión de un día y con la
+     * misma construcción del motivo, para que la regla de qué es no laborable
+     * siga estando en un solo sitio.
+     */
+    Map<LocalDate, Motivo> motivosEnRango(User persona, LocalDate desde, LocalDate hasta);
 }

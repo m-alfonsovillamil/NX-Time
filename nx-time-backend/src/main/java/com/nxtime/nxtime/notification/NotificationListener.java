@@ -16,6 +16,7 @@ import com.nxtime.nxtime.domain.OvertimeType;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
 import com.nxtime.nxtime.service.NoticeService;
+import com.nxtime.nxtime.service.ReglasDeCuadrante;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -616,6 +617,42 @@ public class NotificationListener {
                             "fecha", evento.fecha(),
                             "motivo", evento.motivo(),
                             "vacaciones", evento.vacaciones()));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // B1: un cuadrante que no suma la jornada contratada
+    // ------------------------------------------------------------------
+
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onScheduleDiffersFromContract(NotificationEvents.ScheduleDiffersFromContract evento) {
+        String titulo = "El cuadrante de " + evento.empleado() + " no suma su jornada contratada";
+        String cuerpo = "La plantilla «" + evento.plantilla() + "» suma "
+                + ReglasDeCuadrante.duracion(evento.minutosPlantilla()) + " a la semana, y su jornada es de "
+                + ReglasDeCuadrante.duracion(evento.minutosContrato()) + ". Aplica desde el "
+                + FECHA.format(evento.desde()) + ".";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    destinatario.getId(),
+                    NoticeType.CUADRANTE_DISTINTO_DE_JORNADA,
+                    titulo,
+                    cuerpo,
+                    NoticeType.CUADRANTE_DISTINTO_DE_JORNADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "schedule-differs-from-contract",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "empleado", evento.empleado(),
+                            "plantilla", evento.plantilla(),
+                            "horasPlantilla", ReglasDeCuadrante.duracion(evento.minutosPlantilla()),
+                            "horasContrato", ReglasDeCuadrante.duracion(evento.minutosContrato()),
+                            "desde", evento.desde()));
         }
     }
 
