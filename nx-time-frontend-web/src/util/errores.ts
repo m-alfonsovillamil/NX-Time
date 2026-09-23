@@ -73,9 +73,23 @@ export function mensajeDeError(cuerpo: unknown, codigo: number): string {
  * Un `AbortError` aquí no es "lo has cancelado tú": es el timeout largo del
  * arranque en frío agotado, así que se cuenta como servidor que no responde.
  */
-export function mensajeDeRed(error: unknown): string {
+export function mensajeDeRed(error: unknown, conectado: boolean = navegadorConectado()): string {
   if (error instanceof DOMException && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
     return T.errores.servidor;
   }
-  return T.errores.red;
+  // Un `fetch` que falla sin respuesta es lo mismo para el navegador tanto si
+  // no hay red como si el servidor rechazó la petición por CORS: los dos
+  // llegan como un `TypeError` sin más detalle, y a propósito -- el navegador
+  // no deja a la página distinguirlos.
+  //
+  // Decir "comprueba tu conexión" en los dos casos manda a mirar el wifi a
+  // quien lo tiene bien, justo cuando el fallo es un CORS_ALLOWED_ORIGINS sin
+  // poner en el backend. Lo único que sí se sabe es si el navegador cree
+  // tener red, así que se usa eso: sin red, se dice; con red, el problema
+  // está en el otro lado.
+  return conectado ? T.errores.sinServidor : T.errores.red;
+}
+
+function navegadorConectado(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine;
 }

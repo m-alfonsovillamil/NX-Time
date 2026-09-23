@@ -1,6 +1,7 @@
 # NX Time
 
 [![CI](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/ci.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/ci.yml)
+[![Web](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://www.postgresql.org/)
@@ -504,9 +505,11 @@ Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
 
 **Empezando:** el cliente web (`nx-time-frontend-web/`), con login y fichar de
-punta a punta contra el mismo backend. Todavía **no está desplegado**: falta su
-job de CI, el *static site* de Render y poner `CORS_ALLOWED_ORIGINS` en el panel
-del backend. Los tokens viven en memoria, así que recargar la página cierra la
+punta a punta contra el mismo backend, con su propio CI
+(`.github/workflows/web.yml`) y su *static site* declarado en `render.yaml`.
+Todavía **no está publicado**: falta crear el servicio en Render y poner su URL
+en `CORS_ALLOWED_ORIGINS` del backend
+([docs/DESPLIEGUE.md](docs/DESPLIEGUE.md#la-web)). Los tokens viven en memoria, así que recargar la página cierra la
 sesión ([ADR 020](docs/adr/020-tokens-en-el-navegador.md)).
 
 **Pendiente:**
