@@ -1,14 +1,7 @@
 package com.nxtime.nxtime.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.temporal.ChronoUnit;
-import java.util.HexFormat;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
 
@@ -76,15 +69,6 @@ public class HuellaDeAuditoria {
     public static final long CLAVE_DEL_LOCK_DE_CADENA = 8_2019_0312L;
 
     /**
-     * Un mapper aparte del de la aplicación, y con las claves ordenadas: lo
-     * que se firma no puede depender de cómo esté configurado el de Spring
-     * hoy. Si alguien le cambia una opción al de la aplicación, los hashes de
-     * mañana dejarían de cuadrar con los de ayer sin que nadie lo note.
-     */
-    private final ObjectMapper canonico = new ObjectMapper()
-            .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-
-    /**
      * El hash de una fila, encadenado al de la anterior.
      *
      * Se le pasa el hash anterior aparte y no se lee de la fila a propósito:
@@ -103,7 +87,7 @@ public class HuellaDeAuditoria {
                 Objects.toString(fila.getMotivo(), ""),
                 marcaDeTiempo(fila),
                 Objects.toString(hashAnterior, ""));
-        return sha256(payload);
+        return Canonico.sha256(payload);
     }
 
     /** La hora tal y como se guarda: microsegundos, ni uno más. */
@@ -111,33 +95,8 @@ public class HuellaDeAuditoria {
         return fila.getFechaHora().truncatedTo(ChronoUnit.MICROS).toString();
     }
 
-    /**
-     * El mismo JSON escrito siempre igual: claves ordenadas y sin espacios.
-     *
-     * Da lo mismo si viene del texto que generó Jackson o de lo que devuelve
-     * {@code jsonb} tras reescribirlo: las dos formas producen esto. Lo que no
-     * sea JSON válido se firma tal cual --no debería pasar, pero una fila rara
-     * no puede tumbar la escritura de la auditoría.
-     */
+    /** Ver {@link Canonico#json}: la forma canónica vive allí desde la Fase B3. */
     String canonizar(String json) {
-        if (json == null || json.isBlank()) {
-            return "";
-        }
-        try {
-            return canonico.writeValueAsString(canonico.readValue(json, Object.class));
-        } catch (JsonProcessingException noEsJson) {
-            return json;
-        }
-    }
-
-    private String sha256(String payload) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(payload.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            // SHA-256 está garantizado en cualquier JVM estándar; el
-            // compilador exige capturar la excepción comprobada.
-            throw new IllegalStateException("SHA-256 no disponible en esta JVM", e);
-        }
+        return Canonico.json(json);
     }
 }

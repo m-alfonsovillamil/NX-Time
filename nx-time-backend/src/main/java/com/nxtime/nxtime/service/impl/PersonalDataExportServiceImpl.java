@@ -8,6 +8,7 @@ import com.nxtime.nxtime.repository.AttachmentRepository;
 import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.CorrectionRequestRepository;
 import com.nxtime.nxtime.repository.JobApplicationRepository;
+import com.nxtime.nxtime.repository.MonthlySignatureRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
@@ -71,6 +72,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private final ScheduleAssignmentRepository scheduleAssignmentRepository;
     private final ScheduleExceptionRepository scheduleExceptionRepository;
     private final ScheduleIncidentRepository scheduleIncidentRepository;
+    private final MonthlySignatureRepository signatureRepository;
     private final NoticeRepository noticeRepository;
     private final AttachmentRepository attachmentRepository;
     private final JobApplicationRepository applicationRepository;
@@ -90,6 +92,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
             ScheduleAssignmentRepository scheduleAssignmentRepository,
             ScheduleExceptionRepository scheduleExceptionRepository,
             ScheduleIncidentRepository scheduleIncidentRepository,
+            MonthlySignatureRepository signatureRepository,
             NoticeRepository noticeRepository,
             AttachmentRepository attachmentRepository,
             JobApplicationRepository applicationRepository,
@@ -105,6 +108,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
         this.scheduleAssignmentRepository = scheduleAssignmentRepository;
         this.scheduleExceptionRepository = scheduleExceptionRepository;
         this.scheduleIncidentRepository = scheduleIncidentRepository;
+        this.signatureRepository = signatureRepository;
         this.noticeRepository = noticeRepository;
         this.attachmentRepository = attachmentRepository;
         this.applicationRepository = applicationRepository;
@@ -194,6 +198,12 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                                 i.getFecha(), i.getTipo().name(), i.getMinutos(),
                                 ReglasDeCuadrante.hora(i.getHoraPrevista()), i.getEstado().name(),
                                 i.getJustificacion(), i.getComentarioResolucion()))
+                        .toList(),
+
+                signatureRepository.findByUsuario_IdOrderByAnioDescMesDescFirmadaEnDesc(id).stream()
+                        .map(f -> new PersonalDataExport.FirmaMensual(
+                                f.getAnio(), f.getMes(), f.getEstado().name(), f.getHash(), f.getFirmadaEn(),
+                                f.getInvalidadaEn(), f.getMotivoInvalidacion(), f.getVisadaEn()))
                         .toList(),
 
                 noticeRepository.findByDestinatarioOrderByCreadoEnDesc(p).stream()

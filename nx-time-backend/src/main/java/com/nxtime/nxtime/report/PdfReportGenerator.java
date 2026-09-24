@@ -39,6 +39,7 @@ import org.springframework.stereotype.Component;
 public class PdfReportGenerator {
 
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /**
      * La zona del documento, fijada y no heredada de la máquina.
@@ -80,7 +81,7 @@ public class PdfReportGenerator {
         }
 
         documento.add(espacio());
-        documento.add(bloqueDeFirma());
+        documento.add(bloqueDeFirma(informe.firma()));
         documento.add(pieLegal());
 
         documento.close();
@@ -142,13 +143,31 @@ public class PdfReportGenerator {
         return aviso;
     }
 
-    private PdfPTable bloqueDeFirma() {
+    /**
+     * Las dos celdas de firma. Sin firma electrónica, en blanco para firmar a
+     * mano, exactamente como antes de la Fase B3. Con ella, la celda del
+     * trabajador dice quién firmó, cuándo, y el principio de la huella: con
+     * eso cualquiera puede pedir que se compruebe que el PDF dice lo firmado.
+     */
+    private PdfPTable bloqueDeFirma(MonthlyReport.FirmaDelInforme firma) {
         PdfPTable firmas = new PdfPTable(2);
         firmas.setWidthPercentage(100);
         firmas.setSpacingBefore(30);
 
-        firmas.addCell(celdaDeFirma("Firma del trabajador"));
-        firmas.addCell(celdaDeFirma("Firma de la empresa"));
+        if (firma == null) {
+            firmas.addCell(celdaDeFirma("Firma del trabajador"));
+            firmas.addCell(celdaDeFirma("Firma de la empresa"));
+            return firmas;
+        }
+        firmas.addCell(celdaDeFirma("Firmado electrónicamente por " + firma.firmadaPor()
+                + " el " + FECHA_Y_HORA.format(firma.firmadaEn().atZone(MADRID))
+                + "\nHuella " + firma.hash().substring(0, 16) + "…"
+                + "\n(firma de aceptación, no firma electrónica cualificada)"
+                + "\n\nFirma del trabajador"));
+        firmas.addCell(celdaDeFirma(firma.visadaPor() == null
+                ? "Firma de la empresa"
+                : "Visado por " + firma.visadaPor() + " el "
+                        + FECHA_Y_HORA.format(firma.visadaEn().atZone(MADRID)) + "\n\nFirma de la empresa"));
         return firmas;
     }
 

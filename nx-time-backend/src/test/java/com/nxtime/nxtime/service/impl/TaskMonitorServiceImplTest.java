@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import static com.nxtime.nxtime.domain.ScheduledTask.ANONIMIZACION;
 import static com.nxtime.nxtime.domain.ScheduledTask.CIERRE_JORNADAS;
 import static com.nxtime.nxtime.domain.ScheduledTask.CUMPLIMIENTO_CUADRANTE;
+import static com.nxtime.nxtime.domain.ScheduledTask.RECORDATORIO_FIRMA;
 import static com.nxtime.nxtime.domain.ScheduledTask.HORAS_EXTRA;
 import static com.nxtime.nxtime.domain.ScheduledTask.VERIFICACION_INTEGRIDAD;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.EN_CURSO;
@@ -173,13 +174,16 @@ class TaskMonitorServiceImplTest {
                 ANONIMIZACION, OK, madrid("2026-09-12T03:45:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 VERIFICACION_INTEGRIDAD, OK, madrid("2026-09-12T03:50:00"))).thenReturn(true);
+        // El recordatorio de firma es a las 9:00: de madrugada, lo exigible es el de ayer.
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                RECORDATORIO_FIRMA, OK, madrid("2026-09-11T09:00:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T05:15:00").estado();
 
         assertThat(estado.ok()).isTrue();
         assertThat(estado.tareas()).extracting(SystemStatusResponse.TaskStatus::tarea)
                 .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, CUMPLIMIENTO_CUADRANTE, ANONIMIZACION,
-                        VERIFICACION_INTEGRIDAD);
+                        VERIFICACION_INTEGRIDAD, RECORDATORIO_FIRMA);
     }
 
     @Test
@@ -212,6 +216,9 @@ class TaskMonitorServiceImplTest {
                 ANONIMIZACION, OK, madrid("2026-09-11T03:45:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 VERIFICACION_INTEGRIDAD, OK, madrid("2026-09-11T03:50:00"))).thenReturn(true);
+        // El recordatorio de firma es a las 9:00: de madrugada, lo exigible es el de ayer.
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                RECORDATORIO_FIRMA, OK, madrid("2026-09-11T09:00:00"))).thenReturn(true);
 
         SystemStatusResponse estado = servicioA("2026-09-12T03:10:00").estado();
 

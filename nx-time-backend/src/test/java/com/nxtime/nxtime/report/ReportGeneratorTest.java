@@ -179,6 +179,41 @@ class ReportGeneratorTest {
         assertThat(new String(salida.toByteArray(), 0, 5)).isEqualTo("%PDF-");
     }
 
+    /** El texto de la primera página, como lo leería una persona. */
+    private String textoDelPdf(MonthlyReport informe) throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        pdfGenerator.generar(informe, salida);
+        try (org.openpdf.text.pdf.PdfReader lector = new org.openpdf.text.pdf.PdfReader(salida.toByteArray())) {
+            return new org.openpdf.text.pdf.parser.PdfTextExtractor(lector).getTextFromPage(1);
+        }
+    }
+
+    @Test
+    @DisplayName("Con firma electrónica, el PDF dice quién firmó, cuándo, la huella y que no es cualificada")
+    void pdf_conFirma_laCita() throws Exception {
+        MonthlyReport base = informeDeEjemplo();
+        MonthlyReport firmado = new MonthlyReport(base.nombreEmpresa(), base.nombreEmpleado(), base.mes(), base.filas(),
+                new MonthlyReport.FirmaDelInforme("Ana", java.time.Instant.parse("2026-07-01T08:30:00Z"),
+                        "3f9c1d2a7b8e4f60" + "0".repeat(48), "Elena",
+                        java.time.Instant.parse("2026-07-02T10:00:00Z")));
+
+        String texto = textoDelPdf(firmado);
+
+        assertThat(texto).contains("Firmado electrónicamente por Ana el 01/07/2026 10:30")
+                .contains("3f9c1d2a7b8e4f60")
+                .contains("no firma electrónica cualificada")
+                .contains("Visado por Elena el 02/07/2026 12:00");
+    }
+
+    @Test
+    @DisplayName("Sin firma, el bloque de firmas es el de siempre: dos huecos para firmar a mano")
+    void pdf_sinFirma_comoAntes() throws Exception {
+        String texto = textoDelPdf(informeDeEjemplo());
+
+        assertThat(texto).contains("Firma del trabajador").contains("Firma de la empresa")
+                .doesNotContain("Firmado electrónicamente").doesNotContain("Visado");
+    }
+
     // ---- Cálculos del modelo ----
 
     @Test

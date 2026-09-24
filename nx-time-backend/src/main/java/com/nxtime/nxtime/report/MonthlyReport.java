@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.report;
 
+import java.time.Instant;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -16,8 +17,29 @@ public record MonthlyReport(
         String nombreEmpresa,
         String nombreEmpleado,
         YearMonth mes,
-        List<ReportRow> filas
+        List<ReportRow> filas,
+        FirmaDelInforme firma
 ) {
+
+    /** Sin firma: el Excel de la empresa, o un mes que nadie ha firmado. */
+    public MonthlyReport(String nombreEmpresa, String nombreEmpleado, YearMonth mes, List<ReportRow> filas) {
+        this(nombreEmpresa, nombreEmpleado, mes, filas, null);
+    }
+
+    /**
+     * La firma VIGENTE del mes (Fase B3), para el bloque de firmas del PDF.
+     * Null si no la hay: entonces el PDF sale exactamente como antes, con
+     * las dos celdas en blanco para firmar a mano.
+     *
+     * @param visadaPor null si la empresa todavía no ha dado su visto bueno
+     */
+    public record FirmaDelInforme(
+            String firmadaPor,
+            Instant firmadaEn,
+            String hash,
+            String visadaPor,
+            Instant visadaEn) {
+    }
 
     /**
      * Total en SEGUNDOS: se agrega en la unidad exacta.

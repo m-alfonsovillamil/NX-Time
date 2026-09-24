@@ -134,6 +134,12 @@ public class PersonalDataPdfGenerator {
                         fechaLocal(i.fecha()), i.tipo(), String.valueOf(i.minutos()), i.estado(),
                         texto(i.justificacion())});
 
+        tabla(documento, "Firmas del registro mensual", datos.firmasMensuales(),
+                new String[] {"Mes", "Estado", "Firmada", "Huella"},
+                f -> new String[] {
+                        String.format("%02d/%d", f.mes(), f.anio()), f.estado(), fechaHora(f.firmadaEn()),
+                        f.hash().substring(0, 16) + "…"});
+
         tabla(documento, "Avisos recibidos (" + datos.avisos().size() + ")", datos.avisos(),
                 new String[] {"Fecha", "Aviso", "Leído"},
                 av -> new String[] {fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});

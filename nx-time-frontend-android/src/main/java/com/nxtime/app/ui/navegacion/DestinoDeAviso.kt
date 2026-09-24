@@ -35,6 +35,7 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_EQUIPO -> Pantalla.EQUIPO.ruta
     DESTINO_AJUSTES -> Pantalla.AJUSTES.ruta
     DESTINO_INCIDENCIAS -> Pantalla.INCIDENCIAS.ruta
+    DESTINO_FIRMAS -> Pantalla.FIRMAS.ruta
     else -> null
 }
 
@@ -84,3 +85,7 @@ const val DESTINO_EQUIPO = "equipo"
 // noche (a quien revisa) llevan a la misma pantalla: cada uno ve en ella su
 // parte.
 const val DESTINO_INCIDENCIAS = "incidencias"
+
+// Fase B3. El recordatorio de firmar el mes y la firma que una corrección
+// dejó sin efecto llevan al mismo sitio: donde se firma.
+const val DESTINO_FIRMAS = "firmas"

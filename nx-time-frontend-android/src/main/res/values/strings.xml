@@ -858,6 +858,23 @@
     <string name="incidencias_aceptada">Incidencia aceptada.</string>
     <string name="incidencias_rechazada">Incidencia rechazada.</string>
     <string name="gestion_incidencias">Incidencias de cuadrante</string>
+
+    <!-- Fase B3: la firma mensual del registro. De aceptación, no eIDAS. -->
+    <string name="firma_ver">Firmar mi registro</string>
+    <string name="firma_titulo">Firmar mi registro</string>
+    <string name="firma_explicacion">Al terminar cada mes, firmas que tu registro horario es correcto. Si después se corrige un fichaje de ese mes, la firma queda sin efecto y te lo pedirá otra vez.</string>
+    <string name="firma_vacio">No hay meses terminados con jornadas que firmar.</string>
+    <string name="firma_jornadas">%1$d jornadas · %2$s</string>
+    <string name="firma_estado_firmado">Firmado</string>
+    <string name="firma_estado_pendiente">Sin firmar</string>
+    <string name="firma_estado_invalidada">Hay que volver a firmar</string>
+    <string name="firma_firmado_el">Firmado el %1$s · huella %2$s…</string>
+    <string name="firma_visado">Visado por %1$s</string>
+    <string name="firma_invalidada_porque">Tu firma anterior quedó sin efecto: %1$s</string>
+    <string name="firma_firmar">Firmar</string>
+    <string name="firma_confirmar_titulo">Firmar %1$s</string>
+    <string name="firma_confirmar_texto">Vas a firmar que tu registro de %1$s es correcto: %2$d jornadas, %3$s de trabajo efectivo.\n\nEs una firma de aceptación, no una firma electrónica cualificada. Si algo no cuadra, pide antes que se corrija.</string>
+    <string name="firma_hecha">Mes firmado.</string>
     <string name="horas_extra_mios">Mis excesos de jornada</string>
     <string name="horas_extra_del_equipo">Pendientes de revisar</string>
     <!--

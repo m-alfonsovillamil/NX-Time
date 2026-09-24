@@ -55,6 +55,9 @@
     "name" : "Fichaje",
     "description" : "Registro horario: iniciar/finalizar jornada, pausas e historial."
   }, {
+    "name" : "Firma mensual",
+    "description" : "La persona firma que su registro de un mes es correcto. Firma de aceptación, no eIDAS. Una corrección posterior no se bloquea: invalida la firma."
+  }, {
     "name" : "Perfil",
     "description" : "Datos personales del usuario autenticado, y consulta del perfil de un compañero de la misma empresa."
   }, {
@@ -1811,6 +1814,131 @@
           },
           "409" : {
             "description" : "El email ya está registrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/firmas" : {
+      "post" : {
+        "tags" : [ "Firma mensual" ],
+        "summary" : "Firmar un mes propio",
+        "description" : "Guarda la huella SHA-256 del resumen del mes. El mes tiene que haber terminado y no puede tener jornadas abiertas ni cerradas por el sistema sin corregir.",
+        "operationId" : "firmar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SignMonthRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Firmado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MonthlySignatureResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El mes no ha terminado, o fecha no válida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ese mes ya está firmado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Jornadas abiertas o cerradas por el sistema, o ninguna",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/firmas/{id}/visado" : {
+      "post" : {
+        "tags" : [ "Firma mensual" ],
+        "summary" : "Visar una firma",
+        "description" : "El visto bueno de la empresa a una firma vigente. Nunca a la propia.",
+        "operationId" : "visar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Visada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MonthlySignatureResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin el permiso, es tuya, o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya no está vigente, o ya está visada",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -5856,6 +5984,151 @@
         } ]
       }
     },
+    "/api/v1/firmas/{id}/verificacion" : {
+      "get" : {
+        "tags" : [ "Firma mensual" ],
+        "summary" : "Comprobar una firma",
+        "description" : "Recalcula hoy la huella del mes y la compara con la firmada. La propia, o cualquiera de la empresa con firma:visar.",
+        "operationId" : "verificar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Resultado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SignatureVerificationResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Ni es tuya ni puedes visar, o es de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/firmas/mias" : {
+      "get" : {
+        "tags" : [ "Firma mensual" ],
+        "summary" : "Mis meses por firmar",
+        "description" : "Los últimos seis meses terminados en los que hay algo: si se pueden firmar, por qué no, y la firma vigente o la última que se invalidó.",
+        "operationId" : "misMeses",
+        "responses" : {
+          "200" : {
+            "description" : "Meses",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SignableMonthResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/firmas/equipo" : {
+      "get" : {
+        "tags" : [ "Firma mensual" ],
+        "summary" : "Cómo está un mes en la empresa",
+        "description" : "Cada persona activa, con su firma vigente, la última invalidada o ninguna.",
+        "operationId" : "equipo",
+        "parameters" : [ {
+          "name" : "anio",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2020
+          }
+        }, {
+          "name" : "mes",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Personas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/TeamSignatureResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'firma:visar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/fichaje/proyectos" : {
       "get" : {
         "tags" : [ "Fichaje" ],
@@ -6706,7 +6979,7 @@
         "tags" : [ "Cuadrantes" ],
         "summary" : "Quién tiene cuadrante un día, y qué le toca",
         "description" : "Solo las personas activas con un cuadrante vigente ese día.",
-        "operationId" : "equipo",
+        "operationId" : "equipo_1",
         "parameters" : [ {
           "name" : "fecha",
           "in" : "query",
@@ -8462,6 +8735,81 @@
         },
         "required" : [ "apellidos", "email", "nombre" ]
       },
+      "SignMonthRequest" : {
+        "type" : "object",
+        "properties" : {
+          "anio" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2020
+          },
+          "mes" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "anio", "mes" ]
+      },
+      "MonthlySignatureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuario" : {
+            "type" : "string"
+          },
+          "anio" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "mes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "VIGENTE", "INVALIDADA" ]
+          },
+          "hash" : {
+            "type" : "string"
+          },
+          "jornadas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "segundosNetos" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "firmadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "invalidadaEn" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "motivoInvalidacion" : {
+            "type" : [ "string", "null" ]
+          },
+          "visadaPor" : {
+            "type" : [ "string", "null" ]
+          },
+          "visadaEn" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          }
+        }
+      },
       "TimeEntryRequest" : {
         "type" : "object",
         "properties" : {
@@ -9357,7 +9705,7 @@
         "properties" : {
           "tarea" : {
             "type" : "string",
-            "enum" : [ "CIERRE_JORNADAS", "HORAS_EXTRA", "CUMPLIMIENTO_CUADRANTE", "ANONIMIZACION", "VERIFICACION_INTEGRIDAD" ]
+            "enum" : [ "CIERRE_JORNADAS", "HORAS_EXTRA", "CUMPLIMIENTO_CUADRANTE", "ANONIMIZACION", "VERIFICACION_INTEGRIDAD", "RECORDATORIO_FIRMA" ]
           },
           "debioCorrer" : {
             "type" : "string",
@@ -9695,6 +10043,40 @@
           }
         }
       },
+      "FirmaMensual" : {
+        "type" : "object",
+        "properties" : {
+          "anio" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "mes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "hash" : {
+            "type" : "string"
+          },
+          "firmadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "invalidadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "motivoInvalidacion" : {
+            "type" : "string"
+          },
+          "visadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "HorasExtra" : {
         "type" : "object",
         "properties" : {
@@ -9897,6 +10279,12 @@
               "$ref" : "#/components/schemas/IncidenciaDeCuadrante"
             }
           },
+          "firmasMensuales" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FirmaMensual"
+            }
+          },
           "avisos" : {
             "type" : "array",
             "items" : {
@@ -9986,6 +10374,78 @@
           },
           "alLimite" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "SignatureVerificationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "firmaId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "VIGENTE", "INVALIDADA" ]
+          },
+          "coincide" : {
+            "type" : "boolean"
+          },
+          "hashFirmado" : {
+            "type" : "string"
+          },
+          "hashActual" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SignableMonthResponse" : {
+        "type" : "object",
+        "properties" : {
+          "anio" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "mes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "jornadas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "segundosNetos" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "puedeFirmar" : {
+            "type" : "boolean"
+          },
+          "bloqueo" : {
+            "type" : [ "string", "null" ]
+          },
+          "firma" : {
+            "type" : "null",
+            "$ref" : "#/components/schemas/MonthlySignatureResponse"
+          }
+        }
+      },
+      "TeamSignatureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuario" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "firma" : {
+            "type" : "null",
+            "$ref" : "#/components/schemas/MonthlySignatureResponse"
           }
         }
       },
@@ -10399,7 +10859,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA" ]
           },
           "titulo" : {
             "type" : "string"

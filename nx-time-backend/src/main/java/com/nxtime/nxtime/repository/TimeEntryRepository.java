@@ -306,4 +306,14 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             @Param("usuarioIds") java.util.Collection<Long> usuarioIds,
             @Param("desde") java.time.Instant desde,
             @Param("hasta") java.time.Instant hasta);
+
+    /**
+     * Quién, de todas las empresas, tiene alguna jornada viva que empiece en
+     * el rango y sigue activo (Fase B3): a quién se le recuerda firmar el mes.
+     */
+    @Query("SELECT DISTINCT t.usuario FROM registros t WHERE t.anulado = false "
+            + "AND t.usuario.activo = true AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta")
+    List<User> findUsuariosActivosQueFicharonEntre(
+            @Param("desde") java.time.Instant desde,
+            @Param("hasta") java.time.Instant hasta);
 }

@@ -99,6 +99,16 @@ persona recibe **un** aviso por noche, no uno por incidencia: la primera versió
 mandaba uno por incidencia, y al ejecutarla con los datos de demo salieron
 veinte correos en una noche ([ADR](docs/adr/024-incidencias-de-cuadrante.md)).
 
+**Una firma mensual que no congela el mes.** Al terminar cada mes, la persona
+firma desde la app que su registro es correcto; se guarda el SHA-256 de un
+resumen canónico del mes, y el PDF lo cita. Si después se corrige un fichaje de
+ese mes, **la corrección no se bloquea: invalida la firma**, en la misma
+transacción, y el mes vuelve a pedir firma. No hay un gancho por cada camino que
+cambia fichajes: la invalidación cuelga del evento de auditoría por el que ya
+pasan todos, y recalcula la huella en vez de invalidar a ciegas, así que una
+corrección que deja las mismas horas no tumba nada. Es una firma de aceptación,
+no eIDAS, y así lo dice ([ADR](docs/adr/025-la-firma-no-bloquea-la-correccion.md)).
+
 **Canal de denuncias con anonimato estructural.** El canal interno que obliga la
 Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
 leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
@@ -383,7 +393,7 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 |---|---|
 | **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias, optar a vacantes internas |
 | **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, revisar las incidencias de cuadrante, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
-| **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
+| **RRHH** | corregir fichajes, ver la auditoría, exportar informes, visar las firmas mensuales, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
 Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
@@ -516,6 +526,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 22. [La web empieza por los cimientos, y lo que queda fuera tiene nombre](docs/adr/022-alcance-de-la-web.md)
 23. [Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato](docs/adr/023-cuadrantes-con-vigencia.md)
 24. [Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche](docs/adr/024-incidencias-de-cuadrante.md)
+25. [La firma mensual no bloquea la corrección: la corrección invalida la firma](docs/adr/025-la-firma-no-bloquea-la-correccion.md)
 
 ---
 

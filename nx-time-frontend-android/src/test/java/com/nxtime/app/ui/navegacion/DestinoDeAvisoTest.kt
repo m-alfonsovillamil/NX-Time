@@ -79,6 +79,13 @@ class DestinoDeAvisoTest {
     }
 
     @Test
+    fun `los avisos de firma llevan a donde se firma (Fase B3)`() {
+        // El símbolo es el de NoticeType.RECORDATORIO_FIRMA y FIRMA_INVALIDADA.
+        assertEquals("firmas", DESTINO_FIRMAS)
+        assertEquals(Pantalla.FIRMAS.ruta, rutaDeAviso(DESTINO_FIRMAS))
+    }
+
+    @Test
     fun `un aviso sin destino no navega`() {
         assertNull(rutaDeAviso(null))
         assertNull(rutaDeAviso(""))

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--/*
+  Una corrección ha dejado sin efecto la firma de un mes (Fase B3, ADR 025).
+
+  La firma no bloquea la corrección: la corrección invalida la firma. Este
+  correo es la otra mitad de esa decisión. Quien firmó tiene que saber que lo
+  que firmó ya no es lo que dice el registro, y por qué, sin tener que
+  descubrirlo al mirar el PDF.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu firma ha quedado sin efecto', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        Tu firma del registro de <strong th:text="${mes}">agosto de 2026</strong> ha quedado sin efecto.
+    </p>
+
+    <p th:text="${motivo}">Se corrigió el fichaje del 14/08/2026.</p>
+
+    <p style="margin: 0;">
+        Lo que firmaste ya no es lo que dice el registro. Revisa el mes y, si está bien,
+        vuelve a firmarlo en la aplicación, en <strong>Perfil &rsaquo; Firmar mi registro</strong>.
+    </p>
+</div>
+</body>
+</html>

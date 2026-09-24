@@ -273,6 +273,22 @@ public final class NotificationEvents {
             String horaPrevista) {
     }
 
+    /**
+     * Una corrección ha dejado sin efecto la firma de un mes (Fase B3). A
+     * quien firmó: su mes vuelve a pedir firma, y tiene que saber por qué.
+     */
+    public record SignatureInvalidated(
+            long empresaId,
+            int anio,
+            int mes,
+            String motivo,
+            List<User> destinatarios) {
+    }
+
+    /** El mes anterior se puede firmar ya (Fase B3). Cada destinatario, con su empresa. */
+    public record SignatureReminder(java.time.YearMonth mes, List<User> destinatarios) {
+    }
+
     /** El resumen de la noche para quien revisa: uno por empresa, sin nombres. */
     public record ScheduleIncidentSummary(
             long empresaId,
