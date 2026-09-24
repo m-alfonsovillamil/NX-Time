@@ -130,6 +130,16 @@ interface ApiService {
         @Query("hasta") hasta: String
     ): Response<List<DiaTeoricoDTO>>
 
+    /*  Firma mensual (Fase B3). Firmar lo propio no pide permisos: es tuyo.  */
+
+    /** Los últimos meses terminados con algo que firmar, y cómo está cada uno. */
+    @GET("api/v1/firmas/mias")
+    suspend fun getMisMesesParaFirmar(): Response<List<MesParaFirmarDTO>>
+
+    /** 400 si el mes no ha terminado, 409 si ya está firmado, 422 si algo lo impide. */
+    @POST("api/v1/firmas")
+    suspend fun firmarMes(@Body peticion: FirmarMesRequest): Response<FirmaMensualDTO>
+
     /*  Incidencias de cuadrante (Fase B2)  */
 
     /** Las mías de un año. Sin `anio`, el año en curso. */

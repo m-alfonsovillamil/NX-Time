@@ -102,6 +102,8 @@ public class GlobalExceptionHandler {
                             + "Cierra el anterior antes de asignar el nuevo."),
             Map.entry("ex_excepciones_horario_sin_solape",
                     "Ese día ya tiene una excepción que choca con esta. Bórrala antes."),
+            // B3: dos firmas del mismo mes a la vez; la segunda llega aquí.
+            Map.entry("uq_firmas_vigente", "Ese mes ya está firmado."),
             // La cadena de auditoría (V27). Que esto salte significa que el
             // advisory lock de TimeEntryAuditListener no se pidió: el dato está
             // a salvo, pero es un fallo nuestro, así que además se registra

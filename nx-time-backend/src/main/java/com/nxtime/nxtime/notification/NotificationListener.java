@@ -19,11 +19,13 @@ import com.nxtime.nxtime.dto.CreateNoticeCommand;
 import com.nxtime.nxtime.service.NoticeService;
 import com.nxtime.nxtime.service.ReglasDeCuadrante;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -79,6 +81,10 @@ public class NotificationListener {
      * plantillas de correo ({@code #temporals.format(..., 'dd/MM/yyyy')}).
      */
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    /** "agosto de 2026": el mes de una firma se lee, no va en ISO. */
+    private static final DateTimeFormatter MES =
+            DateTimeFormatter.ofPattern("LLLL 'de' yyyy", Locale.of("es", "ES"));
 
     private final EmailSender emailSender;
     private final NoticeService noticeService;
@@ -709,6 +715,65 @@ public class NotificationListener {
         String cuando = primera.equals(ultima) ? "El " + FECHA.format(primera)
                 : "Entre el " + FECHA.format(primera) + " y el " + FECHA.format(ultima);
         return cuando + ": " + lista + ".";
+    }
+
+    /**
+     * Una corrección ha dejado sin efecto la firma de un mes (Fase B3). A
+     * quien firmó, con el porqué: su mes vuelve a pedir firma.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSignatureInvalidated(NotificationEvents.SignatureInvalidated evento) {
+        String mes = MES.format(YearMonth.of(evento.anio(), evento.mes()));
+        String titulo = "Tu firma de " + mes + " ha quedado sin efecto";
+        String cuerpo = evento.motivo() + " Lo que firmaste ya no es lo que dice el registro: revísalo y"
+                + " vuelve a firmarlo.";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    destinatario.getId(),
+                    NoticeType.FIRMA_INVALIDADA,
+                    titulo,
+                    cuerpo,
+                    NoticeType.FIRMA_INVALIDADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "signature-invalidated",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "mes", mes,
+                            "motivo", evento.motivo()));
+        }
+    }
+
+    /** El mes anterior se puede firmar ya (Fase B3). Uno por persona y mes. */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onSignatureReminder(NotificationEvents.SignatureReminder evento) {
+        String mes = MES.format(evento.mes());
+        String titulo = "Ya puedes firmar tu registro de " + mes;
+        String cuerpo = "Revisa tus jornadas de " + mes + " y, si están bien, fírmalas en la aplicación.";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    destinatario.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.RECORDATORIO_FIRMA,
+                    titulo,
+                    cuerpo,
+                    NoticeType.RECORDATORIO_FIRMA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "signature-reminder",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "mes", mes));
+        }
     }
 
     /** Uno por empresa y noche, con el recuento y SIN nombres: ver la plantilla. */

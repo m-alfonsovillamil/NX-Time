@@ -51,7 +51,8 @@ public enum ScheduledTask {
      * anteriores, y así una manipulación no espera a que alguien se acuerde de
      * pulsar el botón de verificar.
      */
-    VERIFICACION_INTEGRIDAD(ScheduledTask.CRON_VERIFICACION_INTEGRIDAD);
+    VERIFICACION_INTEGRIDAD(ScheduledTask.CRON_VERIFICACION_INTEGRIDAD),
+    RECORDATORIO_FIRMA(ScheduledTask.CRON_RECORDATORIO_FIRMA);
 
     /*
      * Constantes y no solo el campo de cada valor: {@code @Scheduled} solo
@@ -85,6 +86,16 @@ public enum ScheduledTask {
     public static final String CRON_VERIFICACION_INTEGRIDAD = "0 50 3 * * *";
 
     /** Todas corren en hora española, con el sistema en calma. */
+    /*
+     * Fase B3. A las 9:00 y no de madrugada: es un aviso para una persona,
+     * que lo lea al empezar el día. A DIARIO y no el día 1, a propósito: si
+     * ese día no corre (Render dormido, un despliegue), el siguiente se pone
+     * al día, y el servicio ya evita mandarlo dos veces el mismo mes. Además,
+     * el vigilante de /estado/tareas solo sabe de tareas que corren al menos
+     * cada 48 horas.
+     */
+    public static final String CRON_RECORDATORIO_FIRMA = "0 0 9 * * *";
+
     public static final String ZONA = "Europe/Madrid";
 
     private final String cron;

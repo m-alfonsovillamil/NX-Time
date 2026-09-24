@@ -109,6 +109,10 @@ import java.util.stream.Collectors;
  * revisar horas extra y por el mismo motivo: saber si un retraso tuvo
  * explicación es conocimiento de quien lleva el equipo. Y como allí, NO
  * alcanza a las incidencias propias: eso lo corta el servicio.
+ * "firma:visar" (Fase B3) empieza en RRHH, en el grupo de los informes
+ * legales: el visto bueno de la empresa al registro mensual lo da quien firma
+ * el informe por la empresa. FIRMAR lo propio no lleva authority: es tuyo. Y
+ * nadie visa su propia firma, aunque la tenga.
  */
 public final class RoleAuthorities {
 
@@ -153,7 +157,8 @@ public final class RoleAuthorities {
             "correccion:disputa:resolver",
             "fichaje:corregir",
             "fichaje:auditoria",
-            "informe:exportar"
+            "informe:exportar",
+            "firma:visar"
     ));
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(

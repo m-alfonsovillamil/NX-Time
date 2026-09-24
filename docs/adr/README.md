@@ -34,3 +34,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [022](022-alcance-de-la-web.md) | La web empieza por los cimientos, y lo que queda fuera tiene nombre |
 | [023](023-cuadrantes-con-vigencia.md) | Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato |
 | [024](024-incidencias-de-cuadrante.md) | Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche |
+| [025](025-la-firma-no-bloquea-la-correccion.md) | La firma mensual no bloquea la corrección: la corrección invalida la firma |

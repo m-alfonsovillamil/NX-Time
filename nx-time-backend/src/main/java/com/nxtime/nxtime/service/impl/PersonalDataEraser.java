@@ -149,6 +149,11 @@ class PersonalDataEraser {
                  WHERE usuario_id = ?
                 """, TEXTO_ELIMINADO, TEXTO_ELIMINADO, usuarioId);
 
+        // Firmas mensuales (B3): la IP desde la que se firmó es dato personal y
+        // no hace falta para comprobar nada. La huella, el mes y las fechas se
+        // quedan: dicen qué registro aceptó la persona, que es lo que se guarda.
+        jdbc.update("UPDATE firmas_mensuales SET ip = NULL WHERE usuario_id = ? AND ip IS NOT NULL", usuarioId);
+
         // Canal de denuncias: solo el lado del DENUNCIANTE. Los mensajes del
         // instructor exigen autor identificado (CHECK de V13), y si esta
         // persona instruyó expedientes, esos siguen apuntando a su fila, que

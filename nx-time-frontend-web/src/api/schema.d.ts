@@ -493,6 +493,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/firmas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Firmar un mes propio
+         * @description Guarda la huella SHA-256 del resumen del mes. El mes tiene que haber terminado y no puede tener jornadas abiertas ni cerradas por el sistema sin corregir.
+         */
+        post: operations["firmar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/firmas/{id}/visado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Visar una firma
+         * @description El visto bueno de la empresa a una firma vigente. Nunca a la propia.
+         */
+        post: operations["visar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje": {
         parameters: {
             query?: never;
@@ -1594,6 +1634,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/firmas/{id}/verificacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprobar una firma
+         * @description Recalcula hoy la huella del mes y la compara con la firmada. La propia, o cualquiera de la empresa con firma:visar.
+         */
+        get: operations["verificar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/firmas/mias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis meses por firmar
+         * @description Los últimos seis meses terminados en los que hay algo: si se pueden firmar, por qué no, y la firma vigente o la última que se invalidó.
+         */
+        get: operations["misMeses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/firmas/equipo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cómo está un mes en la empresa
+         * @description Cada persona activa, con su firma vigente, la última invalidada o ninguna.
+         */
+        get: operations["equipo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje/proyectos": {
         parameters: {
             query?: never;
@@ -1945,7 +2045,7 @@ export interface paths {
          * Quién tiene cuadrante un día, y qué le toca
          * @description Solo las personas activas con un cuadrante vigente ese día.
          */
-        get: operations["equipo"];
+        get: operations["equipo_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2620,6 +2720,38 @@ export interface components {
             /** Format: email */
             email: string;
         };
+        SignMonthRequest: {
+            /** Format: int32 */
+            anio: number;
+            /** Format: int32 */
+            mes: number;
+        };
+        MonthlySignatureResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuario?: string;
+            /** Format: int32 */
+            anio?: number;
+            /** Format: int32 */
+            mes?: number;
+            /** @enum {string} */
+            estado?: "VIGENTE" | "INVALIDADA";
+            hash?: string;
+            /** Format: int32 */
+            jornadas?: number;
+            /** Format: int64 */
+            segundosNetos?: number;
+            /** Format: date-time */
+            firmadaEn?: string;
+            /** Format: date-time */
+            invalidadaEn?: string | null;
+            motivoInvalidacion?: string | null;
+            visadaPor?: string | null;
+            /** Format: date-time */
+            visadaEn?: string | null;
+        };
         TimeEntryRequest: {
             /** @enum {string} */
             tipo: "INICIO" | "FIN" | "PAUSA_INICIO" | "PAUSA_FIN";
@@ -2964,7 +3096,7 @@ export interface components {
         };
         TaskStatus: {
             /** @enum {string} */
-            tarea?: "CIERRE_JORNADAS" | "HORAS_EXTRA" | "CUMPLIMIENTO_CUADRANTE" | "ANONIMIZACION" | "VERIFICACION_INTEGRIDAD";
+            tarea?: "CIERRE_JORNADAS" | "HORAS_EXTRA" | "CUMPLIMIENTO_CUADRANTE" | "ANONIMIZACION" | "VERIFICACION_INTEGRIDAD" | "RECORDATORIO_FIRMA";
             /** Format: date-time */
             debioCorrer?: string;
             ok?: boolean;
@@ -3104,6 +3236,21 @@ export interface components {
             /** Format: int64 */
             corrigeAlFichaje?: number;
         };
+        FirmaMensual: {
+            /** Format: int32 */
+            anio?: number;
+            /** Format: int32 */
+            mes?: number;
+            estado?: string;
+            hash?: string;
+            /** Format: date-time */
+            firmadaEn?: string;
+            /** Format: date-time */
+            invalidadaEn?: string;
+            motivoInvalidacion?: string;
+            /** Format: date-time */
+            visadaEn?: string;
+        };
         HorasExtra: {
             /** Format: date */
             fecha?: string;
@@ -3172,6 +3319,7 @@ export interface components {
             cuadrantes?: components["schemas"]["Cuadrante"][];
             excepcionesDeCuadrante?: components["schemas"]["ExcepcionDeCuadrante"][];
             incidenciasDeCuadrante?: components["schemas"]["IncidenciaDeCuadrante"][];
+            firmasMensuales?: components["schemas"]["FirmaMensual"][];
             avisos?: components["schemas"]["Aviso"][];
             adjuntos?: components["schemas"]["Adjunto"][];
             candidaturas?: components["schemas"]["Candidatura"][];
@@ -3204,6 +3352,35 @@ export interface components {
             /** Format: int64 */
             avisosAbiertos?: number;
             alLimite?: boolean;
+        };
+        SignatureVerificationResponse: {
+            /** Format: int64 */
+            firmaId?: number;
+            /** @enum {string} */
+            estado?: "VIGENTE" | "INVALIDADA";
+            coincide?: boolean;
+            hashFirmado?: string;
+            hashActual?: string;
+        };
+        SignableMonthResponse: {
+            /** Format: int32 */
+            anio?: number;
+            /** Format: int32 */
+            mes?: number;
+            /** Format: int32 */
+            jornadas?: number;
+            /** Format: int64 */
+            segundosNetos?: number;
+            puedeFirmar?: boolean;
+            bloqueo?: string | null;
+            firma?: components["schemas"]["MonthlySignatureResponse"];
+        };
+        TeamSignatureResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            usuario?: string;
+            estado?: string;
+            firma?: components["schemas"]["MonthlySignatureResponse"];
         };
         AddedPauseDTO: {
             /** Format: int64 */
@@ -3383,7 +3560,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
-            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS";
+            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS" | "RECORDATORIO_FIRMA" | "FIRMA_INVALIDADA";
             titulo?: string;
             cuerpo?: string;
             rutaDestino?: string;
@@ -4898,6 +5075,106 @@ export interface operations {
                 };
             };
             /** @description El email ya está registrado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    firmar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignMonthRequest"];
+            };
+        };
+        responses: {
+            /** @description Firmado */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MonthlySignatureResponse"];
+                };
+            };
+            /** @description El mes no ha terminado, o fecha no válida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ese mes ya está firmado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Jornadas abiertas o cerradas por el sistema, o ninguna */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    visar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MonthlySignatureResponse"];
+                };
+            };
+            /** @description Sin el permiso, es tuya, o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya no está vigente, o ya está visada */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8054,6 +8331,107 @@ export interface operations {
             };
         };
     };
+    verificar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SignatureVerificationResponse"];
+                };
+            };
+            /** @description Ni es tuya ni puedes visar, o es de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    misMeses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Meses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SignableMonthResponse"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    equipo: {
+        parameters: {
+            query: {
+                anio: number;
+                mes: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Personas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TeamSignatureResponse"][];
+                };
+            };
+            /** @description Sin 'firma:visar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     getProyectos: {
         parameters: {
             query?: never;
@@ -8697,7 +9075,7 @@ export interface operations {
             };
         };
     };
-    equipo: {
+    equipo_1: {
         parameters: {
             query: {
                 fecha: string;

@@ -36,6 +36,7 @@ public record PersonalDataExport(
         List<Cuadrante> cuadrantes,
         List<ExcepcionDeCuadrante> excepcionesDeCuadrante,
         List<IncidenciaDeCuadrante> incidenciasDeCuadrante,
+        List<FirmaMensual> firmasMensuales,
         List<Aviso> avisos,
         List<Adjunto> adjuntos,
         List<Candidatura> candidaturas,
@@ -94,6 +95,12 @@ public record PersonalDataExport(
     public record IncidenciaDeCuadrante(
             LocalDate fecha, String tipo, int minutos, String horaPrevista, String estado,
             String justificacion, String comentarioResolucion) {
+    }
+
+    /** Un mes firmado (Fase B3): qué huella se firmó, cuándo, y si una corrección la tumbó. */
+    public record FirmaMensual(
+            int anio, int mes, String estado, String hash, Instant firmadaEn, Instant invalidadaEn,
+            String motivoInvalidacion, Instant visadaEn) {
     }
 
     public record Aviso(String tipo, String titulo, String cuerpo, boolean leido, Instant creadoEn) {

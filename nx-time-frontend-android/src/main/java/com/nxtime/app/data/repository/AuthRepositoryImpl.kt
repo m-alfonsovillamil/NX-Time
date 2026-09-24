@@ -102,6 +102,12 @@ class AuthRepositoryImpl(
         hasta: java.time.LocalDate
     ): Response<List<DiaTeoricoDTO>> = apiService.getMiCuadrante(desde.toString(), hasta.toString())
 
+    override suspend fun getMisMesesParaFirmar(): Response<List<MesParaFirmarDTO>> =
+        apiService.getMisMesesParaFirmar()
+
+    override suspend fun firmarMes(anio: Int, mes: Int): Response<FirmaMensualDTO> =
+        apiService.firmarMes(FirmarMesRequest(anio, mes))
+
     override suspend fun getMisIncidencias(anio: Int?): Response<List<IncidenciaDTO>> =
         apiService.getMisIncidencias(anio)
 

@@ -1,11 +1,13 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.MonthlySignatureStatus;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.ReportRow;
+import com.nxtime.nxtime.repository.MonthlySignatureRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.ReportService;
@@ -34,10 +36,15 @@ public class ReportServiceImpl implements ReportService {
 
     private final TimeEntryRepository timeEntryRepository;
     private final UserRepository userRepository;
+    private final MonthlySignatureRepository signatureRepository;
 
-    public ReportServiceImpl(TimeEntryRepository timeEntryRepository, UserRepository userRepository) {
+    public ReportServiceImpl(
+            TimeEntryRepository timeEntryRepository,
+            UserRepository userRepository,
+            MonthlySignatureRepository signatureRepository) {
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
+        this.signatureRepository = signatureRepository;
     }
 
     @Override
@@ -70,11 +77,25 @@ public class ReportServiceImpl implements ReportService {
         List<TimeEntry> fichajes = timeEntryRepository.findParaInformeDeEmpleado(
                 empleado, inicioDelMes(mes), inicioDelMesSiguiente(mes));
 
+        // La firma vigente del mes, si la hay (Fase B3). Solo la vigente: una
+        // invalidada ya no dice nada del registro de hoy.
+        MonthlyReport.FirmaDelInforme firma = signatureRepository
+                .findByUsuario_IdAndAnioAndMesAndEstado(
+                        empleado.getId(), mes.getYear(), mes.getMonthValue(), MonthlySignatureStatus.VIGENTE)
+                .map(vigente -> new MonthlyReport.FirmaDelInforme(
+                        empleado.getNombre(),
+                        vigente.getFirmadaEn(),
+                        vigente.getHash(),
+                        vigente.getVisadaPor() == null ? null : vigente.getVisadaPor().getNombre(),
+                        vigente.getVisadaEn()))
+                .orElse(null);
+
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 empleado.getNombre(),
                 mes,
-                fichajes.stream().map(this::aFila).toList());
+                fichajes.stream().map(this::aFila).toList(),
+                firma);
     }
 
     private User getUsuario(String email) {

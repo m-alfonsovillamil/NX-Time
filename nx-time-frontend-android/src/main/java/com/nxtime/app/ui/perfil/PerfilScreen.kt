@@ -86,6 +86,7 @@ fun PerfilScreen(
     onIrAjustes: () -> Unit,
     onIrHorasExtra: () -> Unit,
     onIrIncidencias: () -> Unit,
+    onIrFirmas: () -> Unit,
     onIrDenuncias: () -> Unit,
     onIrOfertas: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -199,6 +200,12 @@ fun PerfilScreen(
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onIrIncidencias, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.cuadrante_ver_incidencias))
+                    }
+
+                    // Fase B3. Firmar tu registro es tuyo: sin gatear.
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onIrFirmas, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.firma_ver))
                     }
 
                     // Fase G. Sin gatear por rol, y a propósito: el canal

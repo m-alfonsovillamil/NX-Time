@@ -66,6 +66,8 @@ class ScheduledTaskMonitorIT {
     @Autowired
     private ScheduleIncidentScheduler incidencias;
     @Autowired
+    private SignatureReminderScheduler recordatorioDeFirma;
+    @Autowired
     private TaskMonitorService taskMonitorService;
     @Autowired
     private ScheduledTaskRunRepository repository;
@@ -85,6 +87,8 @@ class ScheduledTaskMonitorIT {
         integridad.verificarLaCadena();
         // Y la de incidencias de cuadrante (B2), con el CHECK de V32.
         incidencias.detectarIncidencias();
+        // Y el recordatorio de firma (B3), con el CHECK de V33.
+        recordatorioDeFirma.recordarFirmas();
 
         for (ScheduledTask tarea : ScheduledTask.values()) {
             ScheduledTaskRun ultima = repository.findFirstByTareaOrderByInicioDesc(tarea).orElseThrow();

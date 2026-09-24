@@ -161,6 +161,10 @@ class DataDeletionIT {
                         + "estado, justificacion, comentario_resolucion, resuelta_por_id, resuelta_en) "
                         + "VALUES (?, ?, current_date, 'RETRASO', 20, 540, 'RECHAZADA', ?, ?, ?, now())",
                 empresa.getId(), id, "Tráfico de " + n, "No vale, " + n, rrhh.getId());
+        // Firma mensual (B3): la IP desde la que firmó.
+        jdbc.update("INSERT INTO firmas_mensuales (empresa_id, usuario_id, anio, mes, hash, version_huella, "
+                        + "jornadas, segundos_netos, firmada_en, ip) VALUES (?, ?, 2025, 3, ?, 1, 1, 28800, now(), ?)",
+                empresa.getId(), id, "a".repeat(64), "10.0.0." + id);
         long denuncia = jdbc.queryForObject("INSERT INTO denuncias (empresa_id, codigo_hash, denunciante_id, categoria, "
                         + "descripcion, estado, acuse_recibo_en, resuelta_en, conclusion) "
                         + "VALUES (?, ?, ?, 'OTRA', 'Relato', 'RESUELTA', now(), now(), 'Cerrada') RETURNING id",
@@ -403,6 +407,9 @@ class DataDeletionIT {
                      FROM incidencias_cuadrante WHERE usuario_id = ?))
                 """, String.class, id, id, id, id, id, id);
         assertThat(textos).doesNotContain("Ana").contains("[eliminado]");
+        // La firma se queda --dice qué registro aceptó--, sin la IP.
+        assertThat(contar("SELECT COUNT(*) FROM firmas_mensuales WHERE usuario_id = ?", id)).isEqualTo(1);
+        assertThat(contar("SELECT COUNT(*) FROM firmas_mensuales WHERE usuario_id = ? AND ip IS NOT NULL", id)).isZero();
         assertThat(contar("SELECT COUNT(*) FROM denuncias WHERE denunciante_id = ?", id)).isZero();
         assertThat(contar("SELECT COUNT(*) FROM denuncia_mensajes WHERE autor_id = ?", id)).isZero();
         // El mensaje del instructor conserva su autor: el CHECK lo exige.

@@ -137,7 +137,13 @@ public enum NoticeType {
     // y, a quien tiene el permiso, la bandeja del equipo.
     INCIDENCIA_DETECTADA("incidencias"),
 
-    RESUMEN_INCIDENCIAS("incidencias");
+    RESUMEN_INCIDENCIAS("incidencias"),
+
+    // B3. Los dos llevan a la pantalla de firmar: el recordatorio, al mes que
+    // se puede firmar; la invalidación, al mes que vuelve a pedir firma.
+    RECORDATORIO_FIRMA("firmas"),
+
+    FIRMA_INVALIDADA("firmas");
 
     private final String rutaDestinoPorDefecto;
 

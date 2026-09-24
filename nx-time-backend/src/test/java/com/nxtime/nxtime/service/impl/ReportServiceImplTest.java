@@ -15,6 +15,7 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.ReportRow;
+import com.nxtime.nxtime.repository.MonthlySignatureRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import java.time.Instant;
@@ -56,6 +57,8 @@ class ReportServiceImplTest {
     private TimeEntryRepository timeEntryRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private MonthlySignatureRepository signatureRepository;
 
     private ReportServiceImpl service;
 
@@ -64,7 +67,7 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReportServiceImpl(timeEntryRepository, userRepository);
+        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository);
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         solicitante = User.builder().id(10L).email("rrhh@nxtime.test").nombre("RRHH")
                 .rol(Role.RRHH).empresa(empresa).activo(true).build();

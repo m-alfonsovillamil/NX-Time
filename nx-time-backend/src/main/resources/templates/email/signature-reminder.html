@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/*
+  El mes anterior se puede firmar ya (Fase B3, ADR 025).
+
+  Uno por persona y mes, aunque la tarea corra a diario. Es una firma de
+  aceptación del registro, no una firma electrónica cualificada: el correo no
+  promete más que eso.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Ya puedes firmar tu registro', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p>
+        Ya puedes firmar tu registro horario de <strong th:text="${mes}">agosto de 2026</strong>.
+    </p>
+
+    <p style="margin: 0;">
+        Revisa tus jornadas y, si están bien, fírmalas en la aplicación, en
+        <strong>Perfil &rsaquo; Firmar mi registro</strong>. Si alguna está mal, pide que se corrija
+        antes: firmar es decir que el registro es correcto.
+    </p>
+</div>
+</body>
+</html>

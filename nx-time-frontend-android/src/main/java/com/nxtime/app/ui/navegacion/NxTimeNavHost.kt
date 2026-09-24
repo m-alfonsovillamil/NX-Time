@@ -59,6 +59,7 @@ import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
 import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
 import com.nxtime.app.ui.cuadrante.IncidenciasScreen
+import com.nxtime.app.ui.firma.FirmaMensualScreen
 import com.nxtime.app.ui.cuadrante.MiCuadranteScreen
 import com.nxtime.app.ui.ofertas.GestionOfertasScreen
 import com.nxtime.app.ui.ofertas.OfertasScreen
@@ -126,6 +127,9 @@ enum class Pantalla(val ruta: String) {
     // Fase B2. Hoja de "Mi cuadrante" (las tuyas) y del panel de gestión
     // (las del equipo): la misma pantalla, como horas extra.
     INCIDENCIAS("incidencias"),
+    // Fase B3. Hoja del perfil: firmar el registro de cada mes. El visado de
+    // la empresa va a la web (ADR 022).
+    FIRMAS("firmas"),
     // Fase G. Dos hojas y no una: presentar/seguir una denuncia y
     // instruir el canal son dos trabajos distintos con dos permisos
     // distintos, y la segunda solo la abre un ADMIN.
@@ -606,6 +610,7 @@ fun NxTimeNavHost(
                     onIrAjustes = { navController.navigate(Pantalla.AJUSTES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) },
+                    onIrFirmas = { navController.navigate(Pantalla.FIRMAS.ruta) },
                     onIrDenuncias = { navController.navigate(Pantalla.DENUNCIAS.ruta) },
                     onIrOfertas = { navController.navigate(Pantalla.OFERTAS.ruta) },
                     viewModel = perfilViewModel
@@ -705,6 +710,10 @@ fun NxTimeNavHost(
                     onVolver = navController::navigateUp,
                     onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) }
                 )
+            }
+
+            composable(Pantalla.FIRMAS.ruta) {
+                FirmaMensualScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.INCIDENCIAS.ruta) {
