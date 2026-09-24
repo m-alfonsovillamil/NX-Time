@@ -71,6 +71,14 @@ class DestinoDeAvisoTest {
     }
 
     @Test
+    fun `los avisos de incidencias llevan a su pantalla (Fase B2)`() {
+        // El símbolo es el de NoticeType.INCIDENCIA_DETECTADA y
+        // RESUMEN_INCIDENCIAS en el backend: si cambia allí, aquí.
+        assertEquals("incidencias", DESTINO_INCIDENCIAS)
+        assertEquals(Pantalla.INCIDENCIAS.ruta, rutaDeAviso(DESTINO_INCIDENCIAS))
+    }
+
+    @Test
     fun `un aviso sin destino no navega`() {
         assertNull(rutaDeAviso(null))
         assertNull(rutaDeAviso(""))

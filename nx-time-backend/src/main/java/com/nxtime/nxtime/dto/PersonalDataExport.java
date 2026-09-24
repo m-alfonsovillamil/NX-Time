@@ -35,6 +35,7 @@ public record PersonalDataExport(
         List<Proyecto> proyectos,
         List<Cuadrante> cuadrantes,
         List<ExcepcionDeCuadrante> excepcionesDeCuadrante,
+        List<IncidenciaDeCuadrante> incidenciasDeCuadrante,
         List<Aviso> avisos,
         List<Adjunto> adjuntos,
         List<Candidatura> candidaturas,
@@ -87,6 +88,12 @@ public record PersonalDataExport(
     /** Un día que se salió del cuadrante. Horas null en un día libre. */
     public record ExcepcionDeCuadrante(
             LocalDate fecha, String tipo, String horaInicio, String horaFin, String motivo) {
+    }
+
+    /** Un día que no cuadró con el cuadrante (Fase B2), con su explicación y lo que se decidió. */
+    public record IncidenciaDeCuadrante(
+            LocalDate fecha, String tipo, int minutos, String horaPrevista, String estado,
+            String justificacion, String comentarioResolucion) {
     }
 
     public record Aviso(String tipo, String titulo, String cuerpo, boolean leido, Instant creadoEn) {

@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import static com.nxtime.nxtime.domain.ScheduledTask.ANONIMIZACION;
 import static com.nxtime.nxtime.domain.ScheduledTask.CIERRE_JORNADAS;
+import static com.nxtime.nxtime.domain.ScheduledTask.CUMPLIMIENTO_CUADRANTE;
 import static com.nxtime.nxtime.domain.ScheduledTask.HORAS_EXTRA;
 import static com.nxtime.nxtime.domain.ScheduledTask.VERIFICACION_INTEGRIDAD;
 import static com.nxtime.nxtime.domain.ScheduledTaskResult.EN_CURSO;
@@ -167,6 +168,8 @@ class TaskMonitorServiceImplTest {
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 HORAS_EXTRA, OK, madrid("2026-09-12T03:30:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                CUMPLIMIENTO_CUADRANTE, OK, madrid("2026-09-12T03:40:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 ANONIMIZACION, OK, madrid("2026-09-12T03:45:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 VERIFICACION_INTEGRIDAD, OK, madrid("2026-09-12T03:50:00"))).thenReturn(true);
@@ -175,7 +178,8 @@ class TaskMonitorServiceImplTest {
 
         assertThat(estado.ok()).isTrue();
         assertThat(estado.tareas()).extracting(SystemStatusResponse.TaskStatus::tarea)
-                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, ANONIMIZACION, VERIFICACION_INTEGRIDAD);
+                .containsExactly(CIERRE_JORNADAS, HORAS_EXTRA, CUMPLIMIENTO_CUADRANTE, ANONIMIZACION,
+                        VERIFICACION_INTEGRIDAD);
     }
 
     @Test
@@ -202,6 +206,8 @@ class TaskMonitorServiceImplTest {
                 CIERRE_JORNADAS, OK, madrid("2026-09-11T03:00:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 HORAS_EXTRA, OK, madrid("2026-09-11T03:30:00"))).thenReturn(true);
+        when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
+                CUMPLIMIENTO_CUADRANTE, OK, madrid("2026-09-11T03:40:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(
                 ANONIMIZACION, OK, madrid("2026-09-11T03:45:00"))).thenReturn(true);
         when(repository.existsByTareaAndResultadoAndInicioGreaterThanEqual(

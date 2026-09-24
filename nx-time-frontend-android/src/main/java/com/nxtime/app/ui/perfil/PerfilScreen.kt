@@ -85,6 +85,7 @@ fun PerfilScreen(
     onVolver: () -> Unit,
     onIrAjustes: () -> Unit,
     onIrHorasExtra: () -> Unit,
+    onIrIncidencias: () -> Unit,
     onIrDenuncias: () -> Unit,
     onIrOfertas: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -190,6 +191,14 @@ fun PerfilScreen(
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(onClick = onIrHorasExtra, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.horas_extra_ver))
+                    }
+
+                    // Fase B2. Sin gatear: quien no tiene cuadrante no tiene
+                    // incidencias, y la pantalla lo dice; esconder el botón
+                    // haría inalcanzables las de un cuadrante ya cerrado.
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onIrIncidencias, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.cuadrante_ver_incidencias))
                     }
 
                     // Fase G. Sin gatear por rol, y a propósito: el canal

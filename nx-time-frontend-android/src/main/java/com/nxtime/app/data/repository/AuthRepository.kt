@@ -37,6 +37,10 @@ interface AuthRepository {
         desde: java.time.LocalDate,
         hasta: java.time.LocalDate
     ): Response<List<DiaTeoricoDTO>>
+    suspend fun getMisIncidencias(anio: Int? = null): Response<List<IncidenciaDTO>>
+    suspend fun getIncidenciasDelEquipo(resueltas: Boolean = false): Response<List<IncidenciaDTO>>
+    suspend fun justificarIncidencia(id: Long, texto: String): Response<IncidenciaDTO>
+    suspend fun resolverIncidencia(id: Long, aceptar: Boolean, comentario: String?): Response<IncidenciaDTO>
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
     suspend fun getProyectosParaFichar(): Response<ProyectosParaFicharDTO>
     suspend fun getImputaciones(fichajeId: Long): Response<ImputacionesDTO>

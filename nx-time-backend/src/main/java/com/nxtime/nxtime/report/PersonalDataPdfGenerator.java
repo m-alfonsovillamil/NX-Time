@@ -128,6 +128,12 @@ public class PersonalDataPdfGenerator {
                         e.horaInicio() != null ? e.horaInicio() + "–" + e.horaFin() : "",
                         texto(e.motivo())});
 
+        tabla(documento, "Incidencias de cuadrante", datos.incidenciasDeCuadrante(),
+                new String[] {"Fecha", "Tipo", "Minutos", "Estado", "Explicación"},
+                i -> new String[] {
+                        fechaLocal(i.fecha()), i.tipo(), String.valueOf(i.minutos()), i.estado(),
+                        texto(i.justificacion())});
+
         tabla(documento, "Avisos recibidos (" + datos.avisos().size() + ")", datos.avisos(),
                 new String[] {"Fecha", "Aviso", "Leído"},
                 av -> new String[] {fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});

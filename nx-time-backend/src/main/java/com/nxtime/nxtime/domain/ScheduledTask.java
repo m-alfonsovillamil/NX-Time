@@ -28,6 +28,14 @@ public enum ScheduledTask {
     HORAS_EXTRA(ScheduledTask.CRON_HORAS_EXTRA),
 
     /**
+     * {@code ScheduleIncidentScheduler}: retrasos, salidas anticipadas y
+     * ausencias contra el cuadrante (Fase B2). Después del cierre de las 3:00
+     * por lo mismo que las horas extra: la salida de una jornada que cerró el
+     * sistema no es un dato real, y hay que saber cuáles son antes de mirar.
+     */
+    CUMPLIMIENTO_CUADRANTE(ScheduledTask.CRON_CUMPLIMIENTO_CUADRANTE),
+
+    /**
      * {@code DataDeletionScheduler}: anonimiza a quien pidió el borrado de sus
      * datos cuando vencen los cuatro años de conservación (ADR 016). Casi
      * todas las noches no encuentra nada, y eso también se registra: una
@@ -51,6 +59,7 @@ public enum ScheduledTask {
      */
     public static final String CRON_CIERRE_JORNADAS = "0 0 3 * * *";
     public static final String CRON_HORAS_EXTRA = "0 30 3 * * *";
+    public static final String CRON_CUMPLIMIENTO_CUADRANTE = "0 40 3 * * *";
 
     /*
      * 3:45 y no más tarde: el workflow de GitHub que comprueba /estado/tareas

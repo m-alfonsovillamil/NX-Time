@@ -9,6 +9,7 @@ import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.service.HolidayCalendar;
 import com.nxtime.nxtime.service.NonWorkingDayService;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -74,6 +75,32 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
                             && !fecha.isAfter(ausencia.getFechaFin()))
                     .findFirst()
                     .ifPresent(ausencia -> motivos.put(fecha, deAusencia(ausencia)));
+        }
+        return motivos;
+    }
+
+    @Override
+    public Map<Long, Motivo> motivosDelDia(Collection<User> personas, LocalDate dia) {
+        Map<Long, Motivo> motivos = new HashMap<>();
+        if (personas.isEmpty()) {
+            return motivos;
+        }
+        // Los festivos son por empresa: se mira el calendario (cacheado) una
+        // vez por empresa, y el nombre solo si ese día lo es.
+        Map<Long, Optional<Motivo>> festivoPorEmpresa = new HashMap<>();
+        for (User persona : personas) {
+            long empresaId = persona.getEmpresa().getId();
+            Optional<Motivo> festivo = festivoPorEmpresa.computeIfAbsent(empresaId, id ->
+                    holidayCalendar.festivosDelAnio(id, dia.getYear()).contains(dia)
+                            ? Optional.of(deFestivo(holidayRepository.findByEmpresaYAnio(id, dia.getYear()), dia))
+                            : Optional.empty());
+            festivo.ifPresent(motivo -> motivos.put(persona.getId(), motivo));
+        }
+        // Las ausencias, de todos a la vez. Un festivo manda sobre una
+        // ausencia, igual que en motivo(): se mira primero y no se pisa.
+        List<Long> ids = personas.stream().map(User::getId).toList();
+        for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuariosEnFecha(ids, dia)) {
+            motivos.putIfAbsent(ausencia.getUsuario().getId(), deAusencia(ausencia));
         }
         return motivos;
     }

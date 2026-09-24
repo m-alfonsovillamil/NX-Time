@@ -12,6 +12,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,6 +46,7 @@ import com.nxtime.app.ui.util.resolver
 @Composable
 fun MiCuadranteScreen(
     onVolver: () -> Unit,
+    onIrIncidencias: () -> Unit,
     viewModel: MiCuadranteViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,6 +68,13 @@ fun MiCuadranteScreen(
                 estado.error?.let { mensaje ->
                     item {
                         BannerError(mensaje = mensaje.resolver(), onReintentar = viewModel::descartarError)
+                    }
+                }
+                // Siempre, también sin cuadrante hoy: las incidencias de un
+                // cuadrante que ya se cerró siguen siendo tuyas.
+                item {
+                    TextButton(onClick = onIrIncidencias) {
+                        Text(stringResource(R.string.cuadrante_ver_incidencias))
                     }
                 }
                 if (estado.dias.none { it.tieneCuadrante() }) {

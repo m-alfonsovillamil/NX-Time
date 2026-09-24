@@ -130,7 +130,14 @@ public enum NoticeType {
 
     // B1. A quien lleva los contratos: la jornada es suya, el cuadrante lo
     // puede poner un gestor. Ver ScheduleServiceImpl.asignar.
-    CUADRANTE_DISTINTO_DE_JORNADA("equipo");
+    CUADRANTE_DISTINTO_DE_JORNADA("equipo"),
+
+    // B2. La incidencia, a quien la tiene (para que la explique); el
+    // resumen, a quien revisa. Los dos a la misma pantalla: enseña lo propio
+    // y, a quien tiene el permiso, la bandeja del equipo.
+    INCIDENCIA_DETECTADA("incidencias"),
+
+    RESUMEN_INCIDENCIAS("incidencias");
 
     private final String rutaDestinoPorDefecto;
 

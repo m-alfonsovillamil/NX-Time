@@ -24,6 +24,21 @@ public interface ScheduleAssignmentRepository extends JpaRepository<ScheduleAssi
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
+    /** Las vigentes un día de varias personas, para el cálculo por lotes. */
+    @Query("SELECT a FROM asignaciones_horario a JOIN FETCH a.plantilla "
+            + "WHERE a.usuario.id IN :usuarioIds AND a.fechaInicio <= :dia "
+            + "AND (a.fechaFin IS NULL OR a.fechaFin >= :dia)")
+    List<ScheduleAssignment> findDeUsuariosEl(
+            @Param("usuarioIds") java.util.Collection<Long> usuarioIds, @Param("dia") LocalDate dia);
+
+    /**
+     * Las vigentes un día, de TODAS las empresas: quién tiene cuadrante ese
+     * día. Es por donde empieza el barrido de incidencias (Fase B2).
+     */
+    @Query("SELECT a FROM asignaciones_horario a JOIN FETCH a.usuario u JOIN FETCH u.empresa "
+            + "WHERE a.fechaInicio <= :dia AND (a.fechaFin IS NULL OR a.fechaFin >= :dia)")
+    List<ScheduleAssignment> findVigentesEl(@Param("dia") LocalDate dia);
+
     /** Las vigentes un día en una empresa, para el cuadrante del equipo. */
     @Query("SELECT a FROM asignaciones_horario a JOIN FETCH a.plantilla JOIN FETCH a.usuario "
             + "WHERE a.empresa.id = :empresaId AND a.fechaInicio <= :dia "

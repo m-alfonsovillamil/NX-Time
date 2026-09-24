@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreTime
@@ -78,6 +79,8 @@ fun PanelGestionScreen(
     onIrProyectos: () -> Unit,
     onIrCorrecciones: () -> Unit,
     onIrHorasExtra: () -> Unit,
+    puedeRevisarIncidencias: Boolean,
+    onIrIncidencias: () -> Unit,
     puedeInstruirDenuncias: Boolean,
     onIrCanalDenuncias: () -> Unit,
     puedePublicarOfertas: Boolean,
@@ -154,6 +157,13 @@ fun PanelGestionScreen(
                 onClick = onIrHorasExtra,
                 contador = pendientes?.horasExtra
             )
+            if (puedeRevisarIncidencias) {
+                OpcionGestion(
+                    texto = stringResource(R.string.gestion_incidencias),
+                    icono = Icons.Default.EventBusy,
+                    onClick = onIrIncidencias
+                )
+            }
             // Esta sí se gatea: solo RRHH y ADMIN la pueden ejecutar, y a un
             // GESTOR no le corresponde saber que alguien lo ha pedido.
             if (puedeGestionarBorrados) {

@@ -12,5 +12,7 @@ public interface ScheduleExceptionRepository extends JpaRepository<ScheduleExcep
 
     List<ScheduleException> findByEmpresa_IdAndFecha(long empresaId, LocalDate fecha);
 
+    List<ScheduleException> findByUsuario_IdInAndFecha(java.util.Collection<Long> usuarioIds, LocalDate fecha);
+
     List<ScheduleException> findByUsuario_IdOrderByFechaDesc(long usuarioId);
 }

@@ -153,6 +153,15 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
+    /** Las aprobadas de varias personas que cubren un día (ver NonWorkingDayService.motivosDelDia). */
+    @Query("SELECT a FROM peticiones_ausencia a "
+            + "WHERE a.usuario.id IN :usuarioIds "
+            + "AND a.estado = com.nxtime.nxtime.domain.AbsenceStatus.APROBADA "
+            + "AND a.fechaInicio <= :dia AND a.fechaFin >= :dia")
+    List<AbsenceRequest> findAprobadasDeUsuariosEnFecha(
+            @Param("usuarioIds") java.util.Collection<Long> usuarioIds,
+            @Param("dia") LocalDate dia);
+
     /** Las aprobadas de una persona que cubren un día (ver NonWorkingDayService). */
     @Query("SELECT a FROM peticiones_ausencia a "
             + "WHERE a.usuario.id = :usuarioId "

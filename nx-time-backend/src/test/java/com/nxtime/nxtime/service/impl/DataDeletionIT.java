@@ -154,6 +154,13 @@ class DataDeletionIT {
                         + "tipo, estado, justificacion, revisado_por, fecha_revision) "
                         + "VALUES (?, ?, current_date, 60, 2400, 'SEMANAL', 'JUSTIFICADO', ?, ?, now())",
                 empresa.getId(), id, "Cierre de mes de " + n, rrhh.getId());
+        // Cuadrantes (B1) e incidencias (B2): también texto libre sobre la persona.
+        jdbc.update("INSERT INTO excepciones_horario (empresa_id, usuario_id, fecha, tipo, motivo) "
+                + "VALUES (?, ?, current_date, 'LIBRE', ?)", empresa.getId(), id, "Cita médica de " + n);
+        jdbc.update("INSERT INTO incidencias_cuadrante (empresa_id, usuario_id, fecha, tipo, minutos, hora_prevista, "
+                        + "estado, justificacion, comentario_resolucion, resuelta_por_id, resuelta_en) "
+                        + "VALUES (?, ?, current_date, 'RETRASO', 20, 540, 'RECHAZADA', ?, ?, ?, now())",
+                empresa.getId(), id, "Tráfico de " + n, "No vale, " + n, rrhh.getId());
         long denuncia = jdbc.queryForObject("INSERT INTO denuncias (empresa_id, codigo_hash, denunciante_id, categoria, "
                         + "descripcion, estado, acuse_recibo_en, resuelta_en, conclusion) "
                         + "VALUES (?, ?, ?, 'OTRA', 'Relato', 'RESUELTA', now(), now(), 'Cerrada') RETURNING id",
@@ -390,8 +397,11 @@ class DataDeletionIT {
                   (SELECT string_agg(motivo, '|') FROM pausas_anadidas WHERE creada_por_id = ?),
                   (SELECT string_agg(concat_ws('|', motivo, comentario_resolucion), '|') FROM peticiones_ausencia WHERE usuario_id = ?),
                   (SELECT string_agg(concat_ws('|', motivo, comentario_resolucion), '|') FROM solicitudes_correccion WHERE solicitante_id = ?),
-                  (SELECT string_agg(justificacion, '|') FROM avisos_horas_extra WHERE usuario_id = ?))
-                """, String.class, id, id, id, id);
+                  (SELECT string_agg(justificacion, '|') FROM avisos_horas_extra WHERE usuario_id = ?),
+                  (SELECT string_agg(motivo, '|') FROM excepciones_horario WHERE usuario_id = ?),
+                  (SELECT string_agg(concat_ws('|', justificacion, comentario_resolucion), '|')
+                     FROM incidencias_cuadrante WHERE usuario_id = ?))
+                """, String.class, id, id, id, id, id, id);
         assertThat(textos).doesNotContain("Ana").contains("[eliminado]");
         assertThat(contar("SELECT COUNT(*) FROM denuncias WHERE denunciante_id = ?", id)).isZero();
         assertThat(contar("SELECT COUNT(*) FROM denuncia_mensajes WHERE autor_id = ?", id)).isZero();

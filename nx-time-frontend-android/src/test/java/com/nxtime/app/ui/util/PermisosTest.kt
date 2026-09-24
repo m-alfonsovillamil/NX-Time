@@ -118,6 +118,7 @@ class PermisosTest {
         assertTrue(Permisos.puedeGestionarCalendario(setOf("calendario:gestionar")))
         assertTrue(Permisos.puedeGestionarProyectos(setOf("proyecto:gestionar")))
         assertTrue(Permisos.puedeRevisarHorasExtra(setOf("horasextra:revisar")))
+        assertTrue(Permisos.puedeRevisarIncidencias(setOf("cuadrante:incidencias:revisar")))
         assertTrue(Permisos.puedeInstruirDenuncias(setOf("denuncia:instruir")))
         assertTrue(Permisos.puedePublicarOfertas(setOf("oferta:publicar")))
         assertTrue(Permisos.puedeValorarCandidaturas(setOf("candidatura:gestionar")))

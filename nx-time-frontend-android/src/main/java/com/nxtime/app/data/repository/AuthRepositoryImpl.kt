@@ -102,6 +102,21 @@ class AuthRepositoryImpl(
         hasta: java.time.LocalDate
     ): Response<List<DiaTeoricoDTO>> = apiService.getMiCuadrante(desde.toString(), hasta.toString())
 
+    override suspend fun getMisIncidencias(anio: Int?): Response<List<IncidenciaDTO>> =
+        apiService.getMisIncidencias(anio)
+
+    override suspend fun getIncidenciasDelEquipo(resueltas: Boolean): Response<List<IncidenciaDTO>> =
+        apiService.getIncidenciasDelEquipo(resueltas)
+
+    override suspend fun justificarIncidencia(id: Long, texto: String): Response<IncidenciaDTO> =
+        apiService.justificarIncidencia(id, JustificarIncidenciaRequest(texto))
+
+    override suspend fun resolverIncidencia(
+        id: Long,
+        aceptar: Boolean,
+        comentario: String?
+    ): Response<IncidenciaDTO> = apiService.resolverIncidencia(id, ResolverIncidenciaRequest(aceptar, comentario))
+
     override suspend fun solicitarCorreccion(
         fichajeId: Long,
         peticion: CorreccionFichajeRequest

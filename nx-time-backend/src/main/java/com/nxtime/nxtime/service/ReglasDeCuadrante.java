@@ -1,8 +1,13 @@
 package com.nxtime.nxtime.service;
 
+import com.nxtime.nxtime.domain.ScheduleIncidentType;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -154,6 +159,115 @@ public final class ReglasDeCuadrante {
         }
         long contratados = OvertimeCalculator.objetivoSemanal(horasSemanales, 5);
         return Math.abs(minutosPlantilla - contratados) > TOLERANCIA_JORNADA_MINUTOS;
+    }
+
+    // ------------------------------------------------------------------
+    // Incidencias (Fase B2)
+    // ------------------------------------------------------------------
+
+    /**
+     * Cuánto tarde se puede llegar sin que sea un retraso.
+     *
+     * Diez minutos, no cero: es la diferencia entre fichar al entrar por la
+     * puerta o al llegar a la mesa, o el autobús. Sin margen, cualquier
+     * cuadrante generaría una incidencia casi a diario, y una bandeja llena de
+     * incidencias que nadie mira es peor que no tenerla.
+     */
+    public static final int TOLERANCIA_RETRASO_MINUTOS = 10;
+
+    /** La misma tolerancia para salir antes, y por lo mismo. */
+    public static final int TOLERANCIA_SALIDA_MINUTOS = 10;
+
+    /**
+     * Un fichaje de un día, lo justo para comparar.
+     *
+     * @param salida null si la jornada sigue abierta (el turno de noche cuando
+     *   el barrido pasa de madrugada).
+     * @param cerradoPorElSistema lo cerró el cierre automático de las 3:00, y
+     *   su salida no es un dato real.
+     */
+    public record FichajeDelDia(long registroId, Instant entrada, Instant salida, boolean cerradoPorElSistema) {
+    }
+
+    /** Lo que el barrido encuentra un día, antes de guardarlo. */
+    public record IncidenciaDetectada(
+            ScheduleIncidentType tipo, int minutos, int horaPrevista, Instant horaReal, Long registroId) {
+    }
+
+    /**
+     * Qué no cuadró un día entre el horario teórico y lo fichado.
+     *
+     * <ul>
+     *   <li><b>Ausencia</b>: tocaba trabajar y no hay ningún fichaje. Los
+     *       festivos y las ausencias aprobadas ya llegan con cero minutos
+     *       teóricos (los resuelve NonWorkingDayService), así que nunca
+     *       producen una ausencia aquí. Esa garantía vive en un solo sitio.</li>
+     *   <li><b>Retraso</b>: la primera entrada, contra el inicio del primer
+     *       tramo. En una jornada partida no se mira la vuelta de comer: el
+     *       horario del mediodía es de quien lo trabaja.</li>
+     *   <li><b>Salida anticipada</b>: la última salida, contra el fin del
+     *       último tramo. Solo si todas las jornadas del día están cerradas y
+     *       ninguna la cerró el sistema.</li>
+     * </ul>
+     *
+     * Las horas se calculan en reloj de pared de la zona: el tramo de las
+     * 09:00 empieza a las 09:00 también el día del cambio de hora.
+     *
+     * Los fichajes se asignan al día en que EMPIEZAN, igual que las horas
+     * extra. Un turno de noche que se ficha pasada la medianoche cuenta para
+     * el día siguiente: es la misma frontera que ya usa todo el sistema.
+     */
+    public static List<IncidenciaDetectada> incidencias(
+            LocalDate fecha,
+            ZoneId zona,
+            List<JornadaTeoricaService.Tramo> tramos,
+            int minutosTeoricos,
+            List<FichajeDelDia> fichajes) {
+
+        if (tramos.isEmpty() || minutosTeoricos <= 0) {
+            return List.of();
+        }
+        int inicioPrevisto = tramos.stream().mapToInt(JornadaTeoricaService.Tramo::inicio).min().orElseThrow();
+        int finPrevisto = tramos.stream().mapToInt(JornadaTeoricaService.Tramo::fin).max().orElseThrow();
+
+        if (fichajes.isEmpty()) {
+            return List.of(new IncidenciaDetectada(
+                    ScheduleIncidentType.AUSENCIA, minutosTeoricos, inicioPrevisto, null, null));
+        }
+
+        List<IncidenciaDetectada> encontradas = new ArrayList<>();
+
+        FichajeDelDia primero = fichajes.stream().min(Comparator.comparing(FichajeDelDia::entrada)).orElseThrow();
+        long retraso = Duration.between(instante(fecha, zona, inicioPrevisto), primero.entrada()).toMinutes();
+        if (retraso > TOLERANCIA_RETRASO_MINUTOS) {
+            encontradas.add(new IncidenciaDetectada(
+                    ScheduleIncidentType.RETRASO, (int) retraso, inicioPrevisto,
+                    primero.entrada(), primero.registroId()));
+        }
+
+        boolean salidaFiable = fichajes.stream()
+                .allMatch(fichaje -> fichaje.salida() != null && !fichaje.cerradoPorElSistema());
+        if (salidaFiable) {
+            FichajeDelDia ultimo = fichajes.stream().max(Comparator.comparing(FichajeDelDia::salida)).orElseThrow();
+            long adelanto = Duration.between(ultimo.salida(), instante(fecha, zona, finPrevisto)).toMinutes();
+            if (adelanto > TOLERANCIA_SALIDA_MINUTOS) {
+                encontradas.add(new IncidenciaDetectada(
+                        ScheduleIncidentType.SALIDA_ANTICIPADA, (int) adelanto, finPrevisto,
+                        ultimo.salida(), ultimo.registroId()));
+            }
+        }
+        return encontradas;
+    }
+
+    /**
+     * El instante en que cae un minuto del día, en reloj de pared.
+     *
+     * Con {@code LocalDateTime}, no sumando minutos a un instante: sumar 540
+     * minutos a la medianoche del día del cambio de hora daría las 08:00 o las
+     * 10:00, no las 09:00. Un minuto más allá de 1440 cae al día siguiente.
+     */
+    static Instant instante(LocalDate fecha, ZoneId zona, int minutos) {
+        return fecha.atStartOfDay().plusMinutes(minutos).atZone(zona).toInstant();
     }
 
     /** La hora de reloj de un minuto del día, dando la vuelta tras la medianoche. */

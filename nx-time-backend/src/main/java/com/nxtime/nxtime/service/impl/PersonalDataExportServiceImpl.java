@@ -13,6 +13,7 @@ import com.nxtime.nxtime.repository.OvertimeAlertRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
 import com.nxtime.nxtime.repository.ScheduleAssignmentRepository;
 import com.nxtime.nxtime.repository.ScheduleExceptionRepository;
+import com.nxtime.nxtime.repository.ScheduleIncidentRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
@@ -69,6 +70,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private final ProjectAssignmentRepository assignmentRepository;
     private final ScheduleAssignmentRepository scheduleAssignmentRepository;
     private final ScheduleExceptionRepository scheduleExceptionRepository;
+    private final ScheduleIncidentRepository scheduleIncidentRepository;
     private final NoticeRepository noticeRepository;
     private final AttachmentRepository attachmentRepository;
     private final JobApplicationRepository applicationRepository;
@@ -87,6 +89,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
             ProjectAssignmentRepository assignmentRepository,
             ScheduleAssignmentRepository scheduleAssignmentRepository,
             ScheduleExceptionRepository scheduleExceptionRepository,
+            ScheduleIncidentRepository scheduleIncidentRepository,
             NoticeRepository noticeRepository,
             AttachmentRepository attachmentRepository,
             JobApplicationRepository applicationRepository,
@@ -101,6 +104,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
         this.assignmentRepository = assignmentRepository;
         this.scheduleAssignmentRepository = scheduleAssignmentRepository;
         this.scheduleExceptionRepository = scheduleExceptionRepository;
+        this.scheduleIncidentRepository = scheduleIncidentRepository;
         this.noticeRepository = noticeRepository;
         this.attachmentRepository = attachmentRepository;
         this.applicationRepository = applicationRepository;
@@ -183,6 +187,13 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                                 e.getInicio() != null ? ReglasDeCuadrante.hora(e.getInicio()) : null,
                                 e.getFin() != null ? ReglasDeCuadrante.hora(e.getFin()) : null,
                                 e.getMotivo()))
+                        .toList(),
+
+                scheduleIncidentRepository.findByUsuario_IdOrderByFechaDesc(id).stream()
+                        .map(i -> new PersonalDataExport.IncidenciaDeCuadrante(
+                                i.getFecha(), i.getTipo().name(), i.getMinutos(),
+                                ReglasDeCuadrante.hora(i.getHoraPrevista()), i.getEstado().name(),
+                                i.getJustificacion(), i.getComentarioResolucion()))
                         .toList(),
 
                 noticeRepository.findByDestinatarioOrderByCreadoEnDesc(p).stream()

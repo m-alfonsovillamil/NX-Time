@@ -34,6 +34,7 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_BORRADOS -> Pantalla.BORRADOS.ruta
     DESTINO_EQUIPO -> Pantalla.EQUIPO.ruta
     DESTINO_AJUSTES -> Pantalla.AJUSTES.ruta
+    DESTINO_INCIDENCIAS -> Pantalla.INCIDENCIAS.ruta
     else -> null
 }
 
@@ -78,3 +79,8 @@ const val DESTINO_AJUSTES = "ajustes"
 // 09/2026. Alguien ha empezado a trabajar en un festivo o con una ausencia
 // aprobada: el aviso lleva a quien lo recibe al historial del equipo.
 const val DESTINO_EQUIPO = "equipo"
+
+// Fase B2. La incidencia detectada (a quien la tiene) y el resumen de la
+// noche (a quien revisa) llevan a la misma pantalla: cada uno ve en ella su
+// parte.
+const val DESTINO_INCIDENCIAS = "incidencias"

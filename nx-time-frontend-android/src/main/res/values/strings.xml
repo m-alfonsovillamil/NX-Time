@@ -824,6 +824,40 @@
     <string name="cuadrante_libre">Libre</string>
     <string name="cuadrante_no_laborable">No laborable</string>
     <string name="cuadrante_sin_cuadrante">Sin cuadrante</string>
+    <string name="cuadrante_ver_incidencias">Ver mis incidencias</string>
+
+    <!-- Fase B2: incidencias de cuadrante. Se detectan, no se imputan. -->
+    <string name="incidencias_titulo">Incidencias de cuadrante</string>
+    <string name="incidencias_explicacion">Se detectan cada noche comparando lo fichado con tu cuadrante, con 10 minutos de margen. No descuentan nada: si hubo un motivo, explícalo.</string>
+    <string name="incidencias_mias">Mis incidencias de este año</string>
+    <string name="incidencias_vacio">Ninguna. Lo fichado cuadra con tu horario.</string>
+    <string name="incidencias_del_equipo">Del equipo, por decidir</string>
+    <string name="incidencias_equipo_vacio">No hay incidencias del equipo esperando decisión.</string>
+    <string name="incidencias_tipo_retraso">Retraso</string>
+    <string name="incidencias_tipo_salida">Salida anticipada</string>
+    <string name="incidencias_tipo_ausencia">Ausencia</string>
+    <string name="incidencias_estado_pendiente">Sin explicar</string>
+    <string name="incidencias_estado_justificada">Explicada</string>
+    <string name="incidencias_estado_aceptada">Aceptada</string>
+    <string name="incidencias_estado_rechazada">Rechazada</string>
+    <string name="incidencias_detalle_retraso">Entrada a las %1$s; prevista a las %2$s (%3$s tarde)</string>
+    <string name="incidencias_detalle_salida">Salida a las %1$s; prevista a las %2$s (%3$s antes)</string>
+    <string name="incidencias_detalle_ausencia">Sin fichar. Jornada prevista de %1$s desde las %2$s</string>
+    <string name="incidencias_detalle_otro">Prevista a las %1$s (%2$s)</string>
+    <string name="incidencias_justificacion">Explicación: %1$s</string>
+    <string name="incidencias_resuelta_por">Decidida por %1$s</string>
+    <string name="incidencias_resuelta_con_comentario">Decidida por %1$s: %2$s</string>
+    <string name="incidencias_justificar">Explicar</string>
+    <string name="incidencias_cambiar_justificacion">Cambiar explicación</string>
+    <string name="incidencias_justificar_ayuda">Cuéntale a quien la revise qué pasó. Puedes cambiarlo mientras nadie haya decidido.</string>
+    <string name="incidencias_aceptar">Aceptar</string>
+    <string name="incidencias_rechazar">Rechazar</string>
+    <string name="incidencias_rechazar_ayuda">Rechazar pide un motivo: es lo que verá la persona.</string>
+    <string name="incidencias_texto_etiqueta">Texto</string>
+    <string name="incidencias_justificada">Explicación enviada.</string>
+    <string name="incidencias_aceptada">Incidencia aceptada.</string>
+    <string name="incidencias_rechazada">Incidencia rechazada.</string>
+    <string name="gestion_incidencias">Incidencias de cuadrante</string>
     <string name="horas_extra_mios">Mis excesos de jornada</string>
     <string name="horas_extra_del_equipo">Pendientes de revisar</string>
     <!--

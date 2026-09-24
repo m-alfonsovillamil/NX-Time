@@ -13,13 +13,19 @@ import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.OvertimeType;
+import com.nxtime.nxtime.domain.ScheduleIncidentType;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
 import com.nxtime.nxtime.service.NoticeService;
 import com.nxtime.nxtime.service.ReglasDeCuadrante;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -617,6 +623,124 @@ public class NotificationListener {
                             "fecha", evento.fecha(),
                             "motivo", evento.motivo(),
                             "vacaciones", evento.vacaciones()));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // B2: incidencias de cuadrante
+    // ------------------------------------------------------------------
+
+    /**
+     * A quien las tiene, en segunda persona y sin tono de acusación: es un día
+     * que no cuadró con el cuadrante, no una falta. Puede haber una razón, y
+     * el aviso lleva a donde se explica.
+     *
+     * Uno por barrido: con una sola incidencia, el detalle; con varias, el
+     * recuento por tipo y el rango de fechas, y el detalle en la aplicación.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onScheduleIncidentDetected(NotificationEvents.ScheduleIncidentDetected evento) {
+        List<NotificationEvents.IncidenciaNueva> incidencias = evento.incidencias();
+        String titulo;
+        String cuerpo;
+        if (incidencias.size() == 1) {
+            NotificationEvents.IncidenciaNueva una = incidencias.get(0);
+            String dia = FECHA.format(una.fecha());
+            titulo = switch (una.tipo()) {
+                case RETRASO -> "El " + dia + " entraste más tarde de lo previsto";
+                case SALIDA_ANTICIPADA -> "El " + dia + " saliste antes de lo previsto";
+                case AUSENCIA -> "El " + dia + " no hay ningún fichaje";
+            };
+            cuerpo = switch (una.tipo()) {
+                case RETRASO -> una.minutos() + " minutos después de las " + una.horaPrevista()
+                        + ", que es lo que dice tu cuadrante.";
+                case SALIDA_ANTICIPADA -> una.minutos() + " minutos antes de lo que dice tu cuadrante.";
+                case AUSENCIA -> "Tu cuadrante decía que ese día trabajabas desde las " + una.horaPrevista() + ".";
+            } + " Si hubo un motivo, puedes explicarlo en la aplicación.";
+        } else {
+            // Días y no incidencias: llegar tarde y salir pronto es un día que
+            // no cuadró, no dos. El recuento por tipo va en el cuerpo.
+            long dias = incidencias.stream().map(NotificationEvents.IncidenciaNueva::fecha).distinct().count();
+            titulo = dias == 1
+                    ? "El " + FECHA.format(incidencias.get(0).fecha()) + " no cuadró con tu cuadrante"
+                    : "Tienes " + dias + " días que no cuadraron con tu cuadrante";
+            cuerpo = recuentoDeIncidencias(incidencias) + " Si hubo un motivo, puedes explicarlo en la aplicación.";
+        }
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    destinatario.getId(),
+                    NoticeType.INCIDENCIA_DETECTADA,
+                    titulo,
+                    cuerpo,
+                    NoticeType.INCIDENCIA_DETECTADA.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "schedule-incident-detected",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "titulo", titulo,
+                            "cuerpo", cuerpo));
+        }
+    }
+
+    /** "Entre el 10/09/2026 y el 23/09/2026: 10 retrasos, 8 salidas anticipadas y 2 días sin fichar." */
+    private static String recuentoDeIncidencias(List<NotificationEvents.IncidenciaNueva> incidencias) {
+        Map<ScheduleIncidentType, Long> porTipo = incidencias.stream().collect(Collectors.groupingBy(
+                NotificationEvents.IncidenciaNueva::tipo, () -> new EnumMap<>(ScheduleIncidentType.class),
+                Collectors.counting()));
+        List<String> partes = new ArrayList<>();
+        porTipo.forEach((tipo, cuantas) -> partes.add(switch (tipo) {
+            case RETRASO -> cuantas == 1 ? "1 retraso" : cuantas + " retrasos";
+            case SALIDA_ANTICIPADA -> cuantas == 1 ? "1 salida anticipada" : cuantas + " salidas anticipadas";
+            case AUSENCIA -> cuantas == 1 ? "1 día sin fichar" : cuantas + " días sin fichar";
+        }));
+        String lista = partes.size() == 1 ? partes.get(0)
+                : String.join(", ", partes.subList(0, partes.size() - 1)) + " y " + partes.get(partes.size() - 1);
+
+        LocalDate primera = incidencias.stream().map(NotificationEvents.IncidenciaNueva::fecha)
+                .min(LocalDate::compareTo).orElseThrow();
+        LocalDate ultima = incidencias.stream().map(NotificationEvents.IncidenciaNueva::fecha)
+                .max(LocalDate::compareTo).orElseThrow();
+        String cuando = primera.equals(ultima) ? "El " + FECHA.format(primera)
+                : "Entre el " + FECHA.format(primera) + " y el " + FECHA.format(ultima);
+        return cuando + ": " + lista + ".";
+    }
+
+    /** Uno por empresa y noche, con el recuento y SIN nombres: ver la plantilla. */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onScheduleIncidentSummary(NotificationEvents.ScheduleIncidentSummary evento) {
+        int incidencias = evento.incidenciasNuevas();
+        int personas = evento.personas();
+        String titulo = incidencias == 1
+                ? "Hay 1 incidencia de cuadrante sin revisar"
+                : "Hay " + incidencias + " incidencias de cuadrante sin revisar";
+        String cuerpo = personas == 1
+                ? "Detectadas anoche, de 1 persona."
+                : "Detectadas anoche, de " + personas + " personas.";
+
+        for (User destinatario : evento.destinatarios()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    destinatario.getId(),
+                    NoticeType.RESUMEN_INCIDENCIAS,
+                    titulo,
+                    cuerpo,
+                    NoticeType.RESUMEN_INCIDENCIAS.getRutaDestinoPorDefecto()));
+
+            emailSender.enviar(
+                    destinatario.getEmail(),
+                    titulo,
+                    "schedule-incident-summary",
+                    variables(
+                            "nombreDestinatario", destinatario.getNombre(),
+                            "incidencias", incidencias,
+                            "personas", personas));
         }
     }
 
