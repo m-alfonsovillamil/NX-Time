@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service;
 
 import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,4 +46,16 @@ public interface NonWorkingDayService {
      * siga estando en un solo sitio.
      */
     Map<LocalDate, Motivo> motivosEnRango(User persona, LocalDate desde, LocalDate hasta);
+
+    /**
+     * Lo mismo para muchas personas y un solo día, con un número de consultas
+     * que no depende de cuántas sean (Fase B2). Devuelve solo a quien ese día
+     * NO trabaja, por id.
+     *
+     * Para el barrido nocturno de incidencias, que recorre a toda la plantilla
+     * con cuadrante de todas las empresas: con {@link #motivo} serían tantas
+     * consultas de ausencias como personas, cada noche y por cada día de la
+     * ventana.
+     */
+    Map<Long, Motivo> motivosDelDia(Collection<User> personas, LocalDate dia);
 }

@@ -131,6 +131,24 @@ class PersonalDataEraser {
                  WHERE usuario_id = ? AND justificacion IS NOT NULL
                 """, TEXTO_ELIMINADO, usuarioId);
 
+        // Cuadrantes (B1) e incidencias (B2). El motivo de una excepción puede
+        // decir "cita médica", y la explicación de un retraso, cualquier cosa:
+        // son texto libre sobre la persona igual que la justificación de unas
+        // horas extra. Las horas, los días y los estados se conservan: explican
+        // el registro horario, que es lo que obliga a guardar.
+        jdbc.update("""
+                UPDATE excepciones_horario
+                   SET motivo = ?
+                 WHERE usuario_id = ? AND motivo IS NOT NULL
+                """, TEXTO_ELIMINADO, usuarioId);
+
+        jdbc.update("""
+                UPDATE incidencias_cuadrante
+                   SET justificacion = CASE WHEN justificacion IS NULL THEN NULL ELSE ? END,
+                       comentario_resolucion = CASE WHEN comentario_resolucion IS NULL THEN NULL ELSE ? END
+                 WHERE usuario_id = ?
+                """, TEXTO_ELIMINADO, TEXTO_ELIMINADO, usuarioId);
+
         // Canal de denuncias: solo el lado del DENUNCIANTE. Los mensajes del
         // instructor exigen autor identificado (CHECK de V13), y si esta
         // persona instruyó expedientes, esos siguen apuntando a su fila, que

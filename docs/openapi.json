@@ -19,6 +19,9 @@
     "name" : "Correcciones",
     "description" : "Solicitudes de corrección de fichajes y su resolución."
   }, {
+    "name" : "Incidencias de cuadrante",
+    "description" : "Retrasos, salidas anticipadas y ausencias contra el cuadrante. Se detectan, no se imputan: ninguna descuenta nada."
+  }, {
     "name" : "Gestión",
     "description" : "Alta de empleados/gestores, listado del equipo y baja de empleados. Authorities distintas según GESTOR/RRHH/ADMIN, ver RoleAuthorities."
   }, {
@@ -1512,6 +1515,170 @@
           },
           "409" : {
             "description" : "No está publicada, el plazo venció, o ya te presentaste",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/incidencias/{id}/resolucion" : {
+      "post" : {
+        "tags" : [ "Incidencias de cuadrante" ],
+        "summary" : "Decidir sobre una incidencia",
+        "description" : "ACEPTADA o RECHAZADA. Aceptar no pide comentario; rechazar, sí. Nadie decide sobre las suyas, tenga el permiso que tenga.",
+        "operationId" : "resolver",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResolveIncidentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Decidida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleIncidentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Rechazar sin comentario",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin el permiso, es tuya, o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya está decidida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/incidencias/{id}/justificacion" : {
+      "post" : {
+        "tags" : [ "Incidencias de cuadrante" ],
+        "summary" : "Explicar una incidencia propia",
+        "description" : "Pasa a JUSTIFICADA. Se puede rehacer mientras nadie haya decidido.",
+        "operationId" : "justificar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/JustifyIncidentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Explicada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ScheduleIncidentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Explicación vacía o demasiado larga",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "No es tuya, o es de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya está decidida",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -4318,7 +4485,7 @@
         "tags" : [ "Correcciones" ],
         "summary" : "Aprobar o rechazar una corrección",
         "description" : "Aprobar es lo que APLICA la corrección: anula el fichaje original y crea el corregido. Al rechazar, el comentario es obligatorio.",
-        "operationId" : "resolver",
+        "operationId" : "resolver_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -5357,6 +5524,96 @@
         } ]
       }
     },
+    "/api/v1/incidencias/mias" : {
+      "get" : {
+        "tags" : [ "Incidencias de cuadrante" ],
+        "summary" : "Mis incidencias de un año",
+        "description" : "Por defecto, el año en curso.",
+        "operationId" : "mias",
+        "parameters" : [ {
+          "name" : "anio",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Incidencias",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleIncidentResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/incidencias/equipo" : {
+      "get" : {
+        "tags" : [ "Incidencias de cuadrante" ],
+        "summary" : "La bandeja del equipo",
+        "description" : "Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Como mucho 200.",
+        "operationId" : "bandeja_1",
+        "parameters" : [ {
+          "name" : "resueltas",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Incidencias",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ScheduleIncidentResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'cuadrante:incidencias:revisar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/horas-extra" : {
       "get" : {
         "tags" : [ "Horas extra" ],
@@ -5925,7 +6182,7 @@
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Las denuncias que he presentado identificándome",
         "description" : "Las anónimas NO salen aquí y no pueden salir: no hay ningún dato que las relacione con quien las puso. A esas se llega solo con el código.",
-        "operationId" : "mias",
+        "operationId" : "mias_1",
         "responses" : {
           "200" : {
             "description" : "Listado",
@@ -6530,7 +6787,7 @@
         "tags" : [ "Correcciones" ],
         "summary" : "Las correcciones que he pedido yo",
         "description" : "Con su estado, para ver en qué han quedado.",
-        "operationId" : "mias_1",
+        "operationId" : "mias_2",
         "responses" : {
           "200" : {
             "description" : "Listado",
@@ -8081,6 +8338,88 @@
           }
         }
       },
+      "ResolveIncidentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "aceptar" : {
+            "type" : "boolean"
+          },
+          "comentario" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "aceptar" ]
+      },
+      "ScheduleIncidentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuario" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "RETRASO", "SALIDA_ANTICIPADA", "AUSENCIA" ]
+          },
+          "minutos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "horaPrevista" : {
+            "type" : "string",
+            "example" : "09:00"
+          },
+          "horaReal" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "PENDIENTE", "JUSTIFICADA", "ACEPTADA", "RECHAZADA" ]
+          },
+          "justificacion" : {
+            "type" : [ "string", "null" ]
+          },
+          "justificadaEn" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "comentarioResolucion" : {
+            "type" : [ "string", "null" ]
+          },
+          "resueltaPor" : {
+            "type" : [ "string", "null" ]
+          },
+          "resueltaEn" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          }
+        }
+      },
+      "JustifyIncidentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "texto" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "texto" ]
+      },
       "CreateManagerRequest" : {
         "type" : "object",
         "properties" : {
@@ -9018,7 +9357,7 @@
         "properties" : {
           "tarea" : {
             "type" : "string",
-            "enum" : [ "CIERRE_JORNADAS", "HORAS_EXTRA", "ANONIMIZACION", "VERIFICACION_INTEGRIDAD" ]
+            "enum" : [ "CIERRE_JORNADAS", "HORAS_EXTRA", "CUMPLIMIENTO_CUADRANTE", "ANONIMIZACION", "VERIFICACION_INTEGRIDAD" ]
           },
           "debioCorrer" : {
             "type" : "string",
@@ -9386,6 +9725,34 @@
           }
         }
       },
+      "IncidenciaDeCuadrante" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "minutos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "horaPrevista" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "justificacion" : {
+            "type" : "string"
+          },
+          "comentarioResolucion" : {
+            "type" : "string"
+          }
+        }
+      },
       "PausaAnadida" : {
         "type" : "object",
         "properties" : {
@@ -9522,6 +9889,12 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ExcepcionDeCuadrante"
+            }
+          },
+          "incidenciasDeCuadrante" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IncidenciaDeCuadrante"
             }
           },
           "avisos" : {
@@ -10026,7 +10399,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS" ]
           },
           "titulo" : {
             "type" : "string"

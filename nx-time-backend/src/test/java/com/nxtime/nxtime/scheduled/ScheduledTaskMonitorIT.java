@@ -64,6 +64,8 @@ class ScheduledTaskMonitorIT {
     @Autowired
     private AuditIntegrityScheduler integridad;
     @Autowired
+    private ScheduleIncidentScheduler incidencias;
+    @Autowired
     private TaskMonitorService taskMonitorService;
     @Autowired
     private ScheduledTaskRunRepository repository;
@@ -81,6 +83,8 @@ class ScheduledTaskMonitorIT {
         // lanzarla aquí pone este test en rojo: es lo que impide que una tarea
         // nueva se quede sin cablear y nadie se entere hasta producción.
         integridad.verificarLaCadena();
+        // Y la de incidencias de cuadrante (B2), con el CHECK de V32.
+        incidencias.detectarIncidencias();
 
         for (ScheduledTask tarea : ScheduledTask.values()) {
             ScheduledTaskRun ultima = repository.findFirstByTareaOrderByInicioDesc(tarea).orElseThrow();

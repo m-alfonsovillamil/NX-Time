@@ -105,6 +105,10 @@ import java.util.stream.Collectors;
  * que NO alcanza a la jornada contratada, que sigue en "empleado:configurar"
  * (RRHH): un gestor pone el CUÁNDO, no el CUÁNTO. Por eso, si el cuadrante
  * que asigna no suma la jornada, se avisa a quien sí la fija.
+ * "cuadrante:incidencias:revisar" (Fase B2) empieza en GESTOR, igual que
+ * revisar horas extra y por el mismo motivo: saber si un retraso tuvo
+ * explicación es conocimiento de quien lleva el equipo. Y como allí, NO
+ * alcanza a las incidencias propias: eso lo corta el servicio.
  */
 public final class RoleAuthorities {
 
@@ -138,7 +142,8 @@ public final class RoleAuthorities {
             "horasextra:revisar",
             "oferta:publicar",
             "candidatura:gestionar",
-            "cuadrante:gestionar"
+            "cuadrante:gestionar",
+            "cuadrante:incidencias:revisar"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

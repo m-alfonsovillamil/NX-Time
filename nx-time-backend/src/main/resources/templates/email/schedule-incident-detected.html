@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/*
+  Una incidencia de cuadrante, a quien la tiene (Fase B2).
+
+  Sin tono de acusación, y a propósito: es un día que no cuadró con el
+  cuadrante, no una falta. Una incidencia no descuenta nada (se detecta, no
+  se imputa, como las horas extra), y puede haber una razón. El correo dice
+  qué pasó y dónde explicarlo.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Un día que no cuadró con tu cuadrante', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p><strong th:text="${titulo}">El 05/10/2026 entraste más tarde de lo previsto</strong>.</p>
+
+    <p th:text="${cuerpo}">25 minutos después de las 09:00, que es lo que dice tu cuadrante.</p>
+
+    <p style="margin: 0;">
+        No descuenta nada: es solo la constancia de que ese día no cuadró. Puedes verlo y
+        explicarlo en la aplicación, en <strong>Perfil &rsaquo; Ver mis incidencias</strong>.
+    </p>
+</div>
+</body>
+</html>

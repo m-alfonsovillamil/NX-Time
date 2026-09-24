@@ -413,6 +413,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidencias/{id}/resolucion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decidir sobre una incidencia
+         * @description ACEPTADA o RECHAZADA. Aceptar no pide comentario; rechazar, sí. Nadie decide sobre las suyas, tenga el permiso que tenga.
+         */
+        post: operations["resolver"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidencias/{id}/justificacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Explicar una incidencia propia
+         * @description Pasa a JUSTIFICADA. Se puede rehacer mientras nadie haya decidido.
+         */
+        post: operations["justificar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gestor/gestores": {
         parameters: {
             query?: never;
@@ -1112,7 +1152,7 @@ export interface paths {
          * Aprobar o rechazar una corrección
          * @description Aprobar es lo que APLICA la corrección: anula el fichaje original y crea el corregido. Al rechazar, el comentario es obligatorio.
          */
-        patch: operations["resolver"];
+        patch: operations["resolver_1"];
         trace?: never;
     };
     "/api/v1/candidaturas/{id}/estado": {
@@ -1414,6 +1454,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/incidencias/mias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis incidencias de un año
+         * @description Por defecto, el año en curso.
+         */
+        get: operations["mias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/incidencias/equipo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La bandeja del equipo
+         * @description Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Como mucho 200.
+         */
+        get: operations["bandeja_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/horas-extra": {
         parameters: {
             query?: never;
@@ -1665,7 +1745,7 @@ export interface paths {
          * Las denuncias que he presentado identificándome
          * @description Las anónimas NO salen aquí y no pueden salir: no hay ningún dato que las relacione con quien las puso. A esas se llega solo con el código.
          */
-        get: operations["mias"];
+        get: operations["mias_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1905,7 +1985,7 @@ export interface paths {
          * Las correcciones que he pedido yo
          * @description Con su estado, para ver en qué han quedado.
          */
-        get: operations["mias_1"];
+        get: operations["mias_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2495,6 +2575,39 @@ export interface components {
             cvNombre?: string;
             puedoValorar?: boolean;
         };
+        ResolveIncidentRequest: {
+            aceptar: boolean;
+            comentario?: string;
+        };
+        ScheduleIncidentResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuario?: string;
+            /** Format: date */
+            fecha?: string;
+            /** @enum {string} */
+            tipo?: "RETRASO" | "SALIDA_ANTICIPADA" | "AUSENCIA";
+            /** Format: int32 */
+            minutos?: number;
+            /** @example 09:00 */
+            horaPrevista?: string;
+            /** Format: date-time */
+            horaReal?: string | null;
+            /** @enum {string} */
+            estado?: "PENDIENTE" | "JUSTIFICADA" | "ACEPTADA" | "RECHAZADA";
+            justificacion?: string | null;
+            /** Format: date-time */
+            justificadaEn?: string | null;
+            comentarioResolucion?: string | null;
+            resueltaPor?: string | null;
+            /** Format: date-time */
+            resueltaEn?: string | null;
+        };
+        JustifyIncidentRequest: {
+            texto: string;
+        };
         CreateManagerRequest: {
             nombre: string;
             apellidos: string;
@@ -2851,7 +2964,7 @@ export interface components {
         };
         TaskStatus: {
             /** @enum {string} */
-            tarea?: "CIERRE_JORNADAS" | "HORAS_EXTRA" | "ANONIMIZACION" | "VERIFICACION_INTEGRIDAD";
+            tarea?: "CIERRE_JORNADAS" | "HORAS_EXTRA" | "CUMPLIMIENTO_CUADRANTE" | "ANONIMIZACION" | "VERIFICACION_INTEGRIDAD";
             /** Format: date-time */
             debioCorrer?: string;
             ok?: boolean;
@@ -3004,6 +3117,17 @@ export interface components {
             /** Format: date-time */
             fechaRevision?: string;
         };
+        IncidenciaDeCuadrante: {
+            /** Format: date */
+            fecha?: string;
+            tipo?: string;
+            /** Format: int32 */
+            minutos?: number;
+            horaPrevista?: string;
+            estado?: string;
+            justificacion?: string;
+            comentarioResolucion?: string;
+        };
         PausaAnadida: {
             /** Format: int64 */
             fichaje?: number;
@@ -3047,6 +3171,7 @@ export interface components {
             proyectos?: components["schemas"]["Proyecto"][];
             cuadrantes?: components["schemas"]["Cuadrante"][];
             excepcionesDeCuadrante?: components["schemas"]["ExcepcionDeCuadrante"][];
+            incidenciasDeCuadrante?: components["schemas"]["IncidenciaDeCuadrante"][];
             avisos?: components["schemas"]["Aviso"][];
             adjuntos?: components["schemas"]["Adjunto"][];
             candidaturas?: components["schemas"]["Candidatura"][];
@@ -3258,7 +3383,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
-            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA";
+            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS";
             titulo?: string;
             cuerpo?: string;
             rutaDestino?: string;
@@ -4533,6 +4658,130 @@ export interface operations {
                 };
             };
             /** @description No está publicada, el plazo venció, o ya te presentaste */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    resolver: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Decidida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleIncidentResponse"];
+                };
+            };
+            /** @description Rechazar sin comentario */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin el permiso, es tuya, o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya está decidida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    justificar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JustifyIncidentRequest"];
+            };
+        };
+        responses: {
+            /** @description Explicada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleIncidentResponse"];
+                };
+            };
+            /** @description Explicación vacía o demasiado larga */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No es tuya, o es de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya está decidida */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6736,7 +6985,7 @@ export interface operations {
             };
         };
     };
-    resolver: {
+    resolver_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -7564,6 +7813,68 @@ export interface operations {
             };
         };
     };
+    mias: {
+        parameters: {
+            query?: {
+                anio?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Incidencias */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleIncidentResponse"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    bandeja_1: {
+        parameters: {
+            query?: {
+                resueltas?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Incidencias */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ScheduleIncidentResponse"][];
+                };
+            };
+            /** @description Sin 'cuadrante:incidencias:revisar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     mios: {
         parameters: {
             query?: {
@@ -7998,7 +8309,7 @@ export interface operations {
             };
         };
     };
-    mias: {
+    mias_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -8446,7 +8757,7 @@ export interface operations {
             };
         };
     };
-    mias_1: {
+    mias_2: {
         parameters: {
             query?: never;
             header?: never;

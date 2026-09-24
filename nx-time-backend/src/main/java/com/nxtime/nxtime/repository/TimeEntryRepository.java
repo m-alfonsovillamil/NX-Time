@@ -293,4 +293,17 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 
     /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
     List<TimeEntry> findByUsuarioOrderByHoraEntradaAsc(User usuario);
+
+    /**
+     * Los fichajes vivos de varias personas que EMPIEZAN entre dos instantes
+     * (Fase B2). Para el barrido de incidencias: una consulta por día, no una
+     * por persona. Sin los anulados: una corrección deja el original anulado
+     * y crea uno nuevo, y contar los dos sería contar el día dos veces.
+     */
+    @Query("SELECT t FROM registros t WHERE t.usuario.id IN :usuarioIds AND t.anulado = false "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta")
+    List<TimeEntry> findVivosDeUsuariosQueEmpiezanEntre(
+            @Param("usuarioIds") java.util.Collection<Long> usuarioIds,
+            @Param("desde") java.time.Instant desde,
+            @Param("hasta") java.time.Instant hasta);
 }

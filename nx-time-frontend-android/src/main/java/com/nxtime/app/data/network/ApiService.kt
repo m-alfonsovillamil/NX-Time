@@ -130,6 +130,37 @@ interface ApiService {
         @Query("hasta") hasta: String
     ): Response<List<DiaTeoricoDTO>>
 
+    /*  Incidencias de cuadrante (Fase B2)  */
+
+    /** Las mías de un año. Sin `anio`, el año en curso. */
+    @GET("api/v1/incidencias/mias")
+    suspend fun getMisIncidencias(
+        @Query("anio") anio: Int? = null
+    ): Response<List<IncidenciaDTO>>
+
+    /**
+     * La bandeja de quien revisa (`cuadrante:incidencias:revisar`), ya sin
+     * las propias. Por defecto, las que esperan decisión.
+     */
+    @GET("api/v1/incidencias/equipo")
+    suspend fun getIncidenciasDelEquipo(
+        @Query("resueltas") resueltas: Boolean = false
+    ): Response<List<IncidenciaDTO>>
+
+    /** Explicar una propia. Se puede rehacer mientras nadie haya decidido. */
+    @POST("api/v1/incidencias/{id}/justificacion")
+    suspend fun justificarIncidencia(
+        @Path("id") id: Long,
+        @Body peticion: JustificarIncidenciaRequest
+    ): Response<IncidenciaDTO>
+
+    /** Aceptar o rechazar. Sobre las propias, 403 aunque se tenga el permiso. */
+    @POST("api/v1/incidencias/{id}/resolucion")
+    suspend fun resolverIncidencia(
+        @Path("id") id: Long,
+        @Body peticion: ResolverIncidenciaRequest
+    ): Response<IncidenciaDTO>
+
     /*
      *  Cumplimiento normativo (RRHH/ADMIN)
      *

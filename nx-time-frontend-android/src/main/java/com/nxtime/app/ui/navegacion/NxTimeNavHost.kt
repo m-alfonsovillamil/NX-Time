@@ -58,6 +58,7 @@ import com.nxtime.app.ui.reparto.RepartoScreen
 import com.nxtime.app.ui.denuncias.CanalDenunciasScreen
 import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
+import com.nxtime.app.ui.cuadrante.IncidenciasScreen
 import com.nxtime.app.ui.cuadrante.MiCuadranteScreen
 import com.nxtime.app.ui.ofertas.GestionOfertasScreen
 import com.nxtime.app.ui.ofertas.OfertasScreen
@@ -122,6 +123,9 @@ enum class Pantalla(val ruta: String) {
     // Fase B1. Hoja de "Mi jornada", en solo lectura: el editor de
     // plantillas va a la web (ADR 022).
     CUADRANTE("cuadrante"),
+    // Fase B2. Hoja de "Mi cuadrante" (las tuyas) y del panel de gestión
+    // (las del equipo): la misma pantalla, como horas extra.
+    INCIDENCIAS("incidencias"),
     // Fase G. Dos hojas y no una: presentar/seguir una denuncia y
     // instruir el canal son dos trabajos distintos con dos permisos
     // distintos, y la segunda solo la abre un ADMIN.
@@ -601,6 +605,7 @@ fun NxTimeNavHost(
                     onVolver = navController::navigateUp,
                     onIrAjustes = { navController.navigate(Pantalla.AJUSTES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
+                    onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) },
                     onIrDenuncias = { navController.navigate(Pantalla.DENUNCIAS.ruta) },
                     onIrOfertas = { navController.navigate(Pantalla.OFERTAS.ruta) },
                     viewModel = perfilViewModel
@@ -659,6 +664,8 @@ fun NxTimeNavHost(
                     onIrProyectos = { navController.navigate(Pantalla.PROYECTOS.ruta) },
                     onIrCorrecciones = { navController.navigate(Pantalla.CORRECCIONES.ruta) },
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
+                    puedeRevisarIncidencias = Permisos.puedeRevisarIncidencias(authorities),
+                    onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) },
                     // Solo ADMIN: la denuncia puede ser sobre el gestor
                     // que estuviera mirando esta pantalla.
                     puedeInstruirDenuncias = Permisos.puedeInstruirDenuncias(authorities),
@@ -694,7 +701,16 @@ fun NxTimeNavHost(
             }
 
             composable(Pantalla.CUADRANTE.ruta) {
-                MiCuadranteScreen(onVolver = navController::navigateUp)
+                MiCuadranteScreen(
+                    onVolver = navController::navigateUp,
+                    onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) }
+                )
+            }
+
+            composable(Pantalla.INCIDENCIAS.ruta) {
+                // Como HORAS_EXTRA: el ViewModel resuelve si enseña la bandeja
+                // del equipo a partir de la sesión.
+                IncidenciasScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.HORAS_EXTRA.ruta) {

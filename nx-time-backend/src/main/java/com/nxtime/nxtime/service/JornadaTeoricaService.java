@@ -3,7 +3,9 @@ package com.nxtime.nxtime.service;
 import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -93,6 +95,16 @@ public interface JornadaTeoricaService {
     List<DiaTeorico> dias(User persona, LocalDate desde, LocalDate hasta);
 
     DiaTeorico dia(User persona, LocalDate fecha);
+
+    /**
+     * El horario teórico de un día para muchas personas, por id, con un número
+     * de consultas que NO depende de cuántas sean (Fase B2).
+     *
+     * Para el barrido nocturno de incidencias, que recorre cada noche a toda la
+     * plantilla con cuadrante de todas las empresas. La precedencia es la misma
+     * función que usa {@link #dias}: aquí solo cambia cómo se cargan los datos.
+     */
+    Map<Long, DiaTeorico> diaDeVarios(Collection<User> personas, LocalDate fecha);
 
     /** Cero si no se trabaja ese día o si no hay cuadrante. */
     default int minutosTeoricos(User persona, LocalDate fecha) {

@@ -14,6 +14,7 @@ import com.nxtime.nxtime.service.OvertimeCalculator;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -77,6 +78,41 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
             dias.add(diaTeorico(fecha, asignaciones, noLaborables, excepciones, tramosPorPlantilla));
         }
         return dias;
+    }
+
+    /**
+     * Las mismas cuatro fuentes que {@link #dias}, pero de todos a la vez:
+     * cinco consultas se pida el día de una persona o el de mil. Luego, la
+     * misma función de precedencia, persona a persona, sobre lo ya cargado.
+     */
+    @Override
+    public Map<Long, DiaTeorico> diaDeVarios(Collection<User> personas, LocalDate fecha) {
+        if (personas.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = personas.stream().map(User::getId).toList();
+
+        Map<Long, NonWorkingDayService.Motivo> noLaborables = nonWorkingDayService.motivosDelDia(personas, fecha);
+        Map<Long, List<ScheduleAssignment>> asignaciones = assignmentRepository.findDeUsuariosEl(ids, fecha).stream()
+                .collect(Collectors.groupingBy(asignacion -> asignacion.getUsuario().getId()));
+        Map<Long, List<ScheduleException>> excepciones = exceptionRepository.findByUsuario_IdInAndFecha(ids, fecha)
+                .stream()
+                .collect(Collectors.groupingBy(excepcion -> excepcion.getUsuario().getId()));
+        Map<Long, Map<DayOfWeek, List<Tramo>>> tramosPorPlantilla = tramosDe(
+                asignaciones.values().stream().flatMap(List::stream).toList());
+
+        Map<Long, DiaTeorico> porPersona = new HashMap<>();
+        for (long id : ids) {
+            NonWorkingDayService.Motivo motivo = noLaborables.get(id);
+            List<ScheduleException> suyas = excepciones.getOrDefault(id, List.of());
+            porPersona.put(id, diaTeorico(
+                    fecha,
+                    asignaciones.getOrDefault(id, List.of()),
+                    motivo != null ? Map.of(fecha, motivo) : Map.of(),
+                    suyas.isEmpty() ? Map.of() : Map.of(fecha, suyas),
+                    tramosPorPlantilla));
+        }
+        return porPersona;
     }
 
     @Override

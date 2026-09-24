@@ -8,6 +8,7 @@ import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.JobApplication;
 import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.OvertimeAlert;
+import com.nxtime.nxtime.domain.ScheduleIncidentType;
 import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
 import java.util.List;
@@ -244,6 +245,39 @@ public final class NotificationEvents {
             LocalDate fecha,
             String motivo,
             boolean vacaciones,
+            List<User> destinatarios) {
+    }
+
+    // ------------------------------------------------------------------
+    // B2: incidencias de cuadrante
+    // ------------------------------------------------------------------
+
+    /**
+     * Las incidencias nuevas de UNA persona en un barrido, para ella. Una sola
+     * lleva el detalle; varias, el recuento: la primera versión mandaba un
+     * correo por incidencia, y ejecutándolo salieron veinte en una noche.
+     * Datos copiados y no la entidad, como el resto de eventos que cruzan al
+     * listener @Async.
+     */
+    public record ScheduleIncidentDetected(
+            long empresaId,
+            List<IncidenciaNueva> incidencias,
+            List<User> destinatarios) {
+    }
+
+    /** Lo que se cuenta de cada incidencia nueva. */
+    public record IncidenciaNueva(
+            ScheduleIncidentType tipo,
+            LocalDate fecha,
+            int minutos,
+            String horaPrevista) {
+    }
+
+    /** El resumen de la noche para quien revisa: uno por empresa, sin nombres. */
+    public record ScheduleIncidentSummary(
+            long empresaId,
+            int incidenciasNuevas,
+            int personas,
             List<User> destinatarios) {
     }
 

@@ -15,6 +15,7 @@ import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.NoticeType;
+import com.nxtime.nxtime.domain.ScheduleIncidentType;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
@@ -335,6 +336,54 @@ class NotificationListenerTest {
         verify(emailSender, org.mockito.Mockito.times(2))
                 .enviar(anyString(), anyString(), eq("overtime-balance-near-limit"), variables.capture());
         assertThat(variables.getAllValues()).extracting(v -> v.get("propio")).containsExactly(true, false);
+    }
+
+    private static NotificationEvents.IncidenciaNueva incidencia(ScheduleIncidentType tipo, int dia) {
+        return new NotificationEvents.IncidenciaNueva(tipo, LocalDate.of(2026, 9, dia), 24, "08:30");
+    }
+
+    @Test
+    @DisplayName("Una incidencia nueva se cuenta con su detalle: la hora prevista y cuánto")
+    void onScheduleIncidentDetected_unaConDetalle() {
+        listener.onScheduleIncidentDetected(new NotificationEvents.ScheduleIncidentDetected(
+                empresa.getId(), List.of(incidencia(ScheduleIncidentType.RETRASO, 22)), List.of(empleado)));
+
+        ArgumentCaptor<CreateNoticeCommand> aviso = ArgumentCaptor.captor();
+        verify(noticeService).publicar(aviso.capture());
+        assertThat(aviso.getValue().titulo()).isEqualTo("El 22/09/2026 entraste más tarde de lo previsto");
+        assertThat(aviso.getValue().cuerpo()).startsWith("24 minutos después de las 08:30");
+        assertThat(aviso.getValue().rutaDestino()).isEqualTo("incidencias");
+    }
+
+    @Test
+    @DisplayName("Varias en el mismo barrido van en UN aviso y UN correo; el título cuenta días y el cuerpo, tipos")
+    void onScheduleIncidentDetected_variasEnUno() {
+        listener.onScheduleIncidentDetected(new NotificationEvents.ScheduleIncidentDetected(
+                empresa.getId(),
+                List.of(incidencia(ScheduleIncidentType.RETRASO, 10), incidencia(ScheduleIncidentType.SALIDA_ANTICIPADA, 10),
+                        incidencia(ScheduleIncidentType.RETRASO, 11), incidencia(ScheduleIncidentType.AUSENCIA, 13)),
+                List.of(empleado)));
+
+        ArgumentCaptor<CreateNoticeCommand> aviso = ArgumentCaptor.captor();
+        verify(noticeService).publicar(aviso.capture());
+        verify(emailSender).enviar(eq(empleado.getEmail()), anyString(), eq("schedule-incident-detected"), anyMap());
+        assertThat(aviso.getValue().titulo()).isEqualTo("Tienes 3 días que no cuadraron con tu cuadrante");
+        assertThat(aviso.getValue().cuerpo()).startsWith(
+                "Entre el 10/09/2026 y el 13/09/2026: 2 retrasos, 1 salida anticipada y 1 día sin fichar.");
+    }
+
+    @Test
+    @DisplayName("Llegar tarde y salir pronto el mismo día es UN día que no cuadró, no dos")
+    void onScheduleIncidentDetected_dosElMismoDia() {
+        listener.onScheduleIncidentDetected(new NotificationEvents.ScheduleIncidentDetected(
+                empresa.getId(),
+                List.of(incidencia(ScheduleIncidentType.RETRASO, 22), incidencia(ScheduleIncidentType.SALIDA_ANTICIPADA, 22)),
+                List.of(empleado)));
+
+        ArgumentCaptor<CreateNoticeCommand> aviso = ArgumentCaptor.captor();
+        verify(noticeService).publicar(aviso.capture());
+        assertThat(aviso.getValue().titulo()).isEqualTo("El 22/09/2026 no cuadró con tu cuadrante");
+        assertThat(aviso.getValue().cuerpo()).startsWith("El 22/09/2026: 1 retraso y 1 salida anticipada.");
     }
 
 }

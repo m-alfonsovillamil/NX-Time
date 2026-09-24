@@ -90,6 +90,15 @@ horas extra se le siguen calculando **por el mismo código de siempre**, no por
 uno equivalente: es la forma de garantizar que la fase no le cambia nada
 ([ADR](docs/adr/023-cuadrantes-con-vigencia.md)).
 
+**Incidencias que se detectan y no se imputan.** Cada noche se compara lo
+fichado con el cuadrante: retrasos, salidas anticipadas y días sin fichar, con
+diez minutos de margen. Ninguna descuenta nada: la persona la explica y alguien
+del equipo la acepta o la rechaza. Una salida puesta por el cierre automático
+no cuenta como salida anticipada, y un festivo nunca es una ausencia. Y cada
+persona recibe **un** aviso por noche, no uno por incidencia: la primera versión
+mandaba uno por incidencia, y al ejecutarla con los datos de demo salieron
+veinte correos en una noche ([ADR](docs/adr/024-incidencias-de-cuadrante.md)).
+
 **Canal de denuncias con anonimato estructural.** El canal interno que obliga la
 Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
 leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
@@ -373,7 +382,7 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 | Rol | Además de lo anterior, puede |
 |---|---|
 | **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias, optar a vacantes internas |
-| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
+| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, revisar las incidencias de cuadrante, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
 | **RRHH** | corregir fichajes, ver la auditoría, exportar informes, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
@@ -506,6 +515,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 21. [La web es un proyecto aparte, y lo que comparte con el resto se genera](docs/adr/021-la-web-es-un-proyecto-aparte.md)
 22. [La web empieza por los cimientos, y lo que queda fuera tiene nombre](docs/adr/022-alcance-de-la-web.md)
 23. [Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato](docs/adr/023-cuadrantes-con-vigencia.md)
+24. [Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche](docs/adr/024-incidencias-de-cuadrante.md)
 
 ---
 

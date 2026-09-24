@@ -125,6 +125,15 @@ object Permisos {
         "horasextra:revisar" in authorities
 
     /**
+     * Ve la bandeja de incidencias de cuadrante del equipo y decide sobre
+     * ellas (`cuadrante:incidencias:revisar`, desde GESTOR). Ver y explicar
+     * las propias no pide nada. Como en horas extra, ni con la authority se
+     * decide sobre las propias, y eso lo corta el servidor.
+     */
+    fun puedeRevisarIncidencias(authorities: Set<String>): Boolean =
+        "cuadrante:incidencias:revisar" in authorities
+
+    /**
      * Lee e instruye las denuncias del canal interno (`denuncia:instruir`).
      *
      * **Solo ADMIN, y aquí eso es el requisito y no un reparto

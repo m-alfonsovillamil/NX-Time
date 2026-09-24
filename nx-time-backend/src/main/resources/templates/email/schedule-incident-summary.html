@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<!--/*
+  El resumen de la noche para quien revisa incidencias de cuadrante (Fase B2).
+
+  Uno por empresa y noche, no uno por incidencia: el aviso individual va solo
+  a quien la tiene. Mismo criterio que el resumen de horas extra.
+
+  NO lleva nombres: un correo que liste quién llegó tarde acaba reenviado. El
+  detalle está en la bandeja, que es donde el permiso lo protege.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Incidencias de cuadrante sin revisar', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreDestinatario}">Nombre</span>,</p>
+
+    <p th:if="${incidencias == 1}">
+        La revisión de anoche ha detectado <strong>1 incidencia</strong> de cuadrante nueva.
+    </p>
+    <p th:unless="${incidencias == 1}">
+        La revisión de anoche ha detectado
+        <strong th:text="${incidencias} + ' incidencias'">5 incidencias</strong> de cuadrante nuevas.
+    </p>
+
+    <p style="margin: 0;" th:if="${personas == 1}">Son de <strong>1 persona</strong>.</p>
+    <p style="margin: 0;" th:unless="${personas == 1}">
+        Son de <strong th:text="${personas} + ' personas'">3 personas</strong>.
+    </p>
+
+    <p style="margin-top: 20px;">
+        Puedes verlas y decidir sobre cada una en la aplicación. Ninguna descuenta nada:
+        son la constancia de que un día no cuadró, y el sitio donde queda la explicación.
+    </p>
+</div>
+</body>
+</html>

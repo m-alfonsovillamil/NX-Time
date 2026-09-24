@@ -211,4 +211,144 @@ class ReglasDeCuadranteTest {
                 tramo(DayOfWeek.MONDAY, "09:00", "14:00"),
                 tramo(DayOfWeek.MONDAY, "22:00", "+06:00")))).isEqualTo(5 * 60 + 8 * 60);
     }
+
+    // ------------------------------------------------------------------
+    // Incidencias (Fase B2)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Incidencias de un día")
+    class Incidencias {
+
+        private final java.time.ZoneId madrid = java.time.ZoneId.of("Europe/Madrid");
+        private final java.time.LocalDate lunes = java.time.LocalDate.of(2026, 10, 5);
+
+        private final List<JornadaTeoricaService.Tramo> oficina =
+                List.of(new JornadaTeoricaService.Tramo(minutos("09:00"), minutos("17:00")));
+
+        private java.time.Instant a(java.time.LocalDate dia, String hora) {
+            return java.time.ZonedDateTime.of(dia, LocalTime.parse(hora), madrid).toInstant();
+        }
+
+        private ReglasDeCuadrante.FichajeDelDia fichaje(String entrada, String salida) {
+            return new ReglasDeCuadrante.FichajeDelDia(1L, a(lunes, entrada), salida == null ? null : a(lunes, salida), false);
+        }
+
+        private List<ReglasDeCuadrante.IncidenciaDetectada> en(
+                List<JornadaTeoricaService.Tramo> tramos, ReglasDeCuadrante.FichajeDelDia... fichajes) {
+            int teoricos = tramos.stream().mapToInt(JornadaTeoricaService.Tramo::minutos).sum();
+            return ReglasDeCuadrante.incidencias(lunes, madrid, tramos, teoricos, List.of(fichajes));
+        }
+
+        @Test
+        @DisplayName("Un día normal no produce nada")
+        void normal() {
+            assertThat(en(oficina, fichaje("08:58", "17:02"))).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Sin ningún fichaje en un día de trabajo es una ausencia, con los minutos teóricos")
+        void ausencia() {
+            assertThat(en(oficina)).singleElement().satisfies(incidencia -> {
+                assertThat(incidencia.tipo()).isEqualTo(com.nxtime.nxtime.domain.ScheduleIncidentType.AUSENCIA);
+                assertThat(incidencia.minutos()).isEqualTo(480);
+                assertThat(incidencia.horaReal()).isNull();
+            });
+        }
+
+        @Test
+        @DisplayName("Un día libre en el cuadrante no produce ausencia aunque no se fiche")
+        void libre() {
+            assertThat(ReglasDeCuadrante.incidencias(lunes, madrid, List.of(), 0, List.of())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Diez minutos tarde entran en la tolerancia; once no")
+        void tolerancia() {
+            assertThat(en(oficina, fichaje("09:10", "17:00"))).isEmpty();
+            assertThat(en(oficina, fichaje("09:11", "17:00"))).singleElement()
+                    .satisfies(incidencia -> {
+                        assertThat(incidencia.tipo()).isEqualTo(com.nxtime.nxtime.domain.ScheduleIncidentType.RETRASO);
+                        assertThat(incidencia.minutos()).isEqualTo(11);
+                        assertThat(incidencia.horaPrevista()).isEqualTo(540);
+                    });
+        }
+
+        @Test
+        @DisplayName("Salir media hora antes es una salida anticipada")
+        void salidaAnticipada() {
+            assertThat(en(oficina, fichaje("09:00", "16:30"))).singleElement()
+                    .satisfies(incidencia -> {
+                        assertThat(incidencia.tipo())
+                                .isEqualTo(com.nxtime.nxtime.domain.ScheduleIncidentType.SALIDA_ANTICIPADA);
+                        assertThat(incidencia.minutos()).isEqualTo(30);
+                    });
+        }
+
+        /**
+         * La salida de una jornada que cerró el cierre automático de las 3:00 no
+         * es un dato real. Acusar de salir pronto con ella sería mentir.
+         */
+        @Test
+        @DisplayName("Una jornada que cerró el sistema no produce salida anticipada")
+        void cerradaPorElSistema() {
+            var cerrada = new ReglasDeCuadrante.FichajeDelDia(1L, a(lunes, "09:00"), a(lunes, "12:00"), true);
+            assertThat(en(oficina, cerrada)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Una jornada todavía abierta no produce salida anticipada")
+        void abierta() {
+            assertThat(en(oficina, fichaje("09:00", null))).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Jornada partida: primera entrada contra el primer tramo, última salida contra el último")
+        void partida() {
+            var partida = List.of(
+                    new JornadaTeoricaService.Tramo(minutos("09:00"), minutos("14:00")),
+                    new JornadaTeoricaService.Tramo(minutos("15:00"), minutos("18:00")));
+            // Vuelve de comer a las 15:40: eso no se mira.
+            assertThat(en(partida, fichaje("09:00", "14:00"), fichaje("15:40", "18:00"))).isEmpty();
+            // Pero la salida final sí.
+            assertThat(en(partida, fichaje("09:00", "14:00"), fichaje("15:00", "17:15")))
+                    .extracting(ReglasDeCuadrante.IncidenciaDetectada::minutos).containsExactly(45);
+        }
+
+        @Test
+        @DisplayName("Turno de noche: la salida esperada es a las 06:00 del día siguiente")
+        void turnoDeNoche() {
+            var noche = List.of(new JornadaTeoricaService.Tramo(minutos("22:00"), minutos("+06:00")));
+            var fichado = new ReglasDeCuadrante.FichajeDelDia(
+                    1L, a(lunes, "22:20"), a(lunes.plusDays(1), "05:30"), false);
+
+            assertThat(en(noche, fichado))
+                    .extracting(ReglasDeCuadrante.IncidenciaDetectada::tipo,
+                            ReglasDeCuadrante.IncidenciaDetectada::minutos)
+                    .containsExactlyInAnyOrder(
+                            org.assertj.core.groups.Tuple.tuple(
+                                    com.nxtime.nxtime.domain.ScheduleIncidentType.RETRASO, 20),
+                            org.assertj.core.groups.Tuple.tuple(
+                                    com.nxtime.nxtime.domain.ScheduleIncidentType.SALIDA_ANTICIPADA, 30));
+        }
+
+        /**
+         * El 29 de marzo de 2026 los relojes pasan de las 2:00 a las 3:00. Sumando
+         * 540 minutos a la medianoche, "las 09:00" serían las 10:00, y quien
+         * entrara a las 09:05 saldría adelantado; con reloj de pared, llega cinco
+         * minutos tarde, dentro de la tolerancia.
+         */
+        @Test
+        @DisplayName("El día del cambio de hora, las 09:00 siguen siendo las 09:00")
+        void cambioDeHora() {
+            java.time.LocalDate cambio = java.time.LocalDate.of(2026, 3, 29);
+            var fichado = new ReglasDeCuadrante.FichajeDelDia(1L,
+                    java.time.ZonedDateTime.of(cambio, LocalTime.of(9, 25), madrid).toInstant(),
+                    java.time.ZonedDateTime.of(cambio, LocalTime.of(17, 0), madrid).toInstant(), false);
+
+            assertThat(ReglasDeCuadrante.incidencias(cambio, madrid, oficina, 480, List.of(fichado)))
+                    .singleElement()
+                    .satisfies(incidencia -> assertThat(incidencia.minutos()).isEqualTo(25));
+        }
+    }
 }
