@@ -113,6 +113,13 @@ import java.util.stream.Collectors;
  * legales: el visto bueno de la empresa al registro mensual lo da quien firma
  * el informe por la empresa. FIRMAR lo propio no lleva authority: es tuyo. Y
  * nadie visa su propia firma, aunque la tenga.
+ * "analitica:leer" (Fase B4) empieza en GESTOR, y es la primera authority cuyo
+ * ALCANCE cambia con el rol sin que cambie la authority: un GESTOR ve su
+ * departamento y RRHH/ADMIN la empresa. Ese recorte no vive aquí sino en el
+ * servicio, porque es un filtro de datos y no un permiso de operación: los dos
+ * hacen la misma operación, "leer la analítica", sobre conjuntos distintos. Lo
+ * decide "empleado:gestionar", que es justo quien responde de la plantilla
+ * entera. Exportar el CSV pide además "informe:exportar".
  */
 public final class RoleAuthorities {
 
@@ -147,7 +154,8 @@ public final class RoleAuthorities {
             "oferta:publicar",
             "candidatura:gestionar",
             "cuadrante:gestionar",
-            "cuadrante:incidencias:revisar"
+            "cuadrante:incidencias:revisar",
+            "analitica:leer"
     ));
 
     private static final Set<String> RRHH = union(GESTOR, Set.of(

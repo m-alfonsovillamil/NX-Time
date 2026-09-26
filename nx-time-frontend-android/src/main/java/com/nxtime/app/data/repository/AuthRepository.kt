@@ -140,6 +140,8 @@ interface AuthRepository {
     /* Panel de empresa, altas/bajas e informes */
     suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
 
+    suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO>
+
     suspend fun cambiarEstadoEmpleado(empleadoId: Long, activo: Boolean): Response<Unit>
 
     suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody>

@@ -106,6 +106,21 @@ public interface JornadaTeoricaService {
      */
     Map<Long, DiaTeorico> diaDeVarios(Collection<User> personas, LocalDate fecha);
 
+    /**
+     * Lo que cada persona tenía PLANIFICADO cada día de un rango: festivos,
+     * excepciones y plantilla, pero <b>sin las ausencias</b> (Fase B4).
+     *
+     * Es la pregunta de la analítica de absentismo: primero qué días se debían
+     * trabajar, y luego quién faltó y por qué. Con {@link #dias} una baja
+     * saldría ya como {@link Origen#NO_LABORABLE} y no se podría distinguir
+     * de un sábado. Aquí un festivo sigue siendo NO_LABORABLE; una ausencia,
+     * no. La precedencia es la misma función que en {@link #dias}.
+     *
+     * Un número de consultas que no depende de cuántas personas ni de cuántos
+     * días: todas deben ser de la misma empresa.
+     */
+    Map<Long, List<DiaTeorico>> planificadoDeVarios(Collection<User> personas, LocalDate desde, LocalDate hasta);
+
     /** Cero si no se trabaja ese día o si no hay cuadrante. */
     default int minutosTeoricos(User persona, LocalDate fecha) {
         return dia(persona, fecha).minutos();

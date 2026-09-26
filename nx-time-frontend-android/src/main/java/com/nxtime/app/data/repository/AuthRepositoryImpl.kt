@@ -326,6 +326,10 @@ class AuthRepositoryImpl(
         return apiService.getPanelEmpresa()
     }
 
+    override suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO> {
+        return apiService.getResumenAnalitica()
+    }
+
     override suspend fun cambiarEstadoEmpleado(
         empleadoId: Long,
         activo: Boolean

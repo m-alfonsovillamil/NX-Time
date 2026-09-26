@@ -116,6 +116,45 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
     }
 
     @Override
+    public Map<Long, List<DiaTeorico>> planificadoDeVarios(
+            Collection<User> personas, LocalDate desde, LocalDate hasta) {
+        if (personas.isEmpty() || desde.isAfter(hasta)) {
+            return Map.of();
+        }
+        Set<Long> empresas = personas.stream().map(p -> p.getEmpresa().getId()).collect(Collectors.toSet());
+        if (empresas.size() != 1) {
+            throw new IllegalArgumentException("El planificado por lotes es de una sola empresa.");
+        }
+        List<Long> ids = personas.stream().map(User::getId).toList();
+
+        // Solo festivos: las ausencias las cruza quien pregunta.
+        Map<LocalDate, NonWorkingDayService.Motivo> festivos =
+                nonWorkingDayService.festivosEnRango(empresas.iterator().next(), desde, hasta);
+        Map<Long, List<ScheduleAssignment>> asignaciones = assignmentRepository
+                .findDeUsuariosEnRango(ids, desde, hasta).stream()
+                .collect(Collectors.groupingBy(asignacion -> asignacion.getUsuario().getId()));
+        Map<Long, Map<LocalDate, List<ScheduleException>>> excepciones = exceptionRepository
+                .findByUsuario_IdInAndFechaBetweenOrderByFechaAscInicioAsc(ids, desde, hasta).stream()
+                .collect(Collectors.groupingBy(
+                        excepcion -> excepcion.getUsuario().getId(),
+                        Collectors.groupingBy(ScheduleException::getFecha, LinkedHashMap::new, Collectors.toList())));
+        Map<Long, Map<DayOfWeek, List<Tramo>>> tramosPorPlantilla = tramosDe(
+                asignaciones.values().stream().flatMap(List::stream).toList());
+
+        Map<Long, List<DiaTeorico>> porPersona = new HashMap<>();
+        for (long id : ids) {
+            List<ScheduleAssignment> suyas = asignaciones.getOrDefault(id, List.of());
+            Map<LocalDate, List<ScheduleException>> susExcepciones = excepciones.getOrDefault(id, Map.of());
+            List<DiaTeorico> dias = new ArrayList<>();
+            for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
+                dias.add(diaTeorico(fecha, suyas, festivos, susExcepciones, tramosPorPlantilla));
+            }
+            porPersona.put(id, dias);
+        }
+        return porPersona;
+    }
+
+    @Override
     public long minutosTeoricosSemana(User persona, LocalDate lunes) {
         if (lunes.getDayOfWeek() != DayOfWeek.MONDAY) {
             throw new IllegalArgumentException("La semana empieza en lunes, y " + lunes + " no lo es.");

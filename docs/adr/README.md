@@ -35,3 +35,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [023](023-cuadrantes-con-vigencia.md) | Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato |
 | [024](024-incidencias-de-cuadrante.md) | Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche |
 | [025](025-la-firma-no-bloquea-la-correccion.md) | La firma mensual no bloquea la corrección: la corrección invalida la firma |
+| [026](026-analitica-en-dias-y-por-alcance.md) | La analítica cuenta días, no horas, y el alcance lo decide quién mira |

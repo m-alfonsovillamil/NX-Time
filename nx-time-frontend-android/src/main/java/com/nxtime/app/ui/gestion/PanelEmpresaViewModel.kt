@@ -8,6 +8,7 @@ import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.HorasProyectoDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
+import com.nxtime.app.data.dto.ResumenAnaliticaDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.DateFormats
@@ -38,6 +39,17 @@ data class PanelEmpresaUiState(
      * gráfica sin barras no dice nada.
      */
     val horasPorProyecto: List<HorasProyectoDTO> = emptyList(),
+    /**
+     * Absentismo y puntualidad del mes (Fase B4). Null mientras carga o si
+     * falló: la tarjeta no se pinta y el resto del panel sigue igual.
+     */
+    val analitica: ResumenAnaliticaDTO? = null,
+    /**
+     * Por qué no hay analítica cuando el servidor lo explica: un gestor sin
+     * departamento recibe un 409 que dice que pida uno a RRHH. Eso sí se
+     * enseña, en la propia tarjeta, porque es algo que puede arreglar.
+     */
+    val avisoAnalitica: MensajeUi? = null,
     val guardandoFicha: Boolean = false,
     val errorFicha: MensajeUi? = null,
     val error: MensajeUi? = null
@@ -64,6 +76,7 @@ class PanelEmpresaViewModel(
 
     fun cargar() {
         _uiState.update { it.copy(cargando = true, error = null) }
+        cargarAnalitica()
         viewModelScope.launch {
             try {
                 // Independientes: van a la vez, así la pantalla tarda lo
@@ -106,6 +119,34 @@ class PanelEmpresaViewModel(
                 _uiState.update {
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
+            }
+        }
+    }
+
+    /**
+     * La tarjeta de analítica, en su propia corrutina y con su propio
+     * `try`: es la consulta más lenta del servidor (la primera vez del día;
+     * luego sale de caché) y no puede retrasar ni tumbar los indicadores,
+     * que no dependen de ella.
+     *
+     * Solo el 409 se enseña. Cualquier otro fallo deja la tarjeta sin
+     * pintar: un banner por un dato secundario taparía los que sí cargaron.
+     */
+    private fun cargarAnalitica() {
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.getResumenAnalitica()
+                _uiState.update {
+                    when {
+                        respuesta.isSuccessful ->
+                            it.copy(analitica = respuesta.body(), avisoAnalitica = null)
+                        respuesta.code() == 409 ->
+                            it.copy(analitica = null, avisoAnalitica = ApiErrorParser.mensajeDe(respuesta))
+                        else -> it.copy(analitica = null, avisoAnalitica = null)
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(analitica = null, avisoAnalitica = null) }
             }
         }
     }

@@ -109,6 +109,18 @@ pasan todos, y recalcula la huella en vez de invalidar a ciegas, así que una
 corrección que deja las mismas horas no tumba nada. Es una firma de aceptación,
 no eIDAS, y así lo dice ([ADR](docs/adr/025-la-firma-no-bloquea-la-correccion.md)).
 
+**Absentismo y puntualidad con una definición escrita.** Por mes, trimestre o
+año, y por departamento o persona. Se cuentan días, no horas. Primero se mira
+qué se debía trabajar *sin* mirar las ausencias, porque si no una baja un sábado
+contaría como día perdido. Las vacaciones salen de la cuenta, y el fichaje manda
+sobre una consulta médica. La cuenta llega hasta ayer, y el día 1 del mes las
+cifras son nulas, no un 0 % que afirmaría que nadie faltó. Como el modelo no
+tiene fecha de alta, la primera jornada fichada hace de alta: sin eso, alguien
+contratado en septiembre salía con ocho meses de absentismo. Un gestor ve su
+departamento y RRHH la empresa, y lo decide el servicio, no la authority. El CSV
+sale con punto y coma, coma decimal, BOM y protección contra fórmulas
+([ADR](docs/adr/026-analitica-en-dias-y-por-alcance.md)).
+
 **Canal de denuncias con anonimato estructural.** El canal interno que obliga la
 Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
 leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
@@ -392,7 +404,7 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 | Rol | Además de lo anterior, puede |
 |---|---|
 | **EMPLEADO** | fichar, ver lo suyo, solicitar ausencias, presentar denuncias, optar a vacantes internas |
-| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, revisar las incidencias de cuadrante, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
+| **GESTOR** | ver y aprobar las de su equipo, crear empleados, gestionar el calendario, los proyectos y los cuadrantes, revisar las incidencias de cuadrante, ver la analítica de su departamento, aprobar correcciones, revisar horas extra, publicar vacantes y valorar candidaturas |
 | **RRHH** | corregir fichajes, ver la auditoría, exportar informes, visar las firmas mensuales, dar de baja, resolver disputas |
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
@@ -527,6 +539,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 23. [Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato](docs/adr/023-cuadrantes-con-vigencia.md)
 24. [Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche](docs/adr/024-incidencias-de-cuadrante.md)
 25. [La firma mensual no bloquea la corrección: la corrección invalida la firma](docs/adr/025-la-firma-no-bloquea-la-correccion.md)
+26. [La analítica cuenta días, no horas, y el alcance lo decide quién mira](docs/adr/026-analitica-en-dias-y-por-alcance.md)
 
 ---
 

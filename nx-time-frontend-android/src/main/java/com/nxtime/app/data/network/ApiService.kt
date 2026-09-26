@@ -427,6 +427,10 @@ interface ApiService {
     @GET("api/v1/dashboard/empresa")
     suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
 
+    /** Absentismo y puntualidad del mes en curso (Fase B4). */
+    @GET("api/v1/analitica/resumen")
+    suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO>
+
     @PATCH("api/v1/gestor/empleados/{id}/estado")
     suspend fun cambiarEstadoEmpleado(
         @Path("id") empleadoId: Long,

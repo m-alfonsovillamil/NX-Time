@@ -76,6 +76,9 @@
     "name" : "Dashboard",
     "description" : "Métricas agregadas: horas trabajadas, pendientes e incidencias."
   }, {
+    "name" : "Analítica",
+    "description" : "Absentismo y puntualidad por periodo, departamento o persona."
+  }, {
     "name" : "Borrado de datos",
     "description" : "Derecho de supresión (RGPD, art. 17): la persona lo pide y RRHH o ADMIN lo ejecuta. Ejecutar borra lo prescindible y desactiva la cuenta; el registro horario se conserva cuatro años y después se anonimiza solo."
   }, {
@@ -7691,6 +7694,299 @@
         } ]
       }
     },
+    "/api/v1/analitica/resumen" : {
+      "get" : {
+        "tags" : [ "Analítica" ],
+        "summary" : "Las cifras de un vistazo",
+        "description" : "Absentismo, puntualidad, jornadas cerradas por el sistema y minutos medios por día. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.",
+        "operationId" : "resumen",
+        "parameters" : [ {
+          "name" : "periodo",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "MES",
+            "enum" : [ "MES", "TRIMESTRE", "ANIO" ]
+          }
+        }, {
+          "name" : "fecha",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Resumen",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AnalyticsSummaryResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo o fecha no válidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'analitica:leer'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Un gestor sin departamento asignado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/analitica/puntualidad" : {
+      "get" : {
+        "tags" : [ "Analítica" ],
+        "summary" : "Puntualidad",
+        "description" : "De las entradas de quien tiene cuadrante, cuántas llegaron dentro de la tolerancia, y la media, la mediana y el reparto de los retrasos. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.",
+        "operationId" : "puntualidad",
+        "parameters" : [ {
+          "name" : "periodo",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "MES",
+            "enum" : [ "MES", "TRIMESTRE", "ANIO" ]
+          }
+        }, {
+          "name" : "fecha",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "agrupar",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "DEPARTAMENTO",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO", "EMPLEADO" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Puntualidad",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PunctualityResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo, fecha o agrupación no válidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'analitica:leer'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Un gestor sin departamento asignado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/analitica/absentismo" : {
+      "get" : {
+        "tags" : [ "Analítica" ],
+        "summary" : "Absentismo",
+        "description" : "Días perdidos sobre días que se debían trabajar, sin contar vacaciones, con el desglose por motivo. Por persona, por departamento o solo el total. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.",
+        "operationId" : "absentismo",
+        "parameters" : [ {
+          "name" : "periodo",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "MES",
+            "enum" : [ "MES", "TRIMESTRE", "ANIO" ]
+          }
+        }, {
+          "name" : "fecha",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "agrupar",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "DEPARTAMENTO",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO", "EMPLEADO" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Absentismo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AbsenteeismResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo, fecha o agrupación no válidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'analitica:leer'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Un gestor sin departamento asignado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/analitica/absentismo.csv" : {
+      "get" : {
+        "tags" : [ "Analítica" ],
+        "summary" : "Absentismo en CSV",
+        "description" : "Lo mismo que /absentismo, para una hoja de cálculo: separado por punto y coma, con coma decimal y en UTF-8 con BOM. Una fila por grupo y el total al final. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.",
+        "operationId" : "absentismoCsv",
+        "parameters" : [ {
+          "name" : "periodo",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "MES",
+            "enum" : [ "MES", "TRIMESTRE", "ANIO" ]
+          }
+        }, {
+          "name" : "fecha",
+          "in" : "query",
+          "description" : "Cualquier día del periodo; hoy si no se da",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "agrupar",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "DEPARTAMENTO",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO", "EMPLEADO" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "El fichero",
+            "content" : {
+              "text/csv" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'analitica:leer' o sin 'informe:exportar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/fichaje/{id}/pausas/{pausaId}" : {
       "delete" : {
         "tags" : [ "Fichaje" ],
@@ -10994,6 +11290,219 @@
           },
           "ip" : {
             "type" : "string"
+          }
+        }
+      },
+      "AnalyticsSummaryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "ventana" : {
+            "$ref" : "#/components/schemas/AnalyticsWindow"
+          },
+          "personas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "absentismo" : {
+            "type" : [ "number", "null" ]
+          },
+          "absentismoSinJustificar" : {
+            "type" : [ "number", "null" ]
+          },
+          "puntualidad" : {
+            "type" : [ "number", "null" ]
+          },
+          "retrasoMedioMinutos" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "jornadasIncompletas" : {
+            "type" : [ "number", "null" ]
+          },
+          "minutosMediosPorDia" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          }
+        }
+      },
+      "AnalyticsWindow" : {
+        "type" : "object",
+        "properties" : {
+          "periodo" : {
+            "type" : "string",
+            "enum" : [ "MES", "TRIMESTRE", "ANIO" ]
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "hasta" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "evaluadoHasta" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          },
+          "alcance" : {
+            "type" : "string",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO" ]
+          },
+          "departamento" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "PunctualityResponse" : {
+        "type" : "object",
+        "properties" : {
+          "ventana" : {
+            "$ref" : "#/components/schemas/AnalyticsWindow"
+          },
+          "agrupacion" : {
+            "type" : "string",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO", "EMPLEADO" ]
+          },
+          "total" : {
+            "$ref" : "#/components/schemas/PunctualityRow"
+          },
+          "filas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PunctualityRow"
+            }
+          }
+        }
+      },
+      "PunctualityRow" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "entradasConHorario" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "puntuales" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "retrasos" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "puntualidad" : {
+            "type" : [ "number", "null" ],
+            "example" : 93.5
+          },
+          "retrasoMedioMinutos" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "retrasoMedianoMinutos" : {
+            "type" : [ "number", "null" ],
+            "format" : "double"
+          },
+          "retrasosHasta30" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "retrasosDeMasDe30" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "AbsenceReasonDays" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "example" : "MEDICO"
+          },
+          "etiqueta" : {
+            "type" : "string",
+            "example" : "Consulta médica"
+          },
+          "dias" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "AbsenteeismResponse" : {
+        "type" : "object",
+        "properties" : {
+          "ventana" : {
+            "$ref" : "#/components/schemas/AnalyticsWindow"
+          },
+          "agrupacion" : {
+            "type" : "string",
+            "enum" : [ "EMPRESA", "DEPARTAMENTO", "EMPLEADO" ]
+          },
+          "total" : {
+            "$ref" : "#/components/schemas/AbsenteeismRow"
+          },
+          "filas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AbsenteeismRow"
+            }
+          }
+        }
+      },
+      "AbsenteeismRow" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "personas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diasLaborables" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diasTrabajados" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diasAusenciaJustificada" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diasSinFichaje" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diasVacaciones" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "absentismo" : {
+            "type" : [ "number", "null" ],
+            "example" : 4.2
+          },
+          "absentismoSinJustificar" : {
+            "type" : [ "number", "null" ],
+            "example" : 0.8
+          },
+          "motivos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AbsenceReasonDays"
+            }
           }
         }
       }

@@ -55,18 +55,15 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
         if (desde.isAfter(hasta)) {
             return motivos;
         }
-        long empresaId = persona.getEmpresa().getId();
+        Map<LocalDate, Motivo> festivos = festivosEnRango(persona.getEmpresa().getId(), desde, hasta);
         // Una consulta de ausencias para todo el rango, no una por día.
         List<AbsenceRequest> ausencias =
                 absenceRequestRepository.findAprobadasDeUsuarioEnRango(persona, desde, hasta);
-        // Los nombres de los festivos, solo si hay alguno y una vez por año.
-        Map<Integer, List<Holiday>> festivosPorAnio = new HashMap<>();
 
         for (LocalDate dia = desde; !dia.isAfter(hasta); dia = dia.plusDays(1)) {
-            if (holidayCalendar.festivosDelAnio(empresaId, dia.getYear()).contains(dia)) {
-                List<Holiday> delAnio = festivosPorAnio.computeIfAbsent(
-                        dia.getYear(), anio -> holidayRepository.findByEmpresaYAnio(empresaId, anio));
-                motivos.put(dia, deFestivo(delAnio, dia));
+            Motivo festivo = festivos.get(dia);
+            if (festivo != null) {
+                motivos.put(dia, festivo);
                 continue;
             }
             LocalDate fecha = dia;
@@ -77,6 +74,21 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
                     .ifPresent(ausencia -> motivos.put(fecha, deAusencia(ausencia)));
         }
         return motivos;
+    }
+
+    @Override
+    public Map<LocalDate, Motivo> festivosEnRango(long empresaId, LocalDate desde, LocalDate hasta) {
+        Map<LocalDate, Motivo> festivos = new LinkedHashMap<>();
+        // Los nombres de los festivos, solo si hay alguno y una vez por año.
+        Map<Integer, List<Holiday>> festivosPorAnio = new HashMap<>();
+        for (LocalDate dia = desde; !dia.isAfter(hasta); dia = dia.plusDays(1)) {
+            if (holidayCalendar.festivosDelAnio(empresaId, dia.getYear()).contains(dia)) {
+                List<Holiday> delAnio = festivosPorAnio.computeIfAbsent(
+                        dia.getYear(), anio -> holidayRepository.findByEmpresaYAnio(empresaId, anio));
+                festivos.put(dia, deFestivo(delAnio, dia));
+            }
+        }
+        return festivos;
     }
 
     @Override

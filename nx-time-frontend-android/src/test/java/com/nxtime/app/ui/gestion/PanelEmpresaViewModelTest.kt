@@ -4,14 +4,21 @@ import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
+import com.nxtime.app.data.dto.HorasPorProyectoDTO
 import com.nxtime.app.data.dto.PanelEmpresaDTO
+import com.nxtime.app.data.dto.ResumenAnaliticaDTO
+import com.nxtime.app.data.dto.VentanaAnaliticaDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -235,5 +242,64 @@ class PanelEmpresaViewModelTest {
             MensajeUi.Recurso(R.string.error_sin_permisos),
             viewModel.uiState.value.errorFicha
         )
+    }
+
+    // ------------------------------------------------------------------
+    // La tarjeta de analítica (Fase B4)
+    // ------------------------------------------------------------------
+
+    private val resumen = ResumenAnaliticaDTO(
+        ventana = VentanaAnaliticaDTO(
+            periodo = "MES", desde = "2026-09-01", hasta = "2026-09-30",
+            evaluadoHasta = "2026-09-25", alcance = "DEPARTAMENTO", departamento = "Ventas"
+        ),
+        personas = 8,
+        absentismo = 4.2,
+        puntualidad = 93.5
+    )
+
+    @Test
+    fun `la analitica llega a la tarjeta`() = runTest {
+        conPanelCargado()
+        whenever(repositorio.getResumenAnalitica()).thenReturn(Response.success(resumen))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        assertEquals(4.2, viewModel.uiState.value.analitica?.absentismo)
+        assertNull(viewModel.uiState.value.avisoAnalitica)
+    }
+
+    @Test
+    fun `un gestor sin departamento ve por que no hay cifras`() = runTest {
+        conPanelCargado()
+        val problema = """{"status":409,"detail":"No tienes departamento asignado."}"""
+            .toResponseBody("application/problem+json".toMediaType())
+        whenever(repositorio.getResumenAnalitica()).thenReturn(Response.error(409, problema))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.analitica)
+        assertEquals(MensajeUi.Texto("No tienes departamento asignado."), viewModel.uiState.value.avisoAnalitica)
+    }
+
+    @Test
+    fun `si la analitica falla el panel carga igual y sin banner`() = runTest {
+        conPanelCargado()
+        whenever(repositorio.getHorasPorProyecto(any(), any()))
+            .thenReturn(Response.success(HorasPorProyectoDTO(anio = 2026, mes = 9)))
+        whenever(repositorio.getResumenAnalitica()).thenThrow(RuntimeException("sin red"))
+        val viewModel = PanelEmpresaViewModel(repositorio)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.analitica)
+        assertNull(viewModel.uiState.value.avisoAnalitica)
+        assertNotNull(viewModel.uiState.value.panel)
+    }
+
+    @Test
+    fun `los porcentajes llevan coma decimal y una raya si no hay cifra`() {
+        assertEquals("4,2 %", porcentaje(4.2))
+        assertEquals("100,0 %", porcentaje(100.0))
+        assertEquals("—", porcentaje(null))
     }
 }

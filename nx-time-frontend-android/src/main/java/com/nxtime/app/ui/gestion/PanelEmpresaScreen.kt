@@ -59,6 +59,7 @@ import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
+import com.nxtime.app.data.dto.ResumenAnaliticaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoCargando
@@ -97,6 +98,7 @@ fun PanelEmpresaScreen(
     puedeGestionarEmpleados: Boolean,
     puedeConfigurarEmpleados: Boolean,
     puedeExportar: Boolean,
+    puedeVerAnalitica: Boolean,
     viewModel: PanelEmpresaViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
@@ -151,6 +153,10 @@ fun PanelEmpresaScreen(
                 }
 
                 Indicadores(estado)
+
+                if (puedeVerAnalitica) {
+                    TarjetaAnalitica(estado.analitica, estado.avisoAnalitica)
+                }
 
                 if (puedeExportar) {
                     Spacer(Modifier.height(20.dp))
@@ -453,6 +459,94 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
         }
     }
 }
+
+/**
+ * Absentismo y puntualidad del mes (Fase B4): dos porcentajes y de qué.
+ *
+ * Es lo único de la analítica que entra en la app. El desglose por
+ * departamento o por persona es una tabla que no cabe en 400 dp y cuyo
+ * público trabaja sentado; va a la web (ADR 026). No hay enlace "ver el
+ * detalle" porque esa pantalla de la web todavía no existe, y un enlace a
+ * una página que no la tiene es peor que no ponerlo.
+ */
+@Composable
+private fun TarjetaAnalitica(analitica: ResumenAnaliticaDTO?, aviso: MensajeUi?) {
+    if (analitica == null && aviso == null) return
+
+    Spacer(Modifier.height(12.dp))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.analitica_titulo),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            if (analitica == null) {
+                Text(
+                    text = aviso?.resolver().orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                return@Column
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CifraAnalitica(
+                    etiqueta = stringResource(R.string.analitica_absentismo),
+                    valor = porcentaje(analitica.absentismo),
+                    modifier = Modifier.weight(1f)
+                )
+                CifraAnalitica(
+                    etiqueta = stringResource(R.string.analitica_puntualidad),
+                    valor = porcentaje(analitica.puntualidad),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            val ventana = analitica.ventana
+            val quien = ventana.departamento
+                ?: stringResource(R.string.analitica_toda_la_empresa)
+            Text(
+                text = if (ventana.evaluadoHasta == null) {
+                    stringResource(R.string.analitica_sin_dias)
+                } else {
+                    stringResource(
+                        R.string.analitica_alcance, DateFormats.fechaCorta(ventana.evaluadoHasta), quien
+                    )
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = stringResource(R.string.analitica_ayuda),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun CifraAnalitica(etiqueta: String, valor: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = etiqueta,
+            style = MaterialTheme.typography.labelMedium,
+            color = LocalContentColor.current.copy(alpha = 0.75f)
+        )
+        Text(text = valor, style = MaterialTheme.typography.headlineSmall)
+    }
+}
+
+/**
+ * "4,2 %" con coma decimal, o una raya si no hay cifra: el día 1 del mes no
+ * se puede decir nada, y un "0,0 %" afirmaría que nadie ha faltado.
+ */
+internal fun porcentaje(valor: Double?): String =
+    if (valor == null) "—" else String.format(Locale.forLanguageTag("es-ES"), "%.1f %%", valor)
 
 @Composable
 private fun Indicador(

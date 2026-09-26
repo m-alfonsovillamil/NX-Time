@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Caché en memoria con Caffeine (Fase 10).
  *
- * Dos usos, con vidas distintas a propósito porque los datos cambian a
+ * Tres usos, con vidas distintas a propósito porque los datos cambian a
  * ritmos muy distintos:
  *
  *  - {@link #FESTIVOS}: el calendario laboral de una empresa y un año.
@@ -25,6 +25,14 @@ import org.springframework.context.annotation.Configuration;
  *    basta para absorber los refrescos de pantalla sin que el dato se
  *    quede visiblemente viejo.
  *
+ *  - {@link #ANALITICA}: el absentismo y la puntualidad (Fase B4). Son
+ *    las consultas más caras del sistema -- un año de una empresa entera,
+ *    persona a persona y día a día -- y nadie mira el absentismo del
+ *    trimestre al segundo. Media hora, y se vacía entera cuando cambia
+ *    algo que la mueve de verdad (una incidencia decidida o detectada).
+ *    Pocas entradas: la clave es por persona que mira, y quien mira
+ *    analítica es poca gente.
+ *
  * Es caché de proceso, no distribuida: con varias instancias cada una
  * tendría la suya (misma limitación consciente que LoginRateLimitFilter).
  * Para el alcance de este proyecto -- una sola instancia -- sobra, y
@@ -36,6 +44,7 @@ public class CacheConfig {
 
     public static final String FESTIVOS = "festivos";
     public static final String DASHBOARD = "dashboard";
+    public static final String ANALITICA = "analitica";
 
     @Bean
     public CacheManager cacheManager() {
@@ -47,6 +56,10 @@ public class CacheConfig {
         manager.registerCustomCache(DASHBOARD, Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofMinutes(1))
                 .maximumSize(1_000)
+                .build());
+        manager.registerCustomCache(ANALITICA, Caffeine.newBuilder()
+                .expireAfterWrite(Duration.ofMinutes(30))
+                .maximumSize(200)
                 .build());
         return manager;
     }

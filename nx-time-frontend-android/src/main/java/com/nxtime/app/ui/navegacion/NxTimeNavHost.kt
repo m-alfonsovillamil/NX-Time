@@ -794,7 +794,8 @@ fun NxTimeNavHost(
                     // distintas en el backend aunque hoy coincidan sus
                     // roles: van por separado también aquí.
                     puedeConfigurarEmpleados = Permisos.puedeConfigurarEmpleados(authorities),
-                    puedeExportar = Permisos.puedeExportarInformes(authorities)
+                    puedeExportar = Permisos.puedeExportarInformes(authorities),
+                    puedeVerAnalitica = Permisos.puedeVerAnalitica(authorities)
                 )
             }
 
