@@ -672,6 +672,9 @@ class ApiContractTest {
         );
         assertThat(pausaInicio.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(bodyOf(pausaInicio).get("enPausa").asBoolean()).isTrue();
+        // Lo que permite a un cliente saber cuánto se trabajó antes de pausar
+        // (la pausa en curso no está aún en segundosPausaAcumulados).
+        assertThat(bodyOf(pausaInicio).get("inicioPausaActual").isTextual()).isTrue();
 
         ResponseEntity<String> pausaFin = rest.exchange(
                 url("/api/v1/fichaje"),
@@ -681,6 +684,7 @@ class ApiContractTest {
         );
         assertThat(pausaFin.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(bodyOf(pausaFin).get("enPausa").asBoolean()).isFalse();
+        assertThat(bodyOf(pausaFin).get("inicioPausaActual").isNull()).isTrue();
     }
 
     @Test

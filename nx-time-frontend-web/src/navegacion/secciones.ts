@@ -55,7 +55,7 @@ export interface Seccion {
  * editor de cuadrantes. El `then` es porque las páginas se exportan con
  * nombre y `lazy` quiere un `default`.
  */
-const Fichar = lazy(() => import('../paginas/Fichar').then((m) => ({ default: m.Fichar })));
+const Fichar = lazy(() => import('../paginas/jornada/Fichar').then((m) => ({ default: m.Fichar })));
 
 const S = T.navegacion.secciones;
 

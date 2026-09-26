@@ -75,7 +75,7 @@ class TimeEntryControllerTest {
         TimeEntry entry = TimeEntry.builder().id(1L).build();
         when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
         when(timeEntryMapper.toResponse(entry))
-                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0));
+                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null));
 
         mockMvc.perform(post("/api/v1/fichaje")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -120,7 +120,7 @@ class TimeEntryControllerTest {
         TimeEntry fichaje = TimeEntry.builder().id(9L).build();
         when(timeEntryService.getHistory(eq("empleado@nxtime.test"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(fichaje), PageRequest.of(0, 50), 51));
-        when(timeEntryMapper.toResponse(fichaje)).thenReturn(new TimeEntryResponse(9L, Instant.now(), null, false, 0, 0));
+        when(timeEntryMapper.toResponse(fichaje)).thenReturn(new TimeEntryResponse(9L, Instant.now(), null, false, 0, 0, null));
 
         mockMvc.perform(get("/api/v1/fichaje/historial"))
                 .andExpect(status().isOk())
@@ -162,7 +162,7 @@ class TimeEntryControllerTest {
     void registerTimeEntry_conProyecto() throws Exception {
         TimeEntry entry = TimeEntry.builder().id(1L).build();
         when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
-        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0));
+        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null));
 
         mockMvc.perform(post("/api/v1/fichaje").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tipo\":\"INICIO\",\"proyectoId\":7}"))
