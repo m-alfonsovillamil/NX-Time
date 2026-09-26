@@ -632,6 +632,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dispositivos-push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar este dispositivo
+         * @description Idempotente: la app lo llama al entrar. Si el token era de otra persona (un móvil compartido), pasa a ser de quien lo registra.
+         */
+        post: operations["registrar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dispositivos-push/baja": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dar de baja este dispositivo
+         * @description Al cerrar sesión o al apagar los push en Ajustes. Solo borra un dispositivo propio; si el token no existe o es de otra persona, no hace nada y responde igual.
+         */
+        post: operations["darDeBaja"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/departamentos": {
         parameters: {
             query?: never;
@@ -851,7 +891,7 @@ export interface paths {
          * Registrar una solicitud recibida fuera de la app
          * @description Para quien no puede pedirlo desde Ajustes, normalmente porque ya está de baja y lo ha pedido por correo o por carta. 'motivo' es obligatorio y dice cómo llegó. Queda constancia de quién la registró, se avisa a los demás que pueden ejecutarla y a la persona le llega un acuse de recibo por correo. No sirve para uno mismo.
          */
-        post: operations["registrar"];
+        post: operations["registrar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2883,6 +2923,14 @@ export interface components {
             pausaFin?: string;
             reparto?: components["schemas"]["ProjectShare"][];
         };
+        RegisterPushDeviceRequest: {
+            token: string;
+            /** @enum {string} */
+            plataforma: "ANDROID" | "WEB" | "IOS";
+        };
+        UnregisterPushDeviceRequest: {
+            token: string;
+        };
         DepartmentRequest: {
             nombre: string;
         };
@@ -3294,6 +3342,14 @@ export interface components {
             /** Format: date-time */
             resueltaEn?: string;
         };
+        DispositivoPush: {
+            plataforma?: string;
+            token?: string;
+            /** Format: date-time */
+            registradoEn?: string;
+            /** Format: date-time */
+            vistoEn?: string;
+        };
         ExcepcionDeCuadrante: {
             /** Format: date */
             fecha?: string;
@@ -3401,6 +3457,7 @@ export interface components {
             incidenciasDeCuadrante?: components["schemas"]["IncidenciaDeCuadrante"][];
             firmasMensuales?: components["schemas"]["FirmaMensual"][];
             avisos?: components["schemas"]["Aviso"][];
+            dispositivosPush?: components["schemas"]["DispositivoPush"][];
             adjuntos?: components["schemas"]["Adjunto"][];
             candidaturas?: components["schemas"]["Candidatura"][];
             denunciasIdentificadas?: components["schemas"]["Denuncia"][];
@@ -5759,6 +5816,86 @@ export interface operations {
             };
         };
     };
+    registrar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterPushDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Registrado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin token o plataforma desconocida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    darDeBaja: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnregisterPushDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Dado de baja (o no había nada que dar de baja) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin token */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     listar_2: {
         parameters: {
             query?: never;
@@ -6373,7 +6510,7 @@ export interface operations {
             };
         };
     };
-    registrar: {
+    registrar_1: {
         parameters: {
             query?: never;
             header?: never;

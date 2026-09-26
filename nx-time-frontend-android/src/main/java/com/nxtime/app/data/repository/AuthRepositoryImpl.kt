@@ -16,7 +16,15 @@ import retrofit2.Response
  */
 class AuthRepositoryImpl(
     private val apiService: ApiService,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    /**
+     * Lo que hay que hacer al entrar, fuera de la sesión: hoy, registrar el
+     * móvil para los push (Fase B5) si están encendidos. Como el
+     * `alCerrarSesion` de [SessionManager], y por lo mismo: vale por todos los
+     * caminos de entrada (contraseña, código de acceso) sin acordarse en cada
+     * pantalla.
+     */
+    private val alEntrar: () -> Unit = {}
 ) : AuthRepository {
 
     /*  Implementación de Autenticación  */
@@ -40,6 +48,7 @@ class AuthRepositoryImpl(
             nombre = authResponse.nombre,
             authorities = authResponse.authorities
         )
+        alEntrar()
     }
 
     override suspend fun solicitarCodigoAcceso(email: String): Response<Unit> {
@@ -331,6 +340,12 @@ class AuthRepositoryImpl(
     override suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO> {
         return apiService.getResumenAnalitica()
     }
+
+    override suspend fun registrarDispositivoPush(token: String): Response<Unit> =
+        apiService.registrarDispositivoPush(RegistroDispositivoPushRequest(token))
+
+    override suspend fun darDeBajaDispositivoPush(token: String): Response<Unit> =
+        apiService.darDeBajaDispositivoPush(BajaDispositivoPushRequest(token))
 
     override suspend fun cambiarEstadoEmpleado(
         empleadoId: Long,

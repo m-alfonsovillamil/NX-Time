@@ -541,6 +541,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 25. [La firma mensual no bloquea la corrección: la corrección invalida la firma](docs/adr/025-la-firma-no-bloquea-la-correccion.md)
 26. [La analítica cuenta días, no horas, y el alcance lo decide quién mira](docs/adr/026-analitica-en-dias-y-por-alcance.md)
 27. [Las listas que crecen sin límite van por páginas, con un DTO propio](docs/adr/027-listas-por-paginas.md)
+28. [Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil](docs/adr/028-push-generico-colgado-del-aviso.md)
 
 ---
 

@@ -69,14 +69,10 @@ de auditoría signifique algo (ver Fase 8).
 tokens válidos y suplantar a cualquier usuario.
 
 ```bash
-openssl rand -base64 64 | tr -d '
-
-'
+openssl rand -base64 64 | tr -d '\r\n'
 ```
 
-El `tr -d '
-
-'` importa: en Windows `openssl` parte la salida en líneas y deja
+El `tr -d '\r\n'` importa: en Windows `openssl` parte la salida en líneas y deja
 retornos de carro, que no son base64 válidos. La aplicación falla al arrancar con
 `Illegal base64 character`.
 
@@ -181,6 +177,38 @@ La app Android no se ve afectada: no manda cabecera `Origin`, así que CORS no
 interviene. Por eso el arranque solo avisa en vez de fallar.
 
 La app Android no manda cabecera `Origin`, así que CORS no le afecta.
+
+### Push (Firebase)
+
+| Variable | Valor |
+|---|---|
+| `FIREBASE_CREDENTIALS_JSON` | la clave de la cuenta de servicio de Firebase, **en base64** |
+
+🚨 **Es un secreto**: con ella se pueden mandar push a toda la plantilla. Solo va
+aquí, en el panel, nunca en el repositorio ni en un chat. Sin ella la aplicación
+arranca igual y simplemente no manda push (ver ADR 028).
+
+Cómo sacarla:
+
+1. Consola de Firebase → ⚙️ **Configuración del proyecto** → pestaña **Cuentas de
+   servicio** → **Generar nueva clave privada**. Descarga un JSON.
+2. Pasarlo a base64 en una sola línea (Render maltrata los saltos de línea de la
+   clave privada):
+   - Git Bash o Linux: `base64 -w0 fichero.json`
+   - PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("fichero.json"))`
+3. Pegar el resultado como valor de `FIREBASE_CREDENTIALS_JSON` y guardar: Render
+   redespliega.
+4. **Borrar el JSON descargado** del disco. Si hace falta otra vez, se genera otra
+   clave, y la vieja se revoca en la misma pestaña.
+
+Comprobación: en el log del arranque tiene que salir
+`Push activado con el proyecto de Firebase 'nx-time-altertas-push'`. Si en su
+lugar sale `FIREBASE_CREDENTIALS_JSON no es una credencial válida`, está mal
+copiada; si no sale nada, está vacía. En ninguno de los dos casos se cae el
+arranque: el backend sigue funcionando, solo que sin push.
+
+El `google-services.json` de la app Android **no** es este fichero ni es secreto:
+va dentro del APK y está versionado en `nx-time-frontend-android/`.
 
 ## 2. Crear el servicio en Render
 

@@ -61,3 +61,10 @@ scripts/probar-smtp.py
 
 # Bytecode de los guiones de verificación (scripts/e2e.py).
 __pycache__/
+
+# Push (Fase B5): la clave de la cuenta de servicio de Firebase es un SECRETO
+# y va solo en el panel de Render. Esto es la red de seguridad por si alguien
+# la descarga dentro del proyecto. El google-services.json de la app, en
+# cambio, SÍ se versiona: no es secreto (va dentro del APK).
+*firebase-adminsdk*.json
+firebase-service-account*.json

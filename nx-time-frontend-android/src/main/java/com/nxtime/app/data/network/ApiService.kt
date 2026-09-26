@@ -435,6 +435,14 @@ interface ApiService {
     @GET("api/v1/dashboard/empresa")
     suspend fun getPanelEmpresa(): Response<PanelEmpresaDTO>
 
+    /*  Push (Fase B5)  */
+
+    @POST("api/v1/dispositivos-push")
+    suspend fun registrarDispositivoPush(@Body peticion: RegistroDispositivoPushRequest): Response<Unit>
+
+    @POST("api/v1/dispositivos-push/baja")
+    suspend fun darDeBajaDispositivoPush(@Body peticion: BajaDispositivoPushRequest): Response<Unit>
+
     /** Absentismo y puntualidad del mes en curso (Fase B4). */
     @GET("api/v1/analitica/resumen")
     suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO>

@@ -30,6 +30,9 @@ pluginManagement {
         id("com.android.application") version "8.13.2"
         id("org.jetbrains.kotlin.android") version "2.2.20"
         id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
+        // Push (Fase B5): lee google-services.json y genera la configuración
+        // de Firebase de cada variante.
+        id("com.google.gms.google-services") version "4.5.0"
         id("org.springframework.boot") version "3.5.6"
         id("io.spring.dependency-management") version "1.1.7"
         id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"

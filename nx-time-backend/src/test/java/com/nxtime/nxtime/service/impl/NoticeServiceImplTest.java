@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.notification.NotificationEvents;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import com.nxtime.nxtime.support.Paginas;
@@ -53,6 +55,9 @@ class NoticeServiceImplTest {
     @Mock
     private CompanyRepository companyRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private NoticeServiceImpl service;
 
     private Company empresa;
@@ -61,7 +66,7 @@ class NoticeServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new NoticeServiceImpl(noticeRepository, userRepository, companyRepository);
+        service = new NoticeServiceImpl(noticeRepository, userRepository, companyRepository, eventPublisher);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Ana")
                 .rol(Role.EMPLEADO).empresa(empresa).build();
@@ -95,6 +100,20 @@ class NoticeServiceImplTest {
         assertThat(guardado.getValue().getDestinatario()).isEqualTo(empleado);
         assertThat(guardado.getValue().getEmpresa()).isEqualTo(empresa);
         assertThat(guardado.getValue().getRutaDestino()).isEqualTo("ausencias");
+    }
+
+    @Test
+    @DisplayName("Publicar anuncia el aviso para el push (Fase B5), con el tipo y la ruta pero sin el texto")
+    void publicar_anunciaElAvisoParaElPush() {
+        when(userRepository.getReferenceById(10L)).thenReturn(empleado);
+        when(companyRepository.getReferenceById(1L)).thenReturn(empresa);
+
+        service.publicar(new CreateNoticeCommand(
+                1L, 10L, NoticeType.AUSENCIA_RESUELTA, "Tu ausencia ha sido rechazada",
+                "Coincide con el cierre de la oficina", "ausencias"));
+
+        verify(eventPublisher).publishEvent(
+                new NotificationEvents.NoticePublished(10L, NoticeType.AUSENCIA_RESUELTA, "ausencias"));
     }
 
     @Test

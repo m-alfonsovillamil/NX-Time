@@ -7,6 +7,7 @@ import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.JobApplication;
 import com.nxtime.nxtime.domain.JobPosting;
+import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.ScheduleIncidentType;
 import com.nxtime.nxtime.domain.User;
@@ -376,5 +377,16 @@ public final class NotificationEvents {
      * {@code @Async}, con la sesión de JPA ya cerrada.
      */
     public record AccessCodeRequested(String email, java.util.Map<String, Object> variables) {
+    }
+
+    /**
+     * Se acaba de guardar un aviso (Fase B5). Lo publica
+     * {@code NoticeServiceImpl.publicar} y lo convierte en push {@link PushSender}.
+     *
+     * Solo ids y el tipo, a diferencia del resto de eventos: el push no dice
+     * nada del contenido del aviso (ver {@link TextoDePush}), así que no hay
+     * nada más que necesite.
+     */
+    public record NoticePublished(long destinatarioId, NoticeType tipo, String rutaDestino) {
     }
 }

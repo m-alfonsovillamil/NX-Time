@@ -588,6 +588,14 @@
     <!-- El TÍTULO de la sección, como "Apariencia" o "Seguridad". Va aparte
          de la etiqueta del interruptor: usar el mismo texto para los dos
          dejaba "Recordarme fichar" repetido dentro de la misma tarjeta. -->
+    <!-- Notificaciones push (Fase B5) -->
+    <string name="ajustes_push_seccion">Notificaciones</string>
+    <string name="ajustes_push">Avisarme en el móvil</string>
+    <string name="ajustes_push_detalle">Te llega una notificación cuando tienes un aviso nuevo: una ausencia resuelta, una corrección, una incidencia. Solo dice de qué va; el detalle lo ves al abrir la app, porque la notificación pasa por los servidores de Google.</string>
+    <string name="ajustes_push_sin_permiso">Android tiene bloqueadas las notificaciones de NX Time. Actívalas en los ajustes del sistema para recibirlas.</string>
+    <string name="push_canal">Avisos</string>
+    <string name="push_canal_detalle">Novedades de tus ausencias, correcciones, incidencias y demás avisos de la app.</string>
+
     <string name="ajustes_recordatorio_seccion">Recordatorio</string>
     <string name="ajustes_recordatorio">Recordarme fichar</string>
     <string name="ajustes_recordatorio_detalle">Te avisamos a la hora de entrada si no has fichado, y a la de salida si te dejaste la jornada abierta. De lunes a viernes.</string>

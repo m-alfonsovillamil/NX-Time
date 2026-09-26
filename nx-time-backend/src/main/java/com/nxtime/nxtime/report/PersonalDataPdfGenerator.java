@@ -144,6 +144,14 @@ public class PersonalDataPdfGenerator {
                 new String[] {"Fecha", "Aviso", "Leído"},
                 av -> new String[] {fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});
 
+        // El token no cabe en una celda y no le dice nada a quien lo lee: se
+        // enseña el final, que basta para reconocerlo. Entero va en el JSON.
+        tabla(documento, "Dispositivos que reciben notificaciones push", datos.dispositivosPush(),
+                new String[] {"Plataforma", "Registrado", "Visto por última vez", "Token"},
+                d -> new String[] {
+                        d.plataforma(), fechaHora(d.registradoEn()), fechaHora(d.vistoEn()),
+                        "…" + d.token().substring(Math.max(0, d.token().length() - 12))});
+
         tabla(documento, "Ficheros adjuntos", datos.adjuntos(),
                 new String[] {"Tipo", "Nombre", "Tamaño", "Subido", "Vigente"},
                 ad -> new String[] {

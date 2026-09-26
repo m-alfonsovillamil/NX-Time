@@ -11,6 +11,12 @@ plugins {
     // y toma la versión del propio Kotlin, así que ya no hay que
     // emparejar a mano Kotlin <-> compilador de Compose.
     id("org.jetbrains.kotlin.plugin.compose")
+    // Push (Fase B5, ADR 028). Necesita google-services.json en este
+    // directorio, con las DOS variantes (com.nxtime.app y com.nxtime.app.dev):
+    // si falta una, el build de esa variante falla. El fichero se versiona a
+    // propósito: no es secreto (va dentro del APK), y sin él nadie que clone
+    // el repositorio podría compilar.
+    id("com.google.gms.google-services")
 }
 
 /*
@@ -61,8 +67,8 @@ android {
          * móvil, y el saldo de vacaciones enseña los días pedidos y sin
          * aprobar, que ya descuentan de los disponibles.
          */
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
@@ -291,6 +297,11 @@ dependencies {
      * que aquí no aporta nada.
      */
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
+    // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-messaging")
 
     /*
      * NO se añade androidx.security:security-crypto. Llegó a estar aquí

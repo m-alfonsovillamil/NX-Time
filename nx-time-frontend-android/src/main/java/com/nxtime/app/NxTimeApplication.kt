@@ -1,5 +1,11 @@
 package com.nxtime.app
 
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import com.nxtime.app.push.TokensDeFirebase
+import com.nxtime.app.push.RegistroDePush
+import com.nxtime.app.push.PreferenciasEnAjustes
 import android.app.Application
 import com.nxtime.app.data.network.ApiService
 import com.nxtime.app.data.network.ArranqueEnFrio
@@ -34,6 +40,9 @@ class NxTimeApplication : Application() {
      */
     lateinit var ajustes: Ajustes
 
+    /** Cuándo este móvil recibe push y cuándo deja de recibirlos (Fase B5). */
+    lateinit var registroDePush: RegistroDePush
+
     /**
      * Esta función se ejecuta 1 sola vez cuando la app arranca. Es el lugar perfecto para configurar nuestras herramientas.
      */
@@ -53,6 +62,9 @@ class NxTimeApplication : Application() {
             // Al cerrar sesión, los recordatorios de fichaje tienen que irse
             // con ella: viven en WorkManager y no en la app.
             RecordatorioDeFichaje.cancelar(this)
+            // Y el token de push, por lo mismo: si no, este móvil seguiría
+            // recibiendo los avisos de quien se fue.
+            registroDePush.alCerrarSesion()
         }
 
         // 2. Creamos RetrofitClient y le pasamos el sessionManager, y el
@@ -64,7 +76,20 @@ class NxTimeApplication : Application() {
         apiService = retrofitClient.instance
 
         // 4. Creamos el Repositorio principal, dándole acceso a la API y a la sesión
-        authRepository = AuthRepositoryImpl(apiService, sessionManager)
+        authRepository = AuthRepositoryImpl(apiService, sessionManager) {
+            registroDePush.registrarSiToca()
+        }
+
+        // 5. Push (Fase B5). Al arrancar con sesión se vuelve a registrar: Google
+        //    puede haber cambiado el token, y así el servidor sabe que sigue vivo.
+        registroDePush = RegistroDePush(
+            preferencias = PreferenciasEnAjustes(ajustes),
+            tieneSesion = { sessionManager.fetchAuthToken() != null },
+            repositorio = { authRepository },
+            firebase = TokensDeFirebase(),
+            alcance = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        )
+        registroDePush.registrarSiToca()
 
     }
 

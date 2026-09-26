@@ -57,6 +57,9 @@ class PersonalDataEraser {
         int adjuntos = jdbc.update("DELETE FROM adjuntos WHERE usuario_id = ?", usuarioId);
         int avisos = jdbc.update("DELETE FROM avisos WHERE destinatario_id = ?", usuarioId);
         int sesiones = jdbc.update("DELETE FROM refresh_tokens WHERE usuario_id = ?", usuarioId);
+        // Los móviles que recibían sus push (Fase B5): identifican aparatos de
+        // la persona, y con la cuenta cerrada no hay nada que mandarles.
+        int dispositivos = jdbc.update("DELETE FROM dispositivos_push WHERE usuario_id = ?", usuarioId);
         int codigos = jdbc.update("DELETE FROM codigos_acceso WHERE usuario_id = ?", usuarioId);
 
         // La cuenta: fuera la fecha de nacimiento, baja, y una contraseña que
@@ -76,6 +79,7 @@ class PersonalDataEraser {
                 "adjuntos", adjuntos,
                 "avisos", avisos,
                 "sesiones", sesiones,
+                "dispositivosPush", dispositivos,
                 "codigosDeAcceso", codigos);
     }
 

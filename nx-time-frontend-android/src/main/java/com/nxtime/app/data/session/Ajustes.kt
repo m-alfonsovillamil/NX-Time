@@ -101,6 +101,33 @@ class Ajustes(context: Context) {
             .apply()
     }
 
+    private val _push = MutableStateFlow(prefs.getBoolean(KEY_PUSH, false))
+
+    /**
+     * Si este móvil recibe notificaciones push (Fase B5). **Apagado por
+     * defecto**, como el recordatorio: el permiso de notificaciones se pide
+     * al encenderlo, y uno pedido al arrancar, sin que se vea para qué, se
+     * deniega. Es de este móvil y no de la cuenta: se guarda aquí y no en la
+     * sesión, así que cerrar sesión no lo apaga.
+     */
+    val push: StateFlow<Boolean> = _push.asStateFlow()
+
+    fun cambiarPush(activo: Boolean) {
+        _push.value = activo
+        prefs.edit().putBoolean(KEY_PUSH, activo).apply()
+    }
+
+    /**
+     * El último token de push que el servidor aceptó para este móvil. Hace
+     * falta para darlo de baja al apagar los push: pedírselo a Firebase en ese
+     * momento podría generar uno nuevo solo para borrarlo.
+     */
+    var tokenPush: String?
+        get() = prefs.getString(KEY_TOKEN_PUSH, null)
+        set(valor) {
+            prefs.edit().putString(KEY_TOKEN_PUSH, valor).apply()
+        }
+
     fun cambiarTema(nuevo: Tema) {
         _tema.value = nuevo
         prefs.edit().putString(KEY_TEMA, nuevo.name).apply()
@@ -117,6 +144,8 @@ class Ajustes(context: Context) {
         private const val KEY_INFORMES = "informes_de_errores"
         private const val KEY_HUELLA = "entrar_con_huella"
         private const val KEY_RECORDATORIO = "recordatorio_fichaje"
+        private const val KEY_PUSH = "notificaciones_push"
+        private const val KEY_TOKEN_PUSH = "token_push"
         private const val KEY_HORA_ENTRADA = "recordatorio_hora_entrada"
         private const val KEY_HORA_SALIDA = "recordatorio_hora_salida"
 

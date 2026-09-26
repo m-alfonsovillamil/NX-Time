@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.notification.NotificationEvents;
+import org.springframework.context.ApplicationEventPublisher;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CreateNoticeCommand;
@@ -27,13 +29,16 @@ public class NoticeServiceImpl implements NoticeService {
     private final NoticeRepository noticeRepository;
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public NoticeServiceImpl(NoticeRepository noticeRepository,
                              UserRepository userRepository,
-                             CompanyRepository companyRepository) {
+                             CompanyRepository companyRepository,
+                             ApplicationEventPublisher eventPublisher) {
         this.noticeRepository = noticeRepository;
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -72,6 +77,11 @@ public class NoticeServiceImpl implements NoticeService {
 
         noticeRepository.save(aviso);
         log.debug("Aviso {} publicado para el usuario {}", comando.tipo(), comando.destinatarioId());
+        // El push (Fase B5) cuelga de aquí y no de cada evento de negocio: por
+        // este método pasan todos los avisos. Se entrega AFTER_COMMIT de esta
+        // transacción, así que un aviso que no llega a guardarse no avisa.
+        eventPublisher.publishEvent(new NotificationEvents.NoticePublished(
+                comando.destinatarioId(), comando.tipo(), comando.rutaDestino()));
     }
 
     @Override

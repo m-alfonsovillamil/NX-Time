@@ -73,6 +73,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private final ScheduleExceptionRepository scheduleExceptionRepository;
     private final ScheduleIncidentRepository scheduleIncidentRepository;
     private final MonthlySignatureRepository signatureRepository;
+    private final com.nxtime.nxtime.repository.PushDeviceRepository pushDeviceRepository;
     private final NoticeRepository noticeRepository;
     private final AttachmentRepository attachmentRepository;
     private final JobApplicationRepository applicationRepository;
@@ -93,6 +94,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
             ScheduleExceptionRepository scheduleExceptionRepository,
             ScheduleIncidentRepository scheduleIncidentRepository,
             MonthlySignatureRepository signatureRepository,
+            com.nxtime.nxtime.repository.PushDeviceRepository pushDeviceRepository,
             NoticeRepository noticeRepository,
             AttachmentRepository attachmentRepository,
             JobApplicationRepository applicationRepository,
@@ -109,6 +111,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
         this.scheduleExceptionRepository = scheduleExceptionRepository;
         this.scheduleIncidentRepository = scheduleIncidentRepository;
         this.signatureRepository = signatureRepository;
+        this.pushDeviceRepository = pushDeviceRepository;
         this.noticeRepository = noticeRepository;
         this.attachmentRepository = attachmentRepository;
         this.applicationRepository = applicationRepository;
@@ -209,6 +212,11 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                 noticeRepository.findByDestinatarioOrderByCreadoEnDesc(p).stream()
                         .map(n -> new PersonalDataExport.Aviso(
                                 n.getTipo().name(), n.getTitulo(), n.getCuerpo(), n.isLeido(), n.getCreadoEn()))
+                        .toList(),
+
+                pushDeviceRepository.findByUsuario_IdOrderByRegistradoEnDesc(id).stream()
+                        .map(d -> new PersonalDataExport.DispositivoPush(
+                                d.getPlataforma().name(), d.getToken(), d.getRegistradoEn(), d.getVistoEn()))
                         .toList(),
 
                 attachmentRepository.findByUsuarioOrderBySubidoEnDesc(p).stream()
