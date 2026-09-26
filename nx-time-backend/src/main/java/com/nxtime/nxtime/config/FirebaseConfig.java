@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.config;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -52,7 +53,10 @@ public class FirebaseConfig {
             FirebaseApp app = firebaseApp(credenciales);
             log.info("Push activado con el proyecto de Firebase '{}'.", app.getOptions().getProjectId());
             return new FirebasePushGateway(FirebaseMessaging.getInstance(app));
-        } catch (IOException | IllegalArgumentException e) {
+        } catch (IOException | RuntimeException | LinkageError e) {
+            // LinkageError también: el 26/09/2026 el primer despliegue con
+            // credencial se cayó con un NoClassDefFoundError (faltaba una
+            // dependencia), que no es una Exception y se escapaba de aquí.
             // Sin el mensaje de la excepción en el log: podría citar un trozo
             // de la credencial.
             log.error("FIREBASE_CREDENTIALS_JSON no es una credencial válida ({}): se arranca SIN push.",
@@ -69,10 +73,14 @@ public class FirebaseConfig {
                 return existente;
             }
         }
-        FirebaseOptions opciones = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(new ByteArrayInputStream(json(credenciales))))
-                .build();
-        return FirebaseApp.initializeApp(opciones, NOMBRE_APP);
+        GoogleCredentials credencial = GoogleCredentials.fromStream(new ByteArrayInputStream(json(credenciales)));
+        FirebaseOptions.Builder opciones = FirebaseOptions.builder().setCredentials(credencial);
+        // El proyecto, explícito: Firebase lo deduce de la credencial al enviar,
+        // pero no lo copia a sus opciones, y el log del arranque diría 'null'.
+        if (credencial instanceof ServiceAccountCredentials cuenta && cuenta.getProjectId() != null) {
+            opciones.setProjectId(cuenta.getProjectId());
+        }
+        return FirebaseApp.initializeApp(opciones.build(), NOMBRE_APP);
     }
 
     /** El JSON de la cuenta de servicio, venga en base64 (lo esperado) o tal cual. */
