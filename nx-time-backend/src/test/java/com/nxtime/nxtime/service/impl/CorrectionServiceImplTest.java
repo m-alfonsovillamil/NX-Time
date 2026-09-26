@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import org.springframework.data.domain.PageRequest;
+import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -650,13 +652,13 @@ class CorrectionServiceImplTest {
     @DisplayName("La respuesta dice a quien pregunta si puede resolver y si puede disputar")
     void toResponse_calculaLosPermisosParaQuienPregunta() {
         CorrectionRequest laPidioElGestor = solicitudDe(gestor, CorrectionStatus.PENDIENTE);
-        when(correctionRepository.findMias(anyLong())).thenReturn(List.of(laPidioElGestor));
+        when(correctionRepository.findMias(anyLong(), any())).thenReturn(Paginas.page(List.of(laPidioElGestor)));
 
-        CorrectionResponse paraElDueño = service.mias(empleado).get(0);
+        CorrectionResponse paraElDueño = service.mias(empleado, PageRequest.of(0, 50)).contenido().get(0);
         assertThat(paraElDueño.puedoResolver()).isTrue();
         assertThat(paraElDueño.puedoDisputar()).isTrue();
 
-        CorrectionResponse paraUnTercero = service.mias(otroEmpleado).get(0);
+        CorrectionResponse paraUnTercero = service.mias(otroEmpleado, PageRequest.of(0, 50)).contenido().get(0);
         assertThat(paraUnTercero.puedoResolver()).isFalse();
         assertThat(paraUnTercero.puedoDisputar()).isFalse();
     }

@@ -28,10 +28,13 @@ interface AuthRepository {
     suspend fun getRegistroActivo(): Response<Registro?>
     suspend fun registrarFichaje(peticion: PeticionFichaje): Response<Registro>
     /** Ver [com.nxtime.app.data.network.ApiService.getHistorial]. Las dos fechas o ninguna. */
+    /** Una página del historial propio; con las dos fechas, solo ese periodo. */
     suspend fun getHistorial(
         desde: java.time.LocalDate? = null,
-        hasta: java.time.LocalDate? = null
-    ): Response<List<Registro>>
+        hasta: java.time.LocalDate? = null,
+        pagina: Int = 0,
+        tamano: Int = com.nxtime.app.data.network.Paginas.TAMANO
+    ): Response<PaginaDTO<Registro>>
     suspend fun getResumenPersonal(): Response<ResumenPersonalDTO>
     suspend fun getMiCuadrante(
         desde: java.time.LocalDate,
@@ -40,7 +43,7 @@ interface AuthRepository {
     suspend fun getMisMesesParaFirmar(): Response<List<MesParaFirmarDTO>>
     suspend fun firmarMes(anio: Int, mes: Int): Response<FirmaMensualDTO>
     suspend fun getMisIncidencias(anio: Int? = null): Response<List<IncidenciaDTO>>
-    suspend fun getIncidenciasDelEquipo(resueltas: Boolean = false): Response<List<IncidenciaDTO>>
+    suspend fun getIncidenciasDelEquipo(resueltas: Boolean = false, pagina: Int = 0): Response<PaginaDTO<IncidenciaDTO>>
     suspend fun justificarIncidencia(id: Long, texto: String): Response<IncidenciaDTO>
     suspend fun resolverIncidencia(id: Long, aceptar: Boolean, comentario: String?): Response<IncidenciaDTO>
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
@@ -71,7 +74,7 @@ interface AuthRepository {
 
     /** Los contadores de las bandejas del panel de gestión. */
     suspend fun getPendientes(): Response<PendientesDTO>
-    suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
+    suspend fun getMisCorrecciones(pagina: Int = 0): Response<PaginaDTO<CorreccionDTO>>
     suspend fun resolverCorreccion(
         correccionId: Long,
         aprobada: Boolean,
@@ -154,7 +157,13 @@ interface AuthRepository {
 
     /* Funciones de Ausencias (Empleado) */
     suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia>
-    suspend fun getMisPeticiones(): Response<List<RespuestaAusencia>>
+    /** Una página de las propias; con las dos fechas, solo las que tocan ese periodo. */
+    suspend fun getMisPeticiones(
+        desde: java.time.LocalDate? = null,
+        hasta: java.time.LocalDate? = null,
+        pagina: Int = 0,
+        tamano: Int = com.nxtime.app.data.network.Paginas.TAMANO
+    ): Response<PaginaDTO<RespuestaAusencia>>
 
     /* Funciones de Ausencias (Gestor) */
     suspend fun getPeticionesPendientes(): Response<List<RespuestaAusencia>>
@@ -165,10 +174,10 @@ interface AuthRepository {
     ): Response<RespuestaAusencia>
 
     suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
-    suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>>
+    suspend fun getHistorialAusencias(pagina: Int = 0): Response<PaginaDTO<RespuestaAusencia>>
 
     /* Funciones de Historial (Gestor) */
-    suspend fun getHistorialEquipo(): Response<List<RegistroEquipoDTO>>
+    suspend fun getHistorialEquipo(pagina: Int = 0): Response<PaginaDTO<RegistroEquipoDTO>>
     suspend fun getMisEmpleados(): Response<List<EmpleadoSimpleDTO>>
 
     /* Funciones de Gestión (Gestor/Usuario) */
@@ -270,7 +279,7 @@ interface AuthRepository {
     ): Response<AsignacionProyectoDTO>
 
     /* Funciones de Avisos */
-    suspend fun getAvisos(): Response<List<AvisoDTO>>
+    suspend fun getAvisos(pagina: Int = 0): Response<PaginaDTO<AvisoDTO>>
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>
     suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit>
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>

@@ -1,5 +1,9 @@
 package com.nxtime.nxtime.controller;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -111,11 +115,45 @@ class TimeEntryControllerTest {
 
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
-    @DisplayName("GET /fichaje/historial devuelve 200 con la lista mapeada")
-    void getHistory_conAuthority_devuelve200() throws Exception {
-        when(timeEntryService.getHistory("empleado@nxtime.test")).thenReturn(List.of());
+    @DisplayName("GET /fichaje/historial devuelve una página: primera, de 50, con los totales")
+    void getHistory_conAuthority_devuelveUnaPagina() throws Exception {
+        TimeEntry fichaje = TimeEntry.builder().id(9L).build();
+        when(timeEntryService.getHistory(eq("empleado@nxtime.test"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(fichaje), PageRequest.of(0, 50), 51));
+        when(timeEntryMapper.toResponse(fichaje)).thenReturn(new TimeEntryResponse(9L, Instant.now(), null, false, 0, 0));
 
-        mockMvc.perform(get("/api/v1/fichaje/historial")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/fichaje/historial"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].id").value(9))
+                .andExpect(jsonPath("$.pagina").value(0))
+                .andExpect(jsonPath("$.tamano").value(50))
+                .andExpect(jsonPath("$.totalElementos").value(51))
+                .andExpect(jsonPath("$.totalPaginas").value(2))
+                .andExpect(jsonPath("$.hayMas").value(true));
+        verify(timeEntryService).getHistory("empleado@nxtime.test", PageRequest.of(0, 50));
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /fichaje/historial pasa al servicio la página y el tamaño pedidos")
+    void getHistory_paginaPedida() throws Exception {
+        when(timeEntryService.getHistory(eq("empleado@nxtime.test"), any(Pageable.class)))
+                .thenReturn(Page.empty(PageRequest.of(3, 20)));
+
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("pagina", "3").param("tamano", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hayMas").value(false));
+        verify(timeEntryService).getHistory("empleado@nxtime.test", PageRequest.of(3, 20));
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("GET /fichaje/historial con página negativa o tamaño fuera de 1..200 es un 400, no un recorte")
+    void getHistory_paginaInvalida_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("pagina", "-1")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("tamano", "0")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/fichaje/historial").param("tamano", "201")).andExpect(status().isBadRequest());
+        verify(timeEntryService, org.mockito.Mockito.never()).getHistory(any(), any(Pageable.class));
     }
 
     @Test
@@ -182,14 +220,15 @@ class TimeEntryControllerTest {
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
     @DisplayName("GET /fichaje/historial con las dos fechas filtra por periodo")
     void getHistory_conFechas_usaElPeriodo() throws Exception {
-        when(timeEntryService.getHistory("empleado@nxtime.test",
-                java.time.LocalDate.of(2026, 9, 1), java.time.LocalDate.of(2026, 9, 30))).thenReturn(List.of());
+        when(timeEntryService.getHistory(eq("empleado@nxtime.test"),
+                eq(java.time.LocalDate.of(2026, 9, 1)), eq(java.time.LocalDate.of(2026, 9, 30)), any(Pageable.class)))
+                .thenReturn(Page.empty(PageRequest.of(0, 50)));
 
         mockMvc.perform(get("/api/v1/fichaje/historial").param("desde", "2026-09-01").param("hasta", "2026-09-30"))
                 .andExpect(status().isOk());
 
         org.mockito.Mockito.verify(timeEntryService).getHistory("empleado@nxtime.test",
-                java.time.LocalDate.of(2026, 9, 1), java.time.LocalDate.of(2026, 9, 30));
+                java.time.LocalDate.of(2026, 9, 1), java.time.LocalDate.of(2026, 9, 30), PageRequest.of(0, 50));
     }
 
     @Test
@@ -213,10 +252,13 @@ class TimeEntryControllerTest {
     @WithMockUser(username = "gestor@nxtime.test", authorities = "fichaje:leer:equipo")
     @DisplayName("GET /fichaje/gestor/historial con la authority de equipo devuelve 200")
     void getTeamHistory_conAuthorityDeEquipo_devuelve200() throws Exception {
-        when(timeEntryService.getTeamHistory("gestor@nxtime.test")).thenReturn(List.<TeamTimeEntryDTO>of());
+        when(timeEntryService.getTeamHistory(eq("gestor@nxtime.test"), any(Pageable.class)))
+                .thenReturn(Page.<TeamTimeEntryDTO>empty(PageRequest.of(1, 30)));
 
-        mockMvc.perform(get("/api/v1/fichaje/gestor/historial")).andExpect(status().isOk());
-        verify(timeEntryService).getTeamHistory("gestor@nxtime.test");
+        mockMvc.perform(get("/api/v1/fichaje/gestor/historial").param("pagina", "1").param("tamano", "30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido").isArray());
+        verify(timeEntryService).getTeamHistory("gestor@nxtime.test", PageRequest.of(1, 30));
     }
 
     // ------------------------------------------------------------------

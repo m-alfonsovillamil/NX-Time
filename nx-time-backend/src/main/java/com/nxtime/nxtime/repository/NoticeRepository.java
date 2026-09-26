@@ -5,6 +5,8 @@ import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.User;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,14 +14,16 @@ import org.springframework.data.repository.query.Param;
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
 
     /**
-     * Los avisos de una persona, del más reciente al más antiguo.
+     * Los avisos de alguien, del más reciente al más antiguo, por páginas
+     * (Fase A7).
      *
-     * Acotado a 50 porque en la Fase A no hay paginación y un empleado
-     * acumula avisos indefinidamente: sin el tope, la lista crecería
-     * para siempre y la pantalla acabaría descargando años de historia
-     * para enseñar los cinco de arriba. Cuando duela, se pagina.
+     * Hasta entonces era un "Top 50": un empleado acumula avisos para
+     * siempre, así que se acotó, pero los anteriores al quincuagésimo
+     * quedaban sin forma de verse desde ningún sitio. El id desempata dos
+     * avisos del mismo instante, que los hay: un barrido nocturno los crea
+     * en ráfaga, y sin desempate uno podía saltar de una página a otra.
      */
-    List<Notice> findTop50ByDestinatarioOrderByCreadoEnDesc(User destinatario);
+    Page<Notice> findByDestinatarioOrderByCreadoEnDescIdDesc(User destinatario, Pageable pagina);
 
     List<Notice> findByDestinatarioAndLeidoFalse(User destinatario);
 

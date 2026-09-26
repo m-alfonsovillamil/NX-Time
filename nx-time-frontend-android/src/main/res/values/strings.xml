@@ -164,6 +164,9 @@
     <string name="empresa_horas_por_empleado">Horas por empleado</string>
     <string name="empresa_media_equipo">La marca vertical es la media del equipo: %1$s</string>
 
+    <!-- Listas por páginas (Fase A7) -->
+    <string name="lista_cargar_mas_reintentar">No se han podido cargar más. Reintentar</string>
+
     <!-- Analítica del mes (Fase B4) -->
     <string name="analitica_titulo">Este mes</string>
     <string name="analitica_absentismo">Absentismo</string>

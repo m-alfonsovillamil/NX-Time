@@ -42,7 +42,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,13 +56,6 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
     private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     static final String REVISAR = "cuadrante:incidencias:revisar";
-
-    /**
-     * Tope de la bandeja. Sin paginar todavía (llega con la Fase A7, junto con
-     * las otras listas), pero tampoco sin límite: una empresa que asigna
-     * cuadrantes y no revisa nunca acumularía miles.
-     */
-    static final int TOPE_BANDEJA = 200;
 
     private final ScheduleIncidentRepository incidentRepository;
     private final ScheduleAssignmentRepository assignmentRepository;
@@ -261,15 +253,13 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
     }
 
     @Override
-    public List<ScheduleIncidentResponse> bandeja(User actor, boolean resueltas) {
+    public com.nxtime.nxtime.dto.PaginaDTO<ScheduleIncidentResponse> bandeja(User actor, boolean resueltas, org.springframework.data.domain.Pageable pagina) {
         Set<ScheduleIncidentStatus> estados = resueltas
                 ? EnumSet.of(ScheduleIncidentStatus.ACEPTADA, ScheduleIncidentStatus.RECHAZADA)
                 : EnumSet.of(ScheduleIncidentStatus.PENDIENTE, ScheduleIncidentStatus.JUSTIFICADA);
-        return incidentRepository
-                .findBandeja(actor.getEmpresa().getId(), actor.getId(), estados, PageRequest.of(0, TOPE_BANDEJA))
-                .stream()
-                .map(ScheduleIncidentServiceImpl::toResponse)
-                .toList();
+        return com.nxtime.nxtime.dto.PaginaDTO.de(
+                incidentRepository.findBandeja(actor.getEmpresa().getId(), actor.getId(), estados, pagina),
+                ScheduleIncidentServiceImpl::toResponse);
     }
 
     @Override

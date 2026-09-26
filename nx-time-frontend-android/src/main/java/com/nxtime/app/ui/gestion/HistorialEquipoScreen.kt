@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -117,11 +118,16 @@ fun HistorialEquipoScreen(
                 }
 
                 val visibles = estado.registrosVisibles
+                // "Vacío" solo si ya no quedan páginas: con el filtro puesto,
+                // que en lo cargado no haya nada suyo no significa que no
+                // haya fichado nunca. Mientras haya más, se pinta la lista
+                // (aunque sea solo su final), que es lo que va pidiendo.
+                val vacioDeVerdad = visibles.isEmpty() && !estado.paginas.hayMas
                 when {
                     // Se distingue "el equipo no ha fichado nunca" de
                     // "este empleado no ha fichado": con un solo texto,
                     // el gestor no sabría si el filtro está haciendo algo.
-                    visibles.isEmpty() && estado.empleadoFiltrado != null -> EstadoVacio(
+                    vacioDeVerdad && estado.empleadoFiltrado != null -> EstadoVacio(
                         titulo = stringResource(
                             R.string.equipo_vacio_filtro_titulo,
                             estado.empleadoFiltrado!!.nombre
@@ -129,7 +135,7 @@ fun HistorialEquipoScreen(
                         texto = stringResource(R.string.equipo_vacio_filtro_texto)
                     )
 
-                    visibles.isEmpty() -> EstadoVacio(
+                    vacioDeVerdad -> EstadoVacio(
                         titulo = stringResource(R.string.equipo_vacio_titulo),
                         texto = stringResource(R.string.equipo_vacio_texto)
                     )
@@ -147,6 +153,7 @@ fun HistorialEquipoScreen(
                                 onVerAuditoria = { onVerAuditoria(registro) }
                             )
                         }
+                        finDeLista(estado.paginas, viewModel::cargarMas)
                     }
                 }
             }

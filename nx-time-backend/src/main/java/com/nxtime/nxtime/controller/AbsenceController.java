@@ -6,6 +6,8 @@ import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.service.AbsenceService;
+import com.nxtime.nxtime.dto.PaginaDTO;
+import com.nxtime.nxtime.service.Paginacion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -72,12 +74,12 @@ public class AbsenceController {
 
     @Operation(summary = "Mis peticiones de ausencia",
             description = "En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) "
-                    + "solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas: es lo que "
-                    + "espera la app ya instalada.")
+                    + "solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes "
+                    + "primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Peticiones del usuario",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = AbsenceResponse.class)))),
-            @ApiResponse(responseCode = "400", description = "Rango incompleto, al revés o de más de un año",
+            @ApiResponse(responseCode = "200", description = "Una página de peticiones"),
+            @ApiResponse(responseCode = "400", description = "Rango incompleto, al revés o de más de un año; "
+                    + "página negativa o tamaño fuera de 1..200",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -86,9 +88,11 @@ public class AbsenceController {
     })
     @PreAuthorize("hasAuthority('ausencia:leer')")
     @GetMapping("/mis-peticiones")
-    public ResponseEntity<List<AbsenceResponse>> getMyRequests(
+    public ResponseEntity<PaginaDTO<AbsenceResponse>> getMyRequests(
             @RequestParam(required = false) LocalDate desde,
             @RequestParam(required = false) LocalDate hasta,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
             Authentication authentication) {
         // Las dos o ninguna: media fecha es casi siempre una llamada mal
         // construida, y responder "todo" a eso engaña más que un 400.
@@ -96,7 +100,8 @@ public class AbsenceController {
             throw new BusinessException(
                     "Para filtrar las ausencias hacen falta las dos fechas.", HttpStatus.BAD_REQUEST);
         }
-        return ResponseEntity.ok(absenceService.getMyRequests(authentication.getName(), desde, hasta));
+        return ResponseEntity.ok(absenceService.getMyRequests(
+                authentication.getName(), desde, hasta, Paginacion.pedir(pagina, tamano)));
     }
 
     @Operation(summary = "Peticiones pendientes del equipo (gestor)")

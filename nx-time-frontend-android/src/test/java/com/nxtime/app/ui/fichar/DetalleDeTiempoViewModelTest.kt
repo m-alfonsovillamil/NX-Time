@@ -1,5 +1,8 @@
 package com.nxtime.app.ui.fichar
 
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.any
+import com.nxtime.app.unaPagina
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.HorasDelDiaDTO
@@ -79,8 +82,8 @@ class DetalleDeTiempoViewModelTest {
     fun `vacaciones enseña solo las aprobadas que no han terminado, la mas cercana primero`() = runTest {
         fun ausencia(id: Long, inicio: String, fin: String, estado: EstadoAusencia) =
             RespuestaAusencia(id, inicio, fin, TipoAusencia.VACACIONES, estado, null, UsuarioSimpleDTO("Ana"))
-        whenever(repositorio.getMisPeticiones()).thenReturn(
-            Response.success(
+        whenever(repositorio.getMisPeticiones(anyOrNull(), anyOrNull(), any(), any())).thenReturn(
+            unaPagina(
                 listOf(
                     ausencia(1, "2026-12-21", "2026-12-31", EstadoAusencia.APROBADA),
                     ausencia(2, "2026-08-03", "2026-08-14", EstadoAusencia.APROBADA),
@@ -96,6 +99,9 @@ class DetalleDeTiempoViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(3L, 1L), vm.uiState.value.proximasAusencias.map { it.id })
+        // Solo desde hoy y un año por delante, que es lo único que puede ser
+        // "próximo": antes se traían todas las de la persona.
+        verify(repositorio).getMisPeticiones(miercoles, miercoles.plusDays(365), 0, 200)
         verify(repositorio, never()).getHorasPorDia(org.mockito.kotlin.any(), org.mockito.kotlin.any())
     }
 }

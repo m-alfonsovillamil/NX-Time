@@ -13,7 +13,9 @@ public interface TimeEntryService {
 
     Optional<TimeEntry> getActiveTimeEntry(String userEmail);
 
-    List<TimeEntry> getHistory(String userEmail);
+    /** El historial propio, más reciente primero, por páginas (Fase A7). */
+    org.springframework.data.domain.Page<TimeEntry> getHistory(
+            String userEmail, org.springframework.data.domain.Pageable pagina);
 
     /** Los proyectos en los que puede fichar hoy y el de la jornada en curso (ADR 017). */
     com.nxtime.nxtime.dto.ClockProjectsResponse proyectosParaFichar(String userEmail);
@@ -31,9 +33,13 @@ public interface TimeEntryService {
      * El historial propio entre dos días de España, los dos incluidos. 400 si
      * {@code desde} es posterior a {@code hasta} o el periodo pasa de un año.
      */
-    List<TimeEntry> getHistory(String userEmail, java.time.LocalDate desde, java.time.LocalDate hasta);
+    org.springframework.data.domain.Page<TimeEntry> getHistory(
+            String userEmail, java.time.LocalDate desde, java.time.LocalDate hasta,
+            org.springframework.data.domain.Pageable pagina);
 
-    List<TeamTimeEntryDTO> getTeamHistory(String managerEmail);
+    /** El historial de los EMPLEADO de la empresa, por páginas (Fase A7). */
+    org.springframework.data.domain.Page<TeamTimeEntryDTO> getTeamHistory(
+            String managerEmail, org.springframework.data.domain.Pageable pagina);
 
         /** Línea temporal completa de cambios de un fichaje. Mismo control de empresa que el resto. */
     List<TimeEntryAudit> getAuditTrail(String actorEmail, long timeEntryId);

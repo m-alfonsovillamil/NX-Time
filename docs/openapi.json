@@ -5704,7 +5704,7 @@
       "get" : {
         "tags" : [ "Incidencias de cuadrante" ],
         "summary" : "La bandeja del equipo",
-        "description" : "Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Como mucho 200.",
+        "description" : "Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).",
         "operationId" : "bandeja_1",
         "parameters" : [ {
           "name" : "resueltas",
@@ -5714,17 +5714,42 @@
             "type" : "boolean",
             "default" : false
           }
+        }, {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Incidencias",
+            "description" : "Una página de incidencias",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/ScheduleIncidentResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOScheduleIncidentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Página negativa o tamaño fuera de 1..200",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -5945,18 +5970,44 @@
       "get" : {
         "tags" : [ "Gestión" ],
         "summary" : "Historial de ausencias del equipo",
-        "description" : "Todas las que ya no están PENDIENTE.",
+        "description" : "Las que ya no están PENDIENTE, las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).",
         "operationId" : "getAbsenceHistory",
+        "parameters" : [ {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
         "responses" : {
           "200" : {
-            "description" : "Historial de ausencias",
+            "description" : "Una página del historial de ausencias",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/AbsenceResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOAbsenceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Página negativa o tamaño fuera de 1..200",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -6202,7 +6253,7 @@
       "get" : {
         "tags" : [ "Fichaje" ],
         "summary" : "Historial de fichajes propio",
-        "description" : "Sin fechas, los últimos 200, más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, formato YYYY-MM-DD): todos los de ese periodo, sin límite de filas y con un año como máximo. Hay que pasar las dos o ninguna.",
+        "description" : "Los más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.",
         "operationId" : "getHistory",
         "parameters" : [ {
           "name" : "desde",
@@ -6220,23 +6271,38 @@
             "type" : "string",
             "format" : "date"
           }
+        }, {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Historial",
+            "description" : "Una página del historial",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/TimeEntryResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOTimeEntryResponse"
                 }
               }
             }
           },
           "400" : {
-            "description" : "Solo una de las dos fechas, fecha mal escrita, inicio posterior al fin, o más de un año",
+            "description" : "Solo una de las dos fechas, fecha mal escrita, inicio posterior al fin, más de un año, página negativa o tamaño fuera de 1..200",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -6275,18 +6341,44 @@
       "get" : {
         "tags" : [ "Fichaje" ],
         "summary" : "Historial de fichajes del equipo (gestor)",
-        "description" : "Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores.",
+        "description" : "Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores. Los más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).",
         "operationId" : "getTeamHistory",
+        "parameters" : [ {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
         "responses" : {
           "200" : {
-            "description" : "Historial del equipo",
+            "description" : "Una página del historial del equipo",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/TeamTimeEntryDTO"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOTeamTimeEntryDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Página negativa o tamaño fuera de 1..200",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -7064,16 +7156,42 @@
         "summary" : "Las correcciones que he pedido yo",
         "description" : "Con su estado, para ver en qué han quedado.",
         "operationId" : "mias_2",
+        "parameters" : [ {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
         "responses" : {
           "200" : {
-            "description" : "Listado",
+            "description" : "Una página de correcciones",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CorrectionResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOCorrectionResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Página negativa o tamaño fuera de 1..200",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -7297,18 +7415,44 @@
       "get" : {
         "tags" : [ "Avisos" ],
         "summary" : "Mis avisos",
-        "description" : "Los 50 más recientes primero. Solo los propios.",
+        "description" : "Los más recientes primero. Solo los propios. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).",
         "operationId" : "getMyNotices",
+        "parameters" : [ {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
         "responses" : {
           "200" : {
-            "description" : "Listado de avisos",
+            "description" : "Una página de avisos",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/NoticeResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTONoticeResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Página negativa o tamaño fuera de 1..200",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -7419,7 +7563,7 @@
       "get" : {
         "tags" : [ "Ausencias" ],
         "summary" : "Mis peticiones de ausencia",
-        "description" : "En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas: es lo que espera la app ya instalada.",
+        "description" : "En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).",
         "operationId" : "getMyRequests",
         "parameters" : [ {
           "name" : "desde",
@@ -7437,23 +7581,38 @@
             "type" : "string",
             "format" : "date"
           }
+        }, {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "tamano",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Peticiones del usuario",
+            "description" : "Una página de peticiones",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/AbsenceResponse"
-                  }
+                  "$ref" : "#/components/schemas/PaginaDTOAbsenceResponse"
                 }
               }
             }
           },
           "400" : {
-            "description" : "Rango incompleto, al revés o de más de un año",
+            "description" : "Rango incompleto, al revés o de más de un año; página negativa o tamaño fuera de 1..200",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -10645,6 +10804,37 @@
           }
         }
       },
+      "PaginaDTOScheduleIncidentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ScheduleIncidentResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "OvertimeBalanceResponse" : {
         "type" : "object",
         "properties" : {
@@ -10669,6 +10859,37 @@
             "format" : "int64"
           },
           "alLimite" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PaginaDTOAbsenceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AbsenceResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
             "type" : "boolean"
           }
         }
@@ -10787,6 +11008,68 @@
           },
           "motivo" : {
             "type" : "string"
+          }
+        }
+      },
+      "PaginaDTOTimeEntryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TimeEntryResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PaginaDTOTeamTimeEntryDTO" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TeamTimeEntryDTO"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
+            "type" : "boolean"
           }
         }
       },
@@ -11065,6 +11348,37 @@
           }
         }
       },
+      "PaginaDTOCorrectionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CorrectionResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "CalendarAbsenceDTO" : {
         "type" : "object",
         "properties" : {
@@ -11172,6 +11486,37 @@
           "creadoEn" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "PaginaDTONoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contenido" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NoticeResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamano" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuántos elementos hay en total, en todas las páginas"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hayMas" : {
+            "type" : "boolean"
           }
         }
       },

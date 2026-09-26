@@ -1,5 +1,7 @@
 package com.nxtime.app.ui.avisos
 
+import com.nxtime.app.pagina
+import com.nxtime.app.unaPagina
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.AvisoDTO
@@ -50,15 +52,17 @@ class AvisosViewModelTest {
     }
 
     @Test
-    fun `cargar trae la lista y cuenta los no leidos`() = runTest {
-        whenever(repositorio.getAvisos()).thenReturn(
-            Response.success(listOf(aviso(1L, leido = false), aviso(2L, leido = true)))
-        )
+    fun `cargar trae la primera pagina y el contador lo da el servidor, no la lista`() = runTest {
+        // La lista es solo la primera página: contar en ella los no leídos
+        // dejaría fuera los de más abajo. Aquí la página trae uno sin leer
+        // y el servidor dice que hay siete.
+        whenever(repositorio.getAvisos()).thenReturn(unaPagina(listOf(aviso(1L, leido = false), aviso(2L, leido = true))))
+        whenever(repositorio.getContadorAvisos()).thenReturn(Response.success(ContadorAvisosDTO(7)))
         val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
         advanceUntilIdle()
 
         assertEquals(2, viewModel.uiState.value.avisos.size)
-        assertEquals(1, viewModel.uiState.value.noLeidos)
+        assertEquals(7, viewModel.uiState.value.noLeidos)
         assertFalse(viewModel.uiState.value.cargando)
     }
 
@@ -99,9 +103,8 @@ class AvisosViewModelTest {
 
     @Test
     fun `marcar leido baja el contador y voltea el aviso sin recargar`() = runTest {
-        whenever(repositorio.getAvisos()).thenReturn(
-            Response.success(listOf(aviso(1L, leido = false), aviso(2L, leido = false)))
-        )
+        whenever(repositorio.getAvisos()).thenReturn(unaPagina(listOf(aviso(1L, leido = false), aviso(2L, leido = false))))
+        whenever(repositorio.getContadorAvisos()).thenReturn(Response.success(ContadorAvisosDTO(2)))
         whenever(repositorio.marcarAvisoLeido(1L)).thenReturn(Response.success(Unit))
         val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
         advanceUntilIdle()
@@ -119,9 +122,8 @@ class AvisosViewModelTest {
 
     @Test
     fun `marcar leido dos veces no vuelve a llamar al servidor`() = runTest {
-        whenever(repositorio.getAvisos()).thenReturn(
-            Response.success(listOf(aviso(1L, leido = false)))
-        )
+        whenever(repositorio.getAvisos()).thenReturn(unaPagina(listOf(aviso(1L, leido = false))))
+        whenever(repositorio.getContadorAvisos()).thenReturn(Response.success(ContadorAvisosDTO(1)))
         whenever(repositorio.marcarAvisoLeido(1L)).thenReturn(Response.success(Unit))
         val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
         advanceUntilIdle()
@@ -136,9 +138,7 @@ class AvisosViewModelTest {
 
     @Test
     fun `marcar todos deja el contador a cero`() = runTest {
-        whenever(repositorio.getAvisos()).thenReturn(
-            Response.success(listOf(aviso(1L, leido = false), aviso(2L, leido = false)))
-        )
+        whenever(repositorio.getAvisos()).thenReturn(unaPagina(listOf(aviso(1L, leido = false), aviso(2L, leido = false))))
         whenever(repositorio.marcarTodosLosAvisosLeidos()).thenReturn(Response.success(Unit))
         val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
         advanceUntilIdle()
@@ -152,9 +152,7 @@ class AvisosViewModelTest {
 
     @Test
     fun `limpiar borra el estado al cerrar sesion`() = runTest {
-        whenever(repositorio.getAvisos()).thenReturn(
-            Response.success(listOf(aviso(1L, leido = false)))
-        )
+        whenever(repositorio.getAvisos()).thenReturn(unaPagina(listOf(aviso(1L, leido = false))))
         val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
         advanceUntilIdle()
 
@@ -165,5 +163,49 @@ class AvisosViewModelTest {
         // anterior.
         assertEquals(0, viewModel.uiState.value.noLeidos)
         assertTrue(viewModel.uiState.value.avisos.isEmpty())
+    }
+
+    // ------------------------------------------------------------------
+    // Por páginas (Fase A7)
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `al llegar al final pide la pagina siguiente y la añade sin repetir`() = runTest {
+        whenever(repositorio.getAvisos(0))
+            .thenReturn(pagina(0, listOf(aviso(3L, leido = true), aviso(2L, leido = true)), hayMas = true))
+        // Entre las dos peticiones ha llegado un aviso nuevo arriba: el 2
+        // baja a la segunda página y vendría dos veces.
+        whenever(repositorio.getAvisos(1))
+            .thenReturn(pagina(1, listOf(aviso(2L, leido = true), aviso(1L, leido = true)), hayMas = false))
+        val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
+        advanceUntilIdle()
+
+        viewModel.cargarMas()
+        advanceUntilIdle()
+
+        assertEquals(listOf(3L, 2L, 1L), viewModel.uiState.value.avisos.map { it.id })
+        assertFalse(viewModel.uiState.value.paginas.hayMas)
+        // Sin más páginas, otra llamada no sale a la red.
+        viewModel.cargarMas()
+        advanceUntilIdle()
+        verify(repositorio, org.mockito.kotlin.times(1)).getAvisos(1)
+    }
+
+    @Test
+    fun `si la pagina siguiente falla se queda lo cargado y se ofrece reintentar`() = runTest {
+        whenever(repositorio.getAvisos(0)).thenReturn(pagina(0, listOf(aviso(2L, leido = true)), hayMas = true))
+        whenever(repositorio.getAvisos(1)).thenThrow(RuntimeException("sin red"))
+        val viewModel = AvisosViewModel(repositorio).also { it.cargar() }
+        advanceUntilIdle()
+
+        viewModel.cargarMas()
+        advanceUntilIdle()
+
+        val estado = viewModel.uiState.value
+        assertEquals(listOf(2L), estado.avisos.map { it.id })
+        assertTrue(estado.paginas.fallo)
+        assertTrue(estado.paginas.hayMas)
+        // No es un error de pantalla: lo que ya se veía sigue ahí.
+        assertEquals(null, estado.error)
     }
 }

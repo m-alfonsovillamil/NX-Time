@@ -66,9 +66,11 @@ class AuthRepositoryImpl(
 
     override suspend fun getHistorial(
         desde: java.time.LocalDate?,
-        hasta: java.time.LocalDate?
-    ): Response<List<Registro>> {
-        return apiService.getHistorial(desde?.toString(), hasta?.toString())
+        hasta: java.time.LocalDate?,
+        pagina: Int,
+        tamano: Int
+    ): Response<PaginaDTO<Registro>> {
+        return apiService.getHistorial(desde?.toString(), hasta?.toString(), pagina, tamano)
     }
 
     override suspend fun getHorasPorDia(
@@ -111,8 +113,8 @@ class AuthRepositoryImpl(
     override suspend fun getMisIncidencias(anio: Int?): Response<List<IncidenciaDTO>> =
         apiService.getMisIncidencias(anio)
 
-    override suspend fun getIncidenciasDelEquipo(resueltas: Boolean): Response<List<IncidenciaDTO>> =
-        apiService.getIncidenciasDelEquipo(resueltas)
+    override suspend fun getIncidenciasDelEquipo(resueltas: Boolean, pagina: Int): Response<PaginaDTO<IncidenciaDTO>> =
+        apiService.getIncidenciasDelEquipo(resueltas, pagina)
 
     override suspend fun justificarIncidencia(id: Long, texto: String): Response<IncidenciaDTO> =
         apiService.justificarIncidencia(id, JustificarIncidenciaRequest(texto))
@@ -147,8 +149,8 @@ class AuthRepositoryImpl(
         return apiService.getCorreccionesPendientes()
     }
 
-    override suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>> {
-        return apiService.getMisCorrecciones()
+    override suspend fun getMisCorrecciones(pagina: Int): Response<PaginaDTO<CorreccionDTO>> {
+        return apiService.getMisCorrecciones(pagina)
     }
 
     override suspend fun resolverCorreccion(
@@ -358,8 +360,13 @@ class AuthRepositoryImpl(
         return apiService.solicitarAusencia(peticion)
     }
 
-    override suspend fun getMisPeticiones(): Response<List<RespuestaAusencia>> {
-        return apiService.getMisPeticiones()
+    override suspend fun getMisPeticiones(
+        desde: java.time.LocalDate?,
+        hasta: java.time.LocalDate?,
+        pagina: Int,
+        tamano: Int
+    ): Response<PaginaDTO<RespuestaAusencia>> {
+        return apiService.getMisPeticiones(desde?.toString(), hasta?.toString(), pagina, tamano)
     }
 
     /* Implementación de Ausencias (Gestor)  */
@@ -385,14 +392,14 @@ class AuthRepositoryImpl(
         return apiService.getSaldoVacaciones()
     }
 
-    override suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>> {
-        return apiService.getHistorialAusencias()
+    override suspend fun getHistorialAusencias(pagina: Int): Response<PaginaDTO<RespuestaAusencia>> {
+        return apiService.getHistorialAusencias(pagina)
     }
 
     /*  Implementación de Historial (Gestor)  */
 
-    override suspend fun getHistorialEquipo(): Response<List<RegistroEquipoDTO>> {
-        return apiService.getHistorialEquipo()
+    override suspend fun getHistorialEquipo(pagina: Int): Response<PaginaDTO<RegistroEquipoDTO>> {
+        return apiService.getHistorialEquipo(pagina)
     }
 
     /*  Implementación de Gestión (Gestor/Usuario)  */
@@ -569,8 +576,8 @@ class AuthRepositoryImpl(
         return apiService.borrarFestivo(id)
     }
 
-    override suspend fun getAvisos(): Response<List<AvisoDTO>> {
-        return apiService.getAvisos()
+    override suspend fun getAvisos(pagina: Int): Response<PaginaDTO<AvisoDTO>> {
+        return apiService.getAvisos(pagina)
     }
 
     override suspend fun getContadorAvisos(): Response<ContadorAvisosDTO> {

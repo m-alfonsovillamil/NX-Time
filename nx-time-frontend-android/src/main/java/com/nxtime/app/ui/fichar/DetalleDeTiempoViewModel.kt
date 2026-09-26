@@ -6,6 +6,7 @@ import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.HorasDelDiaDTO
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.data.network.ApiErrorParser
+import com.nxtime.app.data.network.Paginas
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
 import java.time.DayOfWeek
@@ -79,7 +80,13 @@ class DetalleDeTiempoViewModel(
     }
 
     private suspend fun cargarAusencias() {
-        val respuesta = authRepository.getMisPeticiones()
+        // Solo las que tocan desde hoy hasta dentro de un año (el máximo que
+        // admite el servidor): son las únicas que pueden ser "próximas".
+        // Antes se traían todas las de la persona para quedarse con estas.
+        val desde = hoy()
+        val respuesta = Paginas.todas { pagina ->
+            authRepository.getMisPeticiones(desde, desde.plusDays(365), pagina, Paginas.TAMANO_MAXIMO)
+        }
         val cuerpo = respuesta.body()
         if (respuesta.isSuccessful && cuerpo != null) {
             _uiState.update { it.copy(cargando = false, proximasAusencias = proximasAprobadas(cuerpo, hoy())) }

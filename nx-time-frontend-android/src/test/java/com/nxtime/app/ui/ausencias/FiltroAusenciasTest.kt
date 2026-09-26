@@ -1,5 +1,8 @@
 package com.nxtime.app.ui.ausencias
 
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.any
+import com.nxtime.app.unaPagina
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
@@ -79,7 +82,7 @@ class FiltroAusenciasTest {
     @Test
     fun `el filtro se conserva al recargar y se puede quitar`() = runTest {
         val repositorio: AuthRepository = mock()
-        whenever(repositorio.getMisPeticiones()).thenReturn(Response.success(lista))
+        whenever(repositorio.getMisPeticiones(anyOrNull(), anyOrNull(), any(), any())).thenReturn(unaPagina(lista))
         val vm = AusenciasViewModel(repositorio)
         advanceUntilIdle()
 

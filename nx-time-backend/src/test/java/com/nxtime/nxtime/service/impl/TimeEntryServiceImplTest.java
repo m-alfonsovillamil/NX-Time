@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import org.springframework.data.domain.PageRequest;
+import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -329,18 +331,14 @@ class TimeEntryServiceImplTest {
     }
 
     @Test
-    @DisplayName("getHistory delega en el repositorio con un Pageable acotado a 200 filas")
-    void getHistory_delegaEnRepositorioConPageableLimitado() {
+    @DisplayName("getHistory pasa al repositorio la página pedida, tal cual")
+    void getHistory_delegaLaPaginaPedida() {
         when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
         TimeEntry entry = TimeEntry.builder().id(1L).usuario(empleado).horaEntrada(Instant.now()).build();
-        when(timeEntryRepository.findHistoryByUsuario(eq(empleado), any(Pageable.class))).thenReturn(List.of(entry));
+        Pageable pedida = PageRequest.of(2, 25);
+        when(timeEntryRepository.findHistoryByUsuario(empleado, pedida)).thenReturn(Paginas.page(List.of(entry)));
 
-        List<TimeEntry> result = service.getHistory(empleado.getEmail());
-
-        assertThat(result).containsExactly(entry);
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(timeEntryRepository).findHistoryByUsuario(eq(empleado), pageableCaptor.capture());
-        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(200);
+        assertThat(service.getHistory(empleado.getEmail(), pedida).getContent()).containsExactly(entry);
     }
 
     @Test
@@ -349,11 +347,11 @@ class TimeEntryServiceImplTest {
         User gestor = User.builder().id(20L).email("gestor@nxtime.test").empresa(empresa).build();
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         TimeEntry entry = TimeEntry.builder().id(1L).usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build();
-        when(timeEntryRepository.findTeamHistory(eq(empresa), any(Pageable.class))).thenReturn(List.of(entry));
+        when(timeEntryRepository.findTeamHistory(eq(empresa), any(Pageable.class))).thenReturn(Paginas.page(List.of(entry)));
         TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, 0L, 0L);
         when(timeEntryMapper.toTeamDTO(entry)).thenReturn(dto);
 
-        List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail());
+        List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail(), PageRequest.of(0, 50)).getContent();
 
         assertThat(result).containsExactly(dto);
     }

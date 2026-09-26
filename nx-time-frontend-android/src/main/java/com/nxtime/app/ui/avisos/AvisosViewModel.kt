@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.AvisoDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.EstadoDePaginas
 import com.nxtime.app.ui.util.MensajeUi
+import com.nxtime.app.ui.util.pedirSiguiente
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 data class AvisosUiState(
     val cargando: Boolean = false,
     val avisos: List<AvisoDTO> = emptyList(),
+    val paginas: EstadoDePaginas = EstadoDePaginas(),
     val noLeidos: Int = 0,
     val error: MensajeUi? = null
 )
@@ -63,11 +66,16 @@ class AvisosViewModel(private val authRepository: AuthRepository) : ViewModel() 
                     _uiState.update {
                         it.copy(
                             cargando = false,
-                            avisos = cuerpo,
-                            noLeidos = cuerpo.count { aviso -> !aviso.leido },
+                            avisos = cuerpo.contenido,
+                            paginas = EstadoDePaginas.tras(cuerpo),
                             error = null
                         )
                     }
+                    // El número de la campana se pide aparte, y no se cuenta
+                    // en la lista: la lista es solo la primera página, y ya
+                    // antes era un "Top 50" que contaba mal a quien tuviera
+                    // no leídos más abajo.
+                    refrescarContador()
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
@@ -78,6 +86,19 @@ class AvisosViewModel(private val authRepository: AuthRepository) : ViewModel() 
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
             }
+        }
+    }
+
+    /** La página siguiente, al llegar al final de la lista. */
+    fun cargarMas() {
+        val estado = _uiState.value
+        if (!estado.paginas.puedeCargarMas) return
+        _uiState.update { it.copy(paginas = it.paginas.copy(cargandoMas = true, fallo = false)) }
+        viewModelScope.launch {
+            val siguiente = pedirSiguiente(estado.paginas, estado.avisos, AvisoDTO::id) {
+                authRepository.getAvisos(it)
+            }
+            _uiState.update { it.copy(avisos = it.avisos + siguiente.nuevos, paginas = siguiente.estado) }
         }
     }
 

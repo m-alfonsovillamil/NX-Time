@@ -4,15 +4,16 @@ import com.nxtime.nxtime.dto.NoticeResponse;
 import com.nxtime.nxtime.dto.UnreadNoticeCountResponse;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.NoticeService;
+import com.nxtime.nxtime.dto.PaginaDTO;
+import com.nxtime.nxtime.service.Paginacion;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -45,17 +46,23 @@ public class NoticeController {
         this.noticeService = noticeService;
     }
 
-    @Operation(summary = "Mis avisos", description = "Los 50 más recientes primero. Solo los propios.")
+    @Operation(summary = "Mis avisos",
+            description = "Los más recientes primero. Solo los propios. Por páginas: 'pagina' desde 0 y "
+                    + "'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Listado de avisos",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = NoticeResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página de avisos"),
+            @ApiResponse(responseCode = "400", description = "Página negativa o tamaño fuera de 1..200",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<NoticeResponse>> getMyNotices(@AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(noticeService.getMisAvisos(usuario.getUser()));
+    public ResponseEntity<PaginaDTO<NoticeResponse>> getMyNotices(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(noticeService.getMisAvisos(usuario.getUser(), Paginacion.pedir(pagina, tamano)));
     }
 
     @Operation(summary = "Cuántos avisos sin leer tengo",

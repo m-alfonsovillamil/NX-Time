@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,9 +32,12 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      * en el historial -- la fila nueva (correcta) sí, y la traza de
      * ambas queda en TimeEntryAudit, no se pierde.
      */
-    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
-            + "WHERE t.usuario = :usuario AND t.anulado = false ORDER BY t.horaEntrada DESC")
-    List<TimeEntry> findHistoryByUsuario(@Param("usuario") User usuario, Pageable pageable);
+    @Query(value = "SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.usuario = :usuario AND t.anulado = false ORDER BY t.horaEntrada DESC, t.id DESC",
+            // Un JOIN FETCH no se puede contar: Spring derivaría un COUNT que
+            // Hibernate rechaza. Se le da el suyo, sin el fetch.
+            countQuery = "SELECT COUNT(t) FROM registros t WHERE t.usuario = :usuario AND t.anulado = false")
+    Page<TimeEntry> findHistoryByUsuario(@Param("usuario") User usuario, Pageable pageable);
 
     /**
      * Antes usaba findByEmpresa (TODOS los usuarios de la empresa,
@@ -46,10 +50,13 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      * join a "usuarios" para el filtro de tenant. "t.anulado = false"
      * (Fase 8): ver findHistoryByUsuario.
      */
-    @Query("SELECT t FROM registros t JOIN FETCH t.usuario u "
+    @Query(value = "SELECT t FROM registros t JOIN FETCH t.usuario u "
             + "WHERE t.empresa = :empresa AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
-            + "AND t.anulado = false ORDER BY t.horaEntrada DESC")
-    List<TimeEntry> findTeamHistory(@Param("empresa") Company empresa, Pageable pageable);
+            + "AND t.anulado = false ORDER BY t.horaEntrada DESC, t.id DESC",
+            countQuery = "SELECT COUNT(t) FROM registros t JOIN t.usuario u "
+            + "WHERE t.empresa = :empresa AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
+            + "AND t.anulado = false")
+    Page<TimeEntry> findTeamHistory(@Param("empresa") Company empresa, Pageable pageable);
 
     /**
      * Jornadas todavía abiertas cuya entrada es anterior al límite dado:
@@ -169,18 +176,24 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     /**
      * El historial propio acotado a un periodo, más recientes primero.
      *
-     * A diferencia de {@link #findHistoryByUsuario}, sin límite de filas: el
-     * rango ya lo acota el servicio (un año como mucho). Incluye la jornada
-     * abierta si cae en el periodo, igual que el historial sin filtro.
+     * Paginado como {@link #findHistoryByUsuario} desde la Fase A7: el rango
+     * lo acota el servicio (un año como mucho), y quien necesita el periodo
+     * entero --para sumar sus horas-- pide las páginas que haga falta.
+     * Incluye la jornada abierta si cae en el periodo, igual que el
+     * historial sin filtro.
      */
-    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+    @Query(value = "SELECT t FROM registros t JOIN FETCH t.usuario "
             + "WHERE t.usuario = :usuario AND t.anulado = false "
             + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta "
-            + "ORDER BY t.horaEntrada DESC")
-    List<TimeEntry> findHistoryByUsuarioEntre(
+            + "ORDER BY t.horaEntrada DESC, t.id DESC",
+            countQuery = "SELECT COUNT(t) FROM registros t "
+            + "WHERE t.usuario = :usuario AND t.anulado = false "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta")
+    Page<TimeEntry> findHistoryByUsuarioEntre(
             @Param("usuario") User usuario,
             @Param("desde") Instant desde,
-            @Param("hasta") Instant hasta);
+            @Param("hasta") Instant hasta,
+            Pageable pageable);
 
     /** Lo mismo para un único empleado: el informe mensual individual. */
     @Query("SELECT t FROM registros t JOIN FETCH t.usuario "

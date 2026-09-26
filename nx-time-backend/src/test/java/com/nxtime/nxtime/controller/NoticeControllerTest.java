@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.support.Paginas;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -56,14 +57,15 @@ class NoticeControllerTest {
     @WithMockSecurityUser(rol = Role.EMPLEADO)
     @DisplayName("GET /avisos como EMPLEADO devuelve 200: los avisos no piden authority")
     void getMyNotices_comoEmpleado_devuelve200() throws Exception {
-        when(noticeService.getMisAvisos(any())).thenReturn(List.of(aviso()));
+        when(noticeService.getMisAvisos(any(), any())).thenReturn(Paginas.una(List.of(aviso())));
 
         mockMvc.perform(get("/api/v1/avisos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].tipo").value("AUSENCIA_RESUELTA"))
-                .andExpect(jsonPath("$[0].rutaDestino").value("ausencias"))
-                .andExpect(jsonPath("$[0].leido").value(false));
+                .andExpect(jsonPath("$.contenido[0].id").value(1))
+                .andExpect(jsonPath("$.contenido[0].tipo").value("AUSENCIA_RESUELTA"))
+                .andExpect(jsonPath("$.contenido[0].rutaDestino").value("ausencias"))
+                .andExpect(jsonPath("$.contenido[0].leido").value(false))
+                .andExpect(jsonPath("$.hayMas").value(false));
     }
 
     @Test
@@ -76,7 +78,7 @@ class NoticeControllerTest {
         // contra la aplicación completa.
         mockMvc.perform(get("/api/v1/avisos")).andExpect(status().is4xxClientError());
 
-        verify(noticeService, Mockito.never()).getMisAvisos(any());
+        verify(noticeService, Mockito.never()).getMisAvisos(any(), any());
     }
 
     @Test

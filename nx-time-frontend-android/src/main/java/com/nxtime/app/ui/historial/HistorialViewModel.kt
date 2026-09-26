@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.network.ApiErrorParser
+import com.nxtime.app.data.network.Paginas
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.DateFormats
+import com.nxtime.app.ui.util.EstadoDePaginas
 import com.nxtime.app.ui.util.MensajeUi
+import com.nxtime.app.ui.util.pedirSiguiente
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +21,8 @@ import java.time.ZoneId
 data class HistorialUiState(
     val cargando: Boolean = true,
     val registros: List<Registro> = emptyList(),
+    /** Solo en [PeriodoHistorial.Recientes]: un periodo se carga entero. */
+    val paginas: EstadoDePaginas = EstadoDePaginas(),
     val periodo: PeriodoHistorial = PeriodoHistorial.Recientes,
     /** Los dos días del periodo, para la cabecera. Null en [PeriodoHistorial.Recientes]. */
     val rango: Pair<LocalDate, LocalDate>? = null,
@@ -59,16 +64,10 @@ class HistorialViewModel(
         _uiState.update { it.copy(cargando = true, error = null, rango = rango) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.getHistorial(rango?.first, rango?.second)
-                val cuerpo = respuesta.body()
-                if (respuesta.isSuccessful && cuerpo != null) {
-                    _uiState.update {
-                        it.copy(cargando = false, registros = cuerpo, error = null)
-                    }
+                if (rango == null) {
+                    cargarRecientes()
                 } else {
-                    _uiState.update {
-                        it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
-                    }
+                    cargarPeriodo(rango)
                 }
             } catch (e: Exception) {
                 _uiState.update {
@@ -77,4 +76,55 @@ class HistorialViewModel(
             }
         }
     }
+
+    /** Los recientes, por páginas: la siguiente llega al bajar ([cargarMas]). */
+    private suspend fun cargarRecientes() {
+        val respuesta = authRepository.getHistorial()
+        val cuerpo = respuesta.body()
+        if (respuesta.isSuccessful && cuerpo != null) {
+            _uiState.update {
+                it.copy(
+                    cargando = false,
+                    registros = cuerpo.contenido,
+                    paginas = EstadoDePaginas.tras(cuerpo),
+                    error = null
+                )
+            }
+        } else {
+            _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
+        }
+    }
+
+    /**
+     * Un periodo, ENTERO: la cabecera suma sus horas, y sumar solo la
+     * primera página daría un total falso sin avisar. El servidor limita el
+     * periodo a un año, así que son pocas peticiones de 200.
+     */
+    private suspend fun cargarPeriodo(rango: Pair<LocalDate, LocalDate>) {
+        val respuesta = Paginas.todas { pagina ->
+            authRepository.getHistorial(rango.first, rango.second, pagina, Paginas.TAMANO_MAXIMO)
+        }
+        val cuerpo = respuesta.body()
+        if (respuesta.isSuccessful && cuerpo != null) {
+            _uiState.update {
+                it.copy(cargando = false, registros = cuerpo, paginas = EstadoDePaginas(), error = null)
+            }
+        } else {
+            _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
+        }
+    }
+
+    /** La página siguiente de los recientes, al llegar al final de la lista. */
+    fun cargarMas() {
+        val estado = _uiState.value
+        if (!estado.paginas.puedeCargarMas) return
+        _uiState.update { it.copy(paginas = it.paginas.copy(cargandoMas = true, fallo = false)) }
+        viewModelScope.launch {
+            val siguiente = pedirSiguiente(estado.paginas, estado.registros, Registro::id) {
+                authRepository.getHistorial(pagina = it)
+            }
+            _uiState.update { it.copy(registros = it.registros + siguiente.nuevos, paginas = siguiente.estado) }
+        }
+    }
+
 }

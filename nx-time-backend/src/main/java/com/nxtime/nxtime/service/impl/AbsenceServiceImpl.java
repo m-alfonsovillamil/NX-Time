@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import org.springframework.data.domain.Pageable;
+import com.nxtime.nxtime.dto.PaginaDTO;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
@@ -206,11 +208,6 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
     }
 
-    @Override
-    public List<AbsenceResponse> getMyRequests(String email) {
-        User user = getUser(email);
-        return absenceRequestRepository.findByUsuario(user).stream().map(this::toResponse).toList();
-    }
 
     /**
      * Lo mismo, pero de un periodo.
@@ -222,9 +219,11 @@ public class AbsenceServiceImpl implements AbsenceService {
      * fichajes, por la misma razón.
      */
     @Override
-    public List<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta) {
+    public com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getMyRequests(
+            String email, LocalDate desde, LocalDate hasta, org.springframework.data.domain.Pageable pagina) {
         if (desde == null || hasta == null) {
-            return getMyRequests(email);
+            return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findByUsuarioOrderByFechaInicioDescIdDesc(getUser(email), pagina),
+                    this::toResponse);
         }
         if (desde.isAfter(hasta)) {
             throw new BusinessException(
@@ -234,8 +233,7 @@ public class AbsenceServiceImpl implements AbsenceService {
             throw new BusinessException("El periodo no puede pasar de un año.", HttpStatus.BAD_REQUEST);
         }
         User user = getUser(email);
-        return absenceRequestRepository.findDeUsuarioEnRango(user, desde, hasta)
-                .stream().map(this::toResponse).toList();
+        return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findDeUsuarioEnRango(user, desde, hasta, pagina), this::toResponse);
     }
 
     @Override
@@ -304,11 +302,11 @@ public class AbsenceServiceImpl implements AbsenceService {
     }
 
     @Override
-    public List<AbsenceResponse> getHistory(String managerEmail) {
+    public PaginaDTO<AbsenceResponse> getHistory(String managerEmail, Pageable pagina) {
         User manager = getUser(managerEmail);
         long companyId = manager.getEmpresa().getId();
-        return absenceRequestRepository.findByEmpresa_IdAndEstadoIsNot(companyId, AbsenceStatus.PENDIENTE)
-                .stream().map(this::toResponse).toList();
+        return PaginaDTO.de(absenceRequestRepository.findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
+                companyId, AbsenceStatus.PENDIENTE, pagina), this::toResponse);
     }
 
     @Override

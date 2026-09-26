@@ -100,14 +100,17 @@ interface ApiService {
     ): Response<Registro>
 
     /**
-     * Sin fechas, los últimos 200. Con las dos ("YYYY-MM-DD", días de España,
-     * incluidos), todo ese periodo. Retrofit no manda los parámetros a null.
+     * Por páginas, los más recientes primero. Con las dos fechas
+     * ("YYYY-MM-DD", días de España, incluidas), solo ese periodo. Retrofit
+     * no manda los parámetros a null.
      */
     @GET("api/v1/fichaje/historial")
     suspend fun getHistorial(
         @Query("desde") desde: String? = null,
-        @Query("hasta") hasta: String? = null
-    ): Response<List<Registro>>
+        @Query("hasta") hasta: String? = null,
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<Registro>>
 
     /** Mis horas día a día ("YYYY-MM-DD", días de España, 62 como mucho). */
     @GET("api/v1/dashboard/horas-por-dia")
@@ -154,8 +157,10 @@ interface ApiService {
      */
     @GET("api/v1/incidencias/equipo")
     suspend fun getIncidenciasDelEquipo(
-        @Query("resueltas") resueltas: Boolean = false
-    ): Response<List<IncidenciaDTO>>
+        @Query("resueltas") resueltas: Boolean = false,
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<IncidenciaDTO>>
 
     /** Explicar una propia. Se puede rehacer mientras nadie haya decidido. */
     @POST("api/v1/incidencias/{id}/justificacion")
@@ -222,7 +227,10 @@ interface ApiService {
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
 
     @GET("api/v1/correcciones/mias")
-    suspend fun getMisCorrecciones(): Response<List<CorreccionDTO>>
+    suspend fun getMisCorrecciones(
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<CorreccionDTO>>
 
     @PATCH("api/v1/correcciones/{id}/estado")
     suspend fun resolverCorreccion(
@@ -512,8 +520,14 @@ interface ApiService {
         @Body peticion: PeticionAusenciaDTO
     ): Response<RespuestaAusencia>
 
+    /** Por páginas; con las dos fechas, solo las que tocan ese periodo (un año como mucho). */
     @GET("api/v1/ausencias/mis-peticiones")
-    suspend fun getMisPeticiones(): Response<List<RespuestaAusencia>>
+    suspend fun getMisPeticiones(
+        @Query("desde") desde: String? = null,
+        @Query("hasta") hasta: String? = null,
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<RespuestaAusencia>>
 
     /*  Endpoints de GESTOR (Ausencias)  */
 
@@ -537,7 +551,10 @@ interface ApiService {
     /*  Endpoints de GESTOR (Varios) */
 
     @GET("api/v1/fichaje/gestor/historial")
-    suspend fun getHistorialEquipo(): Response<List<RegistroEquipoDTO>>
+    suspend fun getHistorialEquipo(
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<RegistroEquipoDTO>>
 
     @POST("api/v1/gestor/empleados")
     suspend fun crearEmpleado(
@@ -548,7 +565,10 @@ interface ApiService {
     suspend fun getMisEmpleados(): Response<List<EmpleadoSimpleDTO>>
 
     @GET("api/v1/gestor/ausencias-historial")
-    suspend fun getHistorialAusencias(): Response<List<RespuestaAusencia>>
+    suspend fun getHistorialAusencias(
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<RespuestaAusencia>>
 
     /**
      * Configura la jornada semanal y/o los días de vacaciones del año
@@ -735,7 +755,10 @@ interface ApiService {
     /*  Endpoints de AVISOS (cualquiera con sesión iniciada) */
 
     @GET("api/v1/avisos")
-    suspend fun getAvisos(): Response<List<AvisoDTO>>
+    suspend fun getAvisos(
+        @Query("pagina") pagina: Int = 0,
+        @Query("tamano") tamano: Int = Paginas.TAMANO
+    ): Response<PaginaDTO<AvisoDTO>>
 
     /** Solo el contador: se pide mucho más a menudo que la lista. */
     @GET("api/v1/avisos/no-leidos")

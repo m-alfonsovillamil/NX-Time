@@ -75,10 +75,9 @@ public class NoticeServiceImpl implements NoticeService {
     }
 
     @Override
-    public List<NoticeResponse> getMisAvisos(User destinatario) {
-        return noticeRepository.findTop50ByDestinatarioOrderByCreadoEnDesc(destinatario).stream()
-                .map(this::toResponse)
-                .toList();
+    public com.nxtime.nxtime.dto.PaginaDTO<NoticeResponse> getMisAvisos(User destinatario, org.springframework.data.domain.Pageable pagina) {
+        return com.nxtime.nxtime.dto.PaginaDTO.de(
+                noticeRepository.findByDestinatarioOrderByCreadoEnDescIdDesc(destinatario, pagina), this::toResponse);
     }
 
     @Override

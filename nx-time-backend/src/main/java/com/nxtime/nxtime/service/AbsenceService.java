@@ -12,14 +12,13 @@ public interface AbsenceService {
 
     AbsenceResponse createRequest(String email, AbsenceRequestDTO requestDTO);
 
-    List<AbsenceResponse> getMyRequests(String email);
 
     /**
      * Mis ausencias de un periodo. Las dos fechas son de España y "hasta"
      * entra. Sin rango se comportan como siempre (lo manda todo), para no
      * romper la app ya instalada.
      */
-    List<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta);
+    com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getMyRequests(String email, LocalDate desde, LocalDate hasta, org.springframework.data.domain.Pageable pagina);
 
     List<AbsenceResponse> getPendingRequests(String managerEmail);
 
@@ -33,7 +32,8 @@ public interface AbsenceService {
      */
     AbsenceResponse changeRequestStatus(String managerEmail, long requestId, UpdateAbsenceStatusRequest request);
 
-    List<AbsenceResponse> getHistory(String managerEmail);
+    com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getHistory(
+            String managerEmail, org.springframework.data.domain.Pageable pagina);
 
     /** Saldo de vacaciones del propio usuario para ese año (Fase 9). */
     VacationBalanceResponse getMyVacationBalance(String email, int anio);

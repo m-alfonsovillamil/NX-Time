@@ -23,7 +23,8 @@ public interface NoticeService {
     void publicar(CreateNoticeCommand comando);
 
     /** Los avisos de una persona, del más reciente al más antiguo. */
-    List<NoticeResponse> getMisAvisos(User destinatario);
+    /** Los avisos propios, del más reciente al más antiguo, por páginas (Fase A7). */
+    com.nxtime.nxtime.dto.PaginaDTO<NoticeResponse> getMisAvisos(User destinatario, org.springframework.data.domain.Pageable pagina);
 
     long contarNoLeidos(User destinatario);
 

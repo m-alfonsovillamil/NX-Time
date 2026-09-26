@@ -1523,7 +1523,7 @@ export interface paths {
         };
         /**
          * La bandeja del equipo
-         * @description Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Como mucho 200.
+         * @description Las de la empresa sin las propias. Por defecto las que esperan decisión (PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["bandeja_1"];
         put?: never;
@@ -1623,7 +1623,7 @@ export interface paths {
         };
         /**
          * Historial de ausencias del equipo
-         * @description Todas las que ya no están PENDIENTE.
+         * @description Las que ya no están PENDIENTE, las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["getAbsenceHistory"];
         put?: never;
@@ -1743,7 +1743,7 @@ export interface paths {
         };
         /**
          * Historial de fichajes propio
-         * @description Sin fechas, los últimos 200, más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, formato YYYY-MM-DD): todos los de ese periodo, sin límite de filas y con un año como máximo. Hay que pasar las dos o ninguna.
+         * @description Los más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.
          */
         get: operations["getHistory"];
         put?: never;
@@ -1763,7 +1763,7 @@ export interface paths {
         };
         /**
          * Historial de fichajes del equipo (gestor)
-         * @description Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores.
+         * @description Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores. Los más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["getTeamHistory"];
         put?: never;
@@ -2183,7 +2183,7 @@ export interface paths {
         };
         /**
          * Mis avisos
-         * @description Los 50 más recientes primero. Solo los propios.
+         * @description Los más recientes primero. Solo los propios. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["getMyNotices"];
         put?: never;
@@ -2243,7 +2243,7 @@ export interface paths {
         };
         /**
          * Mis peticiones de ausencia
-         * @description En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas: es lo que espera la app ya instalada.
+         * @description En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["getMyRequests"];
         put?: never;
@@ -3420,6 +3420,21 @@ export interface components {
             /** Format: int32 */
             diasTotales?: number;
         };
+        PaginaDTOScheduleIncidentResponse: {
+            contenido?: components["schemas"]["ScheduleIncidentResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
+        };
         OvertimeBalanceResponse: {
             /** Format: int32 */
             anio?: number;
@@ -3432,6 +3447,21 @@ export interface components {
             /** Format: int64 */
             avisosAbiertos?: number;
             alLimite?: boolean;
+        };
+        PaginaDTOAbsenceResponse: {
+            contenido?: components["schemas"]["AbsenceResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
         };
         SignatureVerificationResponse: {
             /** Format: int64 */
@@ -3480,6 +3510,36 @@ export interface components {
         TodayStatusResponse: {
             laborable?: boolean;
             motivo?: string;
+        };
+        PaginaDTOTimeEntryResponse: {
+            contenido?: components["schemas"]["TimeEntryResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
+        };
+        PaginaDTOTeamTimeEntryDTO: {
+            contenido?: components["schemas"]["TeamTimeEntryDTO"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
         };
         TeamTimeEntryDTO: {
             /** Format: int64 */
@@ -3604,6 +3664,21 @@ export interface components {
             nombre?: string;
             dia?: components["schemas"]["TheoreticalDayResponse"];
         };
+        PaginaDTOCorrectionResponse: {
+            contenido?: components["schemas"]["CorrectionResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
+        };
         CalendarAbsenceDTO: {
             /** Format: int64 */
             id?: number;
@@ -3647,6 +3722,21 @@ export interface components {
             leido?: boolean;
             /** Format: date-time */
             creadoEn?: string;
+        };
+        PaginaDTONoticeResponse: {
+            contenido?: components["schemas"]["NoticeResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
         };
         UnreadNoticeCountResponse: {
             /** Format: int64 */
@@ -8296,6 +8386,8 @@ export interface operations {
         parameters: {
             query?: {
                 resueltas?: boolean;
+                pagina?: number;
+                tamano?: number;
             };
             header?: never;
             path?: never;
@@ -8303,13 +8395,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Incidencias */
+            /** @description Una página de incidencias */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ScheduleIncidentResponse"][];
+                    "*/*": components["schemas"]["PaginaDTOScheduleIncidentResponse"];
+                };
+            };
+            /** @description Página negativa o tamaño fuera de 1..200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Sin 'cuadrante:incidencias:revisar' */
@@ -8466,20 +8567,32 @@ export interface operations {
     };
     getAbsenceHistory: {
         parameters: {
-            query?: never;
+            query?: {
+                pagina?: number;
+                tamano?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Historial de ausencias */
+            /** @description Una página del historial de ausencias */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AbsenceResponse"][];
+                    "*/*": components["schemas"]["PaginaDTOAbsenceResponse"];
+                };
+            };
+            /** @description Página negativa o tamaño fuera de 1..200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description No autenticado */
@@ -8666,6 +8779,8 @@ export interface operations {
             query?: {
                 desde?: string;
                 hasta?: string;
+                pagina?: number;
+                tamano?: number;
             };
             header?: never;
             path?: never;
@@ -8673,16 +8788,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Historial */
+            /** @description Una página del historial */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TimeEntryResponse"][];
+                    "*/*": components["schemas"]["PaginaDTOTimeEntryResponse"];
                 };
             };
-            /** @description Solo una de las dos fechas, fecha mal escrita, inicio posterior al fin, o más de un año */
+            /** @description Solo una de las dos fechas, fecha mal escrita, inicio posterior al fin, más de un año, página negativa o tamaño fuera de 1..200 */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -8713,20 +8828,32 @@ export interface operations {
     };
     getTeamHistory: {
         parameters: {
-            query?: never;
+            query?: {
+                pagina?: number;
+                tamano?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Historial del equipo */
+            /** @description Una página del historial del equipo */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TeamTimeEntryDTO"][];
+                    "*/*": components["schemas"]["PaginaDTOTeamTimeEntryDTO"];
+                };
+            };
+            /** @description Página negativa o tamaño fuera de 1..200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description No autenticado */
@@ -9308,20 +9435,32 @@ export interface operations {
     };
     mias_2: {
         parameters: {
-            query?: never;
+            query?: {
+                pagina?: number;
+                tamano?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Listado */
+            /** @description Una página de correcciones */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CorrectionResponse"][];
+                    "*/*": components["schemas"]["PaginaDTOCorrectionResponse"];
+                };
+            };
+            /** @description Página negativa o tamaño fuera de 1..200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description No autenticado */
@@ -9487,20 +9626,32 @@ export interface operations {
     };
     getMyNotices: {
         parameters: {
-            query?: never;
+            query?: {
+                pagina?: number;
+                tamano?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Listado de avisos */
+            /** @description Una página de avisos */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["NoticeResponse"][];
+                    "*/*": components["schemas"]["PaginaDTONoticeResponse"];
+                };
+            };
+            /** @description Página negativa o tamaño fuera de 1..200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description No autenticado */
@@ -9589,6 +9740,8 @@ export interface operations {
             query?: {
                 desde?: string;
                 hasta?: string;
+                pagina?: number;
+                tamano?: number;
             };
             header?: never;
             path?: never;
@@ -9596,16 +9749,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Peticiones del usuario */
+            /** @description Una página de peticiones */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AbsenceResponse"][];
+                    "*/*": components["schemas"]["PaginaDTOAbsenceResponse"];
                 };
             };
-            /** @description Rango incompleto, al revés o de más de un año */
+            /** @description Rango incompleto, al revés o de más de un año; página negativa o tamaño fuera de 1..200 */
             400: {
                 headers: {
                     [name: string]: unknown;

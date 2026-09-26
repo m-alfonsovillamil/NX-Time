@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.controller;
 
+import static org.mockito.ArgumentMatchers.isNull;
+import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -82,7 +84,8 @@ class AbsenceControllerTest {
     @WithMockUser(username = "empleado@nxtime.test", authorities = "ausencia:leer")
     @DisplayName("GET /ausencias/mis-peticiones con authority correcta devuelve 200")
     void getMyRequests_conAuthority_devuelve200() throws Exception {
-        when(absenceService.getMyRequests("empleado@nxtime.test")).thenReturn(List.of());
+        when(absenceService.getMyRequests(eq("empleado@nxtime.test"), isNull(), isNull(), any()))
+                .thenReturn(Paginas.una(List.of()));
 
         mockMvc.perform(get("/api/v1/ausencias/mis-peticiones")).andExpect(status().isOk());
     }

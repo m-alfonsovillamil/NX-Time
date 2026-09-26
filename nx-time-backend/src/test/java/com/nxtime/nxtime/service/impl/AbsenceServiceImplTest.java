@@ -1,5 +1,8 @@
 package com.nxtime.nxtime.service.impl;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -260,59 +263,56 @@ class AbsenceServiceImplTest {
 
     // ---- Consultas ----
 
-    @Test
-    @DisplayName("getMyRequests devuelve las peticiones del usuario mapeadas")
-    void getMyRequests_devuelvePeticionesDelUsuario() {
-        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
-        AbsenceRequest request = AbsenceRequest.builder().id(1L).usuario(empleado).empresa(empresa).build();
-        when(absenceRequestRepository.findByUsuario(empleado)).thenReturn(List.of(request));
-
-        assertThat(service.getMyRequests(empleado.getEmail())).containsExactly(RESPUESTA_CUALQUIERA);
-    }
-
     /*
      * "Mis peticiones" devolvía TODAS las ausencias de la persona desde que
      * entró en la empresa: el filtro por año que enseña la app era solo de
-     * la app, y el servidor seguía mandándolo todo.
+     * la app, y el servidor seguía mandándolo todo. Desde la Fase A7, además,
+     * va por páginas en los dos casos.
      */
     @Test
-    @DisplayName("Con un rango, solo pide a la base las ausencias de ese periodo")
+    @DisplayName("Con un rango, solo pide a la base las ausencias de ese periodo, y la página pedida")
     void getMyRequests_conRango_consultaSoloEsePeriodo() {
         when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
         AbsenceRequest request = AbsenceRequest.builder().id(1L).usuario(empleado).empresa(empresa).build();
         LocalDate desde = LocalDate.of(2026, 1, 1);
         LocalDate hasta = LocalDate.of(2026, 12, 31);
-        when(absenceRequestRepository.findDeUsuarioEnRango(empleado, desde, hasta)).thenReturn(List.of(request));
+        Pageable pedida = PageRequest.of(1, 10);
+        when(absenceRequestRepository.findDeUsuarioEnRango(empleado, desde, hasta, pedida))
+                .thenReturn(Paginas.page(List.of(request)));
 
-        assertThat(service.getMyRequests(empleado.getEmail(), desde, hasta)).containsExactly(RESPUESTA_CUALQUIERA);
-        verify(absenceRequestRepository, never()).findByUsuario(any());
+        assertThat(service.getMyRequests(empleado.getEmail(), desde, hasta, pedida).contenido())
+                .containsExactly(RESPUESTA_CUALQUIERA);
+        verify(absenceRequestRepository, never()).findByUsuarioOrderByFechaInicioDescIdDesc(any(), any());
     }
 
     @Test
-    @DisplayName("Sin rango se comporta como siempre: lo manda todo, que es lo que espera la app instalada")
-    void getMyRequests_sinRango_devuelveTodas() {
+    @DisplayName("Sin rango, todas las de la persona, también por páginas")
+    void getMyRequests_sinRango_devuelveTodasPorPaginas() {
         when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
         AbsenceRequest request = AbsenceRequest.builder().id(1L).usuario(empleado).empresa(empresa).build();
-        when(absenceRequestRepository.findByUsuario(empleado)).thenReturn(List.of(request));
+        Pageable pedida = PageRequest.of(0, 50);
+        when(absenceRequestRepository.findByUsuarioOrderByFechaInicioDescIdDesc(empleado, pedida))
+                .thenReturn(Paginas.page(List.of(request)));
 
-        assertThat(service.getMyRequests(empleado.getEmail(), null, null)).containsExactly(RESPUESTA_CUALQUIERA);
+        assertThat(service.getMyRequests(empleado.getEmail(), null, null, pedida).contenido())
+                .containsExactly(RESPUESTA_CUALQUIERA);
     }
 
     @Test
     @DisplayName("Un rango al revés o de más de un año se rechaza con 400")
     void getMyRequests_rangoInvalido_lanzaBusinessException() {
         assertThatThrownBy(() -> service.getMyRequests(
-                empleado.getEmail(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1)))
+                empleado.getEmail(), LocalDate.of(2026, 5, 1), LocalDate.of(2026, 4, 1), PageRequest.of(0, 50)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("no puede ser posterior");
 
         // 367 días: uno más que el año bisiesto que se permite.
         assertThatThrownBy(() -> service.getMyRequests(
-                empleado.getEmail(), LocalDate.of(2026, 1, 1), LocalDate.of(2027, 1, 2)))
+                empleado.getEmail(), LocalDate.of(2026, 1, 1), LocalDate.of(2027, 1, 2), PageRequest.of(0, 50)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("no puede pasar de un año");
 
-        verify(absenceRequestRepository, never()).findDeUsuarioEnRango(any(), any(), any());
+        verify(absenceRequestRepository, never()).findDeUsuarioEnRango(any(), any(), any(), any());
     }
 
     @Test
@@ -331,12 +331,14 @@ class AbsenceServiceImplTest {
     @DisplayName("getHistory filtra por la empresa del gestor y estado distinto de PENDIENTE")
     void getHistory_filtraPorEmpresaYNoPendiente() {
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
-        when(absenceRequestRepository.findByEmpresa_IdAndEstadoIsNot(empresa.getId(), AbsenceStatus.PENDIENTE))
-                .thenReturn(List.of());
+        Pageable pedida = PageRequest.of(0, 50);
+        when(absenceRequestRepository.findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
+                empresa.getId(), AbsenceStatus.PENDIENTE, pedida)).thenReturn(Paginas.page(List.of()));
 
-        service.getHistory(gestor.getEmail());
+        service.getHistory(gestor.getEmail(), pedida);
 
-        verify(absenceRequestRepository).findByEmpresa_IdAndEstadoIsNot(empresa.getId(), AbsenceStatus.PENDIENTE);
+        verify(absenceRequestRepository).findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
+                empresa.getId(), AbsenceStatus.PENDIENTE, pedida);
     }
 
     // ---- changeRequestStatus ----

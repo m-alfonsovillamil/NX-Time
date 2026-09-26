@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -144,6 +145,7 @@ fun HistorialScreen(
                                 onRepartir = { onRepartir(registro) }
                             )
                         }
+                        finDeLista(estado.paginas, viewModel::cargarMas)
                     }
                 }
             }
@@ -154,8 +156,8 @@ fun HistorialScreen(
 /**
  * Chips de periodo y, con un periodo elegido, las fechas y el total neto.
  *
- * "Recientes" es el de siempre (los últimos 200) y no lleva total: sumar
- * 200 jornadas sueltas no responde a ninguna pregunta que alguien se haga.
+ * "Recientes" son los últimos fichajes, por páginas al bajar, y no lleva total: sumar
+ * jornadas sueltas no responde a ninguna pregunta que alguien se haga.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
