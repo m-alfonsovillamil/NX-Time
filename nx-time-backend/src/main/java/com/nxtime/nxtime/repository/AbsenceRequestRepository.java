@@ -5,6 +5,8 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.User;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +14,9 @@ import org.springframework.data.repository.query.Param;
 public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, Long> {
 
     List<AbsenceRequest> findByUsuario(User usuario);
+
+    /** Las de una persona, las más recientes primero, por páginas (Fase A7). */
+    Page<AbsenceRequest> findByUsuarioOrderByFechaInicioDescIdDesc(User usuario, Pageable pagina);
 
     /**
      * Las ausencias de alguien que tocan un rango de fechas.
@@ -32,6 +37,16 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
             @Param("usuario") User usuario,
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
+
+    /** Lo mismo, por páginas (Fase A7). */
+    @Query("SELECT a FROM peticiones_ausencia a WHERE a.usuario = :usuario "
+            + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde "
+            + "ORDER BY a.fechaInicio DESC, a.id DESC")
+    Page<AbsenceRequest> findDeUsuarioEnRango(
+            @Param("usuario") User usuario,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta,
+            Pageable pagina);
 
     /**
      * Las APROBADAS de alguien que tocan un rango.
@@ -54,7 +69,14 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
     // simple y aprovecha el índice (empresa_id, estado) del esquema.
     List<AbsenceRequest> findByEmpresa_IdAndEstado(long empresaId, AbsenceStatus estado);
 
-    List<AbsenceRequest> findByEmpresa_IdAndEstadoIsNot(long empresaId, AbsenceStatus estado);
+    /**
+     * Las ya resueltas de una empresa, las más recientes primero, por páginas
+     * (Fase A7). Era la lista más grande del sistema sin ningún límite: todas
+     * las ausencias decididas de la empresa desde siempre, y cada una contando
+     * sus días hábiles al convertirse.
+     */
+    Page<AbsenceRequest> findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
+            long empresaId, AbsenceStatus estado, Pageable pagina);
 
     /**
      * Peticiones del usuario que se solapan con el rango dado y siguen

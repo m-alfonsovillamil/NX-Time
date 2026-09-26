@@ -56,5 +56,6 @@ public interface CorrectionService {
     long contarPendientesParaMi(User actor);
 
     /** Las que ha pedido, para ver en qué han quedado. */
-    List<CorrectionResponse> mias(User actor);
+    /** Las que ha pedido uno, las más recientes primero, por páginas (Fase A7). */
+    com.nxtime.nxtime.dto.PaginaDTO<CorrectionResponse> mias(User actor, org.springframework.data.domain.Pageable pagina);
 }

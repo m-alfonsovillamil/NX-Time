@@ -311,10 +311,12 @@ public class CorrectionServiceImpl implements CorrectionService {
     }
 
     @Override
-    public List<CorrectionResponse> mias(User actor) {
-        return correctionRepository.findMias(actor.getId()).stream()
-                .map(solicitud -> toResponse(solicitud, actor))
-                .toList();
+    public com.nxtime.nxtime.dto.PaginaDTO<CorrectionResponse> mias(User actor, org.springframework.data.domain.Pageable pagina) {
+        // toResponse consulta el reparto por proyecto de cada solicitud: con
+        // la lista entera eran tantas consultas como correcciones se hubieran
+        // pedido nunca. Ahora, como mucho las de una página.
+        return com.nxtime.nxtime.dto.PaginaDTO.de(correctionRepository.findMias(actor.getId(), pagina),
+                solicitud -> toResponse(solicitud, actor));
     }
 
     // ------------------------------------------------------------------

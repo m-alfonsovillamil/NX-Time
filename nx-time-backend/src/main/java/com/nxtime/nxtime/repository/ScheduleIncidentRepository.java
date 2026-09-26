@@ -28,14 +28,16 @@ public interface ScheduleIncidentRepository extends JpaRepository<ScheduleIncide
      * suyas. Nadie revisa lo suyo, y filtrarlo aquí y no en la pantalla es lo
      * que lo hace verdad para cualquier cliente.
      */
-    @Query("SELECT i FROM incidencias_cuadrante i JOIN FETCH i.usuario "
+    @Query(value = "SELECT i FROM incidencias_cuadrante i JOIN FETCH i.usuario "
             + "WHERE i.empresa.id = :empresaId AND i.usuario.id <> :excluido AND i.estado IN :estados "
-            + "ORDER BY i.fecha DESC, i.usuario.nombre")
-    List<ScheduleIncident> findBandeja(
+            + "ORDER BY i.fecha DESC, i.usuario.nombre, i.id DESC",
+            countQuery = "SELECT COUNT(i) FROM incidencias_cuadrante i "
+            + "WHERE i.empresa.id = :empresaId AND i.usuario.id <> :excluido AND i.estado IN :estados")
+    org.springframework.data.domain.Page<ScheduleIncident> findBandeja(
             @Param("empresaId") long empresaId,
             @Param("excluido") long excluido,
             @Param("estados") Collection<ScheduleIncidentStatus> estados,
-            org.springframework.data.domain.Pageable limite);
+            org.springframework.data.domain.Pageable pagina);
 
     /** Para la exportación de datos personales. */
     List<ScheduleIncident> findByUsuario_IdOrderByFechaDesc(long usuarioId);

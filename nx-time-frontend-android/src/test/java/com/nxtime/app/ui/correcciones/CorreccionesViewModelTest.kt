@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.correcciones
 
+import com.nxtime.app.unaPagina
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.CorreccionDTO
 import com.nxtime.app.data.dto.UsuarioSimpleDTO
@@ -67,7 +68,7 @@ class CorreccionesViewModelTest {
         mias: List<CorreccionDTO> = emptyList()
     ) {
         whenever(repositorio.getCorreccionesPendientes()).thenReturn(Response.success(pendientes))
-        whenever(repositorio.getMisCorrecciones()).thenReturn(Response.success(mias))
+        whenever(repositorio.getMisCorrecciones()).thenReturn(unaPagina(mias))
     }
 
     @Test
@@ -177,7 +178,7 @@ class CorreccionesViewModelTest {
         whenever(repositorio.getCorreccionesPendientes()).thenReturn(
             Response.error(500, "".toResponseBody("application/json".toMediaType()))
         )
-        whenever(repositorio.getMisCorrecciones()).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.getMisCorrecciones()).thenReturn(unaPagina(emptyList()))
 
         val viewModel = CorreccionesViewModel(repositorio)
         advanceUntilIdle()

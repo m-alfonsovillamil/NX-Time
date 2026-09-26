@@ -5,6 +5,8 @@ import com.nxtime.nxtime.dto.ResolveIncidentRequest;
 import com.nxtime.nxtime.dto.ScheduleIncidentResponse;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.ScheduleIncidentService;
+import com.nxtime.nxtime.dto.PaginaDTO;
+import com.nxtime.nxtime.service.Paginacion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -70,19 +72,24 @@ public class ScheduleIncidentController {
 
     @Operation(summary = "La bandeja del equipo",
             description = "Las de la empresa sin las propias. Por defecto las que esperan decisión "
-                    + "(PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Como mucho 200.")
+                    + "(PENDIENTE y JUSTIFICADA); con resueltas=true, las ya decididas. Por páginas: 'pagina' desde 0 y "
+                    + "'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Incidencias",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ScheduleIncidentResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página de incidencias"),
+            @ApiResponse(responseCode = "400", description = "Página negativa o tamaño fuera de 1..200",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Sin 'cuadrante:incidencias:revisar'",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping("/equipo")
     @PreAuthorize("hasAuthority('cuadrante:incidencias:revisar')")
-    public ResponseEntity<List<ScheduleIncidentResponse>> bandeja(
+    public ResponseEntity<PaginaDTO<ScheduleIncidentResponse>> bandeja(
             @RequestParam(defaultValue = "false") boolean resueltas,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(incidentService.bandeja(usuario.getUser(), resueltas));
+        return ResponseEntity.ok(
+                incidentService.bandeja(usuario.getUser(), resueltas, Paginacion.pedir(pagina, tamano)));
     }
 
     @Operation(summary = "Explicar una incidencia propia",

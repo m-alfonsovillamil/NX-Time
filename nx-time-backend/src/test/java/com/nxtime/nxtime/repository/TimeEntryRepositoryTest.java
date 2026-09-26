@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 /**
@@ -73,7 +74,7 @@ class TimeEntryRepositoryTest extends AbstractRepositoryTest {
         // De otro usuario: no debe aparecer en el historial del empleado.
         timeEntryRepository.save(TimeEntry.builder().usuario(gestor).empresa(empresa).horaEntrada(ahora).build());
 
-        List<TimeEntry> historial = timeEntryRepository.findHistoryByUsuario(empleado, PageRequest.of(0, 200));
+        List<TimeEntry> historial = timeEntryRepository.findHistoryByUsuario(empleado, PageRequest.of(0, 200)).getContent();
 
         assertThat(historial).extracting(TimeEntry::getId).containsExactly(reciente.getId(), antiguo.getId());
     }
@@ -94,8 +95,44 @@ class TimeEntryRepositoryTest extends AbstractRepositoryTest {
         timeEntryRepository.save(TimeEntry.builder()
                 .usuario(empleadoDeOtraEmpresa).empresa(otraEmpresa).horaEntrada(Instant.now()).build());
 
-        List<TimeEntry> equipo = timeEntryRepository.findTeamHistory(empresa, PageRequest.of(0, 200));
+        List<TimeEntry> equipo = timeEntryRepository.findTeamHistory(empresa, PageRequest.of(0, 200)).getContent();
 
         assertThat(equipo).extracting(TimeEntry::getId).containsExactly(delEmpleado.getId());
+    }
+
+    @Test
+    @DisplayName("findHistoryByUsuario parte en páginas, cuenta sin los anulados y no repite ni salta filas")
+    void findHistoryByUsuario_paginas() {
+        // Tres a la MISMA hora (cerradas: solo puede haber una abierta por
+        // persona): sin el desempate por id, el orden entre ellas no está
+        // definido y una podría salir en las dos páginas.
+        Instant misma = Instant.parse("2026-03-02T08:00:00Z");
+        TimeEntry a = timeEntryRepository.save(TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(misma).horaSalida(misma.plusSeconds(3600)).build());
+        TimeEntry b = timeEntryRepository.save(TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(misma).horaSalida(misma.plusSeconds(3600)).build());
+        TimeEntry c = timeEntryRepository.save(TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(misma).horaSalida(misma.plusSeconds(3600)).build());
+        TimeEntry anulado = TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(misma).horaSalida(misma.plusSeconds(3600)).build();
+        anulado.setAnulado(true);
+        timeEntryRepository.save(anulado);
+
+        Page<TimeEntry> primera = timeEntryRepository.findHistoryByUsuario(empleado, PageRequest.of(0, 2));
+        Page<TimeEntry> segunda = timeEntryRepository.findHistoryByUsuario(empleado, PageRequest.of(1, 2));
+
+        assertThat(primera.getTotalElements()).isEqualTo(3);
+        assertThat(primera.hasNext()).isTrue();
+        assertThat(segunda.hasNext()).isFalse();
+        assertThat(primera.getContent()).extracting(TimeEntry::getId).containsExactly(c.getId(), b.getId());
+        assertThat(segunda.getContent()).extracting(TimeEntry::getId).containsExactly(a.getId());
+    }
+
+    @Test
+    @DisplayName("findTeamHistory cuenta solo a los EMPLEADO, igual que filtra")
+    void findTeamHistory_cuentaComoFiltra() {
+        timeEntryRepository.save(TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build());
+        timeEntryRepository.save(TimeEntry.builder().usuario(gestor).empresa(empresa).horaEntrada(Instant.now()).build());
+
+        Page<TimeEntry> equipo = timeEntryRepository.findTeamHistory(empresa, PageRequest.of(0, 1));
+
+        assertThat(equipo.getTotalElements()).isEqualTo(1);
+        assertThat(equipo.hasNext()).isFalse();
     }
 }

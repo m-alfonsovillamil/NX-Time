@@ -11,12 +11,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import com.nxtime.app.ui.util.EstadoDePaginas
 import com.nxtime.app.ui.util.MensajeUi
+import com.nxtime.app.ui.util.pedirSiguiente
 import kotlinx.coroutines.launch
 
 data class AusenciasEquipoUiState(
     val cargando: Boolean = true,
     val peticiones: List<RespuestaAusencia> = emptyList(),
+    /**
+     * Solo las resueltas van por páginas (Fase A7): son todas las de la
+     * empresa desde siempre. Las pendientes son trabajo por hacer y se
+     * enseñan enteras.
+     */
+    val paginas: EstadoDePaginas = EstadoDePaginas(),
     /** Id de la petición que se está resolviendo ahora mismo. */
     val resolviendo: Long? = null,
     val error: MensajeUi? = null
@@ -57,15 +65,30 @@ class AusenciasEquipoViewModel(
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = if (resueltas) {
-                    authRepository.getHistorialAusencias()
-                } else {
-                    authRepository.getPeticionesPendientes()
+                if (resueltas) {
+                    val respuesta = authRepository.getHistorialAusencias()
+                    val cuerpo = respuesta.body()
+                    if (respuesta.isSuccessful && cuerpo != null) {
+                        _uiState.update {
+                            it.copy(
+                                cargando = false,
+                                peticiones = cuerpo.contenido,
+                                paginas = EstadoDePaginas.tras(cuerpo),
+                                error = null
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
+                        }
+                    }
+                    return@launch
                 }
+                val respuesta = authRepository.getPeticionesPendientes()
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful && cuerpo != null) {
                     _uiState.update {
-                        it.copy(cargando = false, peticiones = cuerpo, error = null)
+                        it.copy(cargando = false, peticiones = cuerpo, paginas = EstadoDePaginas(), error = null)
                     }
                 } else {
                     _uiState.update {
@@ -77,6 +100,19 @@ class AusenciasEquipoViewModel(
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
             }
+        }
+    }
+
+    /** La página siguiente de las resueltas, al llegar al final de la lista. */
+    fun cargarMas() {
+        val estado = _uiState.value
+        if (!resueltas || !estado.paginas.puedeCargarMas) return
+        _uiState.update { it.copy(paginas = it.paginas.copy(cargandoMas = true, fallo = false)) }
+        viewModelScope.launch {
+            val siguiente = pedirSiguiente(estado.paginas, estado.peticiones, RespuestaAusencia::id) {
+                authRepository.getHistorialAusencias(it)
+            }
+            _uiState.update { it.copy(peticiones = it.peticiones + siguiente.nuevos, paginas = siguiente.estado) }
         }
     }
 

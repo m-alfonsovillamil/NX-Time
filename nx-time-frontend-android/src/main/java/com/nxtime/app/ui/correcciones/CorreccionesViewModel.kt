@@ -6,7 +6,9 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.CorreccionDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.EstadoDePaginas
 import com.nxtime.app.ui.util.MensajeUi
+import com.nxtime.app.ui.util.pedirSiguiente
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +22,8 @@ data class CorreccionesUiState(
     val pendientes: List<CorreccionDTO> = emptyList(),
     /** Las que he pedido yo, para ver en qué han quedado. */
     val mias: List<CorreccionDTO> = emptyList(),
+    /** Las mías van por páginas (Fase A7); las pendientes no: son trabajo por hacer. */
+    val paginasMias: EstadoDePaginas = EstadoDePaginas(),
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 )
@@ -66,13 +70,27 @@ class CorreccionesViewModel(private val authRepository: AuthRepository) : ViewMo
                         pendientes = pendientes.body().orEmpty(),
                         // Si falla solo esta, la pantalla se ve igual: lo
                         // que hay que resolver es lo urgente.
-                        mias = mias.body().orEmpty(),
+                        mias = mias.body()?.contenido.orEmpty(),
+                        paginasMias = mias.body()?.let(EstadoDePaginas::tras) ?: EstadoDePaginas(),
                         error = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e)) }
             }
+        }
+    }
+
+    /** La página siguiente de las mías, al llegar al final de la lista. */
+    fun cargarMasMias() {
+        val estado = _uiState.value
+        if (!estado.paginasMias.puedeCargarMas) return
+        _uiState.update { it.copy(paginasMias = it.paginasMias.copy(cargandoMas = true, fallo = false)) }
+        viewModelScope.launch {
+            val siguiente = pedirSiguiente(estado.paginasMias, estado.mias, CorreccionDTO::id) {
+                authRepository.getMisCorrecciones(it)
+            }
+            _uiState.update { it.copy(mias = it.mias + siguiente.nuevos, paginasMias = siguiente.estado) }
         }
     }
 

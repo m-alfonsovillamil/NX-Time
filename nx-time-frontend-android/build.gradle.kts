@@ -61,8 +61,8 @@ android {
          * móvil, y el saldo de vacaciones enseña los días pedidos y sin
          * aprobar, que ya descuentan de los disponibles.
          */
-        versionCode = 6
-        versionName = "1.5"
+        versionCode = 7
+        versionName = "1.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

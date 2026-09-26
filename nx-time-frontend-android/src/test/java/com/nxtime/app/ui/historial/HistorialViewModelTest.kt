@@ -1,5 +1,8 @@
 package com.nxtime.app.ui.historial
 
+import org.mockito.kotlin.any
+import com.nxtime.app.pagina
+import com.nxtime.app.unaPagina
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.repository.AuthRepository
@@ -51,19 +54,19 @@ class HistorialViewModelTest {
 
     @Test
     fun `por defecto pide los recientes, sin fechas`() = runTest {
-        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull())).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull(), any(), any())).thenReturn(unaPagina(emptyList()))
 
         HistorialViewModel(repositorio) { miercoles }
         advanceUntilIdle()
 
-        verify(repositorio).getHistorial(null, null)
+        verify(repositorio).getHistorial(null, null, 0, 50)
     }
 
     @Test
     fun `al elegir un periodo pide esas fechas y suma solo las jornadas cerradas`() = runTest {
-        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull())).thenReturn(Response.success(emptyList()))
-        whenever(repositorio.getHistorial(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30))).thenReturn(
-            Response.success(
+        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull(), any(), any())).thenReturn(unaPagina(emptyList()))
+        whenever(repositorio.getHistorial(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30), 0, 200)).thenReturn(
+            unaPagina(
                 listOf(
                     // 8 h con 30 min de pausa = 7 h 30 min.
                     registro(1, "2026-09-15T07:00:00Z", "2026-09-15T15:00:00Z", pausa = 1800),
@@ -86,7 +89,7 @@ class HistorialViewModelTest {
 
     @Test
     fun `al recargar se conserva el periodo elegido`() = runTest {
-        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull())).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull(), any(), any())).thenReturn(unaPagina(emptyList()))
         val elegido = PeriodoHistorial.Elegido(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31))
         val vm = HistorialViewModel(repositorio) { miercoles }
         advanceUntilIdle()
@@ -97,6 +100,51 @@ class HistorialViewModelTest {
 
         assertEquals(elegido, vm.uiState.value.periodo)
         org.mockito.kotlin.verify(repositorio, org.mockito.kotlin.times(2))
-            .getHistorial(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31))
+            .getHistorial(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31), 0, 200)
+    }
+
+    /*
+     * Fase A7: un periodo llega por páginas, y la cabecera suma sus horas.
+     * Sumar solo la primera daría un total falso sin avisar, así que se
+     * piden todas.
+     */
+    @Test
+    fun `un periodo de varias paginas se carga entero y suma todas`() = runTest {
+        whenever(repositorio.getHistorial(anyOrNull(), anyOrNull(), any(), any())).thenReturn(unaPagina(emptyList()))
+        val septiembre = LocalDate.of(2026, 9, 1) to LocalDate.of(2026, 9, 30)
+        whenever(repositorio.getHistorial(septiembre.first, septiembre.second, 0, 200)).thenReturn(
+            pagina(0, listOf(registro(2, "2026-09-15T07:00:00Z", "2026-09-15T08:00:00Z")), hayMas = true)
+        )
+        whenever(repositorio.getHistorial(septiembre.first, septiembre.second, 1, 200)).thenReturn(
+            pagina(1, listOf(registro(1, "2026-09-14T07:00:00Z", "2026-09-14T09:00:00Z")), hayMas = false)
+        )
+        val vm = HistorialViewModel(repositorio) { miercoles }
+        advanceUntilIdle()
+
+        vm.cambiarPeriodo(PeriodoHistorial.EsteMes)
+        advanceUntilIdle()
+
+        assertEquals(listOf(2L, 1L), vm.uiState.value.registros.map { it.id })
+        assertEquals(3L * 3600, vm.uiState.value.segundosNetos)
+        // Un periodo no se sigue cargando al bajar: ya está entero.
+        assertEquals(false, vm.uiState.value.paginas.hayMas)
+    }
+
+    @Test
+    fun `los recientes cargan la pagina siguiente al llegar al final`() = runTest {
+        whenever(repositorio.getHistorial(null, null, 0, 50)).thenReturn(
+            pagina(0, listOf(registro(2, "2026-09-15T07:00:00Z", "2026-09-15T08:00:00Z")), hayMas = true)
+        )
+        whenever(repositorio.getHistorial(null, null, 1, 50)).thenReturn(
+            pagina(1, listOf(registro(1, "2026-09-14T07:00:00Z", "2026-09-14T08:00:00Z")), hayMas = false)
+        )
+        val vm = HistorialViewModel(repositorio) { miercoles }
+        advanceUntilIdle()
+
+        vm.cargarMas()
+        advanceUntilIdle()
+
+        assertEquals(listOf(2L, 1L), vm.uiState.value.registros.map { it.id })
+        assertEquals(false, vm.uiState.value.paginas.hayMas)
     }
 }

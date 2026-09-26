@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.gestion
 
+import com.nxtime.app.unaPagina
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.EstadoAusencia
@@ -59,18 +60,18 @@ class AusenciasEquipoViewModelTest {
         advanceUntilIdle()
 
         verify(repositorio).getPeticionesPendientes()
-        verify(repositorio, never()).getHistorialAusencias()
+        verify(repositorio, never()).getHistorialAusencias(any())
         assertEquals(listOf(pendiente), viewModel.uiState.value.peticiones)
     }
 
     @Test
     fun `las resueltas se piden al historial`() = runTest {
-        whenever(repositorio.getHistorialAusencias()).thenReturn(Response.success(emptyList()))
+        whenever(repositorio.getHistorialAusencias(any())).thenReturn(unaPagina(emptyList()))
 
         AusenciasEquipoViewModel(repositorio).mostrar(resueltas = true)
         advanceUntilIdle()
 
-        verify(repositorio).getHistorialAusencias()
+        verify(repositorio).getHistorialAusencias(0)
         verify(repositorio, never()).getPeticionesPendientes()
     }
 

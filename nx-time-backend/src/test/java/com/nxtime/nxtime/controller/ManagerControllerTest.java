@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.support.Paginas;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -112,7 +113,7 @@ class ManagerControllerTest {
     @WithMockSecurityUser(rol = Role.GESTOR)
     @DisplayName("GET /gestor/ausencias-historial con 'ausencia:leer:equipo' devuelve 200")
     void getAbsenceHistory_conAuthority_devuelve200() throws Exception {
-        when(absenceService.getHistory(eq("test@nxtime.test"))).thenReturn(List.of());
+        when(absenceService.getHistory(eq("test@nxtime.test"), any())).thenReturn(Paginas.una(List.of()));
 
         mockMvc.perform(get("/api/v1/gestor/ausencias-historial")).andExpect(status().isOk());
     }

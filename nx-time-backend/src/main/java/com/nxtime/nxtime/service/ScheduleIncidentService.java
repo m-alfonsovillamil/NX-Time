@@ -37,7 +37,7 @@ public interface ScheduleIncidentService {
      * defecto las que esperan decisión; con {@code resueltas}, las ya
      * decididas.
      */
-    List<ScheduleIncidentResponse> bandeja(User actor, boolean resueltas);
+    com.nxtime.nxtime.dto.PaginaDTO<ScheduleIncidentResponse> bandeja(User actor, boolean resueltas, org.springframework.data.domain.Pageable pagina);
 
     /** Quien la tiene explica qué pasó. Se puede rehacer hasta que alguien decida. */
     ScheduleIncidentResponse justificar(long incidenciaId, String texto, User actor);

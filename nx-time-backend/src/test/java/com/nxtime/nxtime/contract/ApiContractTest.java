@@ -218,6 +218,19 @@ class ApiContractTest {
         return json.readTree(response.getBody());
     }
 
+    /**
+     * La lista de una respuesta paginada (Fase A7), comprobando de paso que
+     * trae los seis campos del contrato: es lo que la app y la web leen.
+     */
+    private JsonNode contenidoDe(ResponseEntity<String> response) throws Exception {
+        JsonNode pagina = bodyOf(response);
+        assertThat(pagina.isObject()).as("una lista paginada llega como objeto, no como array").isTrue();
+        assertThat(pagina.has("pagina") && pagina.has("tamano") && pagina.has("totalElementos")
+                && pagina.has("totalPaginas") && pagina.has("hayMas")).isTrue();
+        assertThat(pagina.get("contenido").isArray()).isTrue();
+        return pagina.get("contenido");
+    }
+
     private static Map<String, Object> mapOf(Object... kv) {
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < kv.length; i += 2) {
@@ -708,7 +721,7 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode body = bodyOf(response);
+        JsonNode body = contenidoDe(response);
         assertThat(body.isArray()).isTrue();
         assertThat(body.size()).isGreaterThanOrEqualTo(1);
     }
@@ -724,7 +737,7 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode body = bodyOf(response);
+        JsonNode body = contenidoDe(response);
         assertThat(body.isArray()).isTrue();
         assertThat(body.size()).isGreaterThanOrEqualTo(1);
 
@@ -812,7 +825,7 @@ class ApiContractTest {
                 String.class
         );
         boolean sigueElOriginal = false;
-        for (JsonNode fichaje : bodyOf(historial)) {
+        for (JsonNode fichaje : contenidoDe(historial)) {
             if (fichaje.get("id").asLong() == registroActivoId) {
                 sigueElOriginal = true;
             }
@@ -930,7 +943,7 @@ class ApiContractTest {
                 String.class
         );
         boolean apareceElOriginal = false;
-        for (JsonNode fichaje : bodyOf(historial)) {
+        for (JsonNode fichaje : contenidoDe(historial)) {
             if (fichaje.get("id").asLong() == registroActivoId) {
                 apareceElOriginal = true;
             }
@@ -1021,7 +1034,7 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode body = bodyOf(response);
+        JsonNode body = contenidoDe(response);
         assertThat(body.size()).isEqualTo(1);
     }
 
@@ -1129,7 +1142,7 @@ class ApiContractTest {
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode body = bodyOf(response);
+        JsonNode body = contenidoDe(response);
         boolean encontrada = false;
         for (JsonNode n : body) {
             if (n.get("id").asLong() == peticionAusenciaId && "APROBADA".equals(n.get("estado").asText())) {
@@ -1394,7 +1407,7 @@ class ApiContractTest {
                     String.class
             );
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            avisos = bodyOf(response);
+            avisos = contenidoDe(response);
             if (avisos.size() > 0) {
                 return avisos;
             }

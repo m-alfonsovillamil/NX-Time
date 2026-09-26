@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.data.network.ApiErrorParser
+import com.nxtime.app.data.network.Paginas
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +47,12 @@ class AusenciasViewModel(
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.getMisPeticiones()
+                // Todas las páginas: el filtro de año, tipo y estado es local,
+                // y filtrar solo la primera página escondería las de años
+                // anteriores. Las de una persona son pocas decenas.
+                val respuesta = Paginas.todas { pagina ->
+                    authRepository.getMisPeticiones(pagina = pagina, tamano = Paginas.TAMANO_MAXIMO)
+                }
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful && cuerpo != null) {
                     _uiState.update {

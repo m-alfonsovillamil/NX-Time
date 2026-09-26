@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.support.Paginas;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -101,7 +102,7 @@ class ScheduleIncidentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"aceptar\":true}"))
                 .andExpect(status().isForbidden());
-        verify(incidentService, never()).bandeja(any(), anyBoolean());
+        verify(incidentService, never()).bandeja(any(), anyBoolean(), any());
         verify(incidentService, never()).resolver(anyLong(), anyBoolean(), any(), any());
     }
 
@@ -109,11 +110,12 @@ class ScheduleIncidentControllerTest {
     @WithMockSecurityUser(rol = Role.GESTOR)
     @DisplayName("Un GESTOR ve la bandeja, por defecto la que espera decisión")
     void bandeja_comoGestor() throws Exception {
-        when(incidentService.bandeja(any(), eq(false))).thenReturn(List.of(incidencia(ScheduleIncidentStatus.JUSTIFICADA)));
+        when(incidentService.bandeja(any(), eq(false), any()))
+                .thenReturn(Paginas.una(List.of(incidencia(ScheduleIncidentStatus.JUSTIFICADA))));
 
         mockMvc.perform(get("/api/v1/incidencias/equipo"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].usuario").value("Ana Prueba"));
+                .andExpect(jsonPath("$.contenido[0].usuario").value("Ana Prueba"));
     }
 
     @Test

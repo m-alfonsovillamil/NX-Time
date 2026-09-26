@@ -540,6 +540,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 24. [Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche](docs/adr/024-incidencias-de-cuadrante.md)
 25. [La firma mensual no bloquea la corrección: la corrección invalida la firma](docs/adr/025-la-firma-no-bloquea-la-correccion.md)
 26. [La analítica cuenta días, no horas, y el alcance lo decide quién mira](docs/adr/026-analitica-en-dias-y-por-alcance.md)
+27. [Las listas que crecen sin límite van por páginas, con un DTO propio](docs/adr/027-listas-por-paginas.md)
 
 ---
 

@@ -1,5 +1,8 @@
 package com.nxtime.nxtime.controller;
 
+import org.springframework.web.bind.annotation.RequestParam;
+import com.nxtime.nxtime.service.Paginacion;
+import com.nxtime.nxtime.dto.PaginaDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
@@ -122,10 +125,13 @@ public class ManagerController {
         return ResponseEntity.ok(employeeProfileService.getMyEmployees(manager.getUser()));
     }
 
-    @Operation(summary = "Historial de ausencias del equipo", description = "Todas las que ya no están PENDIENTE.")
+    @Operation(summary = "Historial de ausencias del equipo",
+            description = "Las que ya no están PENDIENTE, las más recientes primero. Por páginas: 'pagina' desde 0 "
+                    + "y 'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Historial de ausencias",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = AbsenceResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página del historial de ausencias"),
+            @ApiResponse(responseCode = "400", description = "Página negativa o tamaño fuera de 1..200",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Sin la authority 'ausencia:leer:equipo'",
@@ -133,8 +139,11 @@ public class ManagerController {
     })
     @PreAuthorize("hasAuthority('ausencia:leer:equipo')")
     @GetMapping("/ausencias-historial")
-    public ResponseEntity<List<AbsenceResponse>> getAbsenceHistory(Authentication authentication) {
-        return ResponseEntity.ok(absenceService.getHistory(authentication.getName()));
+    public ResponseEntity<PaginaDTO<AbsenceResponse>> getAbsenceHistory(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
+            Authentication authentication) {
+        return ResponseEntity.ok(absenceService.getHistory(authentication.getName(), Paginacion.pedir(pagina, tamano)));
     }
 
     // Nuevo en la Fase 4: antes no había forma de dar de baja a un

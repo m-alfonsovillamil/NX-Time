@@ -22,6 +22,10 @@ import com.nxtime.nxtime.service.AddedPauseService;
 import com.nxtime.nxtime.service.AllocationEditService;
 import com.nxtime.nxtime.service.CorrectionService;
 import com.nxtime.nxtime.service.TimeEntryService;
+import com.nxtime.nxtime.dto.PaginaDTO;
+import com.nxtime.nxtime.service.Paginacion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -242,14 +246,14 @@ public class TimeEntryController {
     }
 
     @Operation(summary = "Historial de fichajes propio",
-            description = "Sin fechas, los últimos 200, más recientes primero. Con 'desde' y 'hasta' (días de España, "
-                    + "los dos incluidos, formato YYYY-MM-DD): todos los de ese periodo, sin límite de filas y con "
-                    + "un año como máximo. Hay que pasar las dos o ninguna.")
+            description = "Los más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, "
+                    + "formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos "
+                    + "o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien "
+                    + "necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Historial",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TimeEntryResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página del historial"),
             @ApiResponse(responseCode = "400", description = "Solo una de las dos fechas, fecha mal escrita, "
-                    + "inicio posterior al fin, o más de un año",
+                    + "inicio posterior al fin, más de un año, página negativa o tamaño fuera de 1..200",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -258,25 +262,29 @@ public class TimeEntryController {
     })
     @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/historial")
-    public ResponseEntity<List<TimeEntryResponse>> getHistory(
+    public ResponseEntity<PaginaDTO<TimeEntryResponse>> getHistory(
             @RequestParam(required = false) LocalDate desde,
             @RequestParam(required = false) LocalDate hasta,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
             Authentication authentication) {
         if ((desde == null) != (hasta == null)) {
             throw new BusinessException("Para filtrar el historial hacen falta las dos fechas.", HttpStatus.BAD_REQUEST);
         }
-        List<TimeEntry> fichajes = desde == null
-                ? timeEntryService.getHistory(authentication.getName())
-                : timeEntryService.getHistory(authentication.getName(), desde, hasta);
-        List<TimeEntryResponse> history = fichajes.stream().map(timeEntryMapper::toResponse).toList();
-        return ResponseEntity.ok(history);
+        Pageable pedida = Paginacion.pedir(pagina, tamano);
+        Page<TimeEntry> fichajes = desde == null
+                ? timeEntryService.getHistory(authentication.getName(), pedida)
+                : timeEntryService.getHistory(authentication.getName(), desde, hasta, pedida);
+        return ResponseEntity.ok(PaginaDTO.de(fichajes, timeEntryMapper::toResponse));
     }
 
     @Operation(summary = "Historial de fichajes del equipo (gestor)",
-            description = "Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores.")
+            description = "Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores. Los más "
+                    + "recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Historial del equipo",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TeamTimeEntryDTO.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página del historial del equipo"),
+            @ApiResponse(responseCode = "400", description = "Página negativa o tamaño fuera de 1..200",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:leer:equipo'",
@@ -284,8 +292,13 @@ public class TimeEntryController {
     })
     @PreAuthorize("hasAuthority('fichaje:leer:equipo')")
     @GetMapping("/gestor/historial")
-    public ResponseEntity<List<TeamTimeEntryDTO>> getTeamHistory(Authentication authentication) {
-        return ResponseEntity.ok(timeEntryService.getTeamHistory(authentication.getName()));
+    public ResponseEntity<PaginaDTO<TeamTimeEntryDTO>> getTeamHistory(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
+            Authentication authentication) {
+        return ResponseEntity.ok(PaginaDTO.de(
+                timeEntryService.getTeamHistory(authentication.getName(), Paginacion.pedir(pagina, tamano)),
+                java.util.function.Function.identity()));
     }
 
     @Operation(summary = "Pedir que se corrija un fichaje pasado",

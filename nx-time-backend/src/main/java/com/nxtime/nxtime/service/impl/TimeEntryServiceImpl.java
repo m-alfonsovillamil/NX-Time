@@ -36,7 +36,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -66,9 +66,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class TimeEntryServiceImpl implements TimeEntryService {
 
     private static final Logger log = LoggerFactory.getLogger(TimeEntryServiceImpl.class);
-
-    /** Límite de filas de los listados de historial (ver auditoría: antes no había ninguno). */
-    private static final int HISTORY_PAGE_SIZE = 200;
 
     /** Un año bisiesto entero. Ver {@link #getHistory(String, LocalDate, LocalDate)}. */
     static final int MAXIMO_DIAS_HISTORIAL = 366;
@@ -335,20 +332,19 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     }
 
     @Override
-    public List<TimeEntry> getHistory(String userEmail) {
+    public Page<TimeEntry> getHistory(String userEmail, Pageable pagina) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        Pageable pageable = PageRequest.of(0, HISTORY_PAGE_SIZE);
-        return timeEntryRepository.findHistoryByUsuario(user, pageable);
+        return timeEntryRepository.findHistoryByUsuario(user, pagina);
     }
 
     @Override
-    public List<TimeEntry> getHistory(String userEmail, LocalDate desde, LocalDate hasta) {
+    public Page<TimeEntry> getHistory(String userEmail, LocalDate desde, LocalDate hasta, Pageable pagina) {
         if (desde.isAfter(hasta)) {
             throw new BusinessException("La fecha de inicio no puede ser posterior a la de fin.", HttpStatus.BAD_REQUEST);
         }
-        // Un año como mucho: sin el límite de 200 filas, un rango abierto
-        // devolvería la vida laboral entera de alguien en una sola respuesta.
+        // Un año como mucho: aunque ya va por páginas, un rango abierto haría
+        // contar la vida laboral entera de alguien en cada petición.
         if (ChronoUnit.DAYS.between(desde, hasta) + 1 > MAXIMO_DIAS_HISTORIAL) {
             throw new BusinessException("El periodo no puede pasar de un año.", HttpStatus.BAD_REQUEST);
         }
@@ -358,19 +354,15 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         return timeEntryRepository.findHistoryByUsuarioEntre(
                 user,
                 desde.atStartOfDay(MADRID).toInstant(),
-                hasta.plusDays(1).atStartOfDay(MADRID).toInstant());
+                hasta.plusDays(1).atStartOfDay(MADRID).toInstant(),
+                pagina);
     }
 
     @Override
-    public List<TeamTimeEntryDTO> getTeamHistory(String managerEmail) {
+    public Page<TeamTimeEntryDTO> getTeamHistory(String managerEmail, Pageable pagina) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestor no encontrado con email: " + managerEmail));
-
-        Company company = manager.getEmpresa();
-        Pageable pageable = PageRequest.of(0, HISTORY_PAGE_SIZE);
-        List<TimeEntry> companyEntries = timeEntryRepository.findTeamHistory(company, pageable);
-
-        return companyEntries.stream().map(timeEntryMapper::toTeamDTO).toList();
+        return timeEntryRepository.findTeamHistory(manager.getEmpresa(), pagina).map(timeEntryMapper::toTeamDTO);
     }
 
     // Fase 8: una corrección NUNCA sobrescribe horaEntrada/horaSalida en

@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.repository;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
@@ -82,17 +84,18 @@ class AbsenceRequestRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
-    @DisplayName("findByEmpresa_IdAndEstadoIsNot excluye las PENDIENTE y las de otra empresa")
+    @DisplayName("El historial de resueltas excluye las PENDIENTE y las de otra empresa, y cuenta igual que filtra")
     void findByEmpresaIdAndEstadoIsNot_excluyePendientesYOtraEmpresa() {
         peticion(empresa, AbsenceStatus.PENDIENTE);
         AbsenceRequest aprobada = peticion(empresa, AbsenceStatus.APROBADA);
         AbsenceRequest rechazada = peticion(empresa, AbsenceStatus.RECHAZADA);
         peticion(otraEmpresa, AbsenceStatus.APROBADA);
 
-        List<AbsenceRequest> result = absenceRequestRepository
-                .findByEmpresa_IdAndEstadoIsNot(empresa.getId(), AbsenceStatus.PENDIENTE);
+        Page<AbsenceRequest> result = absenceRequestRepository.findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
+                empresa.getId(), AbsenceStatus.PENDIENTE, PageRequest.of(0, 50));
 
-        assertThat(result).extracting(AbsenceRequest::getId)
+        assertThat(result.getContent()).extracting(AbsenceRequest::getId)
                 .containsExactlyInAnyOrder(aprobada.getId(), rechazada.getId());
+        assertThat(result.getTotalElements()).isEqualTo(2);
     }
 }

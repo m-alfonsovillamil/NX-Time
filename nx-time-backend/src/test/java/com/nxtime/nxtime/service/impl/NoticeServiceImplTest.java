@@ -1,5 +1,8 @@
 package com.nxtime.nxtime.service.impl;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -112,10 +115,11 @@ class NoticeServiceImplTest {
     @Test
     @DisplayName("Mis avisos son los míos, y los devuelve con todos sus campos")
     void getMisAvisos_devuelveLosDelDestinatario() {
-        when(noticeRepository.findTop50ByDestinatarioOrderByCreadoEnDesc(empleado))
-                .thenReturn(List.of(aviso(1L, empleado, false), aviso(2L, empleado, true)));
+        Pageable pedida = PageRequest.of(0, 50);
+        when(noticeRepository.findByDestinatarioOrderByCreadoEnDescIdDesc(empleado, pedida))
+                .thenReturn(Paginas.page(List.of(aviso(1L, empleado, false), aviso(2L, empleado, true))));
 
-        List<NoticeResponse> avisos = service.getMisAvisos(empleado);
+        List<NoticeResponse> avisos = service.getMisAvisos(empleado, pedida).contenido();
 
         assertThat(avisos).hasSize(2);
         assertThat(avisos).extracting(NoticeResponse::id).containsExactly(1L, 2L);

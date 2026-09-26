@@ -4,6 +4,8 @@ import com.nxtime.nxtime.domain.CorrectionRequest;
 import com.nxtime.nxtime.domain.CorrectionStatus;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -48,6 +50,14 @@ public interface CorrectionRequestRepository extends JpaRepository<CorrectionReq
             + "LEFT JOIN FETCH c.aprobador "
             + "WHERE c.solicitante.id = :usuarioId ORDER BY c.creadoEn DESC")
     List<CorrectionRequest> findMias(@Param("usuarioId") long usuarioId);
+
+    /** Lo mismo, por páginas, para la pantalla (Fase A7). La exportación de datos sigue con la de arriba. */
+    @Query(value = "SELECT c FROM solicitudes_correccion c "
+            + "JOIN FETCH c.registro r JOIN FETCH r.usuario "
+            + "LEFT JOIN FETCH c.aprobador "
+            + "WHERE c.solicitante.id = :usuarioId ORDER BY c.creadoEn DESC, c.id DESC",
+            countQuery = "SELECT COUNT(c) FROM solicitudes_correccion c WHERE c.solicitante.id = :usuarioId")
+    Page<CorrectionRequest> findMias(@Param("usuarioId") long usuarioId, Pageable pagina);
 
     /**
      * Las que afectan a los fichajes de una persona aunque las pidiera

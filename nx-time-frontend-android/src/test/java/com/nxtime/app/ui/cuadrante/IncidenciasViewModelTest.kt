@@ -1,5 +1,7 @@
 package com.nxtime.app.ui.cuadrante
 
+import com.nxtime.app.data.dto.PaginaDTO
+import com.nxtime.app.unaPagina
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.IncidenciaDTO
 import com.nxtime.app.data.repository.AuthRepository
@@ -59,8 +61,8 @@ class IncidenciasViewModelTest {
 
     private suspend fun conRespuestasNormales() {
         whenever(repositorio.getMisIncidencias(anyOrNull())).thenReturn(Response.success(listOf(incidencia(1))))
-        whenever(repositorio.getIncidenciasDelEquipo(any()))
-            .thenReturn(Response.success(listOf(incidencia(2), incidencia(3, "JUSTIFICADA"))))
+        whenever(repositorio.getIncidenciasDelEquipo(any(), any()))
+            .thenReturn(unaPagina(listOf(incidencia(2), incidencia(3, "JUSTIFICADA"))))
     }
 
     @Test
@@ -71,7 +73,7 @@ class IncidenciasViewModelTest {
         val vm = IncidenciasViewModel(repositorio, sesion)
         advanceUntilIdle()
 
-        verify(repositorio, never()).getIncidenciasDelEquipo(any())
+        verify(repositorio, never()).getIncidenciasDelEquipo(any(), any())
         assertFalse(vm.uiState.value.puedeRevisar)
         assertEquals(1, vm.uiState.value.mias.size)
         assertTrue(vm.uiState.value.delEquipo.isEmpty())
@@ -87,7 +89,7 @@ class IncidenciasViewModelTest {
 
         assertTrue(vm.uiState.value.puedeRevisar)
         // Por defecto, las que esperan decisión: no las resueltas.
-        verify(repositorio).getIncidenciasDelEquipo(false)
+        verify(repositorio).getIncidenciasDelEquipo(false, 0)
         assertEquals(2, vm.uiState.value.delEquipo.size)
         assertFalse(vm.uiState.value.cargando)
     }
@@ -97,7 +99,7 @@ class IncidenciasViewModelTest {
         // Una bandeja vacía diría "no hay nada que decidir", que sería mentira.
         whenever(sesion.fetchAuthorities()).thenReturn(GESTOR)
         whenever(repositorio.getMisIncidencias(anyOrNull())).thenReturn(Response.success(emptyList()))
-        whenever(repositorio.getIncidenciasDelEquipo(any())).thenReturn(error<List<IncidenciaDTO>>(500))
+        whenever(repositorio.getIncidenciasDelEquipo(any(), any())).thenReturn(error<PaginaDTO<IncidenciaDTO>>(500))
 
         val vm = IncidenciasViewModel(repositorio, sesion)
         advanceUntilIdle()

@@ -75,6 +75,9 @@ import org.springframework.test.context.DynamicPropertySource;
 @DisplayName("Incidencias de cuadrante")
 class IncidenciasIT {
 
+    private static final org.springframework.data.domain.Pageable PAGINA =
+            org.springframework.data.domain.PageRequest.of(0, 50);
+
     private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final LocalDate LUNES = LocalDate.of(2025, 3, 3);
     private static final LocalDate VIERNES = LUNES.plusDays(4);
@@ -355,14 +358,14 @@ class IncidenciasIT {
 
         ScheduleIncidentResponse explicada = incidentService.justificar(incidencia.getId(), "Avería del metro", ana);
         assertThat(explicada.estado()).isEqualTo(ScheduleIncidentStatus.JUSTIFICADA);
-        assertThat(incidentService.bandeja(gestor, false)).extracting(ScheduleIncidentResponse::id)
+        assertThat(incidentService.bandeja(gestor, false, PAGINA).contenido()).extracting(ScheduleIncidentResponse::id)
                 .containsExactly(incidencia.getId());
 
         ScheduleIncidentResponse decidida = incidentService.resolver(incidencia.getId(), true, null, gestor);
         assertThat(decidida.estado()).isEqualTo(ScheduleIncidentStatus.ACEPTADA);
         assertThat(decidida.resueltaPor()).isEqualTo("Gestora");
-        assertThat(incidentService.bandeja(gestor, false)).isEmpty();
-        assertThat(incidentService.bandeja(gestor, true)).hasSize(1);
+        assertThat(incidentService.bandeja(gestor, false, PAGINA).contenido()).isEmpty();
+        assertThat(incidentService.bandeja(gestor, true, PAGINA).contenido()).hasSize(1);
     }
 
     @Test
@@ -380,7 +383,7 @@ class IncidenciasIT {
         ScheduleIncident suya = incidenciasDe(gestor).get(0);
         assertThatThrownBy(() -> incidentService.resolver(suya.getId(), true, null, gestor))
                 .isInstanceOf(TenantAccessException.class);
-        assertThat(incidentService.bandeja(gestor, false)).extracting(ScheduleIncidentResponse::usuarioId)
+        assertThat(incidentService.bandeja(gestor, false, PAGINA).contenido()).extracting(ScheduleIncidentResponse::usuarioId)
                 .as("la bandeja no le enseña las suyas").doesNotContain(gestor.getId());
 
         incidentService.resolver(incidencia.getId(), true, null, gestor);

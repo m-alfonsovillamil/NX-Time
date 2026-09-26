@@ -5,6 +5,8 @@ import com.nxtime.nxtime.dto.DisputeRequest;
 import com.nxtime.nxtime.dto.ResolveCorrectionRequest;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.dto.PaginaDTO;
+import com.nxtime.nxtime.service.Paginacion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -74,16 +77,19 @@ public class CorrectionController {
     @Operation(summary = "Las correcciones que he pedido yo",
             description = "Con su estado, para ver en qué han quedado.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Listado",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = CorrectionResponse.class)))),
+            @ApiResponse(responseCode = "200", description = "Una página de correcciones"),
+            @ApiResponse(responseCode = "400", description = "Página negativa o tamaño fuera de 1..200",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @GetMapping("/mias")
     @PreAuthorize("hasAuthority('correccion:solicitar')")
-    public ResponseEntity<List<CorrectionResponse>> mias(
+    public ResponseEntity<PaginaDTO<CorrectionResponse>> mias(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamano,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(correctionService.mias(usuario.getUser()));
+        return ResponseEntity.ok(correctionService.mias(usuario.getUser(), Paginacion.pedir(pagina, tamano)));
     }
 
     @Operation(summary = "Aprobar o rechazar una corrección",

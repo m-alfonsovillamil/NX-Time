@@ -7,7 +7,9 @@ import com.nxtime.app.data.dto.IncidenciaDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.ui.util.EstadoDePaginas
 import com.nxtime.app.ui.util.MensajeUi
+import com.nxtime.app.ui.util.pedirSiguiente
 import com.nxtime.app.ui.util.Permisos
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +24,8 @@ data class IncidenciasUiState(
     val mias: List<IncidenciaDTO> = emptyList(),
     /** Las del equipo que esperan decisión. Vacía si no me toca revisar. */
     val delEquipo: List<IncidenciaDTO> = emptyList(),
+    /** La bandeja del equipo va por páginas (Fase A7); las mías son de un año. */
+    val paginasEquipo: EstadoDePaginas = EstadoDePaginas(),
     val puedeRevisar: Boolean = false,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
@@ -72,13 +76,27 @@ class IncidenciasViewModel(
                     it.copy(
                         cargando = false,
                         mias = mias.body().orEmpty(),
-                        delEquipo = equipo?.body().orEmpty(),
+                        delEquipo = equipo?.body()?.contenido.orEmpty(),
+                        paginasEquipo = equipo?.body()?.let(EstadoDePaginas::tras) ?: EstadoDePaginas(),
                         error = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e)) }
             }
+        }
+    }
+
+    /** La página siguiente de la bandeja del equipo, al llegar al final. */
+    fun cargarMasDelEquipo() {
+        val estado = _uiState.value
+        if (!estado.paginasEquipo.puedeCargarMas) return
+        _uiState.update { it.copy(paginasEquipo = it.paginasEquipo.copy(cargandoMas = true, fallo = false)) }
+        viewModelScope.launch {
+            val siguiente = pedirSiguiente(estado.paginasEquipo, estado.delEquipo, IncidenciaDTO::id) {
+                authRepository.getIncidenciasDelEquipo(pagina = it)
+            }
+            _uiState.update { it.copy(delEquipo = it.delEquipo + siguiente.nuevos, paginasEquipo = siguiente.estado) }
         }
     }
 
