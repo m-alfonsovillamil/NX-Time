@@ -288,6 +288,19 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
 
     /*
+     * 🚨 androidx.fragment, explícito y nuevo. biometric 1.1.0 arrastra la
+     * 1.2.5, y con ella MainActivity (una FragmentActivity) rechaza los
+     * códigos de petición de los lanzadores de Compose
+     * (rememberLauncherForActivityResult): "Can only use lower 16 bits for
+     * requestCode", y la app SE CERRABA al pedir el permiso de notificaciones.
+     * Lo destapó la Fase B5 al probar el push en el emulador, pero el mismo
+     * lanzador era el del recordatorio de fichar, que llevaba cerrándose igual
+     * desde que se escribió. Desde la 1.3.0, FragmentActivity usa el registro
+     * de resultados moderno y no tiene ese límite.
+     */
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
+
+    /*
      * Recordatorio de fichar (paso 7).
      *
      * WorkManager y no AlarmManager: el aviso no necesita puntualidad al
