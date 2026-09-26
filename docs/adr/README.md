@@ -31,10 +31,11 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [019](019-el-refresh-token-se-hashea-y-se-rota.md) | El refresh token se hashea, se rota, y reutilizarlo revoca la familia |
 | [020](020-tokens-en-el-navegador.md) | Los tokens de la web viven en memoria, y la cookie espera al dominio propio |
 | [021](021-la-web-es-un-proyecto-aparte.md) | La web es un proyecto aparte, y lo que comparte con el resto se genera |
-| [022](022-alcance-de-la-web.md) | La web empieza por los cimientos, y lo que queda fuera tiene nombre |
+| [022](022-alcance-de-la-web.md) | La web empieza por los cimientos, y lo que queda fuera tiene nombre (alcance sustituido por el 029) |
 | [023](023-cuadrantes-con-vigencia.md) | Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato |
 | [024](024-incidencias-de-cuadrante.md) | Incidencias de cuadrante: se detectan, no se imputan, y se avisa una vez por noche |
 | [025](025-la-firma-no-bloquea-la-correccion.md) | La firma mensual no bloquea la corrección: la corrección invalida la firma |
 | [026](026-analitica-en-dias-y-por-alcance.md) | La analítica cuenta días, no horas, y el alcance lo decide quién mira |
 | [027](027-listas-por-paginas.md) | Las listas que crecen sin límite van por páginas, con un DTO propio |
 | [028](028-push-generico-colgado-del-aviso.md) | Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil |
+| [029](029-la-web-alcanza-a-la-app.md) | La web alcanza a la app: un armazón común y la URL como destino del aviso |
