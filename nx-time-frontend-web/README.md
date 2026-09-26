@@ -5,8 +5,8 @@ aparece en `settings.gradle.kts` ni en `settings-docker.gradle.kts`, tiene su
 propio `npm` y tendrá su propio job de CI. Quien solo toque el backend no
 necesita Node instalado.
 
-Tiene **login y fichar** funcionando de punta a punta contra el mismo backend
-que la app Android, dentro del **armazón** en el que irán el resto de pantallas
+Tiene **login, Mi jornada y el historial** funcionando de punta a punta contra el
+mismo backend que la app Android, dentro del **armazón** en el que irán el resto de pantallas
 (fase W0 del plan de la web, [ADR 029](../docs/adr/029-la-web-alcanza-a-la-app.md)):
 menú por authorities, campana de avisos, rutas protegidas y los componentes
 comunes. Las demás pantallas llegan por fases (W2-W7) hasta hacer todo lo que
@@ -19,7 +19,7 @@ src/
 ├── navegacion/   secciones.ts   EL catálogo: de aquí salen menú, rutas y destinos de avisos
 │                 Marco.tsx · Campana.tsx
 ├── rutas/        rutas.tsx      guarda por authority, 403 y 404
-├── paginas/      Login.tsx · Fichar.tsx     (cada una, su trozo de JS)
+├── paginas/      Login · jornada/ (Mi jornada) · historial/     (cada página, su trozo de JS)
 ├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Notificaciones · Icono
 ├── i18n/es/      un fichero por área; ningún texto literal en los componentes
 ├── estilos/      tokens.css (generado) · base.css
