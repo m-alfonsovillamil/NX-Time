@@ -18,6 +18,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react()],
   server: {
+    // El test de `navegacion/secciones.ts` lee `NoticeType.java` y
+    // `RoleAuthorities.java` para comprobar que la web y el backend dicen lo
+    // mismo. Vite solo sirve lo que hay dentro del proyecto; se abre esa
+    // carpeta del backend y nada más.
+    fs: { allow: ['.', '../nx-time-backend/src/main/java/com/nxtime/nxtime/domain'] },
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
       '/auth': { target: 'http://localhost:8080', changeOrigin: true },

@@ -6,24 +6,32 @@ propio `npm` y tendrá su propio job de CI. Quien solo toque el backend no
 necesita Node instalado.
 
 Tiene **login y fichar** funcionando de punta a punta contra el mismo backend
-que la app Android: lo que se ficha aquí sale en el historial del móvil. Es
-deliberadamente pequeño — el resto de pantallas (analítica, editor de
-cuadrantes, visado de firmas, informes) llegará después.
+que la app Android, dentro del **armazón** en el que irán el resto de pantallas
+(fase W0 del plan de la web, [ADR 029](../docs/adr/029-la-web-alcanza-a-la-app.md)):
+menú por authorities, campana de avisos, rutas protegidas y los componentes
+comunes. Las demás pantallas llegan por fases (W2-W7) hasta hacer todo lo que
+hace la app, más el editor de cuadrantes, la analítica y el visado de firmas.
 
 ```
 src/
-├── api/      schema.d.ts (generado) · cliente.ts · sesion.ts
-├── rutas/    rutas.tsx
-├── paginas/  Login.tsx · Fichar.tsx
-├── componentes/  Basicos.tsx · ServidorDespertando.tsx
-├── i18n/     es.ts          ningún texto literal en los componentes
-├── estilos/  tokens.css (generado) · base.css
-└── util/     fechas.ts · errores.ts
-e2e/          jornada.spec.ts (Playwright, contra el backend real)
+├── api/          schema.d.ts (generado) · cliente.ts · sesion.ts · useSesion.ts
+│                 consultas.ts   TanStack Query: pedir(), useMutacion, listas por páginas
+├── navegacion/   secciones.ts   EL catálogo: de aquí salen menú, rutas y destinos de avisos
+│                 Marco.tsx · Campana.tsx
+├── rutas/        rutas.tsx      guarda por authority, 403 y 404
+├── paginas/      Login.tsx · Fichar.tsx     (cada una, su trozo de JS)
+├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Notificaciones · Icono
+├── i18n/es/      un fichero por área; ningún texto literal en los componentes
+├── estilos/      tokens.css (generado) · base.css
+├── util/         fechas.ts · errores.ts · descargar.ts
+└── pruebas/      api.tsx        servidor de mentira tipado con el contrato
+e2e/              jornada.spec.ts (Playwright, contra el backend real)
+scripts/          tokens.mjs · presupuesto.mjs
 ```
 
-**Sin Redux, Zustand ni TanStack Query.** Para dos pantallas sobran `useState`
-y un módulo con estado; se añadirá cuando haya una pantalla que lo pida.
+**Una sección nueva son dos pasos**: su línea en `navegacion/secciones.ts` y su
+página. El menú, la ruta y el destino de aviso salen solos, y un test compara
+el catálogo con `NoticeType.java` y `RoleAuthorities.java` del backend.
 
 ## Los dos ficheros generados
 
@@ -67,6 +75,7 @@ npm run generar     # tipos + tokens
 npm test            # Vitest
 npm run typecheck   # tsc del proyecto + el contrato generado
 npm run build       # bundle de produccion en dist/
+npm run presupuesto # tras el build: el JS inicial no pasa de 150 kB comprimido
 npm run e2e         # Playwright, y necesita backend (ver abajo)
 ```
 
@@ -90,7 +99,7 @@ el proyecto lleva `skipLibCheck: true` (lo normal, para no gastar el build en
 los `.d.ts` de las dependencias), y con él puesto un contrato generado roto
 pasaría sin que nadie lo viera, porque es justamente un `.d.ts`.
 
-## Las tres decisiones que conviene conocer antes de tocar nada
+## Las decisiones que conviene conocer antes de tocar nada
 
 **Los tokens viven en memoria.** No hay `localStorage` ni cookie, así que
 recargar la página cierra la sesión. Es una decisión, no un olvido: el porqué
@@ -105,19 +114,32 @@ eso el servidor lo lee como una copia robada y revoca la sesión entera. Por eso
 `cliente.ts` comparte una única promesa. No es una optimización; sin ella, tres
 peticiones simultáneas echan a la gente. `cliente.test.ts` lo comprueba.
 
+**Los datos pasan por TanStack Query y `pedir()`.** Cada `queryFn` es
+`pedir(cliente.GET(...))`, que devuelve los datos o lanza un `ErrorDeApi` con el
+`detail` del servidor listo para enseñar. Volver a la pestaña vuelve a
+preguntar, y una escritura (`useMutacion`) invalida por clave lo que ha
+cambiado. Los errores de un formulario se enseñan al lado del botón, no en una
+notificación que se va sola.
+
+**La URL es el destino del aviso.** El aviso `ausencias` lleva a `/ausencias`:
+sin tabla de traducción. Una sección cuya página aún no existe está en el
+catálogo con su fase (`llegaEn`); no sale en el menú y su aviso no navega.
+
 **El estado de la jornada se pregunta, no se deduce.** `GET /fichaje/activo` y
 el campo `enPausa` vienen del servidor en cada fichaje. Llevar la cuenta en el
 cliente se desincroniza en cuanto alguien fiche desde el móvil con esta pestaña
 abierta, que es justo el caso que esta pantalla existe para demostrar.
 
-## El test de extremo a extremo
+## Los tests de extremo a extremo
 
-Uno solo, y contra el backend de verdad. Los tests de Vitest cubren lo que se
-puede razonar; este cubre lo único que ninguno de ellos puede demostrar: que la
-web y el backend **hablan el mismo idioma**. En este proyecto los defectos que
-se han escapado salieron todos ejecutando el sistema.
+Pocos, y contra el backend de verdad. Los tests de Vitest cubren lo que se
+puede razonar (con `pruebas/api.tsx`, cuyas claves son rutas del contrato: una
+ruta mal escrita no compila); estos cubren lo único que ninguno de ellos puede
+demostrar: que la web y el backend **hablan el mismo idioma**. En este proyecto
+los defectos que se han escapado salieron todos ejecutando el sistema.
 
-Está fuera de `npm test` a propósito, porque necesita el sistema levantado:
+Están fuera de `npm test` a propósito, porque necesitan el sistema levantado
+(pasarán a CI en la fase W8):
 
 ```bash
 docker compose up -d postgres
@@ -125,8 +147,10 @@ docker compose up -d postgres
 npm run e2e
 ```
 
-Entra como EMPLEADO (el rol con menos permisos, para que se note si esta
-pantalla necesitara alguno que no tiene), ficha, pausa, reanuda y sale.
+Entran como EMPLEADO (el rol con menos permisos, para que se note si una
+pantalla necesitara alguno que no tiene): una jornada entera, el marco con su
+menú y su campana, un enlace sin sesión que vuelve a su página tras el login, y
+que recargar cierra la sesión (ADR 020, hasta la fase W1).
 
 ## Por qué los tests están sobre `scripts/tokens.mjs`
 

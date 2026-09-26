@@ -76,6 +76,44 @@ test('recargar la pagina cierra la sesion, como dice el ADR 020', async ({ page 
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
 });
 
+/*
+ * El armazón de W0 (ADR 029) contra el backend de verdad: el menú sale de
+ * las authorities que manda el login, la campana pide su contador, y cerrar
+ * sesión está en el menú de usuario.
+ */
+test('el marco: menu por authorities, campana y cerrar sesion', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
+  await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+
+  // Escritorio: se ve la barra lateral, con la sección actual marcada.
+  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
+  await expect(menu.getByRole('link', { name: 'Mi jornada' })).toHaveAttribute('aria-current', 'page');
+  // Un EMPLEADO no tiene ninguna authority de gestión.
+  await expect(page.getByRole('heading', { name: 'Gestión' })).toHaveCount(0);
+
+  // El contador de la campana viene de /avisos/no-leidos: la etiqueta dice cuántos.
+  await expect(page.getByRole('button', { name: /^Avisos: / })).toBeVisible();
+
+  await page.getByLabel(/^Menú de /).click();
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+});
+
+test('un enlace a una seccion sin sesion pasa por el login y vuelve a ella', async ({ page }) => {
+  await page.goto('/fichar');
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+
+  await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
+  await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+
+  await expect(page).toHaveURL(/\/fichar$/);
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+});
+
 test('una ruta que no existe no rompe la aplicacion', async ({ page }) => {
   await page.goto('/no-existe');
   await expect(page.getByRole('heading', { name: 'Esta página no existe' })).toBeVisible();
