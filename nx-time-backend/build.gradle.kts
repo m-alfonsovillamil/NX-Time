@@ -54,6 +54,11 @@ dependencies {
         exclude(group = "com.google.cloud", module = "google-cloud-storage")
         exclude(group = "com.google.cloud", module = "google-cloud-firestore")
     }
+    // 🚨 Y esto, que llegaba de rebote por google-cloud-storage y SÍ se usa:
+    // FirebaseOptions lee la credencial con JacksonFactory. Sin él, el primer
+    // despliegue con credencial se cayó con ClassNotFoundException (26/09/2026).
+    // Misma versión que el google-http-client que trae firebase-admin.
+    implementation("com.google.http-client:google-http-client-jackson2:2.1.0")
 
     // Caché (Fase 10): Caffeine como implementación. Se usa para el
     // calendario laboral (ver HolidayCalendar) -- los festivos cambian

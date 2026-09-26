@@ -103,3 +103,14 @@ es secreto (va dentro del APK), y sin él nadie podría compilar.
 - Al añadir esta fase, la suite del backend se quedó sin memoria: cada test de
   integración crea su propia base, así que su contexto de Spring nunca se
   reutiliza, pero se guardaba en caché. `spring.test.context.cache.maxSize=8`.
+- **El primer despliegue con la credencial se cayó** (26/09/2026) con
+  `ClassNotFoundException: JacksonFactory`. Al excluir `google-cloud-storage`
+  para quitar el XML, se fue también `google-http-client-jackson2`, que llegaba de
+  rebote y Firebase sí usa para leer la credencial. Ningún test lo vio: ninguno
+  arrancaba Firebase con una credencial bien formada. Render mantuvo la versión
+  anterior, así que no hubo caída del servicio. Se arregló en tres frentes: la
+  dependencia explícita; `FirebaseConfigTest` genera una credencial de mentira
+  bien formada e inicializa Firebase de verdad; y `FirebaseConfig` captura
+  también `LinkageError`, para que un fallo así deje el backend sin push en vez de
+  sin arrancar. Se comprobó arrancando el jar empaquetado con esa credencial,
+  que es lo que hace Render.
