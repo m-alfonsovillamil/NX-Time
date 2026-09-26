@@ -694,7 +694,7 @@ h2 {
   padding: 10px 12px;
   text-align: left;
   border-bottom: 1px solid var(--nx-outline-variant);
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .nx-tabla th {
@@ -738,6 +738,11 @@ h2 {
 
   .nx-tabla .nx-tabla__numerica {
     text-align: right;
+  }
+
+  /* Una celda sin dato (una jornada sin pausa) no deja su etiqueta suelta. */
+  .nx-tabla td:empty {
+    display: none;
   }
 
   /* El nombre de la columna delante de cada dato, que en la tarjeta no hay cabecera. */
@@ -1112,6 +1117,58 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+/* ---- Historial (W2) ---- */
+
+.nx-acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  /* Pegadas a su cabecera, «Acciones»; los botones de texto ya traen su margen. */
+  margin-left: -8px;
+}
+
+.nx-acciones-fila .nx-boton {
+  min-height: 36px;
+}
+
+.nx-filtro-fechas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nx-filtro-fechas .nx-campo {
+  flex: 1 1 160px;
+}
+
+.nx-filtro-fechas .nx-aviso {
+  flex-basis: 100%;
+}
+
+.nx-reparto li {
+  display: grid;
+  grid-template-columns: 1fr 96px auto;
+  align-items: center;
+}
+
+.nx-reparto__minutos {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--nx-outline);
+  background: var(--nx-surface);
+  color: var(--nx-on-surface);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.nx-reparto__minutos:focus-visible {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: 1px;
 }
 
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este

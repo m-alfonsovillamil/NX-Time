@@ -81,6 +81,19 @@ export async function pedir<D>(peticion: Promise<Respuesta<D>>): Promise<D> {
 }
 
 /**
+ * Como [pedir], pero con el código de la respuesta.
+ *
+ * Para las rutas en las que el código **es** la respuesta: repartir una
+ * jornada contesta 200 si se ha aplicado y 202 si se ha pedido, con dos
+ * cuerpos distintos, y la pantalla tiene que decir cuál de las dos ha pasado.
+ */
+export async function pedirConEstado<D>(peticion: Promise<Respuesta<D>>): Promise<{ datos: D; status: number }> {
+  const { data, error, response } = await esperar(peticion);
+  if (!response.ok) throw new ErrorDeApi(mensajeDeError(error, response.status), response.status);
+  return { datos: data as D, status: response.status };
+}
+
+/**
  * Como [pedir], pero un 204 es «no hay» y no un error.
  *
  * Existe por `GET /fichaje/activo`, que responde 204 cuando no hay jornada

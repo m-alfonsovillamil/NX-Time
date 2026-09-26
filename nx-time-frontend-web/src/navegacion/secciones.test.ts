@@ -121,7 +121,8 @@ describe('la barra inferior del móvil', () => {
   });
 
   it('con una sola sección no hay barra', () => {
-    expect(barraInferior(menuPara(AUTHORITIES.EMPLEADO))).toEqual({ enBarra: [], conMas: false });
+    const una = menuPara(AUTHORITIES.EMPLEADO, { conPendientes: true }).slice(0, 1);
+    expect(barraInferior(una)).toEqual({ enBarra: [], conMas: false });
   });
 });
 
