@@ -250,8 +250,8 @@ public class DemoDataSeeder implements CommandLineRunner {
         // Fase B. Sin departamentos ni datos personales, el perfil sale
         // con la mitad de los campos vacíos en la demo desplegada y el
         // avatar de todo el mundo es una letra suelta.
-        sembrarPerfiles(empleadosTech, techCorp, "Ingeniería", "Producto");
-        sembrarPerfiles(empleadosIberica, consultoraIberica, "Consultoría", "Administración");
+        sembrarPerfiles(empleadosTech, gestorTech, techCorp, "Ingeniería", "Producto");
+        sembrarPerfiles(empleadosIberica, gestorIberica, consultoraIberica, "Consultoría", "Administración");
 
         sembrarFichas(empleadosTech);
         sembrarFichas(empleadosIberica);
@@ -611,11 +611,18 @@ public class DemoDataSeeder implements CommandLineRunner {
      * son opcionales de verdad y la pantalla tiene que aguantar verlos
      * vacíos.
      */
-    private void sembrarPerfiles(List<User> empleados, Company empresa, String... nombresDeDepartamento) {
+    private void sembrarPerfiles(
+            List<User> empleados, User gestor, Company empresa, String... nombresDeDepartamento) {
         List<Department> departamentos = java.util.Arrays.stream(nombresDeDepartamento)
                 .map(nombre -> departmentRepository.save(
                         Department.builder().empresa(empresa).nombre(nombre).build()))
                 .toList();
+
+        // El gestor, en el primero: un GESTOR ve la analítica de SU
+        // departamento (Fase B4), y sin ninguno la tarjeta del panel solo
+        // decía que pidiera uno a RRHH. Salió al probar la demo en vivo.
+        gestor.setDepartamento(departamentos.get(0));
+        userRepository.save(gestor);
 
         // Los apellidos los pone ya crearUsuario: son lo que hace que el
         // avatar enseñe dos iniciales de verdad ("JL" y no "JA").

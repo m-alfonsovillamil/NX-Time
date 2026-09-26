@@ -31,6 +31,15 @@ public interface ScheduleAssignmentRepository extends JpaRepository<ScheduleAssi
     List<ScheduleAssignment> findDeUsuariosEl(
             @Param("usuarioIds") java.util.Collection<Long> usuarioIds, @Param("dia") LocalDate dia);
 
+    /** Las de varias personas que tocan un rango, para el planificado de la analítica (Fase B4). */
+    @Query("SELECT a FROM asignaciones_horario a JOIN FETCH a.plantilla "
+            + "WHERE a.usuario.id IN :usuarioIds AND a.fechaInicio <= :hasta "
+            + "AND (a.fechaFin IS NULL OR a.fechaFin >= :desde)")
+    List<ScheduleAssignment> findDeUsuariosEnRango(
+            @Param("usuarioIds") java.util.Collection<Long> usuarioIds,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
+
     /**
      * Las vigentes un día, de TODAS las empresas: quién tiene cuadrante ese
      * día. Es por donde empieza el barrido de incidencias (Fase B2).

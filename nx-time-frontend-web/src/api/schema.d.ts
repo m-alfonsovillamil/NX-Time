@@ -2331,6 +2331,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/analitica/resumen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las cifras de un vistazo
+         * @description Absentismo, puntualidad, jornadas cerradas por el sistema y minutos medios por día. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.
+         */
+        get: operations["resumen"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analitica/puntualidad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Puntualidad
+         * @description De las entradas de quien tiene cuadrante, cuántas llegaron dentro de la tolerancia, y la media, la mediana y el reparto de los retrasos. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.
+         */
+        get: operations["puntualidad"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analitica/absentismo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Absentismo
+         * @description Días perdidos sobre días que se debían trabajar, sin contar vacaciones, con el desglose por motivo. Por persona, por departamento o solo el total. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.
+         */
+        get: operations["absentismo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/analitica/absentismo.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Absentismo en CSV
+         * @description Lo mismo que /absentismo, para una hoja de cálculo: separado por punto y coma, con coma decimal y en UTF-8 con BOM. Una fila por grupo y el total al final. El periodo es el mes, trimestre o año natural que contiene 'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su departamento.
+         */
+        get: operations["absentismoCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje/{id}/pausas/{pausaId}": {
         parameters: {
             query?: never;
@@ -3647,6 +3727,97 @@ export interface components {
             /** Format: date-time */
             fechaHora?: string;
             ip?: string;
+        };
+        AnalyticsSummaryResponse: {
+            ventana?: components["schemas"]["AnalyticsWindow"];
+            /** Format: int32 */
+            personas?: number;
+            absentismo?: number | null;
+            absentismoSinJustificar?: number | null;
+            puntualidad?: number | null;
+            /** Format: double */
+            retrasoMedioMinutos?: number | null;
+            jornadasIncompletas?: number | null;
+            /** Format: int64 */
+            minutosMediosPorDia?: number | null;
+        };
+        AnalyticsWindow: {
+            /** @enum {string} */
+            periodo?: "MES" | "TRIMESTRE" | "ANIO";
+            /** Format: date */
+            desde?: string;
+            /** Format: date */
+            hasta?: string;
+            /** Format: date */
+            evaluadoHasta?: string | null;
+            /** @enum {string} */
+            alcance?: "EMPRESA" | "DEPARTAMENTO";
+            departamento?: string | null;
+        };
+        PunctualityResponse: {
+            ventana?: components["schemas"]["AnalyticsWindow"];
+            /** @enum {string} */
+            agrupacion?: "EMPRESA" | "DEPARTAMENTO" | "EMPLEADO";
+            total?: components["schemas"]["PunctualityRow"];
+            filas?: components["schemas"]["PunctualityRow"][];
+        };
+        PunctualityRow: {
+            /** Format: int64 */
+            id?: number | null;
+            nombre?: string;
+            /** Format: int32 */
+            entradasConHorario?: number;
+            /** Format: int32 */
+            puntuales?: number;
+            /** Format: int32 */
+            retrasos?: number;
+            /** @example 93.5 */
+            puntualidad?: number | null;
+            /** Format: double */
+            retrasoMedioMinutos?: number | null;
+            /** Format: double */
+            retrasoMedianoMinutos?: number | null;
+            /** Format: int32 */
+            retrasosHasta30?: number;
+            /** Format: int32 */
+            retrasosDeMasDe30?: number;
+        };
+        AbsenceReasonDays: {
+            /** @example MEDICO */
+            motivo?: string;
+            /** @example Consulta médica */
+            etiqueta?: string;
+            /** Format: int32 */
+            dias?: number;
+        };
+        AbsenteeismResponse: {
+            ventana?: components["schemas"]["AnalyticsWindow"];
+            /** @enum {string} */
+            agrupacion?: "EMPRESA" | "DEPARTAMENTO" | "EMPLEADO";
+            total?: components["schemas"]["AbsenteeismRow"];
+            filas?: components["schemas"]["AbsenteeismRow"][];
+        };
+        AbsenteeismRow: {
+            /** Format: int64 */
+            id?: number | null;
+            nombre?: string;
+            /** Format: int32 */
+            personas?: number;
+            /** Format: int32 */
+            diasLaborables?: number;
+            /** Format: int32 */
+            diasTrabajados?: number;
+            /** Format: int32 */
+            diasAusenciaJustificada?: number;
+            /** Format: int32 */
+            diasSinFichaje?: number;
+            /** Format: int32 */
+            diasVacaciones?: number;
+            /** @example 4.2 */
+            absentismo?: number | null;
+            /** @example 0.8 */
+            absentismoSinJustificar?: number | null;
+            motivos?: components["schemas"]["AbsenceReasonDays"][];
         };
     };
     responses: never;
@@ -9626,6 +9797,192 @@ export interface operations {
             };
             /** @description Fichaje no encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    resumen: {
+        parameters: {
+            query?: {
+                periodo?: "MES" | "TRIMESTRE" | "ANIO";
+                fecha?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AnalyticsSummaryResponse"];
+                };
+            };
+            /** @description Periodo o fecha no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'analitica:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Un gestor sin departamento asignado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    puntualidad: {
+        parameters: {
+            query?: {
+                periodo?: "MES" | "TRIMESTRE" | "ANIO";
+                fecha?: string;
+                agrupar?: "EMPRESA" | "DEPARTAMENTO" | "EMPLEADO";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Puntualidad */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PunctualityResponse"];
+                };
+            };
+            /** @description Periodo, fecha o agrupación no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'analitica:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Un gestor sin departamento asignado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    absentismo: {
+        parameters: {
+            query?: {
+                periodo?: "MES" | "TRIMESTRE" | "ANIO";
+                fecha?: string;
+                agrupar?: "EMPRESA" | "DEPARTAMENTO" | "EMPLEADO";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Absentismo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AbsenteeismResponse"];
+                };
+            };
+            /** @description Periodo, fecha o agrupación no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'analitica:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Un gestor sin departamento asignado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    absentismoCsv: {
+        parameters: {
+            query?: {
+                periodo?: "MES" | "TRIMESTRE" | "ANIO";
+                /** @description Cualquier día del periodo; hoy si no se da */
+                fecha?: string;
+                agrupar?: "EMPRESA" | "DEPARTAMENTO" | "EMPLEADO";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El fichero */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Sin 'analitica:leer' o sin 'informe:exportar' */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

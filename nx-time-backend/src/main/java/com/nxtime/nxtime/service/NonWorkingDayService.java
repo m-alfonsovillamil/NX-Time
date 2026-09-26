@@ -58,4 +58,16 @@ public interface NonWorkingDayService {
      * ventana.
      */
     Map<Long, Motivo> motivosDelDia(Collection<User> personas, LocalDate dia);
+
+    /**
+     * Solo los festivos de una empresa en un rango (ambos incluidos), sin
+     * mirar las ausencias de nadie (Fase B4).
+     *
+     * Para la analítica de absentismo, que necesita saber qué días se debían
+     * trabajar ANTES de mirar quién faltó: si la ausencia ya viniera dentro
+     * del "no laborable", una baja no podría contarse como día perdido. Es la
+     * misma construcción del motivo que usa {@link #motivosEnRango}, que ahora
+     * pasa por aquí.
+     */
+    Map<LocalDate, Motivo> festivosEnRango(long empresaId, LocalDate desde, LocalDate hasta);
 }

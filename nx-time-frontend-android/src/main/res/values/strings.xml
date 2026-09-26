@@ -163,6 +163,18 @@
     </string>
     <string name="empresa_horas_por_empleado">Horas por empleado</string>
     <string name="empresa_media_equipo">La marca vertical es la media del equipo: %1$s</string>
+
+    <!-- Analítica del mes (Fase B4) -->
+    <string name="analitica_titulo">Este mes</string>
+    <string name="analitica_absentismo">Absentismo</string>
+    <string name="analitica_puntualidad">Puntualidad</string>
+    <string name="analitica_toda_la_empresa">toda la empresa</string>
+    <string name="analitica_alcance">Hasta el %1$s · %2$s</string>
+    <string name="analitica_sin_dias">Todavía no ha terminado ningún día del mes.</string>
+    <string name="analitica_ayuda">
+        Absentismo: días perdidos sobre días que se debían trabajar, sin contar
+        vacaciones. Puntualidad: solo de quien tiene cuadrante.
+    </string>
     <string name="empresa_plantilla">Plantilla</string>
     <string name="empresa_mes">Mes del informe</string>
     <string name="empresa_descargar_excel">Descargar Excel de horas</string>

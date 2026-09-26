@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.config.CacheConfig;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.ScheduleAssignment;
@@ -39,6 +40,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -89,8 +91,13 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
     // El barrido
     // ------------------------------------------------------------------
 
+    /**
+     * Vacía la analítica (Fase B4): los retrasos nuevos mueven la
+     * puntualidad. Una vez por barrido, no por incidencia.
+     */
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.ANALITICA, allEntries = true)
     public int detectar(LocalDate desde, LocalDate hasta) {
         Map<Company, Set<User>> nuevasPorEmpresa = new LinkedHashMap<>();
         Map<Company, Integer> cuantasPorEmpresa = new LinkedHashMap<>();
@@ -283,8 +290,13 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
         return toResponse(incidentRepository.save(incidencia));
     }
 
+    /**
+     * Vacía la analítica (Fase B4): aceptar la explicación de una ausencia
+     * la pasa de "sin fichaje" a "con motivo" en el absentismo.
+     */
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.ANALITICA, allEntries = true)
     public ScheduleIncidentResponse resolver(long incidenciaId, boolean aceptar, String comentario, User actor) {
         ScheduleIncident incidencia = deLaEmpresa(incidenciaId, actor);
         if (!RoleAuthorities.tiene(actor, REVISAR)) {

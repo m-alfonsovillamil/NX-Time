@@ -84,6 +84,13 @@ object Permisos {
     fun puedeCrearGestores(authorities: Set<String>): Boolean =
         "gestor:crear" in authorities
 
+    /**
+     * Ve el absentismo y la puntualidad (`analitica:leer`, Fase B4). Qué
+     * parte de la empresa ve —su departamento o toda— lo decide el servidor.
+     */
+    fun puedeVerAnalitica(authorities: Set<String>): Boolean =
+        "analitica:leer" in authorities
+
     /** Ve el panel de indicadores de la empresa (`fichaje:leer:equipo`). */
     fun puedeVerPanelEmpresa(authorities: Set<String>): Boolean =
         "fichaje:leer:equipo" in authorities
