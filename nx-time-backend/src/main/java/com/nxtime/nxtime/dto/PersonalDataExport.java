@@ -38,6 +38,7 @@ public record PersonalDataExport(
         List<IncidenciaDeCuadrante> incidenciasDeCuadrante,
         List<FirmaMensual> firmasMensuales,
         List<Aviso> avisos,
+        List<DispositivoPush> dispositivosPush,
         List<Adjunto> adjuntos,
         List<Candidatura> candidaturas,
         List<Denuncia> denunciasIdentificadas,
@@ -104,6 +105,13 @@ public record PersonalDataExport(
     }
 
     public record Aviso(String tipo, String titulo, String cuerpo, boolean leido, Instant creadoEn) {
+    }
+
+    /**
+     * Un móvil que recibe tus push (Fase B5). El token entero: identifica un
+     * aparato tuyo, y es tuyo saber qué se guarda de él.
+     */
+    public record DispositivoPush(String plataforma, String token, Instant registradoEn, Instant vistoEn) {
     }
 
     public record Adjunto(String tipo, String nombre, String mime, long tamanoBytes, Instant subidoEn, boolean vigente) {

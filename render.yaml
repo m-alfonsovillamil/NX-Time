@@ -105,6 +105,14 @@ services:
       - key: MAIL_FROM
         sync: false
 
+      # Push (Fase B5, ADR 028): el JSON de la cuenta de servicio de
+      # Firebase, EN BASE64 (Render maltrata los saltos de línea de la clave
+      # privada). Es un secreto: puede mandar push a toda la plantilla. Sin
+      # ella la aplicación arranca igual y simplemente no manda push.
+      # Generar con: base64 -w0 cuenta-de-servicio.json
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false
+
       # Orígenes permitidos para CORS, separados por comas y SIN barra final
       # ("https://nxtime-web.onrender.com", no ".../"). Vacío mientras no haya
       # un cliente web: la app Android no manda cabecera Origin y CORS no le

@@ -263,6 +263,9 @@ enum class DestinoPrincipal(
 fun NxTimeNavHost(
     sesionIniciada: Boolean,
     sessionManager: SessionManager,
+    /** La `rutaDestino` del push que ha abierto la app (Fase B5), o null. */
+    rutaDeAvisoPendiente: String? = null,
+    onRutaDeAvisoAtendida: () -> Unit = {},
     navController: NavHostController = rememberNavController()
 ) {
     val inicio = if (sesionIniciada) Pantalla.FICHAR.ruta else Pantalla.LOGIN.ruta
@@ -407,6 +410,21 @@ fun NxTimeNavHost(
             launchSingleTop = true
             restoreState = true
         }
+    }
+
+    /*
+     * Un push tocado (Fase B5): se va adonde apunta, igual que al tocar el
+     * aviso en la lista, y el contador de la campana se pone al día. Solo con
+     * sesión: sin ella el push ni se enseña, pero la ruta podría haber llegado
+     * justo antes de caducar. Una ruta que esta versión no conoce se descarta.
+     */
+    LaunchedEffect(rutaDeAvisoPendiente) {
+        val ruta = rutaDeAvisoPendiente ?: return@LaunchedEffect
+        if (sessionManager.fetchAuthToken() != null) {
+            rutaDeAviso(ruta)?.let { irAAviso(it) }
+            avisosViewModel.refrescarContador()
+        }
+        onRutaDeAvisoAtendida()
     }
 
     val entradaActual by navController.currentBackStackEntryAsState()

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "571661902410",
+    "project_id": "nx-time-altertas-push",
+    "storage_bucket": "nx-time-altertas-push.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571661902410:android:1e64fe89926956cedffcb3",
+        "android_client_info": {
+          "package_name": "com.nxtime.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwl1oKZ6IFCPq6tY9M0S3OYT3mBe21FzQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571661902410:android:be86205206bfecb2dffcb3",
+        "android_client_info": {
+          "package_name": "com.nxtime.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwl1oKZ6IFCPq6tY9M0S3OYT3mBe21FzQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -66,7 +66,7 @@ object AppViewModelProvider {
         initializer { AusenciasViewModel(app().authRepository) }
         initializer { SolicitudViewModel(app().authRepository) }
         initializer { CambiarContrasenaViewModel(app().authRepository) }
-        initializer { AjustesViewModel(app().authRepository, app().ajustes) }
+        initializer { AjustesViewModel(app().authRepository, app().ajustes, app().registroDePush) }
         initializer { HistorialEquipoViewModel(app().authRepository) }
         initializer { AusenciasEquipoViewModel(app().authRepository) }
         initializer { AltaUsuarioViewModel(app().authRepository) }

@@ -25,14 +25,44 @@
     "name" : "Gestión",
     "description" : "Alta de empleados/gestores, listado del equipo y baja de empleados. Authorities distintas según GESTOR/RRHH/ADMIN, ver RoleAuthorities."
   }, {
+    "name" : "Estado",
+    "description" : "Si las tareas nocturnas han corrido. Público y sin datos de ninguna empresa."
+  }, {
+    "name" : "Push",
+    "description" : "Registrar y dar de baja el dispositivo que recibe las notificaciones push."
+  }, {
+    "name" : "Fichaje",
+    "description" : "Registro horario: iniciar/finalizar jornada, pausas e historial."
+  }, {
+    "name" : "Firma mensual",
+    "description" : "La persona firma que su registro de un mes es correcto. Firma de aceptación, no eIDAS. Una corrección posterior no se bloquea: invalida la firma."
+  }, {
+    "name" : "Departamentos",
+    "description" : "Departamentos de la empresa y a cuál pertenece cada empleado."
+  }, {
+    "name" : "Proyectos",
+    "description" : "Proyectos de la empresa, asignaciones con vigencia y horas imputadas."
+  }, {
+    "name" : "Auditoría",
+    "description" : "Línea temporal de cambios de un fichaje (RD-ley 8/2019). Solo lectura."
+  }, {
+    "name" : "Dashboard",
+    "description" : "Métricas agregadas: horas trabajadas, pendientes e incidencias."
+  }, {
+    "name" : "Analítica",
+    "description" : "Absentismo y puntualidad por periodo, departamento o persona."
+  }, {
+    "name" : "Borrado de datos",
+    "description" : "Derecho de supresión (RGPD, art. 17): la persona lo pide y RRHH o ADMIN lo ejecuta. Ejecutar borra lo prescindible y desactiva la cuenta; el registro horario se conserva cuatro años y después se anonimiza solo."
+  }, {
+    "name" : "Canal de denuncias",
+    "description" : "Canal interno de información de la Ley 2/2023, con anonimato opcional."
+  }, {
     "name" : "Calendario",
     "description" : "Festivos del calendario laboral y ausencias del mes."
   }, {
     "name" : "Ausencias",
     "description" : "Solicitud de ausencias (vacaciones, bajas...) y su aprobación/rechazo por un gestor."
-  }, {
-    "name" : "Estado",
-    "description" : "Si las tareas nocturnas han corrido. Público y sin datos de ninguna empresa."
   }, {
     "name" : "Adjuntos",
     "description" : "Currículum y foto de perfil. Un CV y una foto vigentes por persona: subir otro reemplaza el anterior."
@@ -52,38 +82,11 @@
     "name" : "Cuadrantes",
     "description" : "Plantillas de horario, asignaciones con vigencia, excepciones por día y el horario teórico que resulta."
   }, {
-    "name" : "Fichaje",
-    "description" : "Registro horario: iniciar/finalizar jornada, pausas e historial."
-  }, {
-    "name" : "Firma mensual",
-    "description" : "La persona firma que su registro de un mes es correcto. Firma de aceptación, no eIDAS. Una corrección posterior no se bloquea: invalida la firma."
-  }, {
     "name" : "Perfil",
     "description" : "Datos personales del usuario autenticado, y consulta del perfil de un compañero de la misma empresa."
   }, {
-    "name" : "Departamentos",
-    "description" : "Departamentos de la empresa y a cuál pertenece cada empleado."
-  }, {
     "name" : "Ofertas internas",
     "description" : "Vacantes internas y candidaturas de la plantilla."
-  }, {
-    "name" : "Proyectos",
-    "description" : "Proyectos de la empresa, asignaciones con vigencia y horas imputadas."
-  }, {
-    "name" : "Auditoría",
-    "description" : "Línea temporal de cambios de un fichaje (RD-ley 8/2019). Solo lectura."
-  }, {
-    "name" : "Dashboard",
-    "description" : "Métricas agregadas: horas trabajadas, pendientes e incidencias."
-  }, {
-    "name" : "Analítica",
-    "description" : "Absentismo y puntualidad por periodo, departamento o persona."
-  }, {
-    "name" : "Borrado de datos",
-    "description" : "Derecho de supresión (RGPD, art. 17): la persona lo pide y RRHH o ADMIN lo ejecuta. Ejecutar borra lo prescindible y desactiva la cuenta; el registro horario se conserva cuatro años y después se anonimiza solo."
-  }, {
-    "name" : "Canal de denuncias",
-    "description" : "Canal interno de información de la Ley 2/2023, con anonimato opcional."
   }, {
     "name" : "Avisos",
     "description" : "Avisos in-app del usuario autenticado: listado, contador de no leídos y marcado como leído. Se generan desde los mismos eventos que envían los correos."
@@ -2358,6 +2361,98 @@
         } ]
       }
     },
+    "/api/v1/dispositivos-push" : {
+      "post" : {
+        "tags" : [ "Push" ],
+        "summary" : "Registrar este dispositivo",
+        "description" : "Idempotente: la app lo llama al entrar. Si el token era de otra persona (un móvil compartido), pasa a ser de quien lo registra.",
+        "operationId" : "registrar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterPushDeviceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Registrado"
+          },
+          "400" : {
+            "description" : "Sin token o plataforma desconocida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/dispositivos-push/baja" : {
+      "post" : {
+        "tags" : [ "Push" ],
+        "summary" : "Dar de baja este dispositivo",
+        "description" : "Al cerrar sesión o al apagar los push en Ajustes. Solo borra un dispositivo propio; si el token no existe o es de otra persona, no hace nada y responde igual.",
+        "operationId" : "darDeBaja",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UnregisterPushDeviceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Dado de baja (o no había nada que dar de baja)"
+          },
+          "400" : {
+            "description" : "Sin token",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/departamentos" : {
       "get" : {
         "tags" : [ "Departamentos" ],
@@ -3141,7 +3236,7 @@
         "tags" : [ "Borrado de datos" ],
         "summary" : "Registrar una solicitud recibida fuera de la app",
         "description" : "Para quien no puede pedirlo desde Ajustes, normalmente porque ya está de baja y lo ha pedido por correo o por carta. 'motivo' es obligatorio y dice cómo llegó. Queda constancia de quién la registró, se avisa a los demás que pueden ejecutarla y a la persona le llega un acuse de recibo por correo. No sirve para uno mismo.",
-        "operationId" : "registrar",
+        "operationId" : "registrar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -9398,6 +9493,32 @@
         },
         "required" : [ "horaEntrada", "horaSalida", "motivo" ]
       },
+      "RegisterPushDeviceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "maxLength" : 4096,
+            "minLength" : 0
+          },
+          "plataforma" : {
+            "type" : "string",
+            "enum" : [ "ANDROID", "WEB", "IOS" ]
+          }
+        },
+        "required" : [ "plataforma", "token" ]
+      },
+      "UnregisterPushDeviceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "maxLength" : 4096,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "token" ]
+      },
       "DepartmentRequest" : {
         "type" : "object",
         "properties" : {
@@ -10446,6 +10567,25 @@
           }
         }
       },
+      "DispositivoPush" : {
+        "type" : "object",
+        "properties" : {
+          "plataforma" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "registradoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "vistoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "ExcepcionDeCuadrante" : {
         "type" : "object",
         "properties" : {
@@ -10744,6 +10884,12 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/Aviso"
+            }
+          },
+          "dispositivosPush" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DispositivoPush"
             }
           },
           "adjuntos" : {

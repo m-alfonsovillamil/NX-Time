@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.ajustes
 
+import androidx.core.app.NotificationManagerCompat
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -166,6 +167,20 @@ fun AjustesScreen(
                 onCambiarHoras = { entrada, salida ->
                     viewModel.cambiarHoras(entrada, salida)
                     programar(estado.recordatorio, entrada, salida)
+                }
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Notificaciones(
+                activas = estado.push,
+                permitidasPorAndroid = NotificationManagerCompat.from(contexto).areNotificationsEnabled(),
+                onCambiar = { activas ->
+                    // Como en el recordatorio: el permiso se pide AL ACTIVAR,
+                    // y solo en Android 13+. Nunca al arrancar la app.
+                    if (activas && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permiso.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    viewModel.cambiarPush(activas)
                 }
             )
 
@@ -368,6 +383,40 @@ private fun Seguridad(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * Notificaciones push (Fase B5): recibir en el móvil los avisos de la app.
+ *
+ * Dice lo que llega y lo que no, porque el push es genérico a propósito: el
+ * contenido del aviso no pasa por Google, y quien lo encienda tiene que saber
+ * que verá "hay novedades en tus ausencias" y no el detalle.
+ */
+@Composable
+private fun Notificaciones(activas: Boolean, permitidasPorAndroid: Boolean, onCambiar: (Boolean) -> Unit) {
+    Tarjeta(stringResource(R.string.ajustes_push_seccion)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.ajustes_push),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(checked = activas, onCheckedChange = onCambiar)
+        }
+        Text(
+            text = stringResource(R.string.ajustes_push_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (activas && !permitidasPorAndroid) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.ajustes_push_sin_permiso),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 

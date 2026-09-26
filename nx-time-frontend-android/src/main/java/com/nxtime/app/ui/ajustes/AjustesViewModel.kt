@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.ajustes
 
+import com.nxtime.app.push.RegistroDePush
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
@@ -24,6 +25,8 @@ data class AjustesUiState(
     val informesDeErrores: Boolean = true,
     val huella: Boolean = false,
     val recordatorio: Boolean = false,
+    /** Si este móvil recibe notificaciones push (Fase B5). */
+    val push: Boolean = false,
     val horaEntrada: String = Ajustes.HORA_ENTRADA_POR_DEFECTO,
     val horaSalida: String = Ajustes.HORA_SALIDA_POR_DEFECTO,
     /** Se está pidiendo la contraseña para activar la huella. */
@@ -51,7 +54,8 @@ data class AjustesUiState(
  */
 class AjustesViewModel(
     private val authRepository: AuthRepository,
-    private val ajustes: Ajustes
+    private val ajustes: Ajustes,
+    private val registroDePush: RegistroDePush? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -60,6 +64,7 @@ class AjustesViewModel(
             informesDeErrores = ajustes.informesDeErrores.value,
             huella = ajustes.huella.value,
             recordatorio = ajustes.recordatorio.value,
+            push = ajustes.push.value,
             horaEntrada = ajustes.horaEntrada.value,
             horaSalida = ajustes.horaSalida.value
         )
@@ -77,6 +82,19 @@ class AjustesViewModel(
     fun cambiarRecordatorio(activo: Boolean) {
         ajustes.cambiarRecordatorio(activo)
         _uiState.update { it.copy(recordatorio = activo, error = null) }
+    }
+
+    /**
+     * Enciende o apaga los push en este móvil (Fase B5).
+     *
+     * El permiso de Android lo pide la pantalla antes de llamar aquí, igual
+     * que en el recordatorio. Encender registra el móvil en el servidor;
+     * apagar lo da de baja y olvida el token en Google. Nada de eso se espera:
+     * si falla, el ajuste queda como se pidió y se reintenta al entrar.
+     */
+    fun cambiarPush(activo: Boolean) {
+        if (activo) registroDePush?.encender() else registroDePush?.apagar()
+        _uiState.update { it.copy(push = activo, error = null) }
     }
 
     /**

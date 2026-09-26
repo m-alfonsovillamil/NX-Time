@@ -85,6 +85,27 @@
                     android:resource="@xml/rutas_de_informes" />
         </provider>
 
+        <!--
+            Push (Fase B5, ADR 028). Los mensajes son solo de datos, así que
+            siempre pasan por aquí y es la app la que decide si los enseña
+            (con sesión y con el ajuste encendido) y cómo.
+        -->
+        <service
+                android:name=".push.NxTimeMessagingService"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!--
+            Sin esto, Firebase pide un token a Google en el primer arranque,
+            lo quiera o no quien usa la app. Los push van apagados por
+            defecto: el token se pide al encenderlos en Ajustes.
+        -->
+        <meta-data
+                android:name="firebase_messaging_auto_init_enabled"
+                android:value="false" />
     </application>
 
 </manifest>

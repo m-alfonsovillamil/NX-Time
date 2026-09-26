@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.ajustes
 
+import com.nxtime.app.push.RegistroDePush
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.data.dto.PeticionLogin
@@ -46,6 +47,7 @@ class AjustesViewModelTest {
 
     private val repositorio: AuthRepository = mock()
     private val ajustes: Ajustes = mock()
+    private val registroDePush: RegistroDePush = mock()
 
     private fun viewModel(
         tema: Tema = Tema.SISTEMA,
@@ -56,12 +58,26 @@ class AjustesViewModelTest {
         whenever(ajustes.informesDeErrores).thenReturn(MutableStateFlow(informes))
         // El ViewModel las lee TODAS al construirse: si alguna se queda sin
         // simular, revienta antes del primer assert. Ya pasó al añadir la
-        // huella, y otra vez al añadir el recordatorio.
+        // huella, otra vez al añadir el recordatorio, y otra con el push (B5).
         whenever(ajustes.huella).thenReturn(MutableStateFlow(huella))
         whenever(ajustes.recordatorio).thenReturn(MutableStateFlow(false))
         whenever(ajustes.horaEntrada).thenReturn(MutableStateFlow("09:30"))
         whenever(ajustes.horaSalida).thenReturn(MutableStateFlow("18:30"))
-        return AjustesViewModel(repositorio, ajustes)
+        whenever(ajustes.push).thenReturn(MutableStateFlow(false))
+        return AjustesViewModel(repositorio, ajustes, registroDePush)
+    }
+
+    @Test
+    fun `encender el push registra el movil, y apagarlo lo da de baja`() = runTest {
+        val vm = viewModel()
+
+        vm.cambiarPush(true)
+        assertTrue(vm.uiState.value.push)
+        verify(registroDePush).encender()
+
+        vm.cambiarPush(false)
+        assertFalse(vm.uiState.value.push)
+        verify(registroDePush).apagar()
     }
 
     @Test

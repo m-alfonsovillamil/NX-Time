@@ -42,6 +42,19 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 
+    // Push (Fase B5, ADR 028): el SDK de servidor de Firebase, solo para FCM.
+    // Sin credenciales no se inicializa nada (ver FirebaseConfig).
+    //
+    // 🚨 Sin Storage ni Firestore, que no se usan y traían un problema serio:
+    // google-cloud-storage arrastra jackson-dataformat-xml, y con él en el
+    // classpath Spring MVC empieza a RESPONDER EN XML a todo cliente que acepte
+    // XML. Lo cazó ApiContractTest: 121 tests leyendo "<" donde esperaban JSON.
+    // FirebaseMessaging no necesita ninguno de los dos.
+    implementation("com.google.firebase:firebase-admin:9.9.0") {
+        exclude(group = "com.google.cloud", module = "google-cloud-storage")
+        exclude(group = "com.google.cloud", module = "google-cloud-firestore")
+    }
+
     // Caché (Fase 10): Caffeine como implementación. Se usa para el
     // calendario laboral (ver HolidayCalendar) -- los festivos cambian
     // una vez al año y se consultaban una vez por cada ausencia de un

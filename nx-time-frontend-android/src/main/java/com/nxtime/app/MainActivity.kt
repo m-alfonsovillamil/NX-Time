@@ -1,5 +1,8 @@
 package com.nxtime.app
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.nxtime.app.push.NotificacionesPush
+import android.content.Intent
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -53,11 +56,31 @@ import com.nxtime.app.ui.util.enEspanol
 class MainActivity : FragmentActivity() {
 
     /**
+     * Adónde lleva el push que ha abierto la app (Fase B5), mientras nadie lo
+     * haya atendido. Llega por el intent: en onCreate si la app estaba
+     * cerrada, en onNewIntent si ya estaba abierta.
+     */
+    private val rutaDeAviso = MutableStateFlow<String?>(null)
+
+    /**
      * Se fija el idioma antes de que exista nada de interfaz: todo lo que
      * pinta Compose -- los textos propios y los de los componentes de
      * Material, como el calendario de "Solicitar ausencia" -- se resuelve
      * contra la `Configuration` de este contexto. Ver [enEspanol].
      */
+    /** Un push tocado con la app ya abierta. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        recogerRutaDeAviso(intent)
+    }
+
+    private fun recogerRutaDeAviso(intent: Intent?) {
+        val ruta = intent?.getStringExtra(NotificacionesPush.EXTRA_RUTA) ?: return
+        // Se quita del intent: es de un solo uso.
+        intent.removeExtra(NotificacionesPush.EXTRA_RUTA)
+        rutaDeAviso.value = ruta
+    }
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(newBase.enEspanol())
     }
@@ -85,6 +108,12 @@ class MainActivity : FragmentActivity() {
         val aplicacion = application as NxTimeApplication
         val sessionManager = aplicacion.sessionManager
         val sesionIniciada = sessionManager.fetchAuthToken() != null
+
+        // Solo en el primer onCreate: al girar el móvil la Activity se recrea
+        // con el MISMO intent, y sin esto volvería a saltar al aviso.
+        if (savedInstanceState == null) {
+            recogerRutaDeAviso(intent)
+        }
 
         setContent {
             /*
@@ -162,9 +191,12 @@ class MainActivity : FragmentActivity() {
                     .collectAsStateWithLifecycle()
 
                 Box(Modifier.fillMaxSize()) {
+                    val ruta by rutaDeAviso.collectAsStateWithLifecycle()
                     NxTimeNavHost(
                         sesionIniciada = sesionIniciada,
-                        sessionManager = sessionManager
+                        sessionManager = sessionManager,
+                        rutaDeAvisoPendiente = ruta,
+                        onRutaDeAvisoAtendida = { rutaDeAviso.value = null }
                     )
                     /*
                      * Por encima del grafo y no dentro de una pantalla: la

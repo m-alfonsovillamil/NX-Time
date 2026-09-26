@@ -145,6 +145,10 @@ interface AuthRepository {
 
     suspend fun getResumenAnalitica(): Response<ResumenAnaliticaDTO>
 
+    /* Push (Fase B5) */
+    suspend fun registrarDispositivoPush(token: String): Response<Unit>
+    suspend fun darDeBajaDispositivoPush(token: String): Response<Unit>
+
     suspend fun cambiarEstadoEmpleado(empleadoId: Long, activo: Boolean): Response<Unit>
 
     suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody>
