@@ -1,5 +1,9 @@
 package com.nxtime.app.ui.ajustes
 
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.DisposableEffect
 import androidx.core.app.NotificationManagerCompat
 import android.Manifest
 import android.os.Build
@@ -94,11 +98,35 @@ fun AjustesScreen(
         }
     }
 
-    // El resultado no se usa: si lo deniega, el ajuste queda encendido pero
-    // el sistema no dejará notificar, y la propia tarjeta lo explica.
+    /*
+     * Si Android deja notificar a la app, leído DE NUEVO al contestar el
+     * diálogo del permiso y cada vez que la pantalla vuelve al primer plano
+     * (quien lo cambia en los ajustes del sistema vuelve aquí después). Leerlo
+     * solo al pintar dejaba la tarjeta de notificaciones diciendo "bloqueadas"
+     * justo después de conceder el permiso: salió al probar el push en el
+     * emulador.
+     */
+    var notificacionesPermitidas by remember {
+        mutableStateOf(NotificationManagerCompat.from(contexto).areNotificationsEnabled())
+    }
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) {
+                notificacionesPermitidas = NotificationManagerCompat.from(contexto).areNotificationsEnabled()
+            }
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
+
+    // Si lo deniega, el ajuste queda encendido pero el sistema no dejará
+    // notificar, y la tarjeta lo explica.
     val permiso = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) {
+        notificacionesPermitidas = NotificationManagerCompat.from(contexto).areNotificationsEnabled()
+    }
 
     /*
      * Escribir el fichero necesita el Context: el ViewModel devuelve el cuerpo
@@ -173,7 +201,7 @@ fun AjustesScreen(
             Spacer(Modifier.height(16.dp))
             Notificaciones(
                 activas = estado.push,
-                permitidasPorAndroid = NotificationManagerCompat.from(contexto).areNotificationsEnabled(),
+                permitidasPorAndroid = notificacionesPermitidas,
                 onCambiar = { activas ->
                     // Como en el recordatorio: el permiso se pide AL ACTIVAR,
                     // y solo en Android 13+. Nunca al arrancar la app.
