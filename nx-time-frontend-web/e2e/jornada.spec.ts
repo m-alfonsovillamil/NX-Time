@@ -32,7 +32,11 @@ test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ 
   // ejecución, se cierra antes: el backend impide dos abiertas a la vez, y el
   // test tiene que poder repetirse sin limpiar la base a mano.
   if (await page.getByRole('button', { name: 'Fichar salida' }).isVisible()) {
+    if (await page.getByRole('button', { name: 'Reanudar' }).isVisible()) {
+      await page.getByRole('button', { name: 'Reanudar' }).click();
+    }
     await page.getByRole('button', { name: 'Fichar salida' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
     await expect(page.getByRole('button', { name: 'Fichar entrada' })).toBeVisible();
   }
 
@@ -40,19 +44,32 @@ test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ 
     await page.getByRole('button', { name: 'Fichar entrada' }).click();
     await expect(page.getByText('Trabajando')).toBeVisible();
     // El cronómetro pinta algo con forma de duración, no un guion.
-    await expect(page.getByText(/^\d+[hm]/)).toBeVisible();
+    await expect(page.locator('.nx-jornada__cronometro')).toHaveText(/^\d+[hm]/);
   });
 
   await test.step('pausar y reanudar lo dice el servidor, no la pantalla', async () => {
     await page.getByRole('button', { name: 'Pausar' }).click();
-    await expect(page.getByText('En pausa')).toBeVisible();
+    await expect(page.getByText('En pausa', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Reanudar' }).click();
     await expect(page.getByText('Trabajando')).toBeVisible();
   });
 
-  await test.step('fichar la salida cierra la jornada', async () => {
+  await test.step('pausado, el cronómetro no avanza', async () => {
+    await page.getByRole('button', { name: 'Pausar' }).click();
+    await expect(page.getByText(/^En pausa desde las/)).toBeVisible();
+    const congelado = await page.locator('.nx-jornada__cronometro').textContent();
+    await page.waitForTimeout(2_000);
+    await expect(page.locator('.nx-jornada__cronometro')).toHaveText(congelado ?? '');
+    await page.getByRole('button', { name: 'Reanudar' }).click();
+    await expect(page.getByText('Trabajando')).toBeVisible();
+  });
+
+  await test.step('fichar la salida pide confirmación y cierra la jornada', async () => {
     await page.getByRole('button', { name: 'Fichar salida' }).click();
+    const dialogo = page.getByRole('dialog', { name: '¿Terminas la jornada?' });
+    await expect(dialogo).toBeVisible();
+    await dialogo.getByRole('button', { name: 'Terminar' }).click();
     await expect(page.getByText('Sin fichar')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Fichar entrada' })).toBeVisible();
   });

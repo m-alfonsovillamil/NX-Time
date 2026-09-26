@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import { duracion, fechaCorta, hora, minutos, segundosTrabajados } from './fechas';
+import {
+  aInstante,
+  diaEnEspana,
+  diasDelRango,
+  duracion,
+  fechaCorta,
+  hora,
+  horaDeSalida,
+  horaEnEspana,
+  lunesDe,
+  minutos,
+  primeroDeMes,
+  segundosTrabajados,
+  sumarDias,
+  ultimoDeMes,
+} from './fechas';
 
 describe('la hora', () => {
   /*
@@ -104,5 +119,45 @@ describe('fechaCorta', () => {
   it('algo que no es una fecha no se inventa', () => {
     expect(fechaCorta('ayer')).toBe('');
     expect(fechaCorta(undefined)).toBe('');
+  });
+});
+
+describe('días e instantes de España', () => {
+  it('una hora de España en verano es UTC+2, y en invierno UTC+1', () => {
+    expect(aInstante('2026-09-21', '09:03')).toBe('2026-09-21T07:03:00.000Z');
+    expect(aInstante('2026-01-15', '09:00')).toBe('2026-01-15T08:00:00.000Z');
+  });
+
+  /* El día del cambio de hora de octubre: antes de las 3 aún es verano. */
+  it('acierta a los dos lados del cambio de hora', () => {
+    expect(aInstante('2026-10-25', '01:00')).toBe('2026-10-24T23:00:00.000Z');
+    expect(aInstante('2026-10-25', '12:00')).toBe('2026-10-25T11:00:00.000Z');
+  });
+
+  it('la ida y la vuelta dan la misma hora', () => {
+    expect(horaEnEspana(aInstante('2026-03-02', '22:52'))).toBe('22:52');
+  });
+
+  /* Las 23:30 UTC de un día de verano ya son el día siguiente en España. */
+  it('el día de un instante es el de España, no el de UTC', () => {
+    expect(diaEnEspana('2026-09-21T22:30:00Z')).toBe('2026-09-22');
+    expect(diaEnEspana('2026-09-21T21:59:00Z')).toBe('2026-09-21');
+  });
+
+  it('la semana empieza en lunes, también si hoy es domingo', () => {
+    expect(lunesDe('2026-09-27')).toBe('2026-09-21');
+    expect(lunesDe('2026-09-21')).toBe('2026-09-21');
+  });
+
+  it('el mes, con febrero y el cambio de año', () => {
+    expect(primeroDeMes('2026-02-17')).toBe('2026-02-01');
+    expect(ultimoDeMes('2026-02-17')).toBe('2026-02-28');
+    expect(sumarDias('2026-12-31', 1)).toBe('2027-01-01');
+    expect(diasDelRango('2026-09-29', '2026-10-02')).toEqual(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
+  });
+
+  it('la salida de un turno de noche dice que es de otro día', () => {
+    expect(horaDeSalida('2026-09-21T20:52:00Z', '2026-09-21T22:29:00Z')).toBe('00:29 h (+1 d)');
+    expect(horaDeSalida('2026-09-21T07:00:00Z', '2026-09-21T15:00:00Z')).toBe('17:00 h');
   });
 });

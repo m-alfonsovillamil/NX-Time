@@ -236,6 +236,40 @@ const arranqueEnFrio: Middleware = {
 
 const pendientesDeLimpiar = new Map<string, () => void>();
 
+/**
+ * Quita los `null` de las respuestas JSON: en la web, un campo vacío es
+ * **siempre** `undefined`.
+ *
+ * El backend (Jackson) manda los campos vacíos como `"enCurso": null`, pero
+ * los tipos generados del contrato los declaran opcionales (`enCurso?: …`),
+ * es decir, `undefined`. Con esa mentira en los tipos, `x !== undefined` deja
+ * pasar el `null` y lo siguiente es `null.codigo`: así se quedó en blanco
+ * «Mi jornada» al fichar contra el backend de verdad (W2), mientras los tests
+ * —con datos simulados que omitían el campo— seguían en verde.
+ *
+ * Arreglarlo aquí, una vez, hace que los tipos digan la verdad en todas las
+ * pantallas. Solo se quitan propiedades de objetos: un `null` dentro de un
+ * array se queda donde está, porque ahí quitarlo movería los demás.
+ */
+const sinNulos: Middleware = {
+  async onResponse({ response }) {
+    if (!(response.headers.get('Content-Type') ?? '').includes('json')) return response;
+    const texto = await response.clone().text();
+    if (texto === '') return response;
+    let limpio: string;
+    try {
+      limpio = JSON.stringify(
+        JSON.parse(texto, function (this: unknown, _clave, valor: unknown) {
+          return valor === null && !Array.isArray(this) ? undefined : valor;
+        }),
+      );
+    } catch {
+      return response;
+    }
+    return new Response(limpio, { status: response.status, statusText: response.statusText, headers: response.headers });
+  },
+};
+
 export const cliente = createClient<paths>({
   baseUrl: BASE,
   // `openapi-fetch` se queda con el `fetch` que haya al crear el cliente, y
@@ -244,6 +278,9 @@ export const cliente = createClient<paths>({
   // evita quedarse con una versión anterior si algo lo envuelve más tarde.
   fetch: (peticion) => globalThis.fetch(peticion),
 });
+// El primero en registrarse es el último en ver la respuesta: los `null` se
+// quitan también de la que llega tras reintentar un 401.
+cliente.use(sinNulos);
 cliente.use(arranqueEnFrio);
 cliente.use(autenticacion);
 
