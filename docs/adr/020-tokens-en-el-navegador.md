@@ -1,6 +1,6 @@
 # 20. Los tokens de la web viven en memoria, y la cookie espera al dominio propio
 
-**Estado:** aceptada · **Fecha:** septiembre 2026
+**Estado:** sustituida por el [ADR 030](030-la-sesion-web-en-cookie.md) al comprar el dominio `nxtime-web.com` · **Fecha:** septiembre 2026
 
 ## Contexto
 

@@ -101,12 +101,14 @@ pasaría sin que nadie lo viera, porque es justamente un `.d.ts`.
 
 ## Las decisiones que conviene conocer antes de tocar nada
 
-**Los tokens viven en memoria.** No hay `localStorage` ni cookie, así que
-recargar la página cierra la sesión. Es una decisión, no un olvido: el porqué
-está en [ADR 020](../docs/adr/020-tokens-en-el-navegador.md), con el detalle
-concreto de que `onrender.com` está en la Public Suffix List y por eso la
-cookie `HttpOnly` tiene que esperar a un dominio propio. **El día que se ponga
-la cookie hará falta también CSRF.**
+**El refresh va en una cookie que esta web no puede leer.** Desde la fase W1
+([ADR 030](../docs/adr/030-la-sesion-web-en-cookie.md)) la web vive en
+`nxtime-web.com` y la API en `api.nxtime-web.com`: el mismo sitio, así que el
+servidor pone el refresh en una cookie `HttpOnly` y la sesión sobrevive a
+recargar. El access sigue solo en memoria. Renovar y salir mandan la cabecera
+`X-CSRF-Token`, copiada de la cookie `nx_csrf` (doble envío), y varias pestañas
+renuevan de una en una con `navigator.locks`, porque el servidor rota el
+refresh. **No hay `localStorage` para nada de la sesión.**
 
 **El refresco del 401 se serializa.** El servidor rota el refresh token: dos
 refrescos en paralelo significan que el segundo llega con un token ya usado, y
@@ -149,8 +151,8 @@ npm run e2e
 
 Entran como EMPLEADO (el rol con menos permisos, para que se note si una
 pantalla necesitara alguno que no tiene): una jornada entera, el marco con su
-menú y su campana, un enlace sin sesión que vuelve a su página tras el login, y
-que recargar cierra la sesión (ADR 020, hasta la fase W1).
+menú y su campana, el historial, un enlace sin sesión que vuelve a su página
+tras el login, y que recargar mantiene la sesión y salir la cierra (ADR 030).
 
 ## Por qué los tests están sobre `scripts/tokens.mjs`
 

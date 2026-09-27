@@ -543,6 +543,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 27. [Las listas que crecen sin límite van por páginas, con un DTO propio](docs/adr/027-listas-por-paginas.md)
 28. [Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil](docs/adr/028-push-generico-colgado-del-aviso.md)
 29. [La web alcanza a la app: un armazón común y la URL como destino del aviso](docs/adr/029-la-web-alcanza-a-la-app.md)
+30. [La sesión de la web va en una cookie, con dominio propio y CSRF de doble envío](docs/adr/030-la-sesion-web-en-cookie.md)
 
 ---
 
@@ -555,12 +556,12 @@ Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
 
 **En marcha:** el cliente web (`nx-time-frontend-web/`), publicado en
-<https://nxtime-web.onrender.com> con su propio CI (`.github/workflows/web.yml`).
+<https://nxtime-web.com> con su propio CI (`.github/workflows/web.yml`).
 Hoy tiene login y fichar dentro del armazón común (menú por permisos, campana de
 avisos, rutas protegidas); el resto de pantallas de la app, y las tres que son
 solo de la web, llegan por fases ([ADR 029](docs/adr/029-la-web-alcanza-a-la-app.md)).
-Los tokens viven en memoria, así que recargar la página cierra la sesión hasta
-que haya dominio propio ([ADR 020](docs/adr/020-tokens-en-el-navegador.md)).
+La sesión sobrevive a recargar: el refresh va en una cookie `HttpOnly`, con su
+protección CSRF ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)).
 
 **Pendiente:**
 

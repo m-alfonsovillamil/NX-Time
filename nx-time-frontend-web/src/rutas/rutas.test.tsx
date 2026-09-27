@@ -37,7 +37,7 @@ afterEach(() => {
 describe('sin sesión', () => {
   it('una sección lleva al login y, al entrar, vuelve a ella', async () => {
     apiBasica({
-      'POST /auth/login': () => ({ token: 't', refreshToken: 'r', nombre: 'Ana', authorities: ['fichaje:leer'] }),
+      'POST /auth/login': () => ({ token: 't', nombre: 'Ana', authorities: ['fichaje:leer'] }),
     });
     pintar(<App />, { ruta: '/fichar' });
 
@@ -48,10 +48,37 @@ describe('sin sesión', () => {
     expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
   });
 
-  it('una ruta que no existe da 404 sin pedir entrar', () => {
+  it('una ruta que no existe da 404 sin pedir entrar', async () => {
     apiBasica();
     pintar(<App />, { ruta: '/no-existe' });
-    expect(screen.getByRole('heading', { name: T.noEncontrado.titulo })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: T.noEncontrado.titulo })).toBeTruthy();
+  });
+});
+
+/* Lo que cambia con la fase W1 (ADR 030): recargar ya no echa a nadie. */
+describe('al recargar', () => {
+  afterEach(() => {
+    document.cookie = 'nx_csrf=; max-age=0';
+  });
+
+  it('con la sesión en la cookie, vuelve a la página sin pasar por el login', async () => {
+    document.cookie = 'nx_csrf=valor-csrf';
+    const api = apiBasica({
+      'POST /auth/refresh': () => ({ token: 't', nombre: 'Ana', authorities: ['fichaje:leer'] }),
+    });
+    pintar(<App />, { ruta: '/fichar' });
+
+    expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: T.login.entrar })).toBeNull();
+    expect(api.a('POST', '/auth/refresh')).toHaveLength(1);
+  });
+
+  it('sin sesión en la cookie, al login, y sin preguntar al servidor', async () => {
+    const api = apiBasica();
+    pintar(<App />, { ruta: '/fichar' });
+
+    expect(await screen.findByRole('button', { name: T.login.entrar })).toBeTruthy();
+    expect(api.a('POST', '/auth/refresh')).toHaveLength(0);
   });
 });
 
@@ -86,6 +113,7 @@ describe('con sesión', () => {
 
   it('cerrar sesión desde el menú de usuario avisa al servidor y vuelve al login', async () => {
     const api = apiBasica({ 'POST /auth/logout': () => sinContenido() });
+    document.cookie = 'nx_csrf=valor-csrf';
     pintar(<App />, { ruta: '/fichar', sesion: sesionDe('EMPLEADO') });
 
     await userEvent.click(await screen.findByLabelText(N.usuario.menu('Ana')));
@@ -93,7 +121,9 @@ describe('con sesión', () => {
 
     expect(await screen.findByRole('button', { name: T.login.entrar })).toBeTruthy();
     expect(sesionActual()).toBeNull();
-    await waitFor(() => expect(api.a('POST', '/auth/logout').map((l) => l.cuerpo)).toEqual([{ refreshToken: 'refresh' }]));
+    // Sin cuerpo: el refresh va en la cookie (ADR 030).
+    await waitFor(() => expect(api.a('POST', '/auth/logout').map((l) => l.cuerpo)).toEqual([undefined]));
+    document.cookie = 'nx_csrf=; max-age=0';
   });
 });
 

@@ -26,4 +26,14 @@ import java.util.List;
  */
 public record AuthenticationResponse(
         String token, String refreshToken, String nombre, Role rol, List<String> authorities) {
+
+    /**
+     * La misma respuesta sin el refresh, para el navegador (ADR 030): allí el
+     * refresh viaja en una cookie {@code HttpOnly}, y ponerlo también en el
+     * cuerpo se lo daría al JavaScript de la página, que es justo de quien se
+     * quiere esconder.
+     */
+    public AuthenticationResponse sinRefreshToken() {
+        return new AuthenticationResponse(token, null, nombre, rol, authorities);
+    }
 }

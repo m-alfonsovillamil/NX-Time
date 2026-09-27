@@ -179,3 +179,9 @@ application:
       # esto solo importa si algún día hay un cliente web. Cada perfil
       # sobreescribe este valor -- ver application-dev.yml / application-prod.yml.
       allowed-origins: ""
+    web-session:
+      # El dominio común de la web y la API (ADR 030), para la cookie nx_csrf:
+      # la pone la API y la tiene que leer la web, que está en otro
+      # subdominio. Vacío = cookie del propio host, que es lo que hace falta en
+      # local, donde la web habla con la API por el proxy de Vite.
+      cookie-domain: ""

@@ -29,7 +29,7 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [017](017-imputacion-por-jornada.md) | Las horas de un proyecto se imputan por jornada, no se deducen por día |
 | [018](018-la-cadena-de-auditoria-se-serializa-en-postgres.md) | La cadena de auditoría se serializa en PostgreSQL, no en la JVM |
 | [019](019-el-refresh-token-se-hashea-y-se-rota.md) | El refresh token se hashea, se rota, y reutilizarlo revoca la familia |
-| [020](020-tokens-en-el-navegador.md) | Los tokens de la web viven en memoria, y la cookie espera al dominio propio |
+| [020](020-tokens-en-el-navegador.md) | Los tokens de la web viven en memoria, y la cookie espera al dominio propio (sustituido por el 030) |
 | [021](021-la-web-es-un-proyecto-aparte.md) | La web es un proyecto aparte, y lo que comparte con el resto se genera |
 | [022](022-alcance-de-la-web.md) | La web empieza por los cimientos, y lo que queda fuera tiene nombre (alcance sustituido por el 029) |
 | [023](023-cuadrantes-con-vigencia.md) | Cuadrantes: plantilla con vigencia, minutos desde medianoche, y la jornada contratada sigue siendo el contrato |
@@ -39,3 +39,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [027](027-listas-por-paginas.md) | Las listas que crecen sin límite van por páginas, con un DTO propio |
 | [028](028-push-generico-colgado-del-aviso.md) | Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil |
 | [029](029-la-web-alcanza-a-la-app.md) | La web alcanza a la app: un armazón común y la URL como destino del aviso |
+| [030](030-la-sesion-web-en-cookie.md) | La sesión de la web va en una cookie, con dominio propio y CSRF de doble envío |

@@ -18,7 +18,10 @@
  *    revoca la familia entera. Es decir, sin esto la protección nueva echaría
  *    a la gente de la aplicación. Es el mismo problema que `RefrescoDeToken`
  *    resolvió en Android con un mutex, y la misma solución: una única promesa
- *    compartida.
+ *    compartida. Y como desde el ADR 030 el refresh es una cookie **que
+ *    comparten todas las pestañas**, la promesa no basta: dos pestañas que
+ *    renuevan a la vez son el mismo problema, y lo resuelve un cerrojo del
+ *    navegador (`navigator.locks`) alrededor de cada refresco.
  *
  * 2. **El arranque en frío de Render.** El plan gratuito duerme el servicio a
  *    los 15 minutos, y despertarlo ha llegado a tardar tres minutos medidos.
@@ -26,12 +29,16 @@
  *    no va lenta: no entra. Aquí se espera hasta 300 s cuando el servidor
  *    puede estar dormido, y se avisa por pantalla a los 3 s — sin el aviso se
  *    ve una página congelada y se cierra antes de que responda.
+ *
+ * Y una tercera desde la fase W1: **la sesión sobrevive a recargar** (ADR 030).
+ * El refresh vive en una cookie `HttpOnly` que el servidor pone y lee; aquí
+ * solo se manda con `credentials: 'include'` y se acompaña de la cabecera CSRF.
  */
 
 import createClient, { type Middleware } from 'openapi-fetch';
 
 import type { paths } from './schema';
-import { cerrarSesion, renovarTokens, sesionActual } from './sesion';
+import { abrirSesion, cerrarSesion, sesionActual } from './sesion';
 
 /**
  * A dónde se habla.
@@ -103,26 +110,117 @@ export function suscribirseADespertando(oyente: () => void): () => void {
  */
 let refrescoEnVuelo: Promise<string | null> | null = null;
 
-async function pedirTokensNuevos(refreshToken: string): Promise<string | null> {
+/* ------------------------------------------------------------------ */
+/* La cookie de la sesión y su CSRF (ADR 030)                           */
+/* ------------------------------------------------------------------ */
+
+const COOKIE_CSRF = 'nx_csrf';
+const CABECERA_CSRF = 'X-CSRF-Token';
+
+/**
+ * El valor de la cookie CSRF, que el servidor pone legible a propósito.
+ *
+ * El doble envío funciona porque **otra web no puede leer esta cookie**, así
+ * que no puede copiarla en la cabecera: el servidor exige que las dos
+ * coincidan antes de aceptar la cookie del refresh.
+ */
+export function valorCsrf(): string | null {
+  if (typeof document === 'undefined') return null;
+  for (const trozo of document.cookie.split(';')) {
+    const [nombre, ...valor] = trozo.trim().split('=');
+    if (nombre === COOKIE_CSRF) {
+      const texto = valor.join('=');
+      return texto === '' ? null : decodeURIComponent(texto);
+    }
+  }
+  return null;
+}
+
+/**
+ * Un cerrojo compartido por todas las pestañas del navegador.
+ *
+ * El refresh es una cookie de todas ellas, y el servidor lo rota: si dos
+ * pestañas renovaran a la vez, la segunda llegaría con uno ya usado y el
+ * servidor revocaría la sesión de todas. Con el cerrojo van de una en una, y
+ * la segunda manda la cookie ya rotada por la primera, porque el navegador
+ * pone la cookie al enviar, no al preparar la petición.
+ *
+ * Sin `navigator.locks` (navegadores de antes de 2022, los tests) se va sin
+ * cerrojo: queda la promesa compartida dentro de cada pestaña.
+ */
+async function conCerrojo<T>(hacer: () => Promise<T>): Promise<T> {
+  const cerrojos = globalThis.navigator?.locks;
+  if (cerrojos === undefined) return hacer();
+  return await cerrojos.request('nx-refresco-de-sesion', () => hacer());
+}
+
+/** Otras pestañas se enteran al momento de que se ha cerrado la sesión. */
+const canal = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('nx-sesion');
+canal?.addEventListener('message', (evento: MessageEvent) => {
+  if (evento.data === 'salir') cerrarSesion();
+});
+
+interface RespuestaDeSesion {
+  token?: string;
+  nombre?: string;
+  authorities?: string[];
+}
+
+async function pedirTokensNuevos(): Promise<string | null> {
+  const csrf = valorCsrf();
+  // Sin la cookie CSRF no hay sesión que renovar: ni se pregunta (y no se
+  // despierta al servidor dormido por nada).
+  if (csrf === null) return null;
   try {
-    const respuesta = await fetch(`${BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-      signal: AbortSignal.timeout(puedeEstarDormido() ? ESPERA_LARGA_MS : ESPERA_CORTA_MS),
-    });
+    const respuesta = await conCerrojo(() =>
+      fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        // El valor se lee otra vez aquí dentro: si esperó al cerrojo, otra
+        // pestaña puede haber renovado y cambiado la cookie mientras tanto.
+        headers: { [CABECERA_CSRF]: valorCsrf() ?? csrf },
+        signal: AbortSignal.timeout(puedeEstarDormido() ? ESPERA_LARGA_MS : ESPERA_CORTA_MS),
+      }),
+    );
     anotarRespuesta(respuesta.status);
     if (!respuesta.ok) return null;
 
-    const cuerpo = (await respuesta.json()) as { token: string; refreshToken: string };
-    // Los dos, y de una vez: el refresh que se acaba de usar ya no vale.
-    renovarTokens(cuerpo.token, cuerpo.refreshToken);
+    const cuerpo = (await respuesta.json()) as RespuestaDeSesion;
+    if (cuerpo.token === undefined) return null;
+    // El nombre y las authorities también: un cambio de rol llega así.
+    abrirSesion({
+      accessToken: cuerpo.token,
+      nombre: cuerpo.nombre ?? sesionActual()?.nombre ?? '',
+      authorities: cuerpo.authorities ?? sesionActual()?.authorities ?? [],
+    });
     return cuerpo.token;
   } catch {
     // Sin red, o el servidor no llegó a responder. No se distingue de un
     // refresh caducado desde aquí, y en los dos casos hay que volver a entrar.
     return null;
   }
+}
+
+/** Una sola renovación en vuelo por pestaña: quien llega después espera a esta. */
+function refrescar(): Promise<string | null> {
+  refrescoEnVuelo ??= pedirTokensNuevos().finally(() => {
+    refrescoEnVuelo = null;
+  });
+  return refrescoEnVuelo;
+}
+
+let restauracion: Promise<boolean> | null = null;
+
+/**
+ * Al abrir la web: si hay una sesión en la cookie, se retoma sin pasar por el
+ * login. Es lo que hace que recargar ya no eche a nadie.
+ *
+ * Una sola vez por carga de página, aunque se llame más (React en modo
+ * estricto monta dos veces en desarrollo).
+ */
+export function restaurarSesion(): Promise<boolean> {
+  restauracion ??= refrescar().then((token) => token !== null);
+  return restauracion;
 }
 
 /**
@@ -140,11 +238,7 @@ export async function tokenParaReintentar(tokenQueFallo: string | undefined): Pr
     return actual.accessToken;
   }
 
-  refrescoEnVuelo ??= pedirTokensNuevos(actual.refreshToken).finally(() => {
-    refrescoEnVuelo = null;
-  });
-
-  const nuevo = await refrescoEnVuelo;
+  const nuevo = await refrescar();
   if (nuevo === null) cerrarSesion();
   return nuevo;
 }
@@ -272,6 +366,9 @@ const sinNulos: Middleware = {
 
 export const cliente = createClient<paths>({
   baseUrl: BASE,
+  // Para que el navegador mande y guarde las cookies de la sesión (ADR 030).
+  // Con la API en otro subdominio, sin esto las ignoraría.
+  credentials: 'include',
   // `openapi-fetch` se queda con el `fetch` que haya al crear el cliente, y
   // eso ocurre al importar este módulo. Con esta indirección se resuelve en
   // cada llamada, que es lo que permite sustituirlo en los tests -- y lo que
@@ -285,17 +382,24 @@ cliente.use(arranqueEnFrio);
 cliente.use(autenticacion);
 
 /**
- * Cerrar la sesión: la local siempre, y la del servidor si se puede.
+ * Cerrar la sesión: la local siempre, la del servidor si se puede, y la de
+ * las demás pestañas.
  *
- * Se avisa al servidor para que revoque la familia entera, pero no se espera:
- * la sesión local se cierra igual. Si la petición falla, el token caduca solo
- * en 12 horas; dejar a alguien «dentro» porque el logout no llegó sería peor.
+ * Se avisa al servidor para que revoque la familia entera y borre las
+ * cookies, pero no se espera: la sesión local se cierra igual. Si la petición
+ * falla, el token caduca solo en 12 horas; dejar a alguien «dentro» porque el
+ * logout no llegó sería peor.
  */
 export function salir(): void {
-  const refreshToken = sesionActual()?.refreshToken;
-  if (refreshToken !== undefined) {
-    void cliente.POST('/auth/logout', { body: { refreshToken } }).catch(() => undefined);
+  const csrf = valorCsrf();
+  if (csrf !== null) {
+    void fetch(`${BASE}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { [CABECERA_CSRF]: csrf },
+    }).catch(() => undefined);
   }
+  canal?.postMessage('salir');
   cerrarSesion();
 }
 
@@ -304,5 +408,6 @@ export function reiniciarEstadoDeRed(): void {
   ultimaRespuesta = null;
   esperasLentas = 0;
   refrescoEnVuelo = null;
+  restauracion = null;
   pendientesDeLimpiar.clear();
 }

@@ -139,8 +139,8 @@ el backend de verdad; en W8 pasa a CI con Postgres y el jar del backend.
   valorará entonces.
 - **Entrar con huella.** El equivalente web son las *passkeys* (WebAuthn), que
   piden su propio registro de credenciales en el backend. Sería otra fase.
-- **Recordar la sesión al recargar**, hasta que haya dominio propio
-  ([ADR 020](020-tokens-en-el-navegador.md)). Es la fase W1.
+- ~~Recordar la sesión al recargar~~: resuelto en la fase W1 con el dominio
+  propio ([ADR 030](030-la-sesion-web-en-cookie.md)).
 
 ## Consecuencias
 

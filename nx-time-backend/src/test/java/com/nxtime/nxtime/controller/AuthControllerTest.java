@@ -16,6 +16,7 @@ import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.security.SesionWeb;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
@@ -36,7 +37,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * ya lo cubre {@code ApiContractTest}.
  */
 @NxTimeWebMvcTest(AuthController.class)
-@Import(WebMvcTestSecurityConfig.class)
+// SesionWeb de verdad, no un mock: es la que decide qué pasa sin cuerpo.
+@Import({WebMvcTestSecurityConfig.class, SesionWeb.class})
 class AuthControllerTest {
 
     @Autowired

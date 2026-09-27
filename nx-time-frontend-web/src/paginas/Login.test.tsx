@@ -63,7 +63,6 @@ describe('entrar', () => {
     servidor(
       json({
         token: 'access',
-        refreshToken: 'refresh',
         nombre: 'Ana',
         rol: 'EMPLEADO',
         authorities: ['fichaje:escribir', 'fichaje:leer'],
@@ -89,7 +88,7 @@ describe('entrar', () => {
 
   it('el correo se recorta antes de mandarlo', async () => {
     // Se copia y se pega, y un espacio al final no es otro correo.
-    servidor(json({ token: 't', refreshToken: 'r', nombre: 'Ana', authorities: [] }));
+    servidor(json({ token: 't', nombre: 'Ana', authorities: [] }));
     pintar();
 
     await userEvent.type(screen.getByLabelText(T.login.email), '  ana@nxtime.test  ');
