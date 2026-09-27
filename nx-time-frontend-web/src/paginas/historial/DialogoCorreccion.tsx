@@ -1,5 +1,6 @@
 /**
- * Pedir que se corrija una jornada propia ya cerrada (ADR 010).
+ * Pedir que se corrija una jornada ya cerrada (ADR 010): la propia o, con
+ * `fichaje:corregir`, la de otra persona (ADR 015), que es quien la aprueba.
  *
  * **Se pide, no se corrige**: el fichaje no cambia hasta que lo aprueba quien
  * tiene `correccion:aprobar`. Solo se aplica en el acto si quien pide puede
@@ -30,7 +31,15 @@ export interface JornadaCerrada {
   horaSalida: string;
 }
 
-function Formulario({ jornada, alTerminar }: { jornada: JornadaCerrada; alTerminar: () => void }) {
+function Formulario({
+  jornada,
+  persona,
+  alTerminar,
+}: {
+  jornada: JornadaCerrada;
+  persona: string | undefined;
+  alTerminar: () => void;
+}) {
   const dia = diaEnEspana(jornada.horaEntrada);
   const [entrada, setEntrada] = useState(horaEnEspana(jornada.horaEntrada));
   const [salida, setSalida] = useState(horaEnEspana(jornada.horaSalida));
@@ -42,8 +51,8 @@ function Formulario({ jornada, alTerminar }: { jornada: JornadaCerrada; alTermin
     (cuerpo: { horaEntrada: string; horaSalida: string; motivo: string }) =>
       pedir(cliente.POST('/api/v1/fichaje/{id}/correcciones', { params: { path: { id: jornada.id } }, body: cuerpo })),
     {
-      invalida: [...TRAS_CAMBIAR_TIEMPO, ['correcciones']],
-      exito: (r) => (r.estado === 'APROBADA' ? C.aplicada : C.pedida),
+      invalida: [...TRAS_CAMBIAR_TIEMPO, ['correcciones'], ['equipo']],
+      exito: (r) => (r.estado === 'APROBADA' ? C.aplicada : persona !== undefined ? C.pedidaAOtro(persona) : C.pedida),
       alTerminar,
     },
   );
@@ -65,7 +74,7 @@ function Formulario({ jornada, alTerminar }: { jornada: JornadaCerrada; alTermin
   return (
     <form className="nx-formulario-dialogo" onSubmit={enviar} noValidate>
       <p className="nx-sutil">{fechaCorta(dia)}</p>
-      <p>{C.explicacion}</p>
+      <p>{persona !== undefined ? C.explicacionDeOtro(persona) : C.explicacion}</p>
       <div className="nx-fila-campos">
         <Campo id="correccion-entrada" etiqueta={C.entrada} type="time" value={entrada} onChange={(e) => setEntrada(e.target.value)} />
         <Campo id="correccion-salida" etiqueta={C.salida} type="time" value={salida} onChange={(e) => setSalida(e.target.value)} />
@@ -94,10 +103,24 @@ function Formulario({ jornada, alTerminar }: { jornada: JornadaCerrada; alTermin
   );
 }
 
-export function DialogoCorreccion({ jornada, alCerrar }: { jornada: JornadaCerrada | null; alCerrar: () => void }) {
+export function DialogoCorreccion({
+  jornada,
+  persona,
+  alCerrar,
+}: {
+  jornada: JornadaCerrada | null;
+  /** De quién es el fichaje, si no es de quien corrige. */
+  persona?: string | undefined;
+  alCerrar: () => void;
+}) {
   return (
-    <Dialogo abierto={jornada !== null} titulo={C.titulo} alCerrar={alCerrar} acciones={null}>
-      {jornada !== null && <Formulario jornada={jornada} alTerminar={alCerrar} />}
+    <Dialogo
+      abierto={jornada !== null}
+      titulo={persona !== undefined ? C.tituloDeOtro(persona) : C.titulo}
+      alCerrar={alCerrar}
+      acciones={null}
+    >
+      {jornada !== null && <Formulario jornada={jornada} persona={persona} alTerminar={alCerrar} />}
     </Dialogo>
   );
 }

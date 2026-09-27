@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Page;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -252,13 +253,25 @@ class TimeEntryControllerTest {
     @WithMockUser(username = "gestor@nxtime.test", authorities = "fichaje:leer:equipo")
     @DisplayName("GET /fichaje/gestor/historial con la authority de equipo devuelve 200")
     void getTeamHistory_conAuthorityDeEquipo_devuelve200() throws Exception {
-        when(timeEntryService.getTeamHistory(eq("gestor@nxtime.test"), any(Pageable.class)))
+        when(timeEntryService.getTeamHistory(eq("gestor@nxtime.test"), isNull(), any(Pageable.class)))
                 .thenReturn(Page.<TeamTimeEntryDTO>empty(PageRequest.of(1, 30)));
 
         mockMvc.perform(get("/api/v1/fichaje/gestor/historial").param("pagina", "1").param("tamano", "30"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido").isArray());
-        verify(timeEntryService).getTeamHistory("gestor@nxtime.test", PageRequest.of(1, 30));
+        verify(timeEntryService).getTeamHistory("gestor@nxtime.test", null, PageRequest.of(1, 30));
+    }
+
+    @Test
+    @WithMockUser(username = "gestor@nxtime.test", authorities = "fichaje:leer:equipo")
+    @DisplayName("GET /fichaje/gestor/historial?usuarioId= pasa el filtro por persona al servicio")
+    void getTeamHistory_conUsuarioId_filtraPorPersona() throws Exception {
+        when(timeEntryService.getTeamHistory(eq("gestor@nxtime.test"), eq(7L), any(Pageable.class)))
+                .thenReturn(Page.<TeamTimeEntryDTO>empty(PageRequest.of(0, 50)));
+
+        mockMvc.perform(get("/api/v1/fichaje/gestor/historial").param("usuarioId", "7"))
+                .andExpect(status().isOk());
+        verify(timeEntryService).getTeamHistory("gestor@nxtime.test", 7L, PageRequest.of(0, 50));
     }
 
     // ------------------------------------------------------------------

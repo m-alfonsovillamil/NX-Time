@@ -1616,6 +1616,58 @@ h2 {
   color: var(--nx-on-primary-container);
 }
 
+/* La traza de auditoría: una línea temporal con un hilo a la izquierda. */
+.nx-cadena {
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--nx-surface-container);
+}
+
+.nx-cadena p {
+  margin: 4px 0 0;
+}
+
+.nx-traza {
+  list-style: none;
+  /* Sitio para el punto, que cuelga a la izquierda del hilo. */
+  margin: 0 0 0 8px;
+  padding: 0 0 0 20px;
+  border-left: 2px solid var(--nx-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nx-traza__paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nx-traza__paso::before {
+  content: '';
+  position: absolute;
+  left: -27px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--nx-primary);
+}
+
+.nx-traza__paso strong {
+  color: var(--nx-primary);
+}
+
+.nx-traza__paso--fuerte::before {
+  background: var(--nx-error);
+}
+
+.nx-traza__paso--fuerte strong {
+  color: var(--nx-error);
+}
+
 /* La bolsa anual de horas extra: 48 h de 80 se entiende de un vistazo. */
 .nx-bolsa {
   display: flex;

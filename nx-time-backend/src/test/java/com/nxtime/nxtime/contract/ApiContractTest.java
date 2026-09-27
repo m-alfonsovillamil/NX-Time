@@ -755,6 +755,18 @@ class ApiContractTest {
         assertThat(primero.get("fecha").asText()).matches("\\d{4}-\\d{2}-\\d{2}");
         assertThat(primero.get("usuario").get("nombre").asText()).isNotBlank();
         assertThat(primero.get("minutosPausaAcumulados").asLong()).isGreaterThanOrEqualTo(0);
+        assertThat(primero.get("usuarioId").isNumber()).isTrue();
+
+        // Fase W5: el filtro por persona se hace en el servidor.
+        long suyo = primero.get("usuarioId").asLong();
+        JsonNode filtrado = contenidoDe(rest.exchange(
+                url("/api/v1/fichaje/gestor/historial?usuarioId=" + suyo),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        ));
+        assertThat(filtrado.size()).isGreaterThanOrEqualTo(1);
+        filtrado.forEach(fila -> assertThat(fila.get("usuarioId").asLong()).isEqualTo(suyo));
     }
 
     // ------------------------------------------------------------------

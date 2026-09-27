@@ -70,6 +70,7 @@ const Correcciones = lazy(() => import('../paginas/revisiones/Correcciones').the
 const Ofertas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.Ofertas })));
 const MisCandidaturas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.PaginaMisCandidaturas })));
 const Denuncias = lazy(() => import('../paginas/denuncias/Denuncias').then((m) => ({ default: m.Denuncias })));
+const HistorialEquipo = lazy(() => import('../paginas/equipo/HistorialEquipo').then((m) => ({ default: m.HistorialEquipo })));
 
 const S = T.navegacion.secciones;
 
@@ -95,7 +96,7 @@ export const SECCIONES: readonly Seccion[] = [
 
   /* ---- Gestión ---- */
   { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W5' },
-  { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W5' },
+  { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
   { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, llegaEn: 'W5' },
   { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, llegaEn: 'W5' },
   { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W6' },

@@ -5,6 +5,7 @@ import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -348,12 +349,25 @@ class TimeEntryServiceImplTest {
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         TimeEntry entry = TimeEntry.builder().id(1L).usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build();
         when(timeEntryRepository.findTeamHistory(eq(empresa), any(Pageable.class))).thenReturn(Paginas.page(List.of(entry)));
-        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, 0L, 0L);
+        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, null, 0L, 0L);
         when(timeEntryMapper.toTeamDTO(entry)).thenReturn(dto);
 
-        List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail(), PageRequest.of(0, 50)).getContent();
+        List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail(), null, PageRequest.of(0, 50)).getContent();
 
         assertThat(result).containsExactly(dto);
+        verify(timeEntryRepository, never()).findTeamHistoryDeUsuario(any(), anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("getTeamHistory con usuarioId pide solo los de esa persona, dentro de la empresa del gestor")
+    void getTeamHistory_conUsuarioId_filtraEnLaBase() {
+        User gestor = User.builder().id(20L).email("gestor@nxtime.test").empresa(empresa).build();
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        when(timeEntryRepository.findTeamHistoryDeUsuario(eq(empresa), eq(7L), any(Pageable.class)))
+                .thenReturn(Paginas.page(List.of()));
+
+        assertThat(service.getTeamHistory(gestor.getEmail(), 7L, PageRequest.of(0, 50)).getContent()).isEmpty();
+        verify(timeEntryRepository, never()).findTeamHistory(any(), any());
     }
 
     // ---- Auditoría (Fase 8): publicación de eventos ----

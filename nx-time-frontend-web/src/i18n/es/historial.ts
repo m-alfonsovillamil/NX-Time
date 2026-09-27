@@ -44,6 +44,11 @@ export const historial = {
     enviar: 'Pedir corrección',
     pedida: 'Corrección pedida. El fichaje no cambia hasta que la aprueben.',
     aplicada: 'Fichaje corregido.',
+    // Sobre el fichaje de otra persona (ADR 015): lo aprueba ella.
+    tituloDeOtro: (quien: string) => `Corregir el fichaje de ${quien}`,
+    explicacionDeOtro: (quien: string) =>
+      `El fichaje no cambia hasta que ${quien} lo acepte. Si no está de acuerdo, lo decide Recursos Humanos.`,
+    pedidaAOtro: (quien: string) => `Corrección propuesta. Se aplicará cuando ${quien} la acepte.`,
   },
 
   reparto: {

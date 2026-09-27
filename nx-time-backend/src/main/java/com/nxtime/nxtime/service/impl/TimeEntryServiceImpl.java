@@ -359,10 +359,13 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     }
 
     @Override
-    public Page<TeamTimeEntryDTO> getTeamHistory(String managerEmail, Pageable pagina) {
+    public Page<TeamTimeEntryDTO> getTeamHistory(String managerEmail, Long usuarioId, Pageable pagina) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestor no encontrado con email: " + managerEmail));
-        return timeEntryRepository.findTeamHistory(manager.getEmpresa(), pagina).map(timeEntryMapper::toTeamDTO);
+        Page<TimeEntry> fichajes = usuarioId == null
+                ? timeEntryRepository.findTeamHistory(manager.getEmpresa(), pagina)
+                : timeEntryRepository.findTeamHistoryDeUsuario(manager.getEmpresa(), usuarioId, pagina);
+        return fichajes.map(timeEntryMapper::toTeamDTO);
     }
 
     // Fase 8: una corrección NUNCA sobrescribe horaEntrada/horaSalida en
