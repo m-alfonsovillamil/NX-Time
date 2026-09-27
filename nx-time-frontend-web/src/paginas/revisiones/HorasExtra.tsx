@@ -165,7 +165,7 @@ function DelEquipo({ anio }: { anio: number }) {
         }),
       ),
     {
-      invalida: [CLAVE],
+      invalida: [CLAVE, ['dashboard']],
       exito: (_r, v) => (v.aceptar ? H.aceptada : H.justificada),
       alTerminar: () => setJustificando(null),
     },

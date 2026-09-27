@@ -1616,6 +1616,58 @@ h2 {
   color: var(--nx-on-primary-container);
 }
 
+/* El panel de gestión: cifras grandes que llevan a su bandeja. */
+.nx-contadores,
+.nx-accesos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.nx-contador,
+.nx-acceso {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  min-height: 44px;
+  border-radius: 12px;
+  background: var(--nx-surface-container);
+  color: var(--nx-on-surface);
+  text-decoration: none;
+}
+
+.nx-contador {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.nx-contador__cifra {
+  font-family: var(--nx-font-titular);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-contador--con .nx-contador__cifra {
+  color: var(--nx-primary);
+}
+
+.nx-contador:hover,
+.nx-acceso:hover {
+  background: var(--nx-surface-container-high);
+}
+
+.nx-contador:focus-visible,
+.nx-acceso:focus-visible {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: 2px;
+}
+
 /* La traza de auditoría: una línea temporal con un hilo a la izquierda. */
 .nx-cadena {
   padding: 12px 16px;
