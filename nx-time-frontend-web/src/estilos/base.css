@@ -1646,10 +1646,24 @@ h2 {
 }
 
 .nx-barras__carril {
+  position: relative;
   height: 10px;
   border-radius: 5px;
   background: var(--nx-surface-variant);
   overflow: hidden;
+}
+
+.nx-barras__relleno--encima {
+  background: var(--nx-tertiary);
+}
+
+/* La media del equipo: una raya vertical sobre todas las barras. */
+.nx-barras__media {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--nx-on-surface);
 }
 
 .nx-barras__relleno {
@@ -1732,10 +1746,21 @@ h2 {
   font-size: 2rem;
   line-height: 1;
   color: var(--nx-on-surface-variant);
+  white-space: nowrap;
 }
 
 .nx-contador--con .nx-contador__cifra {
   color: var(--nx-primary);
+}
+
+/* Lo que no debería pasar desapercibido entre cifras informativas. */
+.nx-contador--alerta {
+  background: var(--nx-error-container);
+  color: var(--nx-on-error-container);
+}
+
+.nx-contador--alerta .nx-contador__cifra {
+  color: var(--nx-on-error-container);
 }
 
 .nx-contador:hover,
@@ -1758,6 +1783,11 @@ h2 {
 
 .nx-cadena p {
   margin: 4px 0 0;
+}
+
+.nx-cadena--rota {
+  background: var(--nx-error-container);
+  color: var(--nx-on-error-container);
 }
 
 .nx-traza {

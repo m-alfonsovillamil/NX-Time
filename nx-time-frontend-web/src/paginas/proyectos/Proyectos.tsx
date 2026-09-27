@@ -22,12 +22,13 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
+import { Barras } from '../../componentes/Barras';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { proyectos } from '../../i18n/es/proyectos';
-import { fechaCorta, hoyEnEspana, mesYAnio, minutos } from '../../util/fechas';
+import { fechaCorta, hoyEnEspana, mesYAnio } from '../../util/fechas';
 import { ordenar, usePlantilla } from '../plantilla/Plantilla';
 import { NavegadorDeMes, useMes } from './mes';
 
@@ -41,24 +42,6 @@ const CLAVE = ['proyectos'] as const;
 
 export function vigenciaDe(p: { fechaInicio?: string; fechaFin?: string }): string {
   return p.fechaFin ? P.rango(fechaCorta(p.fechaInicio), fechaCorta(p.fechaFin)) : P.desde(fechaCorta(p.fechaInicio));
-}
-
-/** Una lista de barras horizontales: el que más, entero; el resto, en proporción. */
-function Barras({ filas }: { filas: readonly { clave: string | number; texto: string; minutos: number }[] }) {
-  const maximo = Math.max(1, ...filas.map((f) => f.minutos));
-  return (
-    <ul className="nx-barras">
-      {filas.map((f) => (
-        <li key={f.clave}>
-          <span className="nx-barras__texto">{f.texto}</span>
-          <span className="nx-barras__carril" aria-hidden="true">
-            <span className="nx-barras__relleno" style={{ width: `${(f.minutos / maximo) * 100}%` }} />
-          </span>
-          <span className="nx-barras__cifra">{minutos(f.minutos)}</span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 /* ------------------------------------------------------------------ */
