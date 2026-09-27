@@ -86,6 +86,7 @@ const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').th
 const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
 const VisadoFirmas = lazy(() => import('../paginas/cuadrante/VisadoFirmas').then((m) => ({ default: m.VisadoFirmas })));
 const Analitica = lazy(() => import('../paginas/analitica/Analitica').then((m) => ({ default: m.Analitica })));
+const Cuadrantes = lazy(() => import('../paginas/cuadrantes/Cuadrantes').then((m) => ({ default: m.Cuadrantes })));
 
 const S = T.navegacion.secciones;
 
@@ -124,7 +125,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
   { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
   { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
-  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, llegaEn: 'W7' },
+  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
 ];

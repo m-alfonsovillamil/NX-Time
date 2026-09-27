@@ -35,7 +35,8 @@ export function textoDelTramo(t: Tramo): string {
   return `${t.horaInicio ?? ''}–${t.horaFin ?? ''}${t.cruzaMedianoche === true ? ` ${C.otroDia}` : ''}`;
 }
 
-function Dia({ dia, esHoy }: { dia: DiaTeorico; esHoy: boolean }) {
+/** Un día del horario teórico. Lo usa también el editor de cuadrantes. */
+export function Dia({ dia, esHoy }: { dia: DiaTeorico; esHoy: boolean }) {
   const tramos = dia.tramos ?? [];
   let contenido;
   if (dia.origen === 'NO_LABORABLE') {

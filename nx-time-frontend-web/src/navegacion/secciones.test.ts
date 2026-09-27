@@ -131,10 +131,10 @@ describe('destinoDeAviso', () => {
     expect(destinoDeAviso('fichar')).toBe('/fichar');
   });
 
-  it('un destino sin página todavía no navega', () => {
-    const pendiente = SECCIONES.find((s) => s.pagina === undefined);
-    expect(pendiente).toBeDefined();
-    expect(destinoDeAviso(pendiente?.ruta)).toBeNull();
+  /* Desde W7 la web tiene todas las pantallas de la app: si una sección nueva
+     se queda sin página, que se note aquí y no en un aviso que no lleva a nada. */
+  it('todas las secciones tienen página', () => {
+    expect(SECCIONES.filter((s) => s.pagina === undefined).map((s) => s.ruta)).toEqual([]);
   });
 
   it('un destino desconocido o vacío no navega, y no rompe nada', () => {

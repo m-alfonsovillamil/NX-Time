@@ -1710,6 +1710,77 @@ h2 {
   gap: 4px;
 }
 
+/* El editor de cuadrantes: un día por fila, sus tramos al lado. */
+.nx-semana-editable {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nx-semana-editable > li {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-tramos-editables {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nx-tramo-editable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.nx-tramo-editable .nx-campo {
+  width: 130px;
+}
+
+.nx-resumen-semana {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 16px;
+  font-size: 0.9rem;
+}
+
+.nx-tabla--semana th[scope='row'] {
+  text-align: left;
+  white-space: nowrap;
+}
+
+.nx-tabla__hoy {
+  color: var(--nx-primary);
+}
+
+.nx-celda-dia {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.nx-celda-dia--libre,
+.nx-celda-dia--no-laborable {
+  color: var(--nx-on-surface-variant);
+}
+
+@media (max-width: 639px) {
+  .nx-semana-editable > li {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Tarjetas en rejilla: una columna en el móvil, las que quepan en escritorio. */
 .nx-rejilla-tarjetas {
   display: grid;
