@@ -82,7 +82,30 @@ export const cuadrante = {
       'Es una firma de aceptación, no una firma electrónica cualificada. Si algo no cuadra, pide antes que se corrija.',
     hecha: 'Mes firmado.',
     comprobar: 'Comprobar la huella',
-    coincide: 'La huella coincide: el registro de ese mes no ha cambiado desde que lo firmaste.',
-    noCoincide: 'La huella no coincide: el registro de ese mes ha cambiado desde que lo firmaste.',
+    coincide: 'La huella coincide: el registro de ese mes no ha cambiado desde que se firmó.',
+    noCoincide: 'La huella no coincide: el registro de ese mes ha cambiado desde que se firmó.',
+  },
+
+  visado: {
+    titulo: 'Visado de firmas',
+    explicacion:
+      'Cada persona firma que su registro del mes es correcto; la empresa da su visto bueno. Si después se corrige un fichaje de ese mes, la firma queda sin efecto y hay que volver a pedirla.',
+    delMes: (mes: string) => `Firmas de ${mes}`,
+    resumen: (firmadas: number, total: number, visadas: number) =>
+      `${firmadas} de ${total} ${total === 1 ? 'persona ha' : 'personas han'} firmado · ${visadas} ${visadas === 1 ? 'visada' : 'visadas'}`,
+    tablaTitulo: 'Firmas del mes por persona',
+    vacio: 'No hay nadie de alta en la empresa ese mes.',
+    persona: 'Persona',
+    estado: 'Estado',
+    firmadaEl: 'Firmada el',
+    registro: 'Registro',
+    visadoCol: 'Visado',
+    acciones: 'Acciones',
+    accionesDe: (quien: string) => `Acciones de la firma de ${quien}`,
+    estados: { SIN_FIRMAR: 'Sin firmar', VIGENTE: 'Firmada', INVALIDADA: 'Sin efecto' } as Record<string, string>,
+    motivo: (texto: string) => `Sin efecto: ${texto}`,
+    visar: 'Visar',
+    visada: 'Firma visada.',
+    visadaPor: (quien: string, cuando: string) => `${quien} · ${cuando}`,
   },
 } as const;

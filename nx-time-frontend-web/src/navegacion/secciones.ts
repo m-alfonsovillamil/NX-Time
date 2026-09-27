@@ -84,6 +84,7 @@ const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) =
 const Borrados = lazy(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
 const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
 const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
+const VisadoFirmas = lazy(() => import('../paginas/cuadrante/VisadoFirmas').then((m) => ({ default: m.VisadoFirmas })));
 
 const S = T.navegacion.secciones;
 
@@ -124,7 +125,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
   { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, llegaEn: 'W7' },
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, llegaEn: 'W7' },
-  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, llegaEn: 'W7' },
+  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */
