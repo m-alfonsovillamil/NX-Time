@@ -65,6 +65,8 @@ const Ajustes = lazy(() => import('../paginas/cuenta/Ajustes').then((m) => ({ de
 const MiCuadrante = lazy(() => import('../paginas/cuadrante/MiCuadrante').then((m) => ({ default: m.MiCuadrante })));
 const Incidencias = lazy(() => import('../paginas/cuadrante/Incidencias').then((m) => ({ default: m.Incidencias })));
 const Firmas = lazy(() => import('../paginas/cuadrante/Firmas').then((m) => ({ default: m.Firmas })));
+const HorasExtra = lazy(() => import('../paginas/revisiones/HorasExtra').then((m) => ({ default: m.HorasExtra })));
+const Correcciones = lazy(() => import('../paginas/revisiones/Correcciones').then((m) => ({ default: m.Correcciones })));
 
 const S = T.navegacion.secciones;
 
@@ -82,8 +84,8 @@ export const SECCIONES: readonly Seccion[] = [
   // la misma página, como en Android. Por eso no pide permiso para entrar.
   { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Incidencias },
   { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Firmas },
-  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
-  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
+  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', enMenu: true, pagina: HorasExtra },
+  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Correcciones },
   { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', requiere: 'oferta:leer', enMenu: true, llegaEn: 'W4' },
   { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', requiere: 'candidatura:crear', enMenu: false, llegaEn: 'W4' },
   { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', requiere: 'denuncia:crear', enMenu: true, llegaEn: 'W4' },
