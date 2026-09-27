@@ -10,8 +10,14 @@
  *
  * Un fichero por área y no uno solo: con las treinta pantallas del plan de la
  * web (ADR 029) serían dos mil líneas, y dos fases tocándolo a la vez chocarían
- * en cada merge. Aquí solo se juntan, y `T` sigue siendo el único punto de
- * entrada: `import { T } from '../i18n/es'` no cambia.
+ * en cada merge.
+ *
+ * **`T` solo lleva lo común** (errores, estados de carga, acceso y el marco).
+ * Los textos de cada página los importa esa página de su fichero
+ * (`i18n/es/historial`), y así viajan en su trozo de JS: metidos en `T`, que lo
+ * carga el marco, acabarían en el JS inicial de todo el mundo, y con treinta
+ * páginas serían unos 25 kB comprimidos que nadie ha pedido. Lo destapó el
+ * presupuesto de peso al llegar la segunda página (W2).
  *
  * `as const` en cada área para que cada clave sea un tipo: escribir `T.lgin`
  * no compila.
@@ -19,12 +25,10 @@
 
 import { acceso } from './acceso';
 import { comun } from './comun';
-import { fichar } from './fichar';
 import { navegacion } from './navegacion';
 
 export const T = {
   ...comun,
   ...acceso,
-  fichar,
   navegacion,
 } as const;

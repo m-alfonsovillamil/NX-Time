@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reiniciarEstadoDeRed } from '../api/cliente';
 import { cerrarSesion, sesionActual } from '../api/sesion';
 import { T } from '../i18n/es';
+import { fichar } from '../i18n/es/fichar';
 import { json, pintar, sesionDe, simularApi, sinContenido, type Manejador, type Ruta } from '../pruebas/api';
 import { App, Requiere } from './rutas';
 
@@ -44,7 +45,7 @@ describe('sin sesión', () => {
     await userEvent.type(screen.getByLabelText(T.login.contrasena), 'x');
     await userEvent.click(screen.getByRole('button', { name: T.login.entrar }));
 
-    expect(await screen.findByRole('heading', { name: T.fichar.titulo })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
   });
 
   it('una ruta que no existe da 404 sin pedir entrar', () => {
@@ -59,16 +60,20 @@ describe('con sesión', () => {
     apiBasica();
     pintar(<App />, { ruta: '/fichar', sesion: sesionDe('EMPLEADO') });
 
-    expect(await screen.findByRole('heading', { name: T.fichar.titulo })).toBeTruthy();
-    // Con una sola sección no hay barra inferior: solo la lateral.
-    const menu = screen.getByRole('navigation', { name: N.menuPrincipal });
-    expect(within(menu).getByRole('link', { name: N.secciones.fichar }).getAttribute('aria-current')).toBe('page');
+    expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
+    // La lateral y la barra inferior están las dos en el HTML; el CSS enseña una.
+    const menus = screen.getAllByRole('navigation', { name: N.menuPrincipal });
+    expect(menus).toHaveLength(2);
+    for (const menu of menus) {
+      expect(within(menu).getByRole('link', { name: N.secciones.fichar }).getAttribute('aria-current')).toBe('page');
+      expect(within(menu).getByRole('link', { name: N.secciones.historial }).getAttribute('aria-current')).toBeNull();
+    }
   });
 
   it('un EMPLEADO no ve el grupo de gestión', async () => {
     apiBasica();
     pintar(<App />, { ruta: '/fichar', sesion: sesionDe('EMPLEADO') });
-    await screen.findByRole('heading', { name: T.fichar.titulo });
+    await screen.findByRole('heading', { name: fichar.titulo });
     expect(screen.queryByRole('heading', { name: N.grupos.gestion })).toBeNull();
   });
 
@@ -76,7 +81,7 @@ describe('con sesión', () => {
     apiBasica();
     pintar(<App />, { ruta: '/no-existe', sesion: sesionDe('EMPLEADO') });
     expect(await screen.findByRole('heading', { name: T.noEncontrado.titulo })).toBeTruthy();
-    expect(screen.getByRole('navigation', { name: N.menuPrincipal })).toBeTruthy();
+    expect(screen.getAllByRole('navigation', { name: N.menuPrincipal }).length).toBeGreaterThan(0);
   });
 
   it('cerrar sesión desde el menú de usuario avisa al servidor y vuelve al login', async () => {
@@ -137,7 +142,7 @@ describe('la campana', () => {
     await userEvent.click(await screen.findByRole('button', { name: N.campana.etiqueta(1) }));
     await userEvent.click(await screen.findByRole('button', { name: /Bienvenida/ }));
 
-    expect(await screen.findByRole('heading', { name: T.fichar.titulo })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
     await waitFor(() => expect(api.a('PATCH', '/api/v1/avisos/41/leido')).toHaveLength(1));
   });
 });

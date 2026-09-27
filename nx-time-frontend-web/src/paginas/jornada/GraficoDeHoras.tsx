@@ -16,11 +16,11 @@ import { useState } from 'react';
 
 import { Boton } from '../../componentes/Basicos';
 import { Tabla } from '../../componentes/Tabla';
-import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import { fechaCorta, minutos } from '../../util/fechas';
 import type { HorasDelDia } from './consultas';
 
-const H = T.fichar.horas;
+const H = fichar.horas;
 
 /*
  * El dibujo mide siempre lo mismo por dentro, sean 7 días o 31, y es el hueco

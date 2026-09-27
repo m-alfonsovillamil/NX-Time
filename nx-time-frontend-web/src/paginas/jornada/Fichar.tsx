@@ -24,7 +24,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton } from '../../componentes/Basicos';
 import { EstadoDeConsulta } from '../../componentes/Estados';
-import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import { duracion, fechaLarga, hora, hoyEnEspana } from '../../util/fechas';
 import {
   CLAVES,
@@ -41,7 +41,7 @@ import { DialogoPausa, type JornadaParaPausa } from './DialogoPausa';
 import { ConfirmarFin, ConfirmarNoLaborable, ElegirProyecto } from './DialogosDeFichar';
 import { Resumen } from './Resumen';
 
-const F = T.fichar;
+const F = fichar;
 
 type Tipo = 'INICIO' | 'FIN' | 'PAUSA_INICIO' | 'PAUSA_FIN';
 

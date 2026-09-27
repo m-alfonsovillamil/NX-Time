@@ -56,13 +56,14 @@ export interface Seccion {
  * nombre y `lazy` quiere un `default`.
  */
 const Fichar = lazy(() => import('../paginas/jornada/Fichar').then((m) => ({ default: m.Fichar })));
+const Historial = lazy(() => import('../paginas/historial/Historial').then((m) => ({ default: m.Historial })));
 
 const S = T.navegacion.secciones;
 
 export const SECCIONES: readonly Seccion[] = [
   /* ---- Lo mío ---- */
   { ruta: 'fichar', etiqueta: S.fichar, icono: 'reloj', grupo: 'personal', enMenu: true, principal: true, pagina: Fichar },
-  { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', enMenu: true, principal: true, llegaEn: 'W2' },
+  { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', enMenu: true, principal: true, pagina: Historial },
   { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', enMenu: true, principal: true, llegaEn: 'W3' },
   { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', enMenu: true, principal: true, llegaEn: 'W3' },
   { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, llegaEn: 'W3' },

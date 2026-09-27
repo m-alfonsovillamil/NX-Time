@@ -95,6 +95,11 @@ de cuadrantes. `npm run presupuesto` falla en CI si el JS inicial pasa de
 equivocado para que una página rara se meta en el trozo inicial, y sin esto
 nada fallaría: la web iría más lenta en el móvil sin que nadie lo notara.
 
+Lo mismo vale para los textos: `T` solo lleva lo común (errores, acceso y el
+marco), y cada página importa su área de `i18n/es/`. Con todas dentro de `T`,
+que lo carga el marco, los textos de treinta páginas irían en el JS inicial;
+lo destapó este presupuesto al llegar la segunda página (W2).
+
 ### 7. Descargas con autenticación
 
 Excel, PDF y CSV no pueden ser un `<a href>`: el token va en la cabecera.

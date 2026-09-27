@@ -22,10 +22,11 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { AreaDeTexto, Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import { aInstante, diaEnEspana, hora, hoyEnEspana, minutos, sumarDias } from '../../util/fechas';
 import { CLAVES, TRAS_CAMBIAR_TIEMPO } from './consultas';
 
-const P = T.fichar.pausa;
+const P = fichar.pausa;
 
 export interface JornadaParaPausa {
   id: number;

@@ -9,12 +9,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import { pintar, problema, sesionDe, simularApi, sinContenido, type Manejador, type Ruta } from '../../pruebas/api';
 import { segundosDeJornada } from './consultas';
 import { Fichar } from './Fichar';
 import { DialogoPausa } from './DialogoPausa';
 
-const F = T.fichar;
+const F = fichar;
 const HACE_UNA_HORA = () => new Date(Date.now() - 3_600_000).toISOString();
 
 function abierta(extra: Record<string, unknown> = {}) {

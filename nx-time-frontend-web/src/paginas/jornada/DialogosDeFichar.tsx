@@ -16,10 +16,11 @@ import { useState, type FormEvent } from 'react';
 import { Boton } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import { duracion, hora } from '../../util/fechas';
 import type { Jornada, ProyectosParaFichar } from './consultas';
 
-const F = T.fichar;
+const F = fichar;
 
 export function ConfirmarFin({
   jornada,

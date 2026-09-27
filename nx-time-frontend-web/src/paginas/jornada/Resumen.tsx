@@ -15,7 +15,7 @@ import { useState } from 'react';
 
 import { Pestanas } from '../../componentes/Pestanas';
 import { Esqueleto } from '../../componentes/Estados';
-import { T } from '../../i18n/es';
+import { fichar } from '../../i18n/es/fichar';
 import {
   diasDelRango,
   hoyEnEspana,
@@ -29,8 +29,8 @@ import {
 import { useHorasPorDia, useResumen, type HorasDelDia } from './consultas';
 import { GraficoDeHoras } from './GraficoDeHoras';
 
-const R = T.fichar.resumen;
-const H = T.fichar.horas;
+const R = fichar.resumen;
+const H = fichar.horas;
 
 type Periodo = 'semana' | 'mes';
 
