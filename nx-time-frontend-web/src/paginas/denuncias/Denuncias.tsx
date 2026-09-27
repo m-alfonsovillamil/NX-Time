@@ -20,7 +20,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
@@ -41,7 +41,7 @@ type Resumen = components['schemas']['ComplaintSummaryResponse'];
 
 const CLAVE_MIAS = ['denuncias', 'mias'] as const;
 
-const TONO: Record<string, Tono> = { RECIBIDA: 'aviso', EN_INVESTIGACION: 'info', RESUELTA: 'exito', ARCHIVADA: 'neutro' };
+export const TONO_DENUNCIA: Record<string, Tono> = { RECIBIDA: 'aviso', EN_INVESTIGACION: 'info', RESUELTA: 'exito', ARCHIVADA: 'neutro' };
 
 const CATEGORIAS = Object.entries(D.categorias).map(([valor, texto]) => ({ valor, texto }));
 
@@ -61,13 +61,13 @@ export function plazoDe(e: { diasHastaAcuse?: number; diasHastaRespuesta?: numbe
   return null;
 }
 
-function Plazo({ e }: { e: { diasHastaAcuse?: number; diasHastaRespuesta?: number } }) {
+export function Plazo({ e }: { e: { diasHastaAcuse?: number; diasHastaRespuesta?: number } }) {
   const plazo = plazoDe(e);
   if (plazo === null) return null;
   return <span className={plazo.vencido ? 'nx-texto-error' : 'nx-sutil'}>{plazo.texto}</span>;
 }
 
-function cerrado(e: Expediente): boolean {
+export function cerrado(e: Expediente): boolean {
   return e.estado === 'RESUELTA' || e.estado === 'ARCHIVADA';
 }
 
@@ -240,6 +240,47 @@ function FormularioDeMensaje({ via, alResponder }: { via: Via; alResponder: (e: 
   );
 }
 
+/**
+ * El expediente, igual para quien denuncia y para quien instruye: estado,
+ * plazo, hechos, conclusión y conversación. Lo que cambia es el subtítulo
+ * (quién la puso) y lo que va debajo (responder, cambiar de estado).
+ */
+export function CuerpoDeExpediente({ e, subtitulo, children }: { e: Expediente; subtitulo: string; children?: ReactNode }) {
+  return (
+    <div className="nx-expediente">
+      <div className="nx-incidencia__cabecera">
+        {e.estado && <Insignia tono={TONO_DENUNCIA[e.estado] ?? 'neutro'}>{D.estados[e.estado] ?? e.estado}</Insignia>}
+        <span className="nx-sutil">{subtitulo}</span>
+      </div>
+      <Plazo e={e} />
+      <p className="nx-texto-largo">{e.descripcion}</p>
+      {e.conclusion && (
+        <section>
+          <h3>{D.conclusion}</h3>
+          <p className="nx-texto-largo">{e.conclusion}</p>
+        </section>
+      )}
+      {(e.mensajes ?? []).length > 0 && (
+        <section>
+          <h3>{D.conversacion}</h3>
+          <ol className="nx-conversacion">
+            {(e.mensajes ?? []).map((m) => (
+              <li key={m.id} className={`nx-mensaje nx-mensaje--${m.autorRol === 'INSTRUCTOR' ? 'otro' : 'mio'}`}>
+                <span className="nx-sutil">
+                  {D.autores[m.autorRol ?? ''] ?? m.autorRol}
+                  {m.creadoEn ? ` · ${fechaHoraCorta(m.creadoEn)}` : ''}
+                </span>
+                <p className="nx-texto-largo">{m.texto}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      {children}
+    </div>
+  );
+}
+
 function DialogoDeExpediente({
   abierto,
   via,
@@ -257,41 +298,12 @@ function DialogoDeExpediente({
   return (
     <Dialogo abierto={abierto} titulo={e?.categoriaEtiqueta ?? D.titulo} alCerrar={alCerrar}>
       {e !== null && via !== null && (
-        <div className="nx-expediente">
-          <div className="nx-incidencia__cabecera">
-            {e.estado && <Insignia tono={TONO[e.estado] ?? 'neutro'}>{D.estados[e.estado] ?? e.estado}</Insignia>}
-            {e.creadoEn && (
-              <span className="nx-sutil">
-                {e.anonima === true ? D.presentadaAnonima(fechaHoraCorta(e.creadoEn)) : D.presentadaConNombre(fechaHoraCorta(e.creadoEn))}
-              </span>
-            )}
-          </div>
-          <Plazo e={e} />
-          <p className="nx-texto-largo">{e.descripcion}</p>
-          {e.conclusion && (
-            <section>
-              <h3>{D.conclusion}</h3>
-              <p className="nx-texto-largo">{e.conclusion}</p>
-            </section>
-          )}
-          {(e.mensajes ?? []).length > 0 && (
-            <section>
-              <h3>{D.conversacion}</h3>
-              <ol className="nx-conversacion">
-                {(e.mensajes ?? []).map((m) => (
-                  <li key={m.id} className={`nx-mensaje nx-mensaje--${m.autorRol === 'INSTRUCTOR' ? 'otro' : 'mio'}`}>
-                    <span className="nx-sutil">
-                      {D.autores[m.autorRol ?? ''] ?? m.autorRol}
-                      {m.creadoEn ? ` · ${fechaHoraCorta(m.creadoEn)}` : ''}
-                    </span>
-                    <p className="nx-texto-largo">{m.texto}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+        <CuerpoDeExpediente
+          e={e}
+          subtitulo={e.creadoEn ? (e.anonima === true ? D.presentadaAnonima(fechaHoraCorta(e.creadoEn)) : D.presentadaConNombre(fechaHoraCorta(e.creadoEn))) : ''}
+        >
           {cerrado(e) ? <p className="nx-sutil">{D.cerrado}</p> : <FormularioDeMensaje via={via} alResponder={alCambiar} />}
-        </div>
+        </CuerpoDeExpediente>
       )}
     </Dialogo>
   );
@@ -349,7 +361,7 @@ function FilaDeDenuncia({ r, ocupado, alAbrir }: { r: Resumen; ocupado: boolean;
     <li className="nx-incidencia">
       <div className="nx-incidencia__cabecera">
         <strong>{r.categoriaEtiqueta}</strong>
-        {r.estado && <Insignia tono={TONO[r.estado] ?? 'neutro'}>{D.estados[r.estado] ?? r.estado}</Insignia>}
+        {r.estado && <Insignia tono={TONO_DENUNCIA[r.estado] ?? 'neutro'}>{D.estados[r.estado] ?? r.estado}</Insignia>}
       </div>
       {r.creadoEn && <span className="nx-sutil">{D.presentadaConNombre(fechaHoraCorta(r.creadoEn))}</span>}
       <Plazo e={r} />
