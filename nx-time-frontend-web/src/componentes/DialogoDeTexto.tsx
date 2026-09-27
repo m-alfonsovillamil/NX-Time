@@ -17,7 +17,7 @@ import { Dialogo } from './Dialogo';
 interface Props {
   abierto: boolean;
   titulo: string;
-  ayuda: string;
+  ayuda?: string;
   etiqueta: string;
   /** Lo que se dice si se intenta mandar vacío. */
   vacio: string;
@@ -65,7 +65,7 @@ function FormularioDeTexto({
 
   return (
     <form className="nx-formulario-dialogo" onSubmit={enviar} noValidate>
-      <p className="nx-sutil">{ayuda}</p>
+      {ayuda !== undefined && <p className="nx-sutil">{ayuda}</p>}
       <AreaDeTexto id="dialogo-texto" etiqueta={etiqueta} maxLength={maxLength} value={texto} onChange={(e) => setTexto(e.target.value)} />
       {(falta ? vacio : error) && <Aviso>{falta ? vacio : error}</Aviso>}
       <div className="nx-dialogo__acciones">

@@ -74,6 +74,8 @@ const HistorialEquipo = lazy(() => import('../paginas/equipo/HistorialEquipo').t
 const PanelGestion = lazy(() => import('../paginas/gestion/PanelGestion').then((m) => ({ default: m.PanelGestion })));
 const AusenciasEquipo = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.AusenciasEquipo })));
 const AusenciasResueltas = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.PaginaAusenciasResueltas })));
+const Plantilla = lazy(() => import('../paginas/plantilla/Plantilla').then((m) => ({ default: m.Plantilla })));
+const Departamentos = lazy(() => import('../paginas/plantilla/Departamentos').then((m) => ({ default: m.Departamentos })));
 
 const S = T.navegacion.secciones;
 
@@ -103,8 +105,8 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
   { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
   { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W6' },
-  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, llegaEn: 'W6' },
-  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
+  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
   { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', requiere: 'proyecto:gestionar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, llegaEn: 'W6' },

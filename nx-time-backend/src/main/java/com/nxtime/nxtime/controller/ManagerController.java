@@ -125,6 +125,25 @@ public class ManagerController {
         return ResponseEntity.ok(employeeProfileService.getMyEmployees(manager.getUser()));
     }
 
+    @Operation(summary = "Toda la plantilla de la empresa",
+            description = "Todas las personas de la empresa, de cualquier rol y de alta o de baja, con su "
+                    + "rol y su departamento. 'mis-empleados' solo trae a los EMPLEADO; esta es la lista "
+                    + "de quien administra la plantilla (RRHH y ADMIN), que también pone departamento a "
+                    + "los gestores.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "La plantilla",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = SimpleEmployeeDTO.class)))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'empleado:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @GetMapping("/plantilla")
+    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    public ResponseEntity<List<SimpleEmployeeDTO>> getPlantilla(@AuthenticationPrincipal SecurityUser actor) {
+        return ResponseEntity.ok(employeeProfileService.getPlantilla(actor.getUser()));
+    }
+
     @Operation(summary = "Historial de ausencias del equipo",
             description = "Las que ya no están PENDIENTE, las más recientes primero. Por páginas: 'pagina' desde 0 "
                     + "y 'tamano' de 1 a 200 (50 por defecto).")

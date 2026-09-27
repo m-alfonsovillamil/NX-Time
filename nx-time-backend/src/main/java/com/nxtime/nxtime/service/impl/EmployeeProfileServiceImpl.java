@@ -69,6 +69,17 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     }
 
     @Override
+    public List<SimpleEmployeeDTO> getPlantilla(User actor) {
+        List<User> plantilla = userRepository.findByEmpresa(actor.getEmpresa());
+        Map<Long, Integer> saldosPorUsuario = plantilla.isEmpty()
+                ? Map.of()
+                : saldosDelAnio(plantilla, anioActual());
+        return plantilla.stream()
+                .map(persona -> toDto(persona, saldosPorUsuario))
+                .toList();
+    }
+
+    @Override
     @Transactional
     public SimpleEmployeeDTO updateProfile(long employeeId, UpdateEmployeeProfileRequest request, User actor) {
         User empleado = userRepository.findById(employeeId)
@@ -267,6 +278,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 saldosPorUsuario.getOrDefault(
                         empleado.getId(), VacationBalanceServiceImpl.DIAS_POR_DEFECTO),
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getId() : null,
-                empleado.getDepartamento() != null ? empleado.getDepartamento().getNombre() : null);
+                empleado.getDepartamento() != null ? empleado.getDepartamento().getNombre() : null,
+                empleado.getRol());
     }
 }

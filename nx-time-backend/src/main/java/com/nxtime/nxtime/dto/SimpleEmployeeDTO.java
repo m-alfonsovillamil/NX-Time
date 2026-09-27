@@ -49,6 +49,13 @@ public record SimpleEmployeeDTO(
          */
         Long departamentoId,
 
-        String departamentoNombre
+        String departamentoNombre,
+
+        /**
+         * Su rol (Fase W6). En «mis empleados» es siempre EMPLEADO; en la
+         * plantilla completa ({@code GET /gestor/plantilla}) salen también
+         * gestores, RRHH y ADMIN, y sin esto no se sabría quién es quién.
+         */
+        com.nxtime.nxtime.domain.Role rol
 ) {
 }

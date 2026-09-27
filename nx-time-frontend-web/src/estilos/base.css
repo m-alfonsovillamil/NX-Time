@@ -104,6 +104,12 @@ h1 {
   gap: 16px;
 }
 
+/* Con botones al lado del título: en el móvil bajan debajo, no se aprietan. */
+.nx-cabecera--con-acciones {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 /* ---- Campos ---- */
 
 .nx-campo {
@@ -705,6 +711,8 @@ h2 {
 .nx-tabla .nx-tabla__numerica {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  /* «40 h/semana» partido en dos líneas ya no se compara de un vistazo. */
+  white-space: nowrap;
 }
 
 @media (max-width: 639px) {
@@ -1614,6 +1622,28 @@ h2 {
   align-self: flex-end;
   background: var(--nx-primary-container);
   color: var(--nx-on-primary-container);
+}
+
+/* Tarjetas en rejilla: una columna en el móvil, las que quepan en escritorio. */
+.nx-rejilla-tarjetas {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.nx-departamento {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nx-departamento h2 {
+  margin: 0;
+  font-size: var(--nx-fs-title-medium);
+}
+
+.nx-departamento p {
+  margin: 0;
 }
 
 /* El panel de gestión: cifras grandes que llevan a su bandeja. */

@@ -110,6 +110,24 @@ class ManagerControllerTest {
     }
 
     @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("GET /gestor/plantilla con 'empleado:gestionar' (RRHH) devuelve 200")
+    void getPlantilla_comoRRHH_devuelve200() throws Exception {
+        when(employeeProfileService.getPlantilla(any())).thenReturn(List.of(fichaDeEjemplo()));
+
+        mockMvc.perform(get("/api/v1/gestor/plantilla"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].rol").value("EMPLEADO"));
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.GESTOR)
+    @DisplayName("GET /gestor/plantilla sin 'empleado:gestionar' (GESTOR) devuelve 403")
+    void getPlantilla_comoGestor_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/v1/gestor/plantilla")).andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockSecurityUser(rol = Role.GESTOR)
     @DisplayName("GET /gestor/ausencias-historial con 'ausencia:leer:equipo' devuelve 200")
     void getAbsenceHistory_conAuthority_devuelve200() throws Exception {
@@ -155,7 +173,7 @@ class ManagerControllerTest {
 
     private static SimpleEmployeeDTO fichaDeEjemplo() {
         return new SimpleEmployeeDTO(
-                2L, "Empleado", "empleado@nxtime.test", true, new BigDecimal("37.5"), 25, 3L, "Operaciones");
+                2L, "Empleado", "empleado@nxtime.test", true, new BigDecimal("37.5"), 25, 3L, "Operaciones", Role.EMPLEADO);
     }
 
     @Test

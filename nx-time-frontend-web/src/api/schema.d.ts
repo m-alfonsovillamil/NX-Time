@@ -1634,6 +1634,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gestor/plantilla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Toda la plantilla de la empresa
+         * @description Todas las personas de la empresa, de cualquier rol y de alta o de baja, con su rol y su departamento. 'mis-empleados' solo trae a los EMPLEADO; esta es la lista de quien administra la plantilla (RRHH y ADMIN), que también pone departamento a los gestores.
+         */
+        get: operations["getPlantilla"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gestor/mis-empleados": {
         parameters: {
             query?: never;
@@ -3191,6 +3211,8 @@ export interface components {
             /** Format: int64 */
             departamentoId?: number;
             departamentoNombre?: string;
+            /** @enum {string} */
+            rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
         };
         UpdateEmployeeStatusRequest: {
             activo: boolean;
@@ -8679,6 +8701,44 @@ export interface operations {
             };
             /** @description Empleado no encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    getPlantilla: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La plantilla */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SimpleEmployeeDTO"][];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'empleado:gestionar' */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
