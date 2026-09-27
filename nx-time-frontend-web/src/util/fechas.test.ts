@@ -5,6 +5,7 @@ import {
   diaEnEspana,
   diasDelRango,
   duracion,
+  fechaCompleta,
   fechaCorta,
   hora,
   horaDeSalida,
@@ -159,5 +160,13 @@ describe('días e instantes de España', () => {
   it('la salida de un turno de noche dice que es de otro día', () => {
     expect(horaDeSalida('2026-09-21T20:52:00Z', '2026-09-21T22:29:00Z')).toBe('00:29 h (+1 d)');
     expect(horaDeSalida('2026-09-21T07:00:00Z', '2026-09-21T15:00:00Z')).toBe('17:00 h');
+  });
+});
+
+describe('fechaCompleta', () => {
+  /* La fecha de nacimiento sin año, en el perfil, era justo el dato que faltaba. */
+  it('lleva el año', () => {
+    expect(fechaCompleta('1994-04-06')).toBe('6 de abril de 1994');
+    expect(fechaCompleta(undefined)).toBe('');
   });
 });

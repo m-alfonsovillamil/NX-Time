@@ -59,6 +59,9 @@ const Fichar = lazy(() => import('../paginas/jornada/Fichar').then((m) => ({ def
 const Historial = lazy(() => import('../paginas/historial/Historial').then((m) => ({ default: m.Historial })));
 const Ausencias = lazy(() => import('../paginas/ausencias/Ausencias').then((m) => ({ default: m.Ausencias })));
 const Calendario = lazy(() => import('../paginas/ausencias/Calendario').then((m) => ({ default: m.Calendario })));
+const Avisos = lazy(() => import('../paginas/cuenta/Avisos').then((m) => ({ default: m.Avisos })));
+const Perfil = lazy(() => import('../paginas/cuenta/Perfil').then((m) => ({ default: m.PaginaPerfil })));
+const Ajustes = lazy(() => import('../paginas/cuenta/Ajustes').then((m) => ({ default: m.Ajustes })));
 
 const S = T.navegacion.secciones;
 
@@ -68,9 +71,9 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', enMenu: true, principal: true, pagina: Historial },
   { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
   { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', requiere: 'calendario:leer', enMenu: true, principal: true, pagina: Calendario },
-  { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
-  { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
-  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
+  { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, pagina: Avisos },
+  { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Perfil },
+  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Ajustes },
   { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', requiere: 'cuadrante:leer', enMenu: true, llegaEn: 'W4' },
   // Lo propio y, con `cuadrante:incidencias:revisar`, la bandeja del equipo:
   // la misma página, como en Android. Por eso no pide permiso para entrar.

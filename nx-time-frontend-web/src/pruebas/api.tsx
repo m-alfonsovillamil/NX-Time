@@ -29,6 +29,7 @@ export interface PeticionSimulada {
   parametros: Record<string, string>;
   query: URLSearchParams;
   cuerpo: unknown;
+  cabeceras: Headers;
 }
 
 /** Lo que devuelve un manejador: una `Response` a medida, o un cuerpo que se manda como JSON 200. */
@@ -85,7 +86,14 @@ export function simularApi(rutas: Partial<Record<Ruta, Manejador>>) {
         const casa = fila.expresion.exec(url.pathname);
         if (casa === null) continue;
         const parametros = Object.fromEntries(fila.nombres.map((n, i) => [n, casa[i + 1] ?? '']));
-        const simulada = { metodo, ruta: url.pathname, parametros, query: url.searchParams, cuerpo };
+        const simulada = {
+          metodo,
+          ruta: url.pathname,
+          parametros,
+          query: url.searchParams,
+          cuerpo,
+          cabeceras: peticion.headers,
+        };
         llamadas.push(simulada);
         const respuesta = await fila.manejador(simulada);
         return respuesta instanceof Response ? respuesta : json(respuesta);
