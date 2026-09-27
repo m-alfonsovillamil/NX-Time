@@ -24,10 +24,11 @@ import lombok.Setter;
  * a alguien de proyecto en abril recolocaría todas sus horas de enero y
  * reescribiría informes ya cerrados.
  *
- * <b>Una persona no puede estar en dos proyectos el mismo día</b>, y eso
- * lo impone la base con {@code ex_asignaciones_sin_solape} (un EXCLUDE
- * sobre {@code daterange}), no este código: comprobarlo en Java sería
- * leer y luego escribir, es decir, una condición de carrera.
+ * <b>Una persona no puede estar dos veces en el mismo proyecto el mismo
+ * día</b> (en varios proyectos a la vez, sí: ADR 017, V23), y eso lo
+ * impone la base con {@code ex_asignaciones_sin_solape_mismo_proyecto} (un
+ * EXCLUDE sobre {@code daterange}), no este código: comprobarlo en Java
+ * sería leer y luego escribir, es decir, una condición de carrera.
  *
  * {@code fechaFin} null significa "sigue asignado", y en la restricción
  * se traduce a un rango abierto por la derecha.

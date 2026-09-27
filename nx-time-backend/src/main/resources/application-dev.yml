@@ -45,6 +45,9 @@ application:
       # de fiar: la IP buena es la de la conexión. En producción (Render) es
       # 1, el balanceador suyo. Ver LoginRateLimitFilter.clientIp.
       trusted-proxies: 0
+      # Solo en local: la suite de Playwright entra una veintena de veces en
+      # medio minuto desde la misma IP. Producción sigue con las 10 de siempre.
+      peticiones-por-minuto: 200
     cors:
       # Permisivo a propósito en desarrollo local: no hay frontend web
       # real todavía (la app Android no manda cabecera Origin), y esto
