@@ -78,6 +78,9 @@ const Plantilla = lazy(() => import('../paginas/plantilla/Plantilla').then((m) =
 const Departamentos = lazy(() => import('../paginas/plantilla/Departamentos').then((m) => ({ default: m.Departamentos })));
 const Proyectos = lazy(() => import('../paginas/proyectos/Proyectos').then((m) => ({ default: m.Proyectos })));
 const CalendarioLaboral = lazy(() => import('../paginas/proyectos/CalendarioLaboral').then((m) => ({ default: m.CalendarioLaboral })));
+const PanelEmpresa = lazy(() => import('../paginas/empresa/PanelEmpresa').then((m) => ({ default: m.PanelEmpresa })));
+const Informes = lazy(() => import('../paginas/empresa/Informes').then((m) => ({ default: m.Informes })));
+const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) => ({ default: m.Integridad })));
 
 const S = T.navegacion.secciones;
 
@@ -106,16 +109,16 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
   { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
   { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
-  { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelEmpresa },
   { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
   { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
   { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
   { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
-  { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, pagina: Informes },
   { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', requiere: 'empleado:gestionar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', requiere: 'denuncia:instruir', enMenu: true, llegaEn: 'W6' },
-  { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
   { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, llegaEn: 'W7' },
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, llegaEn: 'W7' },
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, llegaEn: 'W7' },
