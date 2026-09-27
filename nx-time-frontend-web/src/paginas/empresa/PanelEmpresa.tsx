@@ -21,15 +21,12 @@ import { Barras } from '../../componentes/Barras';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { empresa } from '../../i18n/es/empresa';
 import { fechaCorta, hoyEnEspana, mesYAnio, minutos } from '../../util/fechas';
+import { porcentaje } from '../../util/numeros';
 
 const E = empresa.panel;
 const A = empresa.analitica;
 
-/** «4,2 %», o una raya si no hay cifra todavía. */
-export function porcentaje(valor: number | null | undefined): string {
-  if (valor === null || valor === undefined) return '—';
-  return `${valor.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
-}
+export { porcentaje } from '../../util/numeros';
 
 function Indicador({ etiqueta, valor, alerta = false, ayuda, a }: { etiqueta: string; valor: string; alerta?: boolean; ayuda?: string; a?: string }) {
   const contenido: ReactNode = (
@@ -126,7 +123,7 @@ export function PanelEmpresa() {
                     <Barras
                       filas={[...horas]
                         .sort((a, b) => (b.minutos ?? 0) - (a.minutos ?? 0))
-                        .map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', minutos: h.minutos ?? 0 }))}
+                        .map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', valor: h.minutos ?? 0 }))}
                       media={media}
                     />
                     <p className="nx-sutil">{E.mediaEquipo(minutos(media))}</p>
@@ -142,7 +139,7 @@ export function PanelEmpresa() {
         <section className="nx-tarjeta" aria-labelledby="empresa-proyectos">
           <h2 id="empresa-proyectos">{E.horasPorProyecto}</h2>
           <Barras
-            filas={(proyectos.data?.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, minutos: x.minutos ?? 0 }))}
+            filas={(proyectos.data?.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, valor: x.minutos ?? 0 }))}
           />
         </section>
       )}

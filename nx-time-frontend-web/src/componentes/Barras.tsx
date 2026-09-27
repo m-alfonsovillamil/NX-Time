@@ -14,11 +14,23 @@ import { minutos as formatoMinutos } from '../util/fechas';
 export interface FilaDeBarra {
   clave: string | number;
   texto: string;
-  minutos: number;
+  valor: number;
 }
 
-export function Barras({ filas, media }: { filas: readonly FilaDeBarra[]; media?: number }) {
-  const tope = Math.max(1, media ?? 0, ...filas.map((f) => f.minutos));
+export function Barras({
+  filas,
+  media,
+  formato = formatoMinutos,
+}: {
+  filas: readonly FilaDeBarra[];
+  media?: number;
+  /** Cómo se escribe la cifra de cada barra. Minutos por defecto. */
+  formato?: (valor: number) => string;
+}) {
+  // Todas a cero: barras vacías y una raya pegada al borde no dicen nada que
+  // no diga ya la cifra (o la tabla de al lado).
+  if (filas.every((f) => f.valor === 0)) return null;
+  const tope = Math.max(Number.EPSILON, media ?? 0, ...filas.map((f) => f.valor));
   return (
     <ul className="nx-barras">
       {filas.map((f) => (
@@ -26,12 +38,12 @@ export function Barras({ filas, media }: { filas: readonly FilaDeBarra[]; media?
           <span className="nx-barras__texto">{f.texto}</span>
           <span className="nx-barras__carril" aria-hidden="true">
             <span
-              className={`nx-barras__relleno${media !== undefined && f.minutos > media ? ' nx-barras__relleno--encima' : ''}`}
-              style={{ width: `${(f.minutos / tope) * 100}%` }}
+              className={`nx-barras__relleno${media !== undefined && f.valor > media ? ' nx-barras__relleno--encima' : ''}`}
+              style={{ width: `${(f.valor / tope) * 100}%` }}
             />
             {media !== undefined && <span className="nx-barras__media" style={{ left: `${(media / tope) * 100}%` }} />}
           </span>
-          <span className="nx-barras__cifra">{formatoMinutos(f.minutos)}</span>
+          <span className="nx-barras__cifra">{formato(f.valor)}</span>
         </li>
       ))}
     </ul>
