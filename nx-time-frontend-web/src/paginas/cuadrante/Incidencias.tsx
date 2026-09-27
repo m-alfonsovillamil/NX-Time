@@ -13,17 +13,16 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useListaPaginada, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { AreaDeTexto, Aviso, Boton, Insignia, Selector, type Tono } from '../../componentes/Basicos';
-import { Dialogo } from '../../componentes/Dialogo';
+import { Aviso, Boton, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
-import { T } from '../../i18n/es';
 import { cuadrante } from '../../i18n/es/cuadrante';
 import { fechaCorta, hora, hoyEnEspana, minutos } from '../../util/fechas';
 
@@ -73,99 +72,6 @@ function TarjetaDeIncidencia({ i, delEquipo, acciones }: { i: Incidencia; delEqu
       )}
       {acciones !== null && <div className="nx-acciones-fila">{acciones}</div>}
     </li>
-  );
-}
-
-/** Explicar (una propia) o rechazar (una del equipo): los dos piden un texto. */
-function DialogoDeTexto({
-  abierto,
-  titulo,
-  ayuda,
-  etiqueta,
-  vacio,
-  boton,
-  ocupado,
-  error,
-  alEnviar,
-  alCerrar,
-  inicial = '',
-}: {
-  abierto: boolean;
-  titulo: string;
-  ayuda: string;
-  etiqueta: string;
-  vacio: string;
-  boton: string;
-  ocupado: boolean;
-  error: string | null;
-  alEnviar: (texto: string) => void;
-  alCerrar: () => void;
-  inicial?: string;
-}) {
-  return (
-    <Dialogo abierto={abierto} titulo={titulo} alCerrar={alCerrar} acciones={null}>
-      {abierto && (
-        <FormularioDeTexto
-          ayuda={ayuda}
-          etiqueta={etiqueta}
-          vacio={vacio}
-          boton={boton}
-          ocupado={ocupado}
-          error={error}
-          alEnviar={alEnviar}
-          alCerrar={alCerrar}
-          inicial={inicial}
-        />
-      )}
-    </Dialogo>
-  );
-}
-
-function FormularioDeTexto({
-  ayuda,
-  etiqueta,
-  vacio,
-  boton,
-  ocupado,
-  error,
-  alEnviar,
-  alCerrar,
-  inicial,
-}: {
-  ayuda: string;
-  etiqueta: string;
-  vacio: string;
-  boton: string;
-  ocupado: boolean;
-  error: string | null;
-  alEnviar: (texto: string) => void;
-  alCerrar: () => void;
-  inicial: string;
-}) {
-  const [texto, setTexto] = useState(inicial);
-  const [falta, setFalta] = useState(false);
-
-  function enviar(evento: FormEvent) {
-    evento.preventDefault();
-    if (texto.trim() === '') return setFalta(true);
-    setFalta(false);
-    alEnviar(texto.trim());
-  }
-
-  return (
-    <form className="nx-formulario-dialogo" onSubmit={enviar} noValidate>
-      <p className="nx-sutil">{ayuda}</p>
-      <AreaDeTexto id="incidencia-texto" etiqueta={etiqueta} maxLength={1000} value={texto} onChange={(e) => setTexto(e.target.value)} />
-      {(falta ? vacio : error) && <Aviso>{falta ? vacio : error}</Aviso>}
-      <div className="nx-dialogo__acciones">
-        <Boton variante="texto" onClick={alCerrar}>
-          {T.app.cancelar}
-        </Boton>
-        <Boton type="submit" ocupado={ocupado}>
-          {boton}
-        </Boton>
-      </div>
-    </form>
   );
 }
 
@@ -311,6 +217,7 @@ function DelEquipo() {
         etiqueta={I.comentario}
         vacio={I.comentarioVacio}
         boton={I.rechazar}
+        peligro
         ocupado={decidir.isPending}
         error={decidir.error?.message ?? null}
         alEnviar={(comentario) =>

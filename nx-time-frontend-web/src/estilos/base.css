@@ -1546,6 +1546,42 @@ h2 {
   margin: 0;
 }
 
+/* La bolsa anual de horas extra: 48 h de 80 se entiende de un vistazo. */
+.nx-bolsa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-bolsa h2 {
+  margin: 0;
+  font-size: var(--nx-fs-title-medium);
+}
+
+.nx-bolsa p {
+  margin: 0;
+}
+
+.nx-bolsa__carril {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--nx-surface-variant);
+  overflow: hidden;
+}
+
+.nx-bolsa__relleno {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--nx-tertiary);
+}
+
+.nx-bolsa__relleno--limite {
+  background: var(--nx-error);
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {
