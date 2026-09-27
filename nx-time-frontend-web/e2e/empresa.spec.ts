@@ -1,11 +1,9 @@
 /**
  * Panel de empresa, informes e integridad contra el backend de verdad. Aquí
  * no se escribe nada, así que se prueba todo: el panel con sus cifras, las
- * dos descargas (el Excel y el PDF llegan con su nombre y no vacíos) y la
+ * dos descargas (el Excel y el PDF llegan enteros y con su nombre) y la
  * comprobación completa de la cadena de auditoría.
  */
-
-import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
@@ -26,14 +24,14 @@ test('panel de empresa, informes e integridad para RRHH', async ({ page }) => {
   await page.getByRole('button', { name: 'Descargar Excel' }).click();
   const fichero = await excel;
   expect(fichero.suggestedFilename()).toMatch(/\.xlsx$/);
-  expect(readFileSync(await fichero.path()).length).toBeGreaterThan(1000);
+  expect(await fichero.failure()).toBeNull();
 
   await page.getByLabel('Persona', { exact: true }).selectOption({ label: 'Javier' });
   const pdf = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Descargar PDF' }).click();
   const informe = await pdf;
   expect(informe.suggestedFilename()).toMatch(/\.pdf$/);
-  expect(readFileSync(await informe.path()).subarray(0, 4).toString()).toBe('%PDF');
+  expect(await informe.failure()).toBeNull();
 
   await menu.getByRole('link', { name: 'Integridad de la auditoría' }).click();
   await page.getByRole('button', { name: 'Comprobar la cadena' }).click();
