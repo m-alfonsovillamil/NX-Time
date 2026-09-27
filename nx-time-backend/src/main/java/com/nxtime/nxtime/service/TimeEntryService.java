@@ -37,9 +37,13 @@ public interface TimeEntryService {
             String userEmail, java.time.LocalDate desde, java.time.LocalDate hasta,
             org.springframework.data.domain.Pageable pagina);
 
-    /** El historial de los EMPLEADO de la empresa, por páginas (Fase A7). */
+    /**
+     * El historial de los EMPLEADO de la empresa, por páginas (Fase A7).
+     * Con {@code usuarioId}, solo el de esa persona (Fase W5); si no es un
+     * EMPLEADO de la empresa, la página sale vacía.
+     */
     org.springframework.data.domain.Page<TeamTimeEntryDTO> getTeamHistory(
-            String managerEmail, org.springframework.data.domain.Pageable pagina);
+            String managerEmail, Long usuarioId, org.springframework.data.domain.Pageable pagina);
 
         /** Línea temporal completa de cambios de un fichaje. Mismo control de empresa que el resto. */
     List<TimeEntryAudit> getAuditTrail(String actorEmail, long timeEntryId);

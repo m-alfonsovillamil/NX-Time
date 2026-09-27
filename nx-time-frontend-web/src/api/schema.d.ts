@@ -1803,7 +1803,7 @@ export interface paths {
         };
         /**
          * Historial de fichajes del equipo (gestor)
-         * @description Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores. Los más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
+         * @description Solo los EMPLEADO de la empresa del gestor autenticado, nunca otros gestores. Los más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Con 'usuarioId', solo los de esa persona; si no es un EMPLEADO de la empresa, la página sale vacía (no 404: el filtro no sirve para averiguar qué ids existen).
          */
         get: operations["getTeamHistory"];
         put?: never;
@@ -3612,6 +3612,8 @@ export interface components {
             /** Format: date */
             fecha?: string;
             usuario?: components["schemas"]["SimpleUserDTO"];
+            /** Format: int64 */
+            usuarioId?: number;
             /** Format: int64 */
             minutosPausaAcumulados?: number;
             /** Format: int64 */
@@ -8988,6 +8990,7 @@ export interface operations {
     getTeamHistory: {
         parameters: {
             query?: {
+                usuarioId?: number;
                 pagina?: number;
                 tamano?: number;
             };

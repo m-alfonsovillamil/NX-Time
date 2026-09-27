@@ -20,6 +20,12 @@ public record TeamTimeEntryDTO(
         LocalDate fecha,
         SimpleUserDTO usuario,
 
+        /**
+         * De quién es (Fase W5): para filtrar el historial por esa persona
+         * o ir a su ficha sin buscarla por el nombre, que puede repetirse.
+         */
+        Long usuarioId,
+
         /** Para pintar ("Pausa: 0h 26m"). Truncado a minutos enteros. */
         long minutosPausaAcumulados,
 

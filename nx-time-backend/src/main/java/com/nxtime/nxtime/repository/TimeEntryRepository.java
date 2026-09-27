@@ -59,6 +59,28 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     Page<TimeEntry> findTeamHistory(@Param("empresa") Company empresa, Pageable pageable);
 
     /**
+     * El historial de UNA persona del equipo (Fase W5). Las mismas reglas
+     * que {@link #findTeamHistory}: su empresa y rol EMPLEADO. Un id de
+     * otra empresa, de un gestor o que no existe devuelve una página
+     * vacía, igual que un empleado sin fichajes: no hay forma de usar
+     * este filtro para averiguar qué ids existen.
+     *
+     * Antes el filtro por persona se hacía en el cliente sobre lo ya
+     * cargado, y con páginas eso obligaba a pedir páginas y páginas
+     * hasta dar con los fichajes de alguien que ficha poco (ADR 027).
+     */
+    @Query(value = "SELECT t FROM registros t JOIN FETCH t.usuario u "
+            + "WHERE t.empresa = :empresa AND u.id = :usuarioId "
+            + "AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
+            + "AND t.anulado = false ORDER BY t.horaEntrada DESC, t.id DESC",
+            countQuery = "SELECT COUNT(t) FROM registros t JOIN t.usuario u "
+            + "WHERE t.empresa = :empresa AND u.id = :usuarioId "
+            + "AND u.rol = com.nxtime.nxtime.domain.Role.EMPLEADO "
+            + "AND t.anulado = false")
+    Page<TimeEntry> findTeamHistoryDeUsuario(
+            @Param("empresa") Company empresa, @Param("usuarioId") long usuarioId, Pageable pageable);
+
+    /**
      * Jornadas todavía abiertas cuya entrada es anterior al límite dado:
      * las que nadie cerró (Fase 9, ver IncompleteTimeEntryScheduler).
      * Excluye las ya anuladas por una corrección, que no hay que tocar.

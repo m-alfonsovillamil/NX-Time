@@ -50,6 +50,7 @@ public interface TimeEntryMapper {
 
     @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().atZone(MADRID_ZONE).toLocalDate())")
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
+    @Mapping(target = "usuarioId", source = "usuario.id")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {

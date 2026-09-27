@@ -125,6 +125,34 @@ class TimeEntryRepositoryTest extends AbstractRepositoryTest {
     }
 
     @Test
+    @DisplayName("findTeamHistoryDeUsuario: solo esa persona, y vacío si es un gestor o de otra empresa")
+    void findTeamHistoryDeUsuario_soloEsaPersonaYSinFugas() {
+        User otroEmpleado = userRepository.save(User.builder()
+                .email("otro.empleado@nxtime.test").nombre("Otro").contrasena("hash")
+                .rol(Role.EMPLEADO).empresa(empresa).build());
+        TimeEntry suyo = timeEntryRepository.save(
+                TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build());
+        timeEntryRepository.save(
+                TimeEntry.builder().usuario(otroEmpleado).empresa(empresa).horaEntrada(Instant.now()).build());
+        timeEntryRepository.save(
+                TimeEntry.builder().usuario(gestor).empresa(empresa).horaEntrada(Instant.now()).build());
+
+        Company otraEmpresa = companyRepository.save(Company.builder().nombre("Otra Empresa").build());
+        User ajeno = userRepository.save(User.builder()
+                .email("ajeno@nxtime.test").nombre("Ajeno").contrasena("hash")
+                .rol(Role.EMPLEADO).empresa(otraEmpresa).build());
+        timeEntryRepository.save(TimeEntry.builder()
+                .usuario(ajeno).empresa(otraEmpresa).horaEntrada(Instant.now()).build());
+
+        Page<TimeEntry> delEmpleado = timeEntryRepository.findTeamHistoryDeUsuario(empresa, empleado.getId(), PageRequest.of(0, 50));
+        assertThat(delEmpleado.getContent()).extracting(TimeEntry::getId).containsExactly(suyo.getId());
+        assertThat(delEmpleado.getTotalElements()).isEqualTo(1);
+        // Un gestor no es «del equipo», y alguien de otra empresa no existe aquí.
+        assertThat(timeEntryRepository.findTeamHistoryDeUsuario(empresa, gestor.getId(), PageRequest.of(0, 50))).isEmpty();
+        assertThat(timeEntryRepository.findTeamHistoryDeUsuario(empresa, ajeno.getId(), PageRequest.of(0, 50))).isEmpty();
+    }
+
+    @Test
     @DisplayName("findTeamHistory cuenta solo a los EMPLEADO, igual que filtra")
     void findTeamHistory_cuentaComoFiltra() {
         timeEntryRepository.save(TimeEntry.builder().usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build());
