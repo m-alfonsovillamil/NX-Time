@@ -1,0 +1,36 @@
+/** El panel de gestión y las ausencias del equipo. Los textos siguen a los de la app. */
+export const gestion = {
+  panel: {
+    titulo: 'Panel de gestión',
+    pendiente: 'Pendiente de resolver',
+    nadaPendiente: 'Nada esperando tu decisión.',
+    ausencias: 'Ausencias por aprobar',
+    correcciones: 'Correcciones',
+    horasExtra: 'Horas extra sin revisar',
+    borrados: 'Borrados de datos',
+    accesos: 'Gestión',
+  },
+
+  ausencias: {
+    titulo: 'Ausencias del equipo',
+    pestanas: 'Qué ausencias',
+    pendientes: 'Pendientes',
+    resueltas: 'Resueltas',
+    vacioPendientesTitulo: 'Nada pendiente',
+    vacioPendientesTexto: 'No hay solicitudes esperando tu respuesta.',
+    vacioResueltasTitulo: 'Todavía no hay resueltas',
+    vacioResueltasTexto: 'Aquí quedarán las solicitudes que apruebes o rechaces.',
+    aprobar: 'Aprobar',
+    rechazar: 'Rechazar',
+    rechazarTitulo: (quien: string) => `Rechazar la solicitud de ${quien}`,
+    rechazarAyuda: 'La persona verá este motivo junto a su solicitud.',
+    comentario: 'Motivo',
+    comentarioVacio: 'Para rechazar hay que indicar un motivo.',
+    aprobada: 'Ausencia aprobada.',
+    rechazada: 'Ausencia rechazada.',
+    motivo: (texto: string) => `Motivo: ${texto}`,
+    resueltaPor: (quien: string, cuando: string) => `Resuelta por ${quien} el ${cuando}`,
+    respuesta: (texto: string) => `Respuesta: ${texto}`,
+    accionesDe: (quien: string) => `Solicitud de ${quien}`,
+  },
+} as const;

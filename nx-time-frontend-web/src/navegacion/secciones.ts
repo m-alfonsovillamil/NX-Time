@@ -71,6 +71,9 @@ const Ofertas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ d
 const MisCandidaturas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.PaginaMisCandidaturas })));
 const Denuncias = lazy(() => import('../paginas/denuncias/Denuncias').then((m) => ({ default: m.Denuncias })));
 const HistorialEquipo = lazy(() => import('../paginas/equipo/HistorialEquipo').then((m) => ({ default: m.HistorialEquipo })));
+const PanelGestion = lazy(() => import('../paginas/gestion/PanelGestion').then((m) => ({ default: m.PanelGestion })));
+const AusenciasEquipo = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.AusenciasEquipo })));
+const AusenciasResueltas = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.PaginaAusenciasResueltas })));
 
 const S = T.navegacion.secciones;
 
@@ -95,10 +98,10 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
 
   /* ---- Gestión ---- */
-  { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W5' },
+  { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelGestion },
   { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
-  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, llegaEn: 'W5' },
-  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, llegaEn: 'W5' },
+  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
+  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
   { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W6' },
   { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, llegaEn: 'W6' },
   { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, llegaEn: 'W6' },
