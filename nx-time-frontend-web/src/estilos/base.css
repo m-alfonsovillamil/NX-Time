@@ -1689,6 +1689,19 @@ h2 {
   }
 }
 
+/* Lo que impide ejecutar un borrado: en una caja que se ve. */
+.nx-bloqueos {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--nx-error-container);
+  color: var(--nx-on-error-container);
+}
+
+.nx-bloqueos ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
 /* Tarjetas en rejilla: una columna en el móvil, las que quepan en escritorio. */
 .nx-rejilla-tarjetas {
   display: grid;

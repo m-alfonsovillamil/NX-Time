@@ -5,9 +5,8 @@
  * **Cada contador es exactamente lo que se ve al abrir su bandeja** (lo
  * garantiza `/dashboard/pendientes`), no un total de la empresa: un «3» que
  * al entrar son dos es peor que no poner nada. Sin permiso para una bandeja,
- * su tarjeta no sale; y tampoco la de una bandeja que la web aún no tiene
- * (los borrados llegan en W6), porque sería un número que no lleva a ningún
- * sitio.
+ * su tarjeta no sale; y tampoco la de una bandeja que la web aún no tenga,
+ * porque sería un número que no lleva a ningún sitio.
  *
  * Los accesos salen del mismo catálogo que el menú (`secciones.ts`), así que
  * no puede ofrecer algo que el menú no ofrezca.
