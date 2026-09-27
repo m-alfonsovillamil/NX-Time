@@ -26,6 +26,13 @@ public interface EmployeeProfileService {
     List<SimpleEmployeeDTO> getMyEmployees(User manager);
 
     /**
+     * Toda la plantilla de la empresa, de cualquier rol y de alta o de baja
+     * (Fase W6). «Mis empleados» deja fuera a los gestores a propósito, y
+     * así no había forma de ponerles departamento.
+     */
+    List<SimpleEmployeeDTO> getPlantilla(User actor);
+
+    /**
      * Configura jornada semanal y/o días de vacaciones del AÑO EN CURSO
      * (Europe/Madrid). Los campos null no se tocan.
      *

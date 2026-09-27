@@ -126,6 +126,21 @@ class EmployeeProfileServiceImplTest {
         verify(vacationBalanceRepository, never()).findByAnioAndUsuarioIn(anyInt(), anyList());
     }
 
+    @Test
+    @DisplayName("La plantilla trae a todos los roles, cada uno con el suyo")
+    void getPlantilla_todosLosRoles() {
+        User gestora = User.builder().id(12L).email("gestora@nxtime.test").nombre("Marta")
+                .rol(Role.GESTOR).empresa(empresa).activo(true)
+                .horasSemanales(new BigDecimal("40.0")).build();
+        when(userRepository.findByEmpresa(empresa)).thenReturn(List.of(empleado, gestora));
+        when(vacationBalanceRepository.findByAnioAndUsuarioIn(anyInt(), anyList())).thenReturn(List.of());
+
+        List<SimpleEmployeeDTO> plantilla = service.getPlantilla(rrhh);
+
+        assertThat(plantilla).extracting(SimpleEmployeeDTO::rol).containsExactly(Role.EMPLEADO, Role.GESTOR);
+        verify(userRepository, never()).findByEmpresaAndRol(any(), any());
+    }
+
     // ------------------------------------------------------------------
     // PATCH de la ficha
     // ------------------------------------------------------------------

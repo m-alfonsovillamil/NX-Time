@@ -6033,6 +6033,52 @@
         } ]
       }
     },
+    "/api/v1/gestor/plantilla" : {
+      "get" : {
+        "tags" : [ "Gestión" ],
+        "summary" : "Toda la plantilla de la empresa",
+        "description" : "Todas las personas de la empresa, de cualquier rol y de alta o de baja, con su rol y su departamento. 'mis-empleados' solo trae a los EMPLEADO; esta es la lista de quien administra la plantilla (RRHH y ADMIN), que también pone departamento a los gestores.",
+        "operationId" : "getPlantilla",
+        "responses" : {
+          "200" : {
+            "description" : "La plantilla",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SimpleEmployeeDTO"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empleado:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/mis-empleados" : {
       "get" : {
         "tags" : [ "Gestión" ],
@@ -10204,6 +10250,10 @@
           },
           "departamentoNombre" : {
             "type" : "string"
+          },
+          "rol" : {
+            "type" : "string",
+            "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
           }
         }
       },

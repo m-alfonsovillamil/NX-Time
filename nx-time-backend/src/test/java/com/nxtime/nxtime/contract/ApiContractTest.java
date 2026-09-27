@@ -577,6 +577,24 @@ class ApiContractTest {
         }
         assertThat(empleado).as("el empleado recién creado debe aparecer en la lista").isNotNull();
         empleadoId = empleado.get("id").asLong();
+        assertThat(empleado.get("rol").asText()).isEqualTo("EMPLEADO");
+    }
+
+    @Test
+    @Order(13)
+    void laPlantillaCompleta_incluyeAQuienAdministra() throws Exception {
+        // Fase W6: «mis empleados» deja fuera a los gestores y al ADMIN;
+        // la plantilla los trae a todos, cada uno con su rol.
+        JsonNode body = bodyOf(rest.exchange(
+                url("/api/v1/gestor/plantilla"),
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(gestorToken)),
+                String.class
+        ));
+        assertThat(body.isArray()).isTrue();
+        java.util.List<String> roles = new java.util.ArrayList<>();
+        body.forEach(n -> roles.add(n.get("rol").asText()));
+        assertThat(roles).contains("ADMIN", "EMPLEADO");
     }
 
     @Test
