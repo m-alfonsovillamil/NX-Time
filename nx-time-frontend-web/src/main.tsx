@@ -10,6 +10,7 @@ import './estilos/tokens.css';
 import './estilos/base.css';
 
 import { crearClienteDeConsultas } from './api/consultas';
+import { aplicarTema, temaGuardado } from './util/tema';
 import { App } from './rutas/rutas';
 
 /*
@@ -24,6 +25,9 @@ if (canonica && globalThis.location.origin !== canonica) {
   const { pathname, search, hash } = globalThis.location;
   globalThis.location.replace(`${canonica}${pathname}${search}${hash}`);
 }
+
+// Antes de pintar nada: si no, quien eligió el oscuro vería un fogonazo claro.
+aplicarTema(temaGuardado(), { guardar: false });
 
 const raiz = document.getElementById('raiz');
 if (raiz === null) throw new Error('Falta <div id="raiz"> en index.html.');

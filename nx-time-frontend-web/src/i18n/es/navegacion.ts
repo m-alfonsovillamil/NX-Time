@@ -58,5 +58,6 @@ export const navegacion = {
     ninguno: 'No tienes avisos.',
     marcarTodos: 'Marcar todos como leídos',
     sinLeer: 'Sin leer',
+    verTodos: 'Ver todos',
   },
 } as const;

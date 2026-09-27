@@ -1368,6 +1368,78 @@ h2 {
   }
 }
 
+/* ---- Mi perfil y ajustes (W3) ---- */
+
+.nx-perfil__cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.nx-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: none;
+}
+
+.nx-avatar--iniciales {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nx-primary-container);
+  color: var(--nx-on-primary-container);
+  font-family: var(--nx-font-titular);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.nx-datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+
+.nx-datos dt {
+  color: var(--nx-on-surface-variant);
+  font-size: var(--nx-fs-label-large);
+}
+
+.nx-datos dd {
+  margin: 0;
+}
+
+.nx-fila-accion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* El <label> de un <input type="file"> escondido, pintado como un botón. */
+.nx-elegir-fichero label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nx-elegir-fichero input:focus-visible + label {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: 2px;
+}
+
+/* Un enlace con aspecto de botón de texto (el «Ver todos» de la campana). */
+.nx-boton--enlace {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {

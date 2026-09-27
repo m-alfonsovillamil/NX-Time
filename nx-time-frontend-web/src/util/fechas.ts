@@ -293,3 +293,15 @@ export function mesYAnio(anio: number, mes: number): string {
 export function diaLargo(dia: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? DIA_LARGO.format(deDia(dia)) : '';
 }
+
+const FECHA_COMPLETA = new Intl.DateTimeFormat(ES, { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * Un día con su año: `1994-04-06` → `6 de abril de 1994`.
+ *
+ * Para fechas que no son de este año por naturaleza, como la de nacimiento:
+ * el formato corto (`jue, 6 abr`) se come el año, que es justo el dato.
+ */
+export function fechaCompleta(dia: string | null | undefined): string {
+  return dia && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? FECHA_COMPLETA.format(deDia(dia)) : '';
+}

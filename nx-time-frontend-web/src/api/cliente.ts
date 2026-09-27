@@ -346,7 +346,11 @@ const pendientesDeLimpiar = new Map<string, () => void>();
  * array se queda donde está, porque ahí quitarlo movería los demás.
  */
 const sinNulos: Middleware = {
-  async onResponse({ response }) {
+  async onResponse({ response, options }) {
+    // Una descarga (`parseAs: 'blob'`) no se toca: el JSON de «descargar mis
+    // datos» es una copia legal de lo que hay guardado, y tiene que salir
+    // exactamente como está, con sus null.
+    if (options.parseAs !== 'json') return response;
     if (!(response.headers.get('Content-Type') ?? '').includes('json')) return response;
     const texto = await response.clone().text();
     if (texto === '') return response;

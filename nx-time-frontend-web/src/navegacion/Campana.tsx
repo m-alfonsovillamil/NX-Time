@@ -8,15 +8,14 @@
  * defecto (`refetchIntervalInBackground: false`), y al volver a la pestaña
  * pide en el acto.
  *
- * Al abrirla enseña la primera página de avisos. La lista completa, con
- * paginación, es la página `/avisos` (llega en W3); hasta entonces, esto es
- * lo que hay, y un aviso cuyo destino aún no tiene página se marca como
- * leído pero no navega.
+ * Al abrirla enseña los últimos avisos; la lista completa, con paginación,
+ * es la página `/avisos`. Un aviso cuyo destino aún no tiene página se marca
+ * como leído pero no navega.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 import { cliente } from '../api/cliente';
 import { pedir, useMutacion } from '../api/consultas';
@@ -98,6 +97,11 @@ export function Campana() {
         alCerrar={() => setAbierta(false)}
         acciones={
           <>
+            {destinoDeAviso('avisos') !== null && (
+              <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/avisos" onClick={() => setAbierta(false)}>
+                {C.verTodos}
+              </Link>
+            )}
             {cuantos > 0 && (
               <Boton variante="texto" ocupado={marcarTodos.isPending} onClick={() => marcarTodos.mutate(undefined)}>
                 {C.marcarTodos}

@@ -23,7 +23,7 @@ import { Icono } from '../componentes/Icono';
 import { Notificaciones } from '../componentes/Notificaciones';
 import { T } from '../i18n/es';
 import { Campana } from './Campana';
-import { barraInferior, menuPara, type Grupo, type Seccion } from './secciones';
+import { barraInferior, disponibles, menuPara, type Grupo, type Seccion } from './secciones';
 
 const N = T.navegacion;
 const GRUPOS: readonly Grupo[] = ['personal', 'gestion'];
@@ -61,19 +61,25 @@ function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; 
 }
 
 /**
- * El nombre y lo que cuelga de él: perfil, ajustes (cuando lleguen en W3) y salir.
+ * El nombre y lo que cuelga de él: mi perfil, ajustes y salir.
  *
  * `<details>` y no un menú desplegable hecho a mano: abre y cierra con el
- * teclado y anuncia su estado sin una línea de JavaScript.
+ * teclado y anuncia su estado sin una línea de JavaScript. Al elegir algo se
+ * cierra, que un `<details>` no lo hace solo.
  */
 function MenuDeUsuario({ nombre }: { nombre: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const cuelgan = disponibles().filter((s) => s.ruta === 'perfil' || s.ruta === 'ajustes');
   return (
-    <details className="nx-menu-usuario">
+    <details className="nx-menu-usuario" open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)}>
       <summary aria-label={N.usuario.menu(nombre)}>
         <Icono nombre="persona" />
         <span className="nx-menu-usuario__nombre">{nombre}</span>
       </summary>
       <div className="nx-menu-usuario__opciones">
+        {cuelgan.map((s) => (
+          <Enlace key={s.ruta} seccion={s} alPulsar={() => setAbierto(false)} />
+        ))}
         <button type="button" className="nx-enlace-menu" onClick={salir}>
           <Icono nombre="salir" />
           <span>{N.usuario.salir}</span>
