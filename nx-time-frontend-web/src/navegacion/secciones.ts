@@ -57,6 +57,8 @@ export interface Seccion {
  */
 const Fichar = lazy(() => import('../paginas/jornada/Fichar').then((m) => ({ default: m.Fichar })));
 const Historial = lazy(() => import('../paginas/historial/Historial').then((m) => ({ default: m.Historial })));
+const Ausencias = lazy(() => import('../paginas/ausencias/Ausencias').then((m) => ({ default: m.Ausencias })));
+const Calendario = lazy(() => import('../paginas/ausencias/Calendario').then((m) => ({ default: m.Calendario })));
 
 const S = T.navegacion.secciones;
 
@@ -64,8 +66,8 @@ export const SECCIONES: readonly Seccion[] = [
   /* ---- Lo mío ---- */
   { ruta: 'fichar', etiqueta: S.fichar, icono: 'reloj', grupo: 'personal', enMenu: true, principal: true, pagina: Fichar },
   { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', enMenu: true, principal: true, pagina: Historial },
-  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', enMenu: true, principal: true, llegaEn: 'W3' },
-  { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', enMenu: true, principal: true, llegaEn: 'W3' },
+  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
+  { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', requiere: 'calendario:leer', enMenu: true, principal: true, pagina: Calendario },
   { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
   { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
   { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', enMenu: false, llegaEn: 'W3' },
