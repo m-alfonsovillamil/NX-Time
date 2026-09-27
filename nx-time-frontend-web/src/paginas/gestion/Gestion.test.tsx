@@ -29,8 +29,9 @@ describe('panel de gestión', () => {
   it('solo las bandejas que la persona puede abrir y que la web ya tiene', () => {
     const rutas = (rol: keyof typeof AUTHORITIES) => bandejasPara(AUTHORITIES[rol]).map((b) => b.ruta);
     expect(rutas('GESTOR')).toEqual(expect.arrayContaining(['ausencias-equipo/pendientes', 'correcciones/pendientes', 'horas-extra']));
-    // Los borrados llegan en W6: un número que no lleva a ningún sitio no sale.
-    expect(rutas('ADMIN')).not.toContain('borrados');
+    // Los borrados son de quien gestiona la plantilla (RRHH y ADMIN).
+    expect(rutas('ADMIN')).toContain('borrados');
+    expect(rutas('GESTOR')).not.toContain('borrados');
     expect(rutas('EMPLEADO')).not.toContain('horas-extra');
   });
 
