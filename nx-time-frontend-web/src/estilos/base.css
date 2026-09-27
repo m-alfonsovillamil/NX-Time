@@ -1546,6 +1546,76 @@ h2 {
   margin: 0;
 }
 
+/* Texto escrito por una persona (una descripción, un mensaje): sus saltos de
+   línea son parte de lo que dice. */
+.nx-texto-largo {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* Marcar «anónima» tiene consecuencias que no se deshacen: se ve. */
+.nx-anonimato--si {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--nx-tertiary);
+  background: var(--nx-surface-container);
+  border-radius: 4px;
+}
+
+/* El código de seguimiento, grande y fácil de copiar a mano. */
+.nx-codigo-seguimiento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.nx-codigo-seguimiento code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--nx-surface-container-high);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.nx-expediente {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nx-expediente h3 {
+  margin: 0 0 4px;
+  font-size: var(--nx-fs-title-medium);
+}
+
+.nx-conversacion {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nx-mensaje {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--nx-surface-container);
+  max-width: 90%;
+}
+
+.nx-mensaje--mio {
+  align-self: flex-end;
+  background: var(--nx-primary-container);
+  color: var(--nx-on-primary-container);
+}
+
 /* La bolsa anual de horas extra: 48 h de 80 se entiende de un vistazo. */
 .nx-bolsa {
   display: flex;

@@ -12,6 +12,11 @@
  *
  * jsdom (los tests) no implementa `showModal()`; ahí se abre con el atributo
  * `open`, que basta para que el contenido exista y se pueda probar.
+ *
+ * Con `obligatorio`, ni Escape ni un clic fuera lo cierran: solo sus botones.
+ * Es para lo que no se puede volver a ver, como el código de seguimiento de
+ * una denuncia anónima: cerrarlo sin querer dejaría a alguien fuera de su
+ * expediente para siempre.
  */
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
@@ -25,6 +30,7 @@ export function Dialogo({
   alCerrar,
   children,
   acciones,
+  obligatorio = false,
 }: {
   abierto: boolean;
   titulo: string;
@@ -35,6 +41,7 @@ export function Dialogo({
    * (para un formulario que lleva sus propios botones dentro del `<form>`).
    */
   acciones?: ReactNode | null;
+  obligatorio?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const idTitulo = useId();
@@ -59,11 +66,18 @@ export function Dialogo({
       // Escape dispara `cancel` y luego `close`. Se escucha `close` para que
       // el estado de React siga al del navegador, cierre quien cierre.
       onClose={() => {
-        if (abierto) alCerrar();
+        if (!abierto) return;
+        // Chrome deja cerrar con un segundo Escape aunque se cancele el
+        // primero (para que una página no atrape a nadie): se vuelve a abrir.
+        if (obligatorio) ref.current?.showModal?.();
+        else alCerrar();
+      }}
+      onCancel={(evento) => {
+        if (obligatorio) evento.preventDefault();
       }}
       // Un clic en el fondo cae en el propio <dialog>, no en su contenido.
       onClick={(evento) => {
-        if (evento.target === ref.current) alCerrar();
+        if (evento.target === ref.current && !obligatorio) alCerrar();
       }}
     >
       {abierto && (

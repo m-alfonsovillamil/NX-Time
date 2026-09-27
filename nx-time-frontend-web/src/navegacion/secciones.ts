@@ -67,6 +67,9 @@ const Incidencias = lazy(() => import('../paginas/cuadrante/Incidencias').then((
 const Firmas = lazy(() => import('../paginas/cuadrante/Firmas').then((m) => ({ default: m.Firmas })));
 const HorasExtra = lazy(() => import('../paginas/revisiones/HorasExtra').then((m) => ({ default: m.HorasExtra })));
 const Correcciones = lazy(() => import('../paginas/revisiones/Correcciones').then((m) => ({ default: m.Correcciones })));
+const Ofertas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.Ofertas })));
+const MisCandidaturas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.PaginaMisCandidaturas })));
+const Denuncias = lazy(() => import('../paginas/denuncias/Denuncias').then((m) => ({ default: m.Denuncias })));
 
 const S = T.navegacion.secciones;
 
@@ -86,9 +89,9 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Firmas },
   { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', enMenu: true, pagina: HorasExtra },
   { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Correcciones },
-  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', requiere: 'oferta:leer', enMenu: true, llegaEn: 'W4' },
-  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', requiere: 'candidatura:crear', enMenu: false, llegaEn: 'W4' },
-  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', requiere: 'denuncia:crear', enMenu: true, llegaEn: 'W4' },
+  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', requiere: 'oferta:leer', enMenu: true, pagina: Ofertas },
+  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', requiere: 'candidatura:crear', enMenu: false, pagina: MisCandidaturas },
+  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
 
   /* ---- Gestión ---- */
   { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W5' },

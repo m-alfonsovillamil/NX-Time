@@ -1,13 +1,15 @@
 /**
- * Los componentes con comportamiento propio: la tabla, las pestañas y el final de una lista.
+ * Los componentes con comportamiento propio: la tabla, las pestañas, el final de
+ * una lista y el diálogo que no se deja cerrar.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { T } from '../i18n/es';
+import { Dialogo } from './Dialogo';
 import { FinDeLista } from './Estados';
 import { Pestanas } from './Pestanas';
 import { Tabla } from './Tabla';
@@ -91,5 +93,38 @@ describe('FinDeLista', () => {
     expect(screen.getByRole('alert').textContent).toContain(T.listas.falloAlCargarMas);
     await userEvent.click(screen.getByRole('button', { name: T.app.reintentar }));
     expect(pedir).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Dialogo obligatorio', () => {
+  /* El código de una denuncia anónima no se vuelve a ver: cerrarlo sin querer no puede pasar. */
+  it('ni Escape ni un clic fuera lo cierran; su botón sí', async () => {
+    const alCerrar = vi.fn();
+    render(
+      <Dialogo abierto titulo="Tu código" alCerrar={alCerrar} obligatorio acciones={<button onClick={alCerrar}>Ya lo he guardado</button>}>
+        <p>ABC-123</p>
+      </Dialogo>,
+    );
+    const dialogo = screen.getByRole('dialog');
+
+    const escape = new Event('cancel', { cancelable: true });
+    dialogo.dispatchEvent(escape);
+    expect(escape.defaultPrevented).toBe(true);
+    fireEvent.click(dialogo);
+    expect(alCerrar).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ya lo he guardado' }));
+    expect(alCerrar).toHaveBeenCalledTimes(1);
+  });
+
+  it('uno normal sí se cierra con un clic fuera', () => {
+    const alCerrar = vi.fn();
+    render(
+      <Dialogo abierto titulo="Algo" alCerrar={alCerrar}>
+        <p>Contenido</p>
+      </Dialogo>,
+    );
+    fireEvent.click(screen.getByRole('dialog'));
+    expect(alCerrar).toHaveBeenCalledTimes(1);
   });
 });
