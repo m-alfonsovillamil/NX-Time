@@ -279,3 +279,17 @@ export function horaDeSalida(entrada: string | null | undefined, salida: string 
   const dias = diasEntre(diaEnEspana(entrada), diaEnEspana(salida));
   return dias > 0 ? `${texto} (+${dias} d)` : texto;
 }
+
+const MES_Y_ANIO = new Intl.DateTimeFormat(ES, { timeZone: 'UTC', month: 'long', year: 'numeric' });
+const DIA_LARGO = new Intl.DateTimeFormat(ES, { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+
+/** `2026`, `9` → `Septiembre de 2026`. */
+export function mesYAnio(anio: number, mes: number): string {
+  const texto = MES_Y_ANIO.format(new Date(Date.UTC(anio, mes - 1, 1)));
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** Un día sin hora, largo: `2026-09-21` → `lunes, 21 de septiembre`. Para lo que se lee, no para lo que se ve. */
+export function diaLargo(dia: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dia) ? DIA_LARGO.format(deDia(dia)) : '';
+}

@@ -1171,6 +1171,203 @@ h2 {
   outline-offset: 1px;
 }
 
+/* ---- Ausencias y calendario (W3) ---- */
+
+.nx-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nx-filtros .nx-campo {
+  flex: 1 1 180px;
+}
+
+.nx-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-rejilla-dos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .nx-rejilla-dos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.nx-calendario__barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nx-calendario__barra .nx-boton--texto {
+  font-size: 24px;
+  min-width: 44px;
+}
+
+.nx-calendario__navegacion {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.nx-calendario__mes {
+  min-width: 11ch;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .nx-calendario__navegacion {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .nx-calendario__mes {
+    font-size: var(--nx-fs-title-medium);
+  }
+}
+
+.nx-calendario__equipo {
+  margin-left: auto;
+}
+
+.nx-calendario {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 4px;
+  table-layout: fixed;
+}
+
+.nx-calendario th {
+  font-size: var(--nx-fs-label-large);
+  color: var(--nx-on-surface-variant);
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.nx-calendario td {
+  padding: 0;
+  vertical-align: top;
+}
+
+.nx-calendario__dia {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 64px;
+  padding: 6px;
+  border: 1px solid var(--nx-outline-variant);
+  border-radius: 12px;
+  background: var(--nx-surface);
+  color: var(--nx-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.nx-calendario__dia:hover {
+  background: var(--nx-surface-container-highest);
+}
+
+.nx-calendario__dia:focus-visible {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: 1px;
+}
+
+.nx-calendario__dia[aria-pressed='true'] {
+  border: 2px solid var(--nx-primary);
+}
+
+.nx-calendario__dia--hoy .nx-calendario__numero {
+  background: var(--nx-primary);
+  color: var(--nx-on-primary);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.nx-calendario__dia--festivo {
+  background: var(--nx-tertiary-container);
+  color: var(--nx-on-tertiary-container);
+}
+
+.nx-calendario__dia--propia {
+  box-shadow: inset 0 -4px 0 var(--nx-primary);
+}
+
+.nx-calendario__numero {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.nx-calendario__festivo {
+  font-size: 11px;
+  line-height: 14px;
+  /* Hueco para el contador de ausentes, que va en la esquina. */
+  max-width: calc(100% - 22px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nx-calendario__ausentes {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--nx-secondary-container);
+  color: var(--nx-on-secondary-container);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+@media (max-width: 639px) {
+  .nx-calendario {
+    border-spacing: 2px;
+  }
+
+  .nx-calendario__dia {
+    min-height: 44px;
+    padding: 4px;
+    align-items: center;
+  }
+
+  /* En 375 px el nombre del festivo no cabe: queda el color, y el detalle del día lo dice. */
+  .nx-calendario__festivo {
+    display: none;
+  }
+
+  .nx-calendario__ausentes {
+    position: static;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    font-size: 10px;
+  }
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {
