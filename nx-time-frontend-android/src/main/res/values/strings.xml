@@ -178,6 +178,7 @@
         Absentismo: días perdidos sobre días que se debían trabajar, sin contar
         vacaciones. Puntualidad: solo de quien tiene cuadrante.
     </string>
+    <string name="analitica_ver_detalle">Ver el detalle en la web</string>
     <string name="empresa_plantilla">Plantilla</string>
     <string name="empresa_mes">Mes del informe</string>
     <string name="empresa_descargar_excel">Descargar Excel de horas</string>

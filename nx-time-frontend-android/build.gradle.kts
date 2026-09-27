@@ -66,9 +66,13 @@ android {
          * valiendo 30 días), la huella ya no vuelve a saltar al girar el
          * móvil, y el saldo de vacaciones enseña los días pedidos y sin
          * aprobar, que ya descuentan de los disponibles.
+         * 9 = 28/09/2026: la tarjeta de analítica del panel de empresa enlaza a
+         * la analítica completa de la web («Ver el detalle», ADR 026 y W7), y
+         * el texto de asignar proyecto dice la regla de verdad (ADR 017: se
+         * puede estar en varios a la vez, no dos veces en el mismo).
          */
-        versionCode = 8
-        versionName = "1.7"
+        versionCode = 9
+        versionName = "1.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
@@ -140,12 +144,17 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/\"")
+            // La web de desarrollo (Vite) vista desde el emulador.
+            buildConfigField("String", "WEB_URL", "\"http://10.0.2.2:5173/\"")
         }
         create("prod") {
             dimension = "entorno"
             val urlProduccion = (project.findProperty("nxtime.prod.url") as String?)
                 ?: "https://CONFIGURA-nxtime.prod.url.invalid/"
             buildConfigField("String", "BASE_URL", "\"$urlProduccion\"")
+            // La web es pública (no es un secreto como la URL del backend):
+            // a ella enlazan las pantallas que en el móvil no caben (ADR 026).
+            buildConfigField("String", "WEB_URL", "\"https://nxtime-web.com/\"")
         }
     }
 
