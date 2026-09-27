@@ -2,7 +2,7 @@
  * Descargar un fichero que pide sesión: el Excel de horas, el PDF mensual, el CSV de analítica.
  *
  * No puede ser un `<a href>`: el navegador no pondría la cabecera
- * `Authorization`, y el access token no va en cookie (ADR 020). Así que se
+ * `Authorization`: el access token no va en cookie, solo el refresh (ADR 030). Así que se
  * pide con `cliente` —que sí lleva el token y sabe refrescarlo—, se recibe
  * como `Blob` y se entrega al navegador con un enlace temporal.
  *

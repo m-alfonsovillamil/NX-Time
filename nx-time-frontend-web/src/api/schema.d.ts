@@ -107,7 +107,7 @@ export interface paths {
         put?: never;
         /**
          * Renovar el access token
-         * @description Emite un access token nuevo a partir de un refresh token vivo, y **rota el refresh**: el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin necesidad de volver a entrar.
+         * @description Emite un access token nuevo a partir de un refresh token vivo, y **rota el refresh**: el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin necesidad de volver a entrar. Sin cuerpo, lo lee de la cookie nx_refresh (el navegador), y entonces exige la cabecera X-CSRF-Token igual a la cookie nx_csrf y un Origin permitido; la respuesta trae las cookies nuevas y ningún refresh en el cuerpo.
          */
         post: operations["refresh"];
         delete?: never;
@@ -167,7 +167,7 @@ export interface paths {
         put?: never;
         /**
          * Cerrar sesión
-         * @description Revoca el refresh token indicado. Idempotente: si el token no existe, no lanza error ni revela nada.
+         * @description Revoca el refresh token indicado. Idempotente: si el token no existe, no lanza error ni revela nada. Sin cuerpo, lo lee de la cookie nx_refresh (con el mismo CSRF que /auth/refresh) y borra las cookies de la sesión web.
          */
         post: operations["logout"];
         delete?: never;
@@ -187,7 +187,7 @@ export interface paths {
         put?: never;
         /**
          * Iniciar sesión
-         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 12 horas desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer.
+         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 12 horas desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va en la cookie HttpOnly nx_refresh, junto con la cookie nx_csrf (ADR 030).
          */
         post: operations["login"];
         delete?: never;
@@ -2660,7 +2660,8 @@ export interface components {
             authorities?: string[];
         };
         RefreshTokenRequest: {
-            refreshToken: string;
+            /** @description El refresh token. Lo manda la app; el navegador lo lleva en la cookie nx_refresh y no manda cuerpo. */
+            refreshToken?: string;
         };
         PasswordRecoveryRequest: {
             /** Format: email */
@@ -4348,7 +4349,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["RefreshTokenRequest"];
             };
@@ -4363,7 +4364,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthenticationResponse"];
                 };
             };
-            /** @description refreshToken en blanco */
+            /** @description Sin refreshToken en el cuerpo ni cookie nx_refresh */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4374,6 +4375,15 @@ export interface operations {
             };
             /** @description Refresh token inexistente, revocado o caducado */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Con la cookie, sin el CSRF correcto o desde un origen no permitido */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4470,7 +4480,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
                 "application/json": components["schemas"]["RefreshTokenRequest"];
             };
@@ -4483,8 +4493,17 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description refreshToken en blanco */
+            /** @description Sin refreshToken en el cuerpo ni cookie nx_refresh */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Con la cookie, sin el CSRF correcto o desde un origen no permitido */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

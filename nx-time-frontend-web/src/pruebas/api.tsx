@@ -133,7 +133,7 @@ const ADMIN = [...RRHH, 'denuncia:instruir', 'gestor:crear'];
 export const AUTHORITIES = { EMPLEADO, GESTOR, RRHH, ADMIN } as const;
 
 export function sesionDe(rol: keyof typeof AUTHORITIES, nombre = 'Ana'): Sesion {
-  return { accessToken: 'access', refreshToken: 'refresh', nombre, authorities: AUTHORITIES[rol] };
+  return { accessToken: 'access', nombre, authorities: AUTHORITIES[rol] };
 }
 
 /**

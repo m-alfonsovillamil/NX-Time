@@ -120,3 +120,8 @@ application:
       # real que consuma la API desde el navegador, se añade aquí
       # (nunca "*" en producción -- ver auditoría, defectos de diseño).
       allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    web-session:
+      # nxtime-web.com en Render (ver render.yaml y ADR 030). Vacío, la cookie
+      # nx_csrf sería solo de api.nxtime-web.com, la web no podría leerla y la
+      # sesión no se podría renovar: se entraría, y a los 15 minutos, fuera.
+      cookie-domain: ${COOKIE_DOMAIN:}

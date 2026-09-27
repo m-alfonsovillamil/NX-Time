@@ -113,10 +113,10 @@ services:
       - key: FIREBASE_CREDENTIALS_JSON
         sync: false
 
-      # Orígenes permitidos para CORS, separados por comas y SIN barra final
-      # ("https://nxtime-web.onrender.com", no ".../"). Vacío mientras no haya
-      # un cliente web: la app Android no manda cabecera Origin y CORS no le
-      # afecta.
+      # Orígenes permitidos para CORS, separados por comas y SIN barra final.
+      # Desde la fase W1 (ADR 030) el valor es "https://nxtime-web.com": la
+      # web vive en su dominio, y la sesión en cookie solo funciona desde ahí.
+      # La app Android no manda cabecera Origin y CORS no le afecta.
       #
       # 🚨 El día que se despliegue una web hay que poner esto A MANO en el
       # panel de Render. Si se olvida, la web compila, despliega y no funciona:
@@ -125,6 +125,13 @@ services:
       # el backend avisa con un WARN al arrancar en producción si está vacío.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+
+      # El dominio común de la web y la API, para la cookie nx_csrf (ADR 030).
+      # No es un secreto. Si cambia el dominio, cambia aquí, en
+      # CORS_ALLOWED_ORIGINS, y en VITE_API_URL, VITE_URL_CANONICA y la CSP de
+      # la web (abajo).
+      - key: COOKIE_DOMAIN
+        value: nxtime-web.com
 
       # Sentry (paso 5 del piloto): adónde van los errores del backend.
       # Vacía, la aplicación arranca igual y no envía nada. El DSN no da
@@ -165,8 +172,17 @@ services:
       # desplegar la web, no basta con reiniciar nada. No es un secreto --
       # cualquiera lo ve en las herramientas del navegador --, así que va
       # aquí con su valor.
+      #
+      # api.nxtime-web.com y no nxtime-backend.onrender.com desde la fase W1:
+      # la cookie de la sesión solo viaja si la web y la API comparten
+      # dominio (ADR 030). La app Android sigue usando la de onrender.
       - key: VITE_API_URL
-        value: https://nxtime-backend.onrender.com
+        value: https://api.nxtime-web.com
+      # Quien abra la web por nxtime-web.onrender.com, que sigue existiendo,
+      # acaba aquí: desde allí la sesión no funcionaría (otro sitio, sin
+      # cookie) y el CORS del backend ni siquiera lo admitiría.
+      - key: VITE_URL_CANONICA
+        value: https://nxtime-web.com
 
     # Es una SPA: /fichar no existe como fichero, lo resuelve react-router
     # en el navegador. Sin esta regla, pulsar F5 en /fichar da un 404 de
@@ -188,7 +204,7 @@ services:
       #    de URL, hay que tocarlo aquí Y en VITE_API_URL.
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://nxtime-backend.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.nxtime-web.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff

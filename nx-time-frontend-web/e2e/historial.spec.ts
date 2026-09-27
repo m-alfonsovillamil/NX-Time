@@ -17,6 +17,9 @@ test('el historial: periodos, total y los diálogos de una jornada', async ({ pa
   await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
   await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
   await page.getByRole('button', { name: 'Entrar' }).click();
+  // Como los demás recorridos: la primera vez, Vite puede recargar la página
+  // mientras prepara las dependencias, y el menú aún no está.
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Historial' }).click();
   await expect(page).toHaveURL(/\/historial$/);

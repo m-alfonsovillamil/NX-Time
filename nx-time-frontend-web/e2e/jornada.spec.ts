@@ -76,12 +76,12 @@ test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ 
 });
 
 /*
- * La otra mitad de la decisión del ADR 020: los tokens viven en memoria, así
- * que recargar cierra la sesión. Se comprueba porque es una consecuencia
- * asumida y no un descuido -- el día que se cambie a cookie con dominio
- * propio, este test tendrá que cambiar, y eso es justo lo que se quiere.
+ * Lo que cambia con la fase W1 (ADR 030, que sustituye al 020): el refresh va
+ * en una cookie HttpOnly, así que recargar ya no cierra la sesión. Hasta W1
+ * este test decía lo contrario, y su comentario avisaba de que el día de la
+ * cookie tendría que cambiar.
  */
-test('recargar la pagina cierra la sesion, como dice el ADR 020', async ({ page }) => {
+test('recargar la pagina mantiene la sesion', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
   await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
@@ -89,7 +89,31 @@ test('recargar la pagina cierra la sesion, como dice el ADR 020', async ({ page 
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
   await page.reload();
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
+  // Una pestaña nueva también entra: la cookie es del navegador, no de la pestaña.
+  const otra = await page.context().newPage();
+  await otra.goto('/fichar');
+  await expect(otra.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+
+  // El refresh no está al alcance del JavaScript de la página: es HttpOnly.
+  const cookies = await page.context().cookies();
+  expect(cookies.find((c) => c.name === 'nx_refresh')?.httpOnly).toBe(true);
+  expect(await page.evaluate(() => document.cookie)).not.toContain('nx_refresh');
+});
+
+test('cerrar sesion y recargar deja fuera', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
+  await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+
+  await page.getByLabel(/^Menú de /).click();
+  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+
+  await page.reload();
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
 });
 

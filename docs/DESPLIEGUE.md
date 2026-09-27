@@ -154,10 +154,11 @@ no hace falta buzón, solo enviar.
 
 | Variable | Valor |
 |---|---|
-| `CORS_ALLOWED_ORIGINS` | vacío mientras no haya cliente web |
+| `CORS_ALLOWED_ORIGINS` | `https://nxtime-web.com` |
+| `COOKIE_DOMAIN` | `nxtime-web.com` (va con su valor en `render.yaml`) |
 
-Lista separada por comas y **sin barra final**: `https://nxtime-web.onrender.com`,
-no `https://nxtime-web.onrender.com/`. Un origen con barra no casa nunca y el
+Lista separada por comas y **sin barra final**: `https://nxtime-web.com`,
+no `https://nxtime-web.com/`. Un origen con barra no casa nunca y el
 fallo se ve igual que si la variable estuviera vacía.
 
 🚨 **El día que se despliegue una web, esto hay que ponerlo a mano aquí.** Si se
@@ -176,7 +177,14 @@ CORS sin orígenes permitidos en producción: ningún navegador podrá usar esta
 La app Android no se ve afectada: no manda cabecera `Origin`, así que CORS no
 interviene. Por eso el arranque solo avisa en vez de fallar.
 
-La app Android no manda cabecera `Origin`, así que CORS no le afecta.
+Desde la fase W1 CORS va **con credenciales** (la sesión de la web es una
+cookie, [ADR 030](adr/030-la-sesion-web-en-cookie.md)): por eso no admite `*` y
+solo vale la web en su dominio. Abierta por `nxtime-web.onrender.com`, la web
+redirige sola a `https://nxtime-web.com`.
+
+`COOKIE_DOMAIN` es el dominio común de la web y la API. Sin él, la cookie
+`nx_csrf` sería solo de `api.nxtime-web.com`, la web no podría leerla y no
+podría renovar la sesión: se entraría y a los 15 minutos, fuera.
 
 ### Push (Firebase)
 
@@ -261,10 +269,45 @@ curl -s -o /dev/null -D - "$WEB/" | grep -i "cache-control"
 ```
 
 Y en el navegador: entrar, fichar y comprobar que la jornada aparece en el
-historial de la app Android. **Pulsar F5 en `/fichar` lleva al login**, y es lo
-esperado: la página carga (eso prueba la reescritura) pero la sesión vive en
-memoria y se pierde al recargar
-([ADR 020](adr/020-tokens-en-el-navegador.md)).
+historial de la app Android. **Pulsar F5 en `/fichar` sigue dentro**: la página
+carga (eso prueba la reescritura) y la sesión se retoma de la cookie
+([ADR 030](adr/030-la-sesion-web-en-cookie.md)). Si al recargar se vuelve al
+login, falta `COOKIE_DOMAIN` o la web no está en su dominio.
+
+### El dominio propio (fase W1)
+
+`nxtime-web.com`, comprado en Cloudflare el 27/09/2026. Cloudflare solo hace de
+DNS: **nada de proxy**, o Render no puede emitir el certificado.
+
+| Tipo | Nombre | Destino | Proxy |
+|---|---|---|---|
+| CNAME | `@` | `nxtime-web.onrender.com` | DNS only (nube gris) |
+| CNAME | `www` | `nxtime-web.onrender.com` | DNS only |
+| CNAME | `api` | `nxtime-backend.onrender.com` | DNS only |
+
+Si Render pide otra cosa para el dominio raíz (un registro A), manda lo que diga
+Render.
+
+En Render: `nxtime-web` → *Settings* → *Custom Domains* → `nxtime-web.com` (añade
+`www` y lo redirige), y `nxtime-backend` → `api.nxtime-web.com`. *Verify* en cada
+uno, y esperar al certificado.
+
+🚨 **El orden importa.** Los dos dominios, verificados y con certificado,
+**antes** de que la fase W1 llegue a `main`: al desplegar, la web pasa a hablar
+con `https://api.nxtime-web.com`, y si aún no responde nadie puede entrar. Y en
+el mismo momento, `CORS_ALLOWED_ORIGINS=https://nxtime-web.com` en el backend.
+
+```bash
+# El certificado y el DNS: los dos tienen que responder por HTTPS.
+curl -s -o /dev/null -w "%{http_code}\n" https://nxtime-web.com/
+curl -s -o /dev/null -w "%{http_code}\n" https://api.nxtime-web.com/actuator/health
+
+# CORS con credenciales y la cabecera CSRF, desde la web:
+curl -s -o /dev/null -D - -X OPTIONS https://api.nxtime-web.com/auth/refresh \
+  -H "Origin: https://nxtime-web.com" -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: x-csrf-token" \
+  | grep -iE "^HTTP|allow-origin|allow-credentials|allow-headers"
+```
 
 **Si al entrar sale «No se ha podido contactar con el servidor»** pero el
 backend responde a `/actuator/health`, casi seguro es CORS. El navegador no deja

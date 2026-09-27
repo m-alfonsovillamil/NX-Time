@@ -18,11 +18,13 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 
+import { restaurarSesion } from '../api/cliente';
 import { haySesion, suscribirse } from '../api/sesion';
 import { useSesion, useSesionIniciada } from '../api/useSesion';
+import { Esqueleto } from '../componentes/Estados';
 import { ServidorDespertando } from '../componentes/ServidorDespertando';
 import { T } from '../i18n/es';
 import { Marco } from '../navegacion/Marco';
@@ -81,10 +83,42 @@ function useVaciarCacheAlSalir() {
   );
 }
 
+/**
+ * Mientras se intenta retomar la sesión de la cookie, `true`.
+ *
+ * Sin esta espera, quien recarga vería un instante el login —y, si entra en
+ * ese instante, pediría una segunda sesión— antes de que llegue la suya. Con
+ * el servidor dormido puede tardar: el cartel de `ServidorDespertando` lo
+ * explica mientras tanto.
+ */
+function useRestaurandoSesion(): boolean {
+  const [restaurando, setRestaurando] = useState(true);
+  useEffect(() => {
+    let vigente = true;
+    void restaurarSesion().finally(() => {
+      if (vigente) setRestaurando(false);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, []);
+  return restaurando;
+}
+
 export function App() {
   const dentro = useSesionIniciada();
+  const restaurando = useRestaurandoSesion();
   useVaciarCacheAlSalir();
   const secciones = disponibles();
+
+  if (restaurando) {
+    return (
+      <div className="nx-fondo">
+        <ServidorDespertando />
+        <Esqueleto />
+      </div>
+    );
+  }
 
   return (
     <div className="nx-fondo">

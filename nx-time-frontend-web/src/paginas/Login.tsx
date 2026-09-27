@@ -6,7 +6,9 @@
  * - **`origen: 'WEB'`** en el cuerpo. El servidor da 30 días de refresh a la
  *   app y 12 horas al navegador (ADR 019). Si no se declarara, esta sesión
  *   heredaría el valor por defecto, que es `ANDROID`, y un navegador
- *   compartido se quedaría con un token de un mes.
+ *   compartido se quedaría con un token de un mes. Es también lo que hace que
+ *   el servidor ponga el refresh en una cookie `HttpOnly` y no en el cuerpo
+ *   (ADR 030): esta página nunca lo ve.
  * - El campo se llama **`contrasena`**, no `password`. Con `password` el
  *   servidor responde 400, y eso ya costó un rato una vez. Ahora no puede
  *   repetirse: lo dicen los tipos generados del contrato.
@@ -57,7 +59,6 @@ export function Login() {
 
       abrirSesion({
         accessToken: data.token ?? '',
-        refreshToken: data.refreshToken ?? '',
         nombre: data.nombre ?? '',
         authorities: data.authorities ?? [],
       });

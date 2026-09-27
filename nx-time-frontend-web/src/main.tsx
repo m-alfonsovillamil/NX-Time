@@ -12,6 +12,19 @@ import './estilos/base.css';
 import { crearClienteDeConsultas } from './api/consultas';
 import { App } from './rutas/rutas';
 
+/*
+ * La web tiene una sola dirección buena (ADR 030). Quien entre por otra —la de
+ * Render, nxtime-web.onrender.com, que sigue existiendo— acaba en la buena:
+ * desde otra dirección la sesión en cookie no funcionaría, y el CORS del
+ * backend ni siquiera la admite. En local no hay dirección canónica y no pasa
+ * nada.
+ */
+const canonica = import.meta.env['VITE_URL_CANONICA'];
+if (canonica && globalThis.location.origin !== canonica) {
+  const { pathname, search, hash } = globalThis.location;
+  globalThis.location.replace(`${canonica}${pathname}${search}${hash}`);
+}
+
 const raiz = document.getElementById('raiz');
 if (raiz === null) throw new Error('Falta <div id="raiz"> en index.html.');
 

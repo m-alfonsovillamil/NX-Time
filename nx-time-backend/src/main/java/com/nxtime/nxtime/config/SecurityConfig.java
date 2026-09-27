@@ -4,6 +4,7 @@ import com.nxtime.nxtime.security.JwtAuthenticationFilter;
 import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import com.nxtime.nxtime.security.RestAccessDeniedHandler;
 import com.nxtime.nxtime.security.RestAuthenticationEntryPoint;
+import com.nxtime.nxtime.security.SesionWeb;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.Arrays;
@@ -179,15 +180,27 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(origenesPermitidos());
+        List<String> origenes = origenesPermitidos();
+        boolean comodin = origenes.contains("*");
+        if (comodin) {
+            // Solo en desarrollo (application-dev.yml). Con "*" no se pueden
+            // permitir credenciales -- el navegador lo rechaza, y con razón --,
+            // así que en local la web habla con la API por el proxy de Vite, en
+            // el mismo origen, y CORS no entra en juego.
+            configuration.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            configuration.setAllowedOrigins(origenes);
+        }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         // Accept y Accept-Language las manda el navegador solo en cuanto se usa
         // fetch con cabeceras; X-Request-Id la entiende CorrelationIdFilter
         // desde hace tiempo, pero al no estar aquí el preflight la rechazaba y
         // la petición no llegaba a salir.
+        // X-CSRF-Token: la que manda la web al renovar o cerrar la sesión con
+        // la cookie (ADR 030). Sin ella aquí, el preflight la rechazaría.
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "Accept", "Accept-Language", "X-Request-Id"));
+                "Authorization", "Content-Type", "Accept", "Accept-Language", "X-Request-Id", SesionWeb.CABECERA_CSRF));
 
         // Lo que el navegador puede LEER de la respuesta, que no es lo mismo
         // que lo que recibe. Sin declararlas aquí, el JavaScript no las ve
@@ -205,10 +218,16 @@ public class SecurityConfig {
         // peticiones no es un detalle de latencia.
         configuration.setMaxAge(Duration.ofHours(1));
 
-        // Sin credenciales: los tokens van en la cabecera Authorization, no en
-        // cookies (ver ADR 024 cuando exista). Es también lo que hace correcto
-        // tener CSRF desactivado, y lo que permite usar "*" en desarrollo.
-        configuration.setAllowCredentials(false);
+        // Con credenciales desde la fase W1 (ADR 030): el refresh de la web
+        // viaja en una cookie, y sin esto el navegador ni la manda ni guarda
+        // la que llega. Obliga a enumerar los orígenes (con credenciales, "*"
+        // deja de valer), que en producción ya era así.
+        //
+        // El CSRF de Spring sigue desactivado a propósito: el access token va
+        // en la cabecera Authorization, que otra web no puede poner, y las
+        // dos rutas que sí usan la cookie (/auth/refresh y /auth/logout) se
+        // protegen con su propio CSRF de doble envío (ver SesionWeb).
+        configuration.setAllowCredentials(!comodin);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
