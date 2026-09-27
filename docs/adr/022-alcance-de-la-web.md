@@ -1,6 +1,6 @@
 # 22. La web empieza por los cimientos, y lo que queda fuera tiene nombre
 
-**Estado:** aceptada · **Fecha:** septiembre 2026
+**Estado:** aceptada; **su parte de alcance la sustituye el [ADR 029](029-la-web-alcanza-a-la-app.md)** · **Fecha:** septiembre 2026
 
 ## Contexto
 

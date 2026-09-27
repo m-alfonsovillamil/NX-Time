@@ -27,6 +27,12 @@ on:
       # 'nx-time-frontend-web/**' aquí, este workflow ni se habría enterado.
       - 'docs/openapi.json'
       - 'nx-time-frontend-android/src/main/java/com/nxtime/app/ui/theme/**'
+      # Y estos dos los lee un test de la web (`navegacion/secciones.test.ts`):
+      # un destino de aviso nuevo sin página en la web, o una authority que
+      # cambia de nombre, tienen que poner este workflow en rojo aunque el PR
+      # sea solo de backend.
+      - 'nx-time-backend/src/main/java/com/nxtime/nxtime/domain/NoticeType.java'
+      - 'nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java'
       - '.github/workflows/web.yml'
   # Cualquier pull request, sin filtro de rama: mismo motivo que en ci.yml
   # (un PR encadenado sobre otra rama también tiene que pasar por aquí).
@@ -77,3 +83,7 @@ jobs:
       # despliegue que habría fallado allí, y aquí se ve el porqué.
       - name: Build
         run: npm run build
+
+      # Después del build, porque mide lo que ha salido de él (ADR 029).
+      - name: Presupuesto de JS inicial
+        run: npm run presupuesto

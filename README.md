@@ -542,6 +542,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 26. [La analítica cuenta días, no horas, y el alcance lo decide quién mira](docs/adr/026-analitica-en-dias-y-por-alcance.md)
 27. [Las listas que crecen sin límite van por páginas, con un DTO propio](docs/adr/027-listas-por-paginas.md)
 28. [Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil](docs/adr/028-push-generico-colgado-del-aviso.md)
+29. [La web alcanza a la app: un armazón común y la URL como destino del aviso](docs/adr/029-la-web-alcanza-a-la-app.md)
 
 ---
 
@@ -553,13 +554,13 @@ Lo que está hecho y lo que no, sin adornos:
 Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
 
-**Empezando:** el cliente web (`nx-time-frontend-web/`), con login y fichar de
-punta a punta contra el mismo backend, con su propio CI
-(`.github/workflows/web.yml`) y su *static site* declarado en `render.yaml`.
-Todavía **no está publicado**: falta crear el servicio en Render y poner su URL
-en `CORS_ALLOWED_ORIGINS` del backend
-([docs/DESPLIEGUE.md](docs/DESPLIEGUE.md#la-web)). Los tokens viven en memoria, así que recargar la página cierra la
-sesión ([ADR 020](docs/adr/020-tokens-en-el-navegador.md)).
+**En marcha:** el cliente web (`nx-time-frontend-web/`), publicado en
+<https://nxtime-web.onrender.com> con su propio CI (`.github/workflows/web.yml`).
+Hoy tiene login y fichar dentro del armazón común (menú por permisos, campana de
+avisos, rutas protegidas); el resto de pantallas de la app, y las tres que son
+solo de la web, llegan por fases ([ADR 029](docs/adr/029-la-web-alcanza-a-la-app.md)).
+Los tokens viven en memoria, así que recargar la página cierra la sesión hasta
+que haya dominio propio ([ADR 020](docs/adr/020-tokens-en-el-navegador.md)).
 
 **Pendiente:**
 

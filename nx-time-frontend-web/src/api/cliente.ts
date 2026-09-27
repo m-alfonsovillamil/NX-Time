@@ -247,6 +247,21 @@ export const cliente = createClient<paths>({
 cliente.use(arranqueEnFrio);
 cliente.use(autenticacion);
 
+/**
+ * Cerrar la sesión: la local siempre, y la del servidor si se puede.
+ *
+ * Se avisa al servidor para que revoque la familia entera, pero no se espera:
+ * la sesión local se cierra igual. Si la petición falla, el token caduca solo
+ * en 12 horas; dejar a alguien «dentro» porque el logout no llegó sería peor.
+ */
+export function salir(): void {
+  const refreshToken = sesionActual()?.refreshToken;
+  if (refreshToken !== undefined) {
+    void cliente.POST('/auth/logout', { body: { refreshToken } }).catch(() => undefined);
+  }
+  cerrarSesion();
+}
+
 /** Solo para los tests: devuelve el módulo a su estado inicial. */
 export function reiniciarEstadoDeRed(): void {
   ultimaRespuesta = null;

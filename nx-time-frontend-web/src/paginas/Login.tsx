@@ -13,16 +13,20 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import { cliente } from '../api/cliente';
 import { abrirSesion } from '../api/sesion';
 import { Aviso, Boton, Campo } from '../componentes/Basicos';
 import { T } from '../i18n/es';
+import type { EstadoDeVuelta } from '../rutas/rutas';
 import { mensajeDeError, mensajeDeRed } from '../util/errores';
 
 export function Login() {
   const navegar = useNavigate();
+  // Si se llegó aquí desde un enlace a otra página (un correo, un aviso), al
+  // entrar se vuelve a ella y no a la jornada.
+  const desde = (useLocation().state as EstadoDeVuelta | null)?.desde ?? '/fichar';
   const [email, setEmail] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +61,7 @@ export function Login() {
         nombre: data.nombre ?? '',
         authorities: data.authorities ?? [],
       });
-      navegar('/fichar', { replace: true });
+      navegar(desde, { replace: true });
     } catch (fallo) {
       setError(mensajeDeRed(fallo));
     } finally {

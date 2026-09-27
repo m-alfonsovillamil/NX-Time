@@ -30,6 +30,25 @@ const FECHA_LARGA = new Intl.DateTimeFormat(ES, {
   month: 'long',
 });
 
+const FECHA_HORA_CORTA = new Intl.DateTimeFormat(ES, {
+  timeZone: ZONA_ESPANA,
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+const FECHA_CORTA = new Intl.DateTimeFormat(ES, {
+  // Un `LocalDate` es un día, no un instante (ADR 002). Se construye como
+  // medianoche UTC y se formatea en UTC para que ninguna zona lo mueva: es
+  // la única forma de que el 21 sea el 21 lo lea quien lo lea.
+  timeZone: 'UTC',
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+});
+
 /** `2026-09-21T07:03:11Z` → `09:03 h`, siempre en hora de España. */
 export function hora(instante: string | null | undefined): string {
   const fecha = aFecha(instante);
@@ -40,6 +59,38 @@ export function hora(instante: string | null | undefined): string {
 export function fechaLarga(instante: Date = new Date()): string {
   const texto = FECHA_LARGA.format(instante);
   return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/** `2026-09-21T07:03:11Z` → `21 sept, 09:03`: para listas de avisos o de cambios. */
+export function fechaHoraCorta(instante: string | null | undefined): string {
+  const fecha = aFecha(instante);
+  return fecha === null ? '' : FECHA_HORA_CORTA.format(fecha);
+}
+
+/**
+ * Un día sin hora, como los manda la API para ausencias y festivos:
+ * `2026-09-21` → `lun, 21 sept`.
+ */
+export function fechaCorta(dia: string | null | undefined): string {
+  if (!dia || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '';
+  const fecha = new Date(`${dia}T00:00:00Z`);
+  return Number.isNaN(fecha.getTime()) ? '' : FECHA_CORTA.format(fecha);
+}
+
+/**
+ * Minutos → `7h 30m`, `45m` o `-1h 05m`.
+ *
+ * Es la unidad de casi todo lo que no es el cronómetro: la jornada semanal,
+ * los totales del historial, las horas extra y el saldo. Admite negativos
+ * porque un saldo puede serlo (faltan horas), y ahí el signo es el dato.
+ */
+export function minutos(total: number): string {
+  const signo = total < 0 ? '-' : '';
+  const absoluto = Math.abs(Math.round(total));
+  const h = Math.floor(absoluto / 60);
+  const m = absoluto % 60;
+  if (h === 0) return `${signo}${m}m`;
+  return `${signo}${h}h ${dos(m)}m`;
 }
 
 /**

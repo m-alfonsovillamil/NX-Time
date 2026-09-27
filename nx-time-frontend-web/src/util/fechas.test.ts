@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { duracion, hora, segundosTrabajados } from './fechas';
+import { duracion, fechaCorta, hora, minutos, segundosTrabajados } from './fechas';
 
 describe('la hora', () => {
   /*
@@ -70,5 +70,39 @@ describe('los segundos trabajados', () => {
 
   it('sin entrada no hay nada que contar', () => {
     expect(segundosTrabajados(null, null, 0)).toBe(0);
+  });
+});
+
+describe('minutos', () => {
+  it('horas y minutos, con los minutos a dos cifras', () => {
+    expect(minutos(450)).toBe('7h 30m');
+    expect(minutos(65)).toBe('1h 05m');
+  });
+
+  it('por debajo de la hora, solo minutos', () => {
+    expect(minutos(45)).toBe('45m');
+    expect(minutos(0)).toBe('0m');
+  });
+
+  /* Un saldo puede ser negativo (faltan horas), y ahí el signo es el dato. */
+  it('un negativo lleva su signo delante de todo', () => {
+    expect(minutos(-65)).toBe('-1h 05m');
+    expect(minutos(-5)).toBe('-5m');
+  });
+});
+
+describe('fechaCorta', () => {
+  /*
+   * Un día sin hora no se mueve con la zona: el 21 es el 21. Se prueba con
+   * el primero de mes porque es donde un desplazamiento se vería (el 1 de
+   * octubre enseñado como 30 de septiembre).
+   */
+  it('un LocalDate se enseña como ese mismo día', () => {
+    expect(fechaCorta('2026-10-01')).toBe('jue, 1 oct');
+  });
+
+  it('algo que no es una fecha no se inventa', () => {
+    expect(fechaCorta('ayer')).toBe('');
+    expect(fechaCorta(undefined)).toBe('');
   });
 });
