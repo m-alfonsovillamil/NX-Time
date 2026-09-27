@@ -76,6 +76,8 @@ const AusenciasEquipo = lazy(() => import('../paginas/gestion/AusenciasEquipo').
 const AusenciasResueltas = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.PaginaAusenciasResueltas })));
 const Plantilla = lazy(() => import('../paginas/plantilla/Plantilla').then((m) => ({ default: m.Plantilla })));
 const Departamentos = lazy(() => import('../paginas/plantilla/Departamentos').then((m) => ({ default: m.Departamentos })));
+const Proyectos = lazy(() => import('../paginas/proyectos/Proyectos').then((m) => ({ default: m.Proyectos })));
+const CalendarioLaboral = lazy(() => import('../paginas/proyectos/CalendarioLaboral').then((m) => ({ default: m.CalendarioLaboral })));
 
 const S = T.navegacion.secciones;
 
@@ -107,8 +109,8 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, llegaEn: 'W6' },
   { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
   { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
-  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', requiere: 'proyecto:gestionar', enMenu: true, llegaEn: 'W6' },
-  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
+  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
   { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', requiere: 'empleado:gestionar', enMenu: true, llegaEn: 'W6' },
   { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, llegaEn: 'W6' },

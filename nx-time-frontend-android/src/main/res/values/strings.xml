@@ -741,7 +741,7 @@
     <string name="proyectos_empleado">Empleado</string>
     <string name="proyectos_desde_etiqueta">Desde el</string>
     <string name="proyectos_hasta_etiqueta">Hasta el</string>
-    <string name="proyectos_asignar_ayuda">Nadie puede estar en dos proyectos a la vez. Si ya está en otro, primero hay que sacarle de aquel.</string>
+    <string name="proyectos_asignar_ayuda">Se puede estar en varios proyectos a la vez, pero no dos veces en el mismo con fechas que se pisen.</string>
     <string name="proyectos_sacar">Sacar del proyecto</string>
     <string name="proyectos_sacar_confirmar">Sacar</string>
     <!--

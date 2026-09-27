@@ -2117,7 +2117,8 @@ class ApiContractTest {
     // ------------------------------------------------------------------
     // El test que de verdad importa aquí es el 83: comprueba contra un
     // PostgreSQL real que la restricción EXCLUDE impide que una persona
-    // esté en dos proyectos el mismo día. Es una regla que vive en la
+    // esté dos veces en el mismo proyecto el mismo día (en dos distintos
+    // sí, desde V23 / ADR 017). Es una regla que vive en la
     // base de datos, así que ningún test con mocks puede verificarla.
 
     @Test

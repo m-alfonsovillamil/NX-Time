@@ -242,9 +242,9 @@ public class ProjectController {
     }
 
     @Operation(summary = "Asignar a alguien al proyecto",
-            description = "Con fechaFin null queda asignado hasta nuevo aviso. Falla con 409 si esa "
-                    + "persona ya está en otro proyecto en alguno de esos días: nadie puede estar en "
-                    + "dos a la vez, y lo impone la base de datos.")
+            description = "Con fechaFin null queda asignado hasta nuevo aviso. Una persona puede estar "
+                    + "en varios proyectos a la vez (ADR 017: se elige al fichar), pero no dos veces en "
+                    + "el MISMO con fechas que se pisen: eso da 409, y lo impone la base de datos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Asignado",
                     content = @Content(schema = @Schema(implementation = ProjectAssignmentResponse.class))),

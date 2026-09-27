@@ -70,6 +70,17 @@ class LoginRateLimitFilterTest {
     }
 
     @Test
+    @DisplayName("El límite se puede subir (solo lo hace el perfil dev), y sigue cortando al pasarlo")
+    void limiteConfigurado_cortaAlPasarlo() throws Exception {
+        LoginRateLimitFilter filtro = new LoginRateLimitFilter(new ObjectMapper(), 0, LIMITE + 5);
+
+        for (int i = 0; i < LIMITE + 5; i++) {
+            assertThat(intentar(filtro, "203.0.113.1").getStatus()).as("intento %d", i + 1).isEqualTo(HttpStatus.OK.value());
+        }
+        assertThat(intentar(filtro, "203.0.113.1").getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+    }
+
+    @Test
     @DisplayName("Dos IPs distintas de verdad tienen cada una su contador")
     void distintasIpsReales_contadoresDistintos() throws Exception {
         LoginRateLimitFilter filtro = new LoginRateLimitFilter(new ObjectMapper(), 1);

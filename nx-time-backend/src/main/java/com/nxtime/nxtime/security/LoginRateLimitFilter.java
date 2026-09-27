@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,7 +35,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * cuentas desde una IP; contra una cuenta concreta lo frenan los 5
  * intentos de cada código y los 3 códigos por hora.
  *
- * 10 peticiones por minuto y por IP, en memoria (un Map, no Redis):
+ * 10 peticiones por minuto y por IP (configurable solo para el perfil dev,
+ * ver {@link #peticionesPorMinuto}), en memoria (un Map, no Redis):
  * suficiente para un servicio con una sola instancia como este. Si
  * algún día corre en varias instancias a la vez, cada una tendría su
  * propio contador -- limitación conocida, aceptable para el alcance de
@@ -52,7 +54,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private static final Set<String> RUTAS_LIMITADAS = Set.of(
             "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar");
-    private static final int PETICIONES_POR_MINUTO = 10;
+    static final int PETICIONES_POR_MINUTO = 10;
 
     /**
      * Acotado a propósito: era un Map que crecía sin límite, con una entrada
@@ -77,11 +79,26 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
      */
     private final int proxiesDeConfianza;
 
+    /**
+     * Cuántas peticiones por minuto y por IP. Las 10 de siempre salvo que se
+     * diga otra cosa, y solo el perfil {@code dev} dice otra cosa: la suite
+     * de Playwright entra y sale una veintena de veces en medio minuto desde
+     * la misma IP, y con 10 fallaba por el límite y no por la web.
+     */
+    private final int peticionesPorMinuto;
+
+    public LoginRateLimitFilter(ObjectMapper objectMapper, int proxiesDeConfianza) {
+        this(objectMapper, proxiesDeConfianza, PETICIONES_POR_MINUTO);
+    }
+
+    @Autowired
     public LoginRateLimitFilter(
             ObjectMapper objectMapper,
-            @Value("${application.security.rate-limit.trusted-proxies:1}") int proxiesDeConfianza) {
+            @Value("${application.security.rate-limit.trusted-proxies:1}") int proxiesDeConfianza,
+            @Value("${application.security.rate-limit.peticiones-por-minuto:" + PETICIONES_POR_MINUTO + "}") int peticionesPorMinuto) {
         this.objectMapper = objectMapper;
         this.proxiesDeConfianza = Math.max(0, proxiesDeConfianza);
+        this.peticionesPorMinuto = Math.max(1, peticionesPorMinuto);
     }
 
     @Override
@@ -111,7 +128,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     }
 
     private Bucket nuevoBucket() {
-        Bandwidth limite = Bandwidth.simple(PETICIONES_POR_MINUTO, Duration.ofMinutes(1));
+        Bandwidth limite = Bandwidth.simple(peticionesPorMinuto, Duration.ofMinutes(1));
         return Bucket.builder().addLimit(limite).build();
     }
 
