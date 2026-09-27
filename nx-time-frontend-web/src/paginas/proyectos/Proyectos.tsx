@@ -261,7 +261,7 @@ function Detalle({ id, alVolver }: { id: number; alVolver: () => void }) {
               {horas.length === 0 ? (
                 <p className="nx-sutil">{D.sinHoras}</p>
               ) : (
-                <Barras filas={horas.map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', minutos: h.minutos ?? 0 }))} />
+                <Barras filas={horas.map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', valor: h.minutos ?? 0 }))} />
               )}
             </section>
 
@@ -339,7 +339,7 @@ function HorasPorProyecto() {
           (h.proyectos ?? []).length === 0 ? (
             <p className="nx-sutil">{P.horas.vacio}</p>
           ) : (
-            <Barras filas={(h.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, minutos: x.minutos ?? 0 }))} />
+            <Barras filas={(h.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, valor: x.minutos ?? 0 }))} />
           )
         }
       </EstadoDeConsulta>
