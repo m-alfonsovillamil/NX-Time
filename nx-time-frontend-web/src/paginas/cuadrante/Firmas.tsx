@@ -37,7 +37,7 @@ function nombreDelMes(m: Mes): string {
   return mesYAnio(m.anio ?? 0, m.mes ?? 1);
 }
 
-function Comprobacion({ firmaId }: { firmaId: number }) {
+export function Comprobacion({ firmaId }: { firmaId: number }) {
   const [pedida, setPedida] = useState(false);
   const verificacion = useQuery({
     queryKey: ['firmas', 'verificacion', firmaId],

@@ -1702,6 +1702,14 @@ h2 {
   padding-left: 20px;
 }
 
+/* Una celda con dos cosas, una encima de otra (la insignia y su motivo). */
+.nx-celda-apilada {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 /* Tarjetas en rejilla: una columna en el móvil, las que quepan en escritorio. */
 .nx-rejilla-tarjetas {
   display: grid;
