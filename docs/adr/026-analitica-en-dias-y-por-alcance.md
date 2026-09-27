@@ -107,6 +107,11 @@ sentado. La app enseña una tarjeta en el panel de empresa con los dos
 porcentajes del mes. Sin enlace «ver el detalle»: la pantalla de la web todavía
 no existe, y un enlace a una página que no lo tiene es peor que no ponerlo.
 
+**Actualización (28/09/2026, fase W7 de la web, ADR 029):** la página ya
+existe (`/analitica`), y desde la versión 9 de la app la tarjeta lleva el
+enlace «Ver el detalle en la web» (`BuildConfig.WEB_URL` + `analitica`). Sin
+sesión en la web, pasa por el login y vuelve a la analítica.
+
 ## Consecuencias
 
 - Cuatro rutas nuevas en `/api/v1/analitica` (`/resumen`, `/absentismo`,

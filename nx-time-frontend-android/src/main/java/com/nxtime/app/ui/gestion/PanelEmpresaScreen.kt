@@ -2,12 +2,9 @@ package com.nxtime.app.ui.gestion
 
 import android.content.ActivityNotFoundException
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,36 +47,39 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.nxtime.app.ui.theme.elevacionDeTarjeta
+import com.nxtime.app.BuildConfig
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.DepartamentoDTO
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.ResumenAnaliticaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.BarraDeHoras
 import com.nxtime.app.ui.components.EstadoCargando
 import com.nxtime.app.ui.components.EstadoErrorPantalla
-import com.nxtime.app.ui.components.BarraDeHoras
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.informes.MIME_EXCEL
 import com.nxtime.app.ui.informes.MIME_PDF
 import com.nxtime.app.ui.informes.compartirInforme
 import com.nxtime.app.ui.informes.guardarEnCache
+import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import com.nxtime.app.ui.util.resolver
-import kotlinx.coroutines.launch
-import okhttp3.ResponseBody
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 
 /**
  * Panel de empresa: cómo va el mes, quién está de alta y los informes.
@@ -465,9 +467,9 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
  *
  * Es lo único de la analítica que entra en la app. El desglose por
  * departamento o por persona es una tabla que no cabe en 400 dp y cuyo
- * público trabaja sentado; va a la web (ADR 026). No hay enlace "ver el
- * detalle" porque esa pantalla de la web todavía no existe, y un enlace a
- * una página que no la tiene es peor que no ponerlo.
+ * público trabaja sentado; va a la web (ADR 026). Desde la versión 9 hay
+ * enlace "ver el detalle": la página de la web ya existe (fase W7), y abre
+ * en el navegador; sin sesión en la web, pasa por su login y vuelve a ella.
  */
 @Composable
 private fun TarjetaAnalitica(analitica: ResumenAnaliticaDTO?, aviso: MensajeUi?) {
@@ -525,6 +527,10 @@ private fun TarjetaAnalitica(analitica: ResumenAnaliticaDTO?, aviso: MensajeUi?)
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val navegador = LocalUriHandler.current
+            TextButton(onClick = { navegador.openUri(BuildConfig.WEB_URL + "analitica") }) {
+                Text(stringResource(R.string.analitica_ver_detalle))
+            }
         }
     }
 }
