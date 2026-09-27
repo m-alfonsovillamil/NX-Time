@@ -62,6 +62,9 @@ const Calendario = lazy(() => import('../paginas/ausencias/Calendario').then((m)
 const Avisos = lazy(() => import('../paginas/cuenta/Avisos').then((m) => ({ default: m.Avisos })));
 const Perfil = lazy(() => import('../paginas/cuenta/Perfil').then((m) => ({ default: m.PaginaPerfil })));
 const Ajustes = lazy(() => import('../paginas/cuenta/Ajustes').then((m) => ({ default: m.Ajustes })));
+const MiCuadrante = lazy(() => import('../paginas/cuadrante/MiCuadrante').then((m) => ({ default: m.MiCuadrante })));
+const Incidencias = lazy(() => import('../paginas/cuadrante/Incidencias').then((m) => ({ default: m.Incidencias })));
+const Firmas = lazy(() => import('../paginas/cuadrante/Firmas').then((m) => ({ default: m.Firmas })));
 
 const S = T.navegacion.secciones;
 
@@ -74,11 +77,11 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, pagina: Avisos },
   { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Perfil },
   { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Ajustes },
-  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', requiere: 'cuadrante:leer', enMenu: true, llegaEn: 'W4' },
+  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', requiere: 'cuadrante:leer', enMenu: true, pagina: MiCuadrante },
   // Lo propio y, con `cuadrante:incidencias:revisar`, la bandeja del equipo:
   // la misma página, como en Android. Por eso no pide permiso para entrar.
-  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
-  { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
+  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Incidencias },
+  { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Firmas },
   { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
   { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', enMenu: true, llegaEn: 'W4' },
   { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', requiere: 'oferta:leer', enMenu: true, llegaEn: 'W4' },

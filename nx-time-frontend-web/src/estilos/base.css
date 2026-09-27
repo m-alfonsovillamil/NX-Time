@@ -1460,6 +1460,92 @@ h2 {
   justify-content: center;
 }
 
+/* ---- Cuadrante, incidencias y firmas (W4) ---- */
+
+.nx-lista-cuadrante,
+.nx-lista-incidencias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.nx-dia-cuadrante {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 2fr auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-dia-cuadrante--hoy {
+  background: var(--nx-primary-container);
+  color: var(--nx-on-primary-container);
+  border-radius: 12px;
+  padding-inline: 12px;
+}
+
+.nx-dia-cuadrante__fecha::first-letter {
+  text-transform: uppercase;
+}
+
+.nx-dia-cuadrante__horario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.nx-dia-cuadrante__minutos,
+.nx-tramos {
+  font-variant-numeric: tabular-nums;
+}
+
+.nx-dia-cuadrante__minutos {
+  white-space: nowrap;
+}
+
+/* Un texto en una fila de botones de texto: los botones llevan su margen
+   dentro, y el texto se quedaba 8 px más a la izquierda que el resto. */
+.nx-acciones-fila > p {
+  margin: 0;
+  padding-left: 8px;
+}
+
+@media (max-width: 639px) {
+  .nx-dia-cuadrante {
+    grid-template-columns: 1fr auto;
+  }
+
+  .nx-dia-cuadrante__horario {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.nx-incidencia {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-incidencia__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nx-texto-error {
+  color: var(--nx-error);
+  margin: 0;
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {
