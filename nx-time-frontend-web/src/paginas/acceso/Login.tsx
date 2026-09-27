@@ -15,14 +15,14 @@
  */
 
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
-import { cliente } from '../api/cliente';
-import { abrirSesion } from '../api/sesion';
-import { Aviso, Boton, Campo } from '../componentes/Basicos';
-import { T } from '../i18n/es';
-import type { EstadoDeVuelta } from '../rutas/rutas';
-import { mensajeDeError, mensajeDeRed } from '../util/errores';
+import { cliente } from '../../api/cliente';
+import { abrirSesion } from '../../api/sesion';
+import { Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { T } from '../../i18n/es';
+import type { EstadoDeVuelta } from '../../rutas/rutas';
+import { mensajeDeError, mensajeDeRed } from '../../util/errores';
 
 export function Login() {
   const navegar = useNavigate();
@@ -100,6 +100,13 @@ export function Login() {
         <Boton type="submit" ocupado={entrando}>
           {entrando ? T.login.entrando : T.login.entrar}
         </Boton>
+
+        <Link className="nx-enlace" to="/recuperar-acceso">
+          {T.login.recuperar}
+        </Link>
+        <Link className="nx-enlace" to="/registro">
+          {T.login.registrarEmpresa}
+        </Link>
       </form>
     </main>
   );

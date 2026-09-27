@@ -18,7 +18,7 @@
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 
 import { restaurarSesion } from '../api/cliente';
@@ -29,7 +29,19 @@ import { ServidorDespertando } from '../componentes/ServidorDespertando';
 import { T } from '../i18n/es';
 import { Marco } from '../navegacion/Marco';
 import { disponibles } from '../navegacion/secciones';
-import { Login } from '../paginas/Login';
+import { Login } from '../paginas/acceso/Login';
+
+/*
+ * Las dos páginas de acceso que no son el login van aparte del catálogo de
+ * secciones: no llevan sesión, no salen en ningún menú y no son destino de
+ * ningún aviso. Con sesión, llevan a la jornada.
+ */
+const RecuperarAcceso = lazy(() =>
+  import('../paginas/acceso/RecuperarAcceso').then((m) => ({ default: m.RecuperarAcceso })),
+);
+const RegistroEmpresa = lazy(() =>
+  import('../paginas/acceso/RegistroEmpresa').then((m) => ({ default: m.RegistroEmpresa })),
+);
 
 /** Lo que el login lee para volver a donde se quería ir. */
 export interface EstadoDeVuelta {
@@ -123,28 +135,32 @@ export function App() {
   return (
     <div className="nx-fondo">
       <ServidorDespertando />
-      <Routes>
-        <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />
-        {dentro ? (
-          <Route element={<Marco />}>
-            {secciones.map(({ ruta, requiere, pagina: Pagina }) => (
-              <Route
-                key={ruta}
-                path={ruta}
-                element={<Requiere authority={requiere}>{Pagina !== undefined && <Pagina />}</Requiere>}
-              />
-            ))}
-            <Route path="*" element={<NoEncontrado />} />
-          </Route>
-        ) : (
-          <>
-            {secciones.map(({ ruta }) => (
-              <Route key={ruta} path={ruta} element={<AlLogin />} />
-            ))}
-            <Route path="*" element={<NoEncontrado />} />
-          </>
-        )}
-      </Routes>
+      <Suspense fallback={<Esqueleto />}>
+        <Routes>
+          <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />
+          <Route path="/recuperar-acceso" element={dentro ? <Navigate to="/fichar" replace /> : <RecuperarAcceso />} />
+          <Route path="/registro" element={dentro ? <Navigate to="/fichar" replace /> : <RegistroEmpresa />} />
+          {dentro ? (
+            <Route element={<Marco />}>
+              {secciones.map(({ ruta, requiere, pagina: Pagina }) => (
+                <Route
+                  key={ruta}
+                  path={ruta}
+                  element={<Requiere authority={requiere}>{Pagina !== undefined && <Pagina />}</Requiere>}
+                />
+              ))}
+              <Route path="*" element={<NoEncontrado />} />
+            </Route>
+          ) : (
+            <>
+              {secciones.map(({ ruta }) => (
+                <Route key={ruta} path={ruta} element={<AlLogin />} />
+              ))}
+              <Route path="*" element={<NoEncontrado />} />
+            </>
+          )}
+        </Routes>
+      </Suspense>
     </div>
   );
 }

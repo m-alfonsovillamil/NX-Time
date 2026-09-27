@@ -2650,6 +2650,7 @@ export interface components {
             /** Format: email */
             email: string;
             contrasena: string;
+            origen?: string;
         };
         AuthenticationResponse: {
             token?: string;
