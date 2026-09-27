@@ -2890,6 +2890,8 @@ export interface components {
             minutosPausaAcumulados?: number;
             /** Format: int64 */
             segundosPausaAcumulados?: number;
+            /** Format: date-time */
+            inicioPausaActual?: string;
         };
         ChangeProjectRequest: {
             /** Format: int64 */

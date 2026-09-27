@@ -86,3 +86,29 @@ describe('listas por páginas', () => {
     expect(pedidas).toBe(100);
   });
 });
+
+/*
+ * El backend manda los campos vacíos como `null` y los tipos generados los
+ * declaran opcionales (`undefined`). `cliente.ts` los quita para que los tipos
+ * digan la verdad: sin esto, «Mi jornada» se quedaba en blanco al fichar.
+ */
+describe('los null del servidor', () => {
+  it('llegan como campos ausentes, también anidados', async () => {
+    simularApi({
+      'GET /api/v1/fichaje/proyectos': () => ({ disponibles: [{ id: 1, codigo: 'NX', nombre: null }], enCurso: null }),
+    });
+
+    const datos = await pedir(cliente.GET('/api/v1/fichaje/proyectos', {}));
+
+    expect(datos).toEqual({ disponibles: [{ id: 1, codigo: 'NX' }] });
+    expect('enCurso' in datos).toBe(false);
+  });
+
+  it('dentro de un array se quedan, para no mover los demás', async () => {
+    simularApi({ 'GET /api/v1/dashboard/horas-por-dia': () => [null, { fecha: '2026-09-21', festivo: null }] });
+
+    const datos = await pedir(cliente.GET('/api/v1/dashboard/horas-por-dia', { params: { query: { desde: 'a', hasta: 'b' } } }));
+
+    expect(datos).toEqual([null, { fecha: '2026-09-21' }]);
+  });
+});

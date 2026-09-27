@@ -30,8 +30,11 @@ export function Dialogo({
   titulo: string;
   alCerrar: () => void;
   children: ReactNode;
-  /** Los botones de abajo. Sin ellos, uno de «Cerrar». */
-  acciones?: ReactNode;
+  /**
+   * Los botones de abajo. Sin ellos, uno de «Cerrar»; con `null`, ninguno
+   * (para un formulario que lleva sus propios botones dentro del `<form>`).
+   */
+  acciones?: ReactNode | null;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const idTitulo = useId();
@@ -69,13 +72,15 @@ export function Dialogo({
           {/* Lo que se desplaza es el contenido: el título y los botones
               se quedan a la vista, por larga que sea la lista. */}
           <div className="nx-dialogo__contenido">{children}</div>
-          <div className="nx-dialogo__acciones">
-            {acciones ?? (
-              <Boton variante="texto" onClick={alCerrar}>
-                {T.app.cerrar}
-              </Boton>
-            )}
-          </div>
+          {acciones !== null && (
+            <div className="nx-dialogo__acciones">
+              {acciones ?? (
+                <Boton variante="texto" onClick={alCerrar}>
+                  {T.app.cerrar}
+                </Boton>
+              )}
+            </div>
+          )}
         </div>
       )}
     </dialog>

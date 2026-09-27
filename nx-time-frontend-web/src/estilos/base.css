@@ -916,6 +916,204 @@ h2 {
   font-size: var(--nx-fs-label-large);
 }
 
+/* ---- Mi jornada (W2) ---- */
+
+.nx-rejilla-jornada {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .nx-rejilla-jornada {
+    grid-template-columns: minmax(320px, 440px) 1fr;
+  }
+}
+
+.nx-columna {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.nx-jornada__proyecto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: var(--nx-fs-label-large);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-accion-secundaria {
+  align-self: center;
+}
+
+.nx-cifras {
+  display: grid;
+  /* Dos por fila, o las cuatro en una si caben: nunca tres y una sola debajo. */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+
+@media (min-width: 1280px) {
+  .nx-cifras {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.nx-cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--nx-surface-container-highest);
+}
+
+.nx-cifra__etiqueta {
+  font-size: var(--nx-fs-label-large);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-cifra__valor {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-large);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  /* «158h 22m» partido en dos renglones se lee como dos cifras. */
+  white-space: nowrap;
+}
+
+/* ---- Gráfico de horas ---- */
+
+.nx-grafico {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nx-grafico__total {
+  margin: 0;
+  font-family: var(--nx-font-titular);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.nx-grafico__dibujo {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+}
+
+.nx-grafico__barra {
+  fill: var(--nx-primary);
+}
+
+.nx-grafico__barra--especial,
+.nx-grafico__marca-especial {
+  fill: var(--nx-tertiary);
+}
+
+.nx-grafico__esperado {
+  stroke: var(--nx-on-surface-variant);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.nx-grafico__base {
+  stroke: var(--nx-outline-variant);
+  stroke-width: 1;
+}
+
+.nx-grafico__eje {
+  fill: var(--nx-on-surface-variant);
+  font-size: 13px;
+  font-family: var(--nx-font-cuerpo);
+}
+
+.nx-grafico__pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nx-grafico__pie .nx-sutil {
+  flex: 1 1 240px;
+}
+
+/* ---- Formularios dentro de un diálogo ---- */
+
+.nx-formulario-dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nx-formulario-dialogo p {
+  margin: 0;
+}
+
+.nx-fila-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.nx-casilla,
+.nx-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.nx-casilla input,
+.nx-opcion input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--nx-primary);
+}
+
+.nx-opciones {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nx-subtitulo {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-medium);
+  margin: 0 0 8px;
+}
+
+.nx-lista-simple {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nx-lista-simple li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {

@@ -34,6 +34,19 @@ public record TimeEntryResponse(
          * listas ("Pausa: 0h 26m") y quitarlo rompería a los clientes ya
          * escritos. Este campo es el que hay que usar para CALCULAR.
          */
-        long segundosPausaAcumulados
+        long segundosPausaAcumulados,
+
+        /**
+         * Cuándo empezó la pausa en curso, o null si no hay ninguna.
+         *
+         * Sin él, un cliente no sabe cuánto se trabajó antes de pausar: la
+         * pausa en curso aún no está en segundosPausaAcumulados (se suma al
+         * reanudar), así que "ahora - entrada - pausas" cuenta la pausa como
+         * trabajo. La app Android lo esquivaba congelando el cronómetro en
+         * memoria al pulsar, y tras abrir la app ya en pausa enseñaba 0. La
+         * web (fase W2) lo necesita para lo mismo, y con esto las dos
+         * pueden calcularlo de verdad.
+         */
+        Instant inicioPausaActual
 ) {
 }

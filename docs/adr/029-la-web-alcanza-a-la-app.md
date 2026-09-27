@@ -108,7 +108,19 @@ cuatro secciones y «Más», el mismo límite de cinco de Material 3 que tiene l
 app. Las tablas se pintan como tarjetas por debajo de 640 px con el mismo
 marcado: cada celda lleva el nombre de su columna en `data-etiqueta`.
 
-### 9. Pruebas
+### 9. En la web, un campo vacío es `undefined`, nunca `null`
+
+El backend manda los campos vacíos como `null` y los tipos generados del
+contrato los declaran opcionales, es decir, `undefined`. Con esa mentira en los
+tipos, `x !== undefined` deja pasar el `null`, y lo siguiente es un
+`null.codigo`: así se quedó en blanco «Mi jornada» al fichar contra el backend
+de verdad (fase W2), con todos los tests en verde porque sus datos simulados
+omitían el campo. `cliente.ts` quita los `null` de las propiedades de toda
+respuesta JSON, una vez, y los tipos dicen la verdad en todas las pantallas.
+Los datos simulados de los tests que imiten una respuesta real deben llevar
+sus `null`, como los manda el backend.
+
+### 10. Pruebas
 
 Vitest + Testing Library por página, con `pruebas/api.tsx`: un servidor de
 mentira cuyas claves son las rutas del contrato (`'GET /api/v1/fichaje/activo'`),

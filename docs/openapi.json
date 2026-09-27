@@ -9399,6 +9399,10 @@
           "segundosPausaAcumulados" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "inicioPausaActual" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
