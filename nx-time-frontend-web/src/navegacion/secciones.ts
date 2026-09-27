@@ -82,6 +82,8 @@ const PanelEmpresa = lazy(() => import('../paginas/empresa/PanelEmpresa').then((
 const Informes = lazy(() => import('../paginas/empresa/Informes').then((m) => ({ default: m.Informes })));
 const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) => ({ default: m.Integridad })));
 const Borrados = lazy(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
+const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
+const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
 
 const S = T.navegacion.secciones;
 
@@ -117,8 +119,8 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
   { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, pagina: Informes },
   { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', requiere: 'empleado:gestionar', enMenu: true, pagina: Borrados },
-  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, llegaEn: 'W6' },
-  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', requiere: 'denuncia:instruir', enMenu: true, llegaEn: 'W6' },
+  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
+  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
   { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
   { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, llegaEn: 'W7' },
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, llegaEn: 'W7' },

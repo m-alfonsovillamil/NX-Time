@@ -65,4 +65,25 @@ export const denuncias = {
   mensajeVacio: 'Escribe el mensaje.',
   mensajeEnviado: 'Mensaje enviado.',
   cerrado: 'El expediente está cerrado: ya no admite mensajes.',
+
+  canal: {
+    titulo: 'Canal interno',
+    explicacion:
+      'Las denuncias de la empresa, las abiertas primero y las más antiguas arriba: son las que están más cerca de que venza el plazo. La ley obliga a acusar recibo en 7 días y a responder en 3 meses.',
+    vacioTitulo: 'Ninguna denuncia',
+    vacioTexto: 'Cuando alguien use el canal, su expediente aparecerá aquí con los plazos legales contando.',
+    esAnonima: 'Denuncia anónima',
+    laPuso: (quien: string) => `La presentó ${quien}`,
+    responder: 'Responder al denunciante',
+    acusa: 'El primer mensaje cuenta como acuse de recibo.',
+    aInvestigacion: 'Pasar a investigación',
+    resolver: 'Cerrar como resuelta',
+    archivar: 'Cerrar y archivar',
+    conclusionAyuda: 'Obligatoria para cerrar el expediente, tanto si se resuelve como si se archiva. La ley obliga a responder, no a dar la razón.',
+    conclusionVacia: 'Escribe la conclusión.',
+    cerrarTitulo: (como: string) => `${como}: conclusión`,
+    actualizada: 'Expediente actualizado.',
+    cerrada: 'Expediente cerrado con su conclusión.',
+    abrir: 'Abrir',
+  },
 } as const;
