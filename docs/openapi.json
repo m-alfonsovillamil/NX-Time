@@ -8794,6 +8794,9 @@
             "type" : "string",
             "maxLength" : 72,
             "minLength" : 8
+          },
+          "origen" : {
+            "type" : "string"
           }
         },
         "required" : [ "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]

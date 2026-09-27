@@ -183,6 +183,23 @@ class SesionWebIT {
         }
 
         @Test
+        @DisplayName("registrar una empresa desde la web se comporta igual: cookie, y nada en el cuerpo")
+        void registroDesdeLaWeb() throws Exception {
+            String cuerpo = """
+                    {"nombreEmpresa":"Web %s","nombre":"Eva","apellidos":"Web","email":"eva.%s@nxtime.test",
+                     "contrasena":"%s","origen":"WEB"}
+                    """.formatted(System.nanoTime(), System.nanoTime(), CONTRASENA);
+            ResponseEntity<String> alta = rest.exchange("/auth/register-manager", HttpMethod.POST,
+                    new HttpEntity<>(cuerpo, conIp(jsonHeaders())), String.class);
+
+            assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(cuerpo(alta).path("refreshToken").isNull()).isTrue();
+            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("HttpOnly");
+            // 12 horas, las del navegador (ADR 019), y no los 30 días de la app.
+            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("Max-Age=43200");
+        }
+
+        @Test
         @DisplayName("desde la app, como siempre: refresh en el cuerpo y ninguna cookie")
         void laAppNoCambia() throws Exception {
             ResponseEntity<String> respuesta = login(null);

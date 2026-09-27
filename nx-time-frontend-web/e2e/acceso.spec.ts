@@ -1,0 +1,26 @@
+/**
+ * Las páginas de acceso sin sesión: desde el login se llega a recuperar la
+ * contraseña y a registrar una empresa, y se vuelve.
+ *
+ * No registra empresas ni cambia contraseñas: dejaría una empresa o una
+ * contraseña distinta en la base de demo en cada ejecución. El ciclo entero
+ * (pedir el código, leerlo del correo en MailHog, elegir contraseña y entrar
+ * con ella, y registrar una empresa y recargar dentro) se comprobó a mano al
+ * cerrar W3 (ver el PR de W3c).
+ */
+
+import { expect, test } from '@playwright/test';
+
+test('del login a recuperar el acceso y a registrar una empresa', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('link', { name: /olvidado tu contraseña/ }).click();
+  await expect(page.getByRole('heading', { name: 'Elegir contraseña' })).toBeVisible();
+  await expect(page).toHaveURL(/\/recuperar-acceso$/);
+  await page.getByRole('link', { name: 'Volver a entrar' }).click();
+
+  await page.getByRole('link', { name: 'Registrar una empresa' }).click();
+  await expect(page.getByRole('heading', { name: 'Registrar empresa' })).toBeVisible();
+  await page.getByRole('link', { name: 'Ya tengo cuenta: entrar' }).click();
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+});

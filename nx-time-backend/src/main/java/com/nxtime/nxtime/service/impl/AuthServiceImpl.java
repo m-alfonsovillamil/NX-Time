@@ -118,7 +118,7 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
         log.info("Nueva empresa registrada: '{}' con administrador {}", company.getNombre(), savedUser.getEmail());
-        return buildAuthResponse(savedUser);
+        return buildAuthResponse(savedUser, origenDe(request.origen()));
     }
 
     // @Transactional de escritura: desde la Fase 4, login() también

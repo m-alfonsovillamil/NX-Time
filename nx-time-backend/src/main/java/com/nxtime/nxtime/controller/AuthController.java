@@ -81,8 +81,15 @@ public class AuthController {
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/register-manager")
-    public ResponseEntity<AuthenticationResponse> registerManager(@Valid @RequestBody RegisterManagerRequest request) {
-        return ResponseEntity.ok(authService.registerManager(request));
+    public ResponseEntity<AuthenticationResponse> registerManager(
+            @Valid @RequestBody RegisterManagerRequest request, HttpServletResponse respuesta) {
+        AuthenticationResponse sesion = authService.registerManager(request);
+        // Como el login: desde el navegador, el refresh a la cookie (ADR 030).
+        if (!esNavegador(request.origen())) {
+            return ResponseEntity.ok(sesion);
+        }
+        sesionWeb.emitir(respuesta, sesion.refreshToken());
+        return ResponseEntity.ok(sesion.sinRefreshToken());
     }
 
     @Operation(summary = "Iniciar sesión",

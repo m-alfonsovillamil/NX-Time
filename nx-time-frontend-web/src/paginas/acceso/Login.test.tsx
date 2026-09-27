@@ -14,9 +14,9 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { reiniciarEstadoDeRed } from '../api/cliente';
-import { cerrarSesion, sesionActual } from '../api/sesion';
-import { T } from '../i18n/es';
+import { reiniciarEstadoDeRed } from '../../api/cliente';
+import { cerrarSesion, sesionActual } from '../../api/sesion';
+import { T } from '../../i18n/es';
 import { Login } from './Login';
 
 function pintar() {

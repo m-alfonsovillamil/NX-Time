@@ -37,7 +37,18 @@ public record RegisterManagerRequest(
         // misma para el sistema.
         @NotBlank(message = "La contraseña es obligatoria.")
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
-        String contrasena
+        String contrasena,
+
+        /**
+         * Desde dónde se registra: ANDROID, IOS o WEB, como en el login.
+         * Opcional; sin él, ANDROID, que es lo que pasaba antes de existir.
+         *
+         * Hace falta por lo mismo que en el login (ADR 019 y 030): desde WEB
+         * el refresh dura 12 horas y va en una cookie HttpOnly, no 30 días en
+         * el cuerpo. Sin esto, quien registrara su empresa desde el navegador
+         * se quedaba con un refresh de un mes al alcance del JavaScript.
+         */
+        String origen
 ) {
 
     /** Ver {@link Emails}: la cuenta nace ya con el correo en minúsculas. */

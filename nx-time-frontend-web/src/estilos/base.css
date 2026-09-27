@@ -1440,6 +1440,26 @@ h2 {
   text-decoration: none;
 }
 
+/* ---- Acceso (W3) ---- */
+
+.nx-enlace {
+  color: var(--nx-primary);
+  font-size: var(--nx-fs-label-large);
+  font-weight: 600;
+  text-align: center;
+  text-underline-offset: 3px;
+}
+
+.nx-enlace:focus-visible {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.nx-boton--centrado {
+  justify-content: center;
+}
+
 /* Quien tenga activado "reducir movimiento" no quiere transiciones, y este
    proyecto tampoco las necesita para nada. */
 @media (prefers-reduced-motion: reduce) {

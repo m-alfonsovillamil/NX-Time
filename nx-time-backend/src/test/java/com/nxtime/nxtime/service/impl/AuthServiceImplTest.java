@@ -102,7 +102,7 @@ class AuthServiceImplTest {
     void registerManager_empresaNueva_creaEmpresaYAdmin() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace",
-                        "ada@nxtime.test", "password123");
+                        "ada@nxtime.test", "password123", null);
         when(companyRepository.findByNombre(request.nombreEmpresa())).thenReturn(Optional.empty());
         when(companyRepository.save(any(Company.class)))
                 .thenReturn(Company.builder().id(1L).nombre(request.nombreEmpresa()).build());
@@ -122,7 +122,7 @@ class AuthServiceImplTest {
     void registerManager_empresaYaExiste_lanzaBusinessException() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Empresa Repetida SL", "Ada", "Lovelace",
-                        "ada@nxtime.test", "password123");
+                        "ada@nxtime.test", "password123", null);
         when(companyRepository.findByNombre(request.nombreEmpresa()))
                 .thenReturn(Optional.of(Company.builder().id(1L).nombre(request.nombreEmpresa()).build()));
 
