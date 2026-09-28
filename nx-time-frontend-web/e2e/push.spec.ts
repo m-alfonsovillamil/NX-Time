@@ -63,27 +63,29 @@ test('un push de FCM se pinta con su texto y apunta a la página del aviso', asy
   ]);
 });
 
-test('una ruta que apunta a otra web no saca de esta', async ({ page, context }) => {
-  await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
-  await page.goto('/');
-  const { cdp, registrationId } = await registroDelServiceWorker(page);
+// Un push por test. Con dos seguidos al mismo registro, en el runner de Linux
+// del CI el segundo no llegaba a pintarse (en Windows, 30 de 30 bien), aunque
+// se mandara después de ver el primero. No se ha podido aclarar si es cosa de
+// entregar push por el protocolo de depuración; varios avisos seguidos se
+// comprueban en producción (docs/DESPLIEGUE.md).
+for (const ruta of ['//otra-web.example/robo', 'https://otra-web.example/robo']) {
+  test(`una ruta que apunta a otra web no saca de esta: ${ruta}`, async ({ page, context }) => {
+    await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
+    await page.goto('/');
+    const { cdp, registrationId } = await registroDelServiceWorker(page);
 
-  // De uno en uno, esperando a cada notificación: dos entregas casi a la vez
-  // por el protocolo de depuración a veces dejaban solo una.
-  const rutas = ['//otra-web.example/robo', 'https://otra-web.example/robo'];
-  for (const [i, ruta] of rutas.entries()) {
     await cdp.send('ServiceWorker.deliverPushMessage', {
       origin: 'http://localhost:5173',
       registrationId,
-      data: JSON.stringify({ data: { tipo: `X${i}`, titulo: 'NX Time', cuerpo: 'Algo', ruta } }),
+      data: JSON.stringify({ data: { tipo: 'X', titulo: 'NX Time', cuerpo: 'Algo', ruta } }),
     });
-    await expect.poll(async () => (await notificaciones(page)).length).toBe(i + 1);
-  }
 
-  // Se queda en una ruta de esta web (que no existe, y enseña su 404), nunca en otra.
-  const origenes = (await notificaciones(page)).map((n) => new URL(n.url ?? '').origin);
-  expect(origenes).toEqual(['http://localhost:5173', 'http://localhost:5173']);
-});
+    // Se queda en una ruta de esta web (que no existe, y enseña su 404), nunca en otra.
+    await expect
+      .poll(async () => (await notificaciones(page)).map((n) => new URL(n.url ?? '').origin))
+      .toEqual(['http://localhost:5173']);
+  });
+}
 
 test('la web es instalable: manifest con sus iconos', async ({ page, request }) => {
   await page.goto('/');

@@ -253,6 +253,9 @@ Comprobación, en <https://nxtime-web.com> → Ajustes → **Notificaciones**:
   enseña la fila `WEB`.
 - Provocar un aviso (por ejemplo, que otra cuenta resuelva una ausencia) y ver
   la notificación con la web **cerrada**. Al pulsarla se abre la página del aviso.
+- Provocar **dos avisos de tipos distintos seguidos** y ver que salen las dos
+  notificaciones. En el CI no se ha podido probar: entregando dos push por el
+  protocolo de depuración de Chromium, en Linux el segundo no se pintaba.
 - Si al encender sale «No se han podido activar», mirar la consola del
   navegador: un error de CSP con un dominio de Google que no sea
   `firebaseinstallations` ni `fcmregistrations` quiere decir que el SDK ha
