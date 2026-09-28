@@ -689,6 +689,13 @@ h2 {
   overflow-x: auto;
 }
 
+/* Solo recibe el foco cuando se desborda (Tabla.tsx): entonces se mueve con
+   las flechas, y tiene que verse dónde está el foco. */
+.nx-tabla-contenedor:focus-visible {
+  outline: 2px solid var(--nx-primary);
+  outline-offset: -2px;
+}
+
 .nx-tabla {
   width: 100%;
   border-collapse: collapse;
