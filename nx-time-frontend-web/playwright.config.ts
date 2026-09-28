@@ -1,43 +1,63 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// La web no instala los tipos de Node (no los necesita), y esto es lo único de
+// Node que usa la configuración.
+declare const process: { env: Record<string, string | undefined> };
+
+/** GitHub Actions define `CI=true` en todos sus pasos. */
+const enCi = Boolean(process.env['CI']);
+
 /**
- * El test de extremo a extremo: **contra el backend de verdad**, no contra
+ * Los tests de extremo a extremo: **contra el backend de verdad**, no contra
  * respuestas simuladas.
  *
- * Es el único de este proyecto, y esa proporción es deliberada. Los tests de
- * Vitest cubren lo que se puede razonar (el refresco serializado, el formateo,
- * los mensajes de error); este cubre lo único que ninguno de ellos puede
- * demostrar: que la web y el backend **hablan el mismo idioma**. En este
- * proyecto los defectos que se han escapado siempre han salido ejecutando el
- * sistema, no leyendo el código.
+ * Los tests de Vitest cubren lo que se puede razonar (el refresco serializado,
+ * el formateo, los mensajes de error); estos cubren lo único que ninguno de
+ * ellos puede demostrar: que la web y el backend **hablan el mismo idioma**. En
+ * este proyecto los defectos que se han escapado siempre han salido ejecutando
+ * el sistema, no leyendo el código.
  *
- * Está fuera de `npm test` a propósito: necesita un backend levantado con
- * `docker compose` y el perfil `demo`, y un test que no se puede ejecutar sin
- * leer un README no debería bloquear a quien solo quiere cambiar un color.
+ * Están fuera de `npm test` a propósito: necesitan un backend levantado con el
+ * perfil `demo`. En el CI los ejecuta `.github/workflows/e2e.yml`, que levanta
+ * Postgres y el jar del backend en cada PR (fase W8). En local:
  *
  * ```bash
  * docker compose up -d postgres
  * ./gradlew :nx-time-backend:bootRun --args="--spring.profiles.active=dev,demo"
  * npm run e2e
  * ```
+ *
+ * Mejor sobre una base **recién creada**: los datos que dejan las pruebas a
+ * mano cambian el orden de las listas y algunas specs los notan.
  */
 export default defineConfig({
   testDir: './e2e',
   // Uno en marcha: los tests fichan de verdad, y dos jornadas abiertas a la
   // vez para el mismo usuario chocarían con `uq_registros_jornada_abierta`.
   workers: 1,
-  reporter: [['list']],
+  // Sin reintentos, tampoco en el CI: un test que a veces falla se arregla, no
+  // se tapa. Y un `test.only` olvidado dejaría el CI en verde probando uno.
+  retries: 0,
+  forbidOnly: enCi,
+  reporter: enCi ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: 'http://localhost:5173',
     ...devices['Desktop Chrome'],
     // El arranque en frío no aplica en local, pero el primer render con Vite
     // sin caché sí tarda.
     actionTimeout: 15_000,
+    // Lo que hace falta para entender un fallo del CI sin reproducirlo: la
+    // traza (DOM, red y consola de cada paso) solo de los que fallan.
+    trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev',
+    // En el CI, el build de producción y no el servidor de desarrollo: es lo
+    // que se despliega, y así no hay la recarga del primer arranque de Vite
+    // (descubre dependencias al vuelo, recarga la página y la spec que estaba
+    // en marcha falla).
+    command: enCi ? 'npm run build && npm run preview -- --port 5173 --strictPort' : 'npm run dev',
     url: 'http://localhost:5173',
-    reuseExistingServer: true,
+    reuseExistingServer: !enCi,
     timeout: 120_000,
   },
 });

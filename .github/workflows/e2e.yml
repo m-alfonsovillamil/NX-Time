@@ -1,0 +1,140 @@
+# Los tests de extremo a extremo de la web, contra el backend de verdad (W8).
+#
+# Hasta W8 las specs de Playwright solo corrían a mano, contra un backend
+# local, y eso tenía dos pegas que ya habían costado tiempo: se olvidaban (un
+# PR podía romper un recorrido con el CI en verde) y corrían sobre una base
+# ensuciada por pruebas a mano, que cambia el orden de las listas y rompe specs
+# que no tienen la culpa. Aquí cada ejecución tiene una base NUEVA con los datos
+# de demo recién sembrados.
+#
+# Va aparte de web.yml y de ci.yml porque necesita las dos cosas: el jar del
+# backend (Java, Postgres) y la web (Node, Chromium). Y porque se tiene que
+# lanzar también cuando el PR es solo de backend: un cambio en un controlador
+# rompe la web sin tocar un fichero de la web.
+name: E2E
+
+on:
+  push:
+    branches: [main]
+    paths: &rutas
+      - 'nx-time-frontend-web/**'
+      - 'nx-time-backend/src/main/**'
+      - 'nx-time-backend/build.gradle.kts'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    paths: *rutas
+
+jobs:
+  e2e:
+    name: Playwright contra el backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # La misma configuración que en ci.yml y en local: puerto 5433 y los
+      # mismos usuarios, para que el perfil `dev` valga tal cual.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: nxtime
+          POSTGRES_USER: nxtime
+          POSTGRES_PASSWORD: nxtime
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U nxtime -d nxtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      # El perfil `dev` manda los correos a localhost:1025. Sin nadie
+      # escuchando, cada aviso por correo llenaría el log de errores de
+      # conexión, y es el log que hay que leer cuando algo falla.
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      # Lo mismo que en ci.yml: el service container no admite scripts de
+      # inicio, y el perfil `dev` conecta como nxtime_app.
+      - name: Crear el rol de aplicación (nxtime_app)
+        env:
+          PGPASSWORD: nxtime
+        run: |
+          psql -h localhost -p 5433 -U nxtime -d nxtime \
+            -c "CREATE ROLE nxtime_app WITH LOGIN PASSWORD 'nxtime_app';"
+          psql -h localhost -p 5433 -U nxtime -d nxtime \
+            -c "GRANT CONNECT ON DATABASE nxtime TO nxtime_app;"
+
+      - name: Compilar el backend
+        run: |
+          chmod +x gradlew
+          ./gradlew -c settings-docker.gradle.kts :nx-time-backend:bootJar --no-daemon
+
+      # El jar y no bootRun: es lo que se despliega, y no deja un Gradle
+      # vivo en medio. Perfiles `dev,demo`: la base de arriba y los datos de
+      # demostración (contraseña demo1234).
+      #
+      # "Listo" NO es que /actuator/health diga UP: el servidor ya atiende
+      # mientras el sembrador de demo (un CommandLineRunner) sigue creando
+      # usuarios, y un login en esa ventana da "Credenciales incorrectas". La
+      # señal buena es la línea con la que el sembrador termina.
+      - name: Arrancar el backend
+        run: |
+          java -jar nx-time-backend/build/libs/nx-time-backend-0.0.1-SNAPSHOT.jar \
+            --spring.profiles.active=dev,demo --spring.jpa.show-sql=false \
+            > backend.log 2>&1 &
+          for i in $(seq 1 90); do
+            if grep -q "Datos de demo listos" backend.log; then
+              echo "Backend listo en ~$((i * 2)) s"; exit 0
+            fi
+            if grep -q "APPLICATION FAILED TO START" backend.log; then break; fi
+            sleep 2
+          done
+          echo "El backend no llegó a estar listo:"; tail -100 backend.log; exit 1
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: nx-time-frontend-web/.node-version
+          cache: npm
+          cache-dependency-path: nx-time-frontend-web/package-lock.json
+
+      - name: Dependencias
+        working-directory: nx-time-frontend-web
+        run: npm ci
+
+      # Solo Chromium, que es el único navegador de la configuración, y las
+      # librerías del sistema que necesita en el runner.
+      - name: Navegador de Playwright
+        working-directory: nx-time-frontend-web
+        run: npx playwright install --with-deps chromium
+
+      - name: Tests de extremo a extremo
+        working-directory: nx-time-frontend-web
+        run: npm run e2e
+
+      # Si algo falla, el informe (con la traza de cada test fallido: DOM, red
+      # y consola paso a paso) y el log del backend. Con los dos se entiende
+      # casi cualquier fallo sin reproducirlo.
+      - name: Publicar el informe y el log del backend
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-e2e
+          path: |
+            nx-time-frontend-web/playwright-report/
+            nx-time-frontend-web/test-results/
+            backend.log
+          retention-days: 7
