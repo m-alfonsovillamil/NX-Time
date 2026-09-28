@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
 import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
+import com.nxtime.nxtime.config.CacheConfig;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
@@ -35,6 +36,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -104,8 +106,14 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
     // normal (ver el comentario homólogo en AuthServiceImpl.registerManager
     // sobre por qué antes no lo era).
+    // Fichar cambia lo que dice el panel personal, y el panel se cachea un
+    // minuto (CacheConfig). Sin borrarlo, tras fichar la salida seguía un
+    // minuto el de antes: "trabajando" y 0 minutos hoy (la jornada abierta
+    // no suma), justo cuando alguien mira cuánto ha hecho.
     @Override
     @Transactional
+    @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
+            key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#userEmail)")
     public TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
