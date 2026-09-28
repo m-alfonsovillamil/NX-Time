@@ -115,11 +115,12 @@ jobs:
         working-directory: nx-time-frontend-web
         run: npm ci
 
-      # Solo Chromium, que es el único navegador de la configuración, y las
-      # librerías del sistema que necesita en el runner.
-      - name: Navegador de Playwright
+      # Chromium (escritorio y Android) y WebKit (el motor de Safari: la web es
+      # hoy el cliente de quien tenga iPhone), con las librerías del sistema
+      # que necesitan en el runner.
+      - name: Navegadores de Playwright
         working-directory: nx-time-frontend-web
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Tests de extremo a extremo
         working-directory: nx-time-frontend-web
