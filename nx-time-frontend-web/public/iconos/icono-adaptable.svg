@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- Versión «maskable»: el fondo llena el lienzo entero, porque el sistema lo
+       recorta con su propia forma (círculo, squircle...). La N cabe en el círculo
+       de 66 centrado que queda siempre a la vista, igual que en Android. -->
+  <rect width="108" height="108" fill="#0E7C86"/>
+  <path d="M37,71 L37,37 L71,71 L71,37" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="71" cy="37" r="7" fill="#FFFFFF"/>
+</svg>

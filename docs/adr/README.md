@@ -40,3 +40,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [028](028-push-generico-colgado-del-aviso.md) | Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil |
 | [029](029-la-web-alcanza-a-la-app.md) | La web alcanza a la app: un armazón común y la URL como destino del aviso |
 | [030](030-la-sesion-web-en-cookie.md) | La sesión de la web va en una cookie, con dominio propio y CSRF de doble envío |
+| [031](031-push-en-la-web.md) | Push en la web: service worker propio, SDK solo para el token y web instalable |

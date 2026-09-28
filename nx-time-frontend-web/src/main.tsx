@@ -11,6 +11,7 @@ import './estilos/base.css';
 
 import { crearClienteDeConsultas } from './api/consultas';
 import { aplicarTema, temaGuardado } from './util/tema';
+import { registrarServiceWorker, seguirLaSesion } from './push/push';
 import { App } from './rutas/rutas';
 
 /*
@@ -28,6 +29,12 @@ if (canonica && globalThis.location.origin !== canonica) {
 
 // Antes de pintar nada: si no, quien eligió el oscuro vería un fogonazo claro.
 aplicarTema(temaGuardado(), { guardar: false });
+
+// El push (W9, ADR 031): el service worker se registra siempre (pinta las
+// notificaciones y hace la web instalable), y el token sigue a la sesión desde
+// antes de que se restaure, para verla empezar.
+seguirLaSesion();
+void registrarServiceWorker();
 
 const raiz = document.getElementById('raiz');
 if (raiz === null) throw new Error('Falta <div id="raiz"> en index.html.');

@@ -116,8 +116,29 @@ export const cuenta = {
       retirada: 'Solicitud retirada.',
     },
 
+    notificaciones: {
+      titulo: 'Notificaciones',
+      encendidas: 'Encendidas',
+      encender: 'Recibir notificaciones aquí',
+      apagar: 'Dejar de recibirlas aquí',
+      detalle: {
+        'sin-configurar': 'Esta instalación de NX Time no tiene configuradas las notificaciones push.',
+        'instalar-primero':
+          'En el iPhone, Safari solo avisa a las webs añadidas a la pantalla de inicio. Pulsa Compartir y «Añadir a pantalla de inicio», abre NX Time desde ese icono y vuelve aquí.',
+        'no-soportado': 'Este navegador no admite notificaciones push. Los avisos te siguen llegando a la campana y por correo.',
+        bloqueado:
+          'Las notificaciones de NX Time están bloqueadas en este navegador. Para recibirlas, permítelas en la configuración del sitio (el candado de la barra de direcciones).',
+        apagado:
+          'Recibe un aviso en este navegador cuando haya novedades, aunque no tengas NX Time abierto. Solo dice de qué va («Hay novedades en tus ausencias»); el detalle lo ves al abrirlo.',
+        encendido:
+          'Este navegador te avisa cuando hay novedades. Se deja de avisar al cerrar la sesión, y vuelve al entrar.',
+      },
+      sinPermiso: 'No has dado permiso para las notificaciones.',
+      error: 'No se han podido activar. Inténtalo de nuevo en un rato.',
+    },
+
     enLaApp: 'Solo en la app',
     enLaAppDetalle:
-      'El recordatorio de fichar, entrar con huella y las notificaciones en el móvil están en la app Android: un navegador no puede avisarte sin estar abierto.',
+      'El recordatorio de fichar y entrar con huella están en la app Android: el recordatorio necesita avisarte a una hora aunque no hayas abierto nada, y la huella en la web serían las passkeys, que son otra fase.',
   },
 } as const;

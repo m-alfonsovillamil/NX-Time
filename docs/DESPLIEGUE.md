@@ -218,6 +218,50 @@ arranque: el backend sigue funcionando, solo que sin push.
 El `google-services.json` de la app Android **no** es este fichero ni es secreto:
 va dentro del APK y está versionado en `nx-time-frontend-android/`.
 
+### Las notificaciones en la web
+
+La web usa el **mismo proyecto de Firebase** y la misma credencial del backend
+de arriba: no hay que tocar nada en el backend. Lo que hace falta es dar de alta
+la web en Firebase y pasarle cinco valores a su build ([ADR 031](adr/031-push-en-la-web.md)).
+**Ninguno es un secreto**: van dentro del JavaScript que se descarga cualquiera.
+
+1. Consola de Firebase → ⚙️ **Configuración del proyecto** → pestaña **General**
+   → **Tus apps** → **Añadir app** → el icono web (`</>`). Nombre: `NX Time web`.
+   **Sin** Firebase Hosting. Al terminar enseña un bloque `firebaseConfig`.
+2. En la pestaña **Cloud Messaging** → **Configuración web** → **Certificados
+   push web** → **Generar par de claves**. La clave que sale es la VAPID.
+3. En Render → servicio **`nxtime-web`** → *Environment*:
+
+   | Variable | De dónde sale |
+   |---|---|
+   | `VITE_FIREBASE_API_KEY` | `apiKey` del `firebaseConfig` |
+   | `VITE_FIREBASE_PROJECT_ID` | `projectId` |
+   | `VITE_FIREBASE_SENDER_ID` | `messagingSenderId` |
+   | `VITE_FIREBASE_APP_ID` | `appId` (el de la app **web**, `1:…:web:…`, no el de Android) |
+   | `VITE_FIREBASE_VAPID_KEY` | la clave del paso 2 |
+
+4. **Volver a desplegar la web** (*Manual Deploy*): se leen al construir, así que
+   guardarlas no basta.
+
+Comprobación, en <https://nxtime-web.com> → Ajustes → **Notificaciones**:
+
+- Con las variables bien puestas sale el botón «Recibir notificaciones aquí».
+  Si sale «Esta instalación de NX Time no tiene configuradas las notificaciones
+  push», falta alguna o no se ha vuelto a desplegar.
+- Pulsarlo pide permiso, y la tarjeta pasa a **Encendidas**. En Neon,
+  `select plataforma, registrado_en from dispositivos_push order by registrado_en desc limit 3`
+  enseña la fila `WEB`.
+- Provocar un aviso (por ejemplo, que otra cuenta resuelva una ausencia) y ver
+  la notificación con la web **cerrada**. Al pulsarla se abre la página del aviso.
+- Si al encender sale «No se han podido activar», mirar la consola del
+  navegador: un error de CSP con un dominio de Google que no sea
+  `firebaseinstallations` ni `fcmregistrations` quiere decir que el SDK ha
+  cambiado de servicio, y hay que añadirlo a `connect-src` en `render.yaml`.
+
+**En el iPhone**: primero Safari → Compartir → **Añadir a pantalla de inicio**,
+abrir NX Time desde ese icono y encenderlas en Ajustes desde ahí. Desde Safari
+sin instalar, Ajustes lo explica y no ofrece el botón: iOS no deja.
+
 ## 2. Crear el servicio en Render
 
 1. *New* → *Blueprint*, apuntando a este repositorio: Render lee `render.yaml`.

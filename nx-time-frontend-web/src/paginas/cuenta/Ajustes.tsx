@@ -2,10 +2,9 @@
  * Ajustes: el tema, la contraseña, cerrar las sesiones, descargar mis datos y
  * pedir que los borren.
  *
- * Lo que la app tiene aquí y la web no —el recordatorio de fichar, entrar con
- * huella y las notificaciones— se dice al final, con su porqué (ADR 029): un
- * navegador no puede avisar sin estar abierto, y la huella en la web serían
- * *passkeys*, que es otra fase.
+ * Las notificaciones push se encienden aquí, en este navegador (W9, ADR 031).
+ * Lo que la app tiene y la web no —el recordatorio de fichar y entrar con
+ * huella— se dice al final, con su porqué (ADR 029 y 031).
  *
  * **Borrar mis datos es un derecho, no un botón más** (RGPD, ADR 016): se pide,
  * no se ejecuta; lo revisa RRHH. Por eso pide confirmación explicando qué se
@@ -24,6 +23,7 @@ import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
 import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { apagarPush, encenderPush, estadoPush, PermisoDenegado, type EstadoPush } from '../../push/push';
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
 
 const J = cuenta.ajustes;
@@ -45,6 +45,60 @@ function Apariencia() {
         }}
         opciones={(['sistema', 'claro', 'oscuro'] as const).map((t) => ({ valor: t, texto: J.temas[t] }))}
       />
+    </Tarjeta>
+  );
+}
+
+/**
+ * Encender o apagar las notificaciones push en este navegador (W9, ADR 031).
+ * El permiso se pide aquí, al pulsar, y no al abrir la web: pedido sin
+ * contexto se deniega, y en Safari solo se puede pedir desde un clic.
+ */
+function Notificaciones() {
+  const N = J.notificaciones;
+  const [estado, setEstado] = useState<EstadoPush>(estadoPush());
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cambiar = async (encender: boolean) => {
+    setOcupado(true);
+    setError(null);
+    try {
+      if (encender) await encenderPush();
+      else await apagarPush();
+    } catch (e) {
+      setError(e instanceof PermisoDenegado ? N.sinPermiso : N.error);
+    } finally {
+      setEstado(estadoPush());
+      setOcupado(false);
+    }
+  };
+
+  return (
+    <Tarjeta titulo={N.titulo}>
+      <div className="nx-columna">
+        {estado === 'encendido' && (
+          <div>
+            <Insignia tono="exito">{N.encendidas}</Insignia>
+          </div>
+        )}
+        <p className="nx-sutil">{N.detalle[estado]}</p>
+        {estado === 'apagado' && (
+          <div>
+            <Boton ocupado={ocupado} onClick={() => void cambiar(true)}>
+              {N.encender}
+            </Boton>
+          </div>
+        )}
+        {estado === 'encendido' && (
+          <div>
+            <Boton variante="secundario" ocupado={ocupado} onClick={() => void cambiar(false)}>
+              {N.apagar}
+            </Boton>
+          </div>
+        )}
+        {error !== null && <Aviso>{error}</Aviso>}
+      </div>
     </Tarjeta>
   );
 }
@@ -267,6 +321,7 @@ export function Ajustes() {
         <h1>{J.titulo}</h1>
       </header>
       <Apariencia />
+      <Notificaciones />
       <Cuenta />
       <Tarjeta titulo={J.privacidad}>
         <div className="nx-columna">

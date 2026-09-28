@@ -30,6 +30,7 @@ import { T } from '../i18n/es';
 import { Marco } from '../navegacion/Marco';
 import { disponibles } from '../navegacion/secciones';
 import { Login } from '../paginas/acceso/Login';
+import { PuenteDelServiceWorker } from '../push/PuenteDelServiceWorker';
 
 /*
  * Las dos páginas de acceso que no son el login van aparte del catálogo de
@@ -135,6 +136,7 @@ export function App() {
   return (
     <div className="nx-fondo">
       <ServidorDespertando />
+      <PuenteDelServiceWorker />
       <Suspense fallback={<Esqueleto />}>
         <Routes>
           <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />

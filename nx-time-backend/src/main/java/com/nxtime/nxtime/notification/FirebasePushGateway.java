@@ -7,6 +7,7 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.SendResponse;
+import com.google.firebase.messaging.WebpushConfig;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,8 @@ import java.util.Set;
 /**
  * {@link PushGateway} con Firebase Cloud Messaging (Fase B5, ADR 028).
  *
- * <b>Mensajes solo de datos</b>, sin bloque {@code notification}: así el
+ * <b>Mensajes solo de datos</b>, sin bloque {@code notification}, también en
+ * la web: allí los pinta el service worker ({@code public/sw.js}). Así el
  * mensaje llega siempre a la app ({@code onMessageReceived}), que decide si lo
  * enseña. Con un bloque {@code notification}, Android lo pintaría por su cuenta
  * con la app en segundo plano, y lo pintaría también en un móvil del que ya se
@@ -57,6 +59,14 @@ public class FirebasePushGateway implements PushGateway {
                 .setAndroidConfig(AndroidConfig.builder()
                         .setPriority(AndroidConfig.Priority.HIGH)
                         .setTtl(VIDA.toMillis())
+                        .build())
+                // Lo mismo para la web (W9, ADR 031), que va por Web Push y no
+                // lee el bloque de Android: sin esto, un push web vive cuatro
+                // semanas en los servidores de Google y llega con urgencia
+                // normal, que el navegador puede retrasar con el equipo en reposo.
+                .setWebpushConfig(WebpushConfig.builder()
+                        .putHeader("TTL", String.valueOf(VIDA.toSeconds()))
+                        .putHeader("Urgency", "high")
                         .build())
                 .build();
         BatchResponse respuesta;
