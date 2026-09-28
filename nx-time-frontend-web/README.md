@@ -140,19 +140,30 @@ ruta mal escrita no compila); estos cubren lo único que ninguno de ellos puede
 demostrar: que la web y el backend **hablan el mismo idioma**. En este proyecto
 los defectos que se han escapado salieron todos ejecutando el sistema.
 
-Están fuera de `npm test` a propósito, porque necesitan el sistema levantado
-(pasarán a CI en la fase W8):
+Están fuera de `npm test` a propósito, porque necesitan el sistema levantado.
+**En el CI los ejecuta `.github/workflows/e2e.yml`** (fase W8) en cada PR que
+toque la web o el código del backend: levanta Postgres, arranca el jar con los
+perfiles `dev,demo` sobre una base recién creada, compila la web y la sirve con
+`vite preview` (el build de producción, no el servidor de desarrollo). Si algo
+falla, deja como artefacto el informe con la traza de cada test y el log del
+backend. En local:
 
 ```bash
 docker compose up -d postgres
 ./gradlew :nx-time-backend:bootRun --args="--spring.profiles.active=dev,demo"
-npm run e2e
+npm run e2e          # contra `npm run dev`
+CI=1 npm run e2e     # como en el CI: build + vite preview
 ```
 
-Entran como EMPLEADO (el rol con menos permisos, para que se note si una
-pantalla necesitara alguno que no tiene): una jornada entera, el marco con su
-menú y su campana, el historial, un enlace sin sesión que vuelve a su página
-tras el login, y que recargar mantiene la sesión y salir la cierra (ADR 030).
+Cada spec entra con el rol que le toca (EMPLEADO para lo suyo, que es el rol con
+menos permisos y así se nota si una pantalla necesita alguno que no tiene;
+GESTOR, RRHH o ADMIN para lo de gestión) y recorre sus pantallas contra los
+datos de demo.
+
+**Una spec no puede depender de lo que haya dejado otra.** En el CI la base es
+nueva cada vez, así que lo que en local pasaba porque otra spec había fichado
+antes, allí falla. Si una spec necesita un dato que la demo no siembra, lo crea
+ella (ver `equipo.spec.ts`), y tiene que poder repetirse sobre una base ya usada.
 
 ## Por qué los tests están sobre `scripts/tokens.mjs`
 

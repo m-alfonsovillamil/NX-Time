@@ -15,18 +15,24 @@ import { defineConfig } from 'vitest/config';
  * Los tests corren en jsdom porque prueban componentes; `scripts/` no lo
  * necesita, pero tener dos entornos por proyecto complica más de lo que ahorra.
  */
+const proxy = {
+  '/api': { target: 'http://localhost:8080', changeOrigin: true },
+  '/auth': { target: 'http://localhost:8080', changeOrigin: true },
+};
+
 export default defineConfig({
   plugins: [react()],
+  // `vite preview` sirve el build de producción, y lo usa Playwright en el CI
+  // (ver playwright.config.ts). Necesita el mismo reenvío que el servidor de
+  // desarrollo.
+  preview: { proxy },
   server: {
     // El test de `navegacion/secciones.ts` lee `NoticeType.java` y
     // `RoleAuthorities.java` para comprobar que la web y el backend dicen lo
     // mismo. Vite solo sirve lo que hay dentro del proyecto; se abre esa
     // carpeta del backend y nada más.
     fs: { allow: ['.', '../nx-time-backend/src/main/java/com/nxtime/nxtime/domain'] },
-    proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/auth': { target: 'http://localhost:8080', changeOrigin: true },
-    },
+    proxy,
   },
   test: {
     environment: 'jsdom',
