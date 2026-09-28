@@ -99,7 +99,7 @@ es secreto (va dentro del APK), y sin él nadie podría compilar.
 - **Web Push queda preparado, no hecho.** Faltaría el `firebase-messaging-sw.js`,
   la clave VAPID (`VITE_FIREBASE_VAPID_KEY`), el `getToken()` del SDK web y
   registrar con `plataforma=WEB`. Safari en iOS solo entrega push a una web
-  instalada como app.
+  instalada como app. **Hecho en W9: ver el [ADR 031](031-push-en-la-web.md).**
 - Al añadir esta fase, la suite del backend se quedó sin memoria: cada test de
   integración crea su propia base, así que su contexto de Spring nunca se
   reutiliza, pero se guardaba en caché. `spring.test.context.cache.maxSize=8`.

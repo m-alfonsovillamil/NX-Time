@@ -10,8 +10,12 @@ la web: el **editor de cuadrantes**, la **analítica** completa y el **visado de
 firmas** (plan de la web, fases W0-W8, [ADR 029](../docs/adr/029-la-web-alcanza-a-la-app.md)).
 Está publicada en <https://nxtime-web.com>, funciona en el móvil (es el cliente
 de quien tenga iPhone mientras no haya app de iOS) y la sesión sobrevive a
-recargar ([ADR 030](../docs/adr/030-la-sesion-web-en-cookie.md)). Lo que no
-hace, y por qué: el recordatorio de fichar y entrar con huella (ADR 029).
+recargar ([ADR 030](../docs/adr/030-la-sesion-web-en-cookie.md)). Se puede
+**instalar** y manda **notificaciones push**, que se encienden en Ajustes para
+cada navegador ([ADR 031](../docs/adr/031-push-en-la-web.md)): el service
+worker es `public/sw.js`, escrito a mano y sin el SDK de Firebase, y la página
+solo usa el SDK para pedir el token (`src/push/push.ts`). Lo que no hace, y por
+qué: el recordatorio de fichar y entrar con huella (ADR 029 y 031).
 
 | Escritorio | Móvil |
 |---|---|
@@ -29,11 +33,13 @@ src/
 ├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Barras · Notificaciones · Icono
 ├── i18n/es/      un fichero por área; ningún texto literal en los componentes
 ├── estilos/      tokens.css (generado) · base.css
+├── push/         push.ts (encender, apagar, el token sigue a la sesión) · PuenteDelServiceWorker.tsx
 ├── util/         fechas.ts · errores.ts · descargar.ts · numeros.ts · tema.ts
 └── pruebas/      api.tsx        servidor de mentira tipado con el contrato
 e2e/              Playwright contra el backend real: un recorrido por área, más
                   accesibilidad, teclado, móvil, carga por áreas y las capturas
-scripts/          tokens.mjs · presupuesto.mjs
+public/           sw.js (el service worker) · manifest.webmanifest · iconos/
+scripts/          tokens.mjs · presupuesto.mjs · iconos.mjs
 ```
 
 **Una sección nueva son dos pasos**: su línea en `navegacion/secciones.ts` y su
@@ -85,6 +91,7 @@ npm run build       # bundle de produccion en dist/
 npm run presupuesto # tras el build: el JS inicial no pasa de 150 kB comprimido
 npm run e2e         # Playwright, y necesita backend (ver abajo)
 npm run capturas    # las capturas de docs/capturas/web/, también contra el backend
+npm run iconos      # los PNG de la web instalable, desde public/iconos/*.svg
 ```
 
 La versión de Node está en `.node-version`, y la leen los tres sitios que la

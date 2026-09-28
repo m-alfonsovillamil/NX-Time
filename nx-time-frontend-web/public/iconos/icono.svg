@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">
+  <!-- La marca de la app Android (res/drawable/ic_marca_*.xml): la N de NX Time
+       trazada como una línea de tiempo, y el punto del extremo es el «ahora». -->
+  <rect width="108" height="108" rx="24" fill="#0E7C86"/>
+  <path d="M37,71 L37,37 L71,71 L71,37" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="71" cy="37" r="7" fill="#FFFFFF"/>
+</svg>

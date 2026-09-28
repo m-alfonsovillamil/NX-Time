@@ -17,6 +17,19 @@ import { Avisos } from './Avisos';
 import { formularioDeSubida, subirAdjunto } from './adjuntos';
 import { PaginaPerfil, problemaDelFichero } from './Perfil';
 
+// La lógica del push la prueba push.test.ts; aquí solo la tarjeta de Ajustes.
+const push = vi.hoisted(() => ({ estado: 'sin-configurar' as string }));
+vi.mock('../../push/push', async (original) => ({
+  ...(await original<typeof import('../../push/push')>()),
+  estadoPush: () => push.estado,
+  encenderPush: vi.fn(async () => {
+    push.estado = 'encendido';
+  }),
+  apagarPush: vi.fn(async () => {
+    push.estado = 'apagado';
+  }),
+}));
+
 vi.mock('./adjuntos', async (original) => ({
   ...(await original<typeof import('./adjuntos')>()),
   subirAdjunto: vi.fn(async () => ({ id: 3, tipo: 'CV', nombreOriginal: 'cv.pdf' })),
@@ -189,6 +202,23 @@ describe('ajustes', () => {
   function api(extra: Partial<Record<Ruta, Manejador>> = {}) {
     return simularApi({ 'GET /api/v1/perfil/borrado': () => sinContenido(), ...extra });
   }
+
+  it('las notificaciones: sin configurar se dice, y encenderlas cambia la tarjeta', async () => {
+    const N = cuenta.ajustes.notificaciones;
+    api();
+    push.estado = 'sin-configurar';
+    const { unmount } = pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+    expect(screen.getByText(N.detalle['sin-configurar'])).toBeTruthy();
+    expect(screen.queryByRole('button', { name: N.encender })).toBeNull();
+    unmount();
+
+    push.estado = 'apagado';
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+    await userEvent.click(screen.getByRole('button', { name: N.encender }));
+
+    expect(await screen.findByText(N.encendidas)).toBeTruthy();
+    expect(screen.getByRole('button', { name: N.apagar })).toBeTruthy();
+  });
 
   it('el tema se aplica en el acto y se recuerda', async () => {
     api();

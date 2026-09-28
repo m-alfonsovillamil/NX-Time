@@ -554,6 +554,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 28. [Push con FCM: cuelga del aviso, dice solo de qué va y se enciende en el móvil](docs/adr/028-push-generico-colgado-del-aviso.md)
 29. [La web alcanza a la app: un armazón común y la URL como destino del aviso](docs/adr/029-la-web-alcanza-a-la-app.md)
 30. [La sesión de la web va en una cookie, con dominio propio y CSRF de doble envío](docs/adr/030-la-sesion-web-en-cookie.md)
+31. [Push en la web: service worker propio, SDK solo para el token y web instalable](docs/adr/031-push-en-la-web.md)
 
 ---
 
@@ -571,8 +572,10 @@ que son solo de la web: editor de cuadrantes, analítica y visado de firmas
 ([ADR 029](docs/adr/029-la-web-alcanza-a-la-app.md)). Funciona en el móvil, que
 importa porque es el cliente de quien tenga iPhone, y la sesión sobrevive a
 recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
-([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Tiene dos workflows:
-`web.yml` (tipos, 275 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Se puede instalar como
+app y avisa con notificaciones push, igual que la app Android; en el iPhone es
+la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene dos workflows:
+`web.yml` (tipos, 288 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
