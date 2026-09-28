@@ -5,14 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
+import com.nxtime.nxtime.domain.TimeEntryAction;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.CompanyDashboardResponse;
 import com.nxtime.nxtime.dto.EmployeeHoursDTO;
 import com.nxtime.nxtime.dto.PersonalDashboardResponse;
+import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.DashboardService;
+import com.nxtime.nxtime.service.TimeEntryService;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -65,6 +68,8 @@ class DashboardServiceIT {
 
     @Autowired
     private DashboardService dashboardService;
+    @Autowired
+    private TimeEntryService timeEntryService;
     @Autowired
     private TimeEntryRepository timeEntryRepository;
     @Autowired
@@ -121,6 +126,28 @@ class DashboardServiceIT {
         assertThat(resumen.minutosHoy()).isZero();
         // Pero sí cuenta para el estado actual.
         assertThat(resumen.estadoActual().name()).isEqualTo("TRABAJANDO");
+    }
+
+    /*
+     * El panel se cachea un minuto. Hasta el 28/09/2026 fichar no lo borraba, y
+     * tras la salida seguía diciendo "trabajando" y 0 minutos hoy (la jornada
+     * abierta no suma) durante ese minuto: lo destaparon las capturas de la web.
+     * Se mira el estado y no los minutos para que el test no dependa de la hora
+     * a la que corre (una jornada empezada antes de medianoche no es de hoy).
+     */
+    @Test
+    @DisplayName("Fichar la salida se ve en el panel al momento, aunque el panel esté en caché")
+    void panelPersonal_ficharBorraLaCache() {
+        Company empresa = crearEmpresa("Cache SL");
+        User empleado = crearUsuario(empresa, "cache@nxtime.test", Role.EMPLEADO);
+        timeEntryService.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+        assertThat(dashboardService.getPersonalDashboard(empleado.getEmail()).estadoActual().name())
+                .isEqualTo("TRABAJANDO");
+
+        timeEntryService.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.FIN));
+
+        assertThat(dashboardService.getPersonalDashboard(empleado.getEmail()).estadoActual().name())
+                .isEqualTo("SIN_JORNADA");
     }
 
     @Test

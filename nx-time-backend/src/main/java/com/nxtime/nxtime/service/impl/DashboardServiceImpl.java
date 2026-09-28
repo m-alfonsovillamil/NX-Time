@@ -81,7 +81,8 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(cacheNames = CacheConfig.DASHBOARD, key = "'personal:' + #email + ':' + T(java.time.LocalDate).now()")
+    @Cacheable(cacheNames = CacheConfig.DASHBOARD,
+            key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#email)")
     public PersonalDashboardResponse getPersonalDashboard(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));

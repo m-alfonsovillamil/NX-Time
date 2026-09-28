@@ -46,6 +46,17 @@ public class CacheConfig {
     public static final String DASHBOARD = "dashboard";
     public static final String ANALITICA = "analitica";
 
+    /**
+     * La clave del panel personal de alguien, hoy. La usan quien lo guarda
+     * ({@code DashboardServiceImpl}) y quien lo borra al fichar
+     * ({@code TimeEntryServiceImpl}): escrita dos veces a mano, un cambio en
+     * una dejaría de casar con la otra y el borrado no borraría nada, sin
+     * error ninguno.
+     */
+    public static String clavePanelPersonal(String email) {
+        return "personal:" + email + ":" + java.time.LocalDate.now();
+    }
+
     @Bean
     public CacheManager cacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager();
