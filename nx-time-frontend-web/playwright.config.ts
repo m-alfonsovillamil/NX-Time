@@ -42,7 +42,6 @@ export default defineConfig({
   reporter: enCi ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: 'http://localhost:5173',
-    ...devices['Desktop Chrome'],
     // El arranque en frío no aplica en local, pero el primer render con Vite
     // sin caché sí tarda.
     actionTimeout: 15_000,
@@ -50,6 +49,14 @@ export default defineConfig({
     // traza (DOM, red y consola de cada paso) solo de los que fallan.
     trace: 'retain-on-failure',
   },
+  projects: [
+    { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: /movil\.spec/ },
+    // La web es hoy el cliente de quien tenga iPhone (no hay app de iOS), así
+    // que el móvil se prueba en los dos motores: Chromium como un Android, y
+    // WebKit, que es el de Safari y el único que hay en un iPhone.
+    { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: /movil\.spec/ },
+    { name: 'iphone', use: { ...devices['iPhone 14'] }, testMatch: /movil\.spec/ },
+  ],
   webServer: {
     // En el CI, el build de producción y no el servidor de desarrollo: es lo
     // que se despliega, y así no hay la recarga del primer arranque de Vite

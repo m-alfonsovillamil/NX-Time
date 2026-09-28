@@ -168,6 +168,15 @@ menú, fichar y manejar un diálogo sin tocar el ratón. El contraste del títul
 sobre el degradado del fondo, que axe no sabe calcular, se midió a mano en los
 dos extremos: el peor caso es 5,81:1 (claro) y 7,50:1 (oscuro).
 
+**Móvil** (fase W8): `movil.spec.ts` corre en dos proyectos más, `movil`
+(Chromium, un Pixel 7) e `iphone` (WebKit, el motor de Safari: la web es el
+cliente de quien tenga iPhone). Comprueba la barra inferior con «Más», una
+jornada entera con toques y que **ninguna página de ninguna cuenta se sale por
+los lados**, ni la página ni una tabla dentro de su caja. Lo que no puede
+probar es la recarga en WebKit: sobre `http://localhost`, WebKit no deja leer
+ni envía las cookies `Secure` de la sesión (en producción, con https, no
+aplica). Eso se comprueba a mano en un iPhone.
+
 **Una spec no puede depender de lo que haya dejado otra.** En el CI la base es
 nueva cada vez, así que lo que en local pasaba porque otra spec había fichado
 antes, allí falla. Si una spec necesita un dato que la demo no siembra, lo crea
