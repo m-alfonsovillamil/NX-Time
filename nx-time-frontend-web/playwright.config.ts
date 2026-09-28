@@ -8,6 +8,13 @@ declare const process: { env: Record<string, string | undefined> };
 const enCi = Boolean(process.env['CI']);
 
 /**
+ * `npm run capturas`: npm pone el nombre del script en `npm_lifecycle_event`
+ * (en cualquier sistema, sin `cross-env`). Solo entonces existe el proyecto que
+ * saca las capturas del README; `npm run e2e` y el CI no lo ven.
+ */
+const sacandoCapturas = process.env['npm_lifecycle_event'] === 'capturas';
+
+/**
  * Los tests de extremo a extremo: **contra el backend de verdad**, no contra
  * respuestas simuladas.
  *
@@ -50,12 +57,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: /movil\.spec/ },
+    { name: 'escritorio', use: { ...devices['Desktop Chrome'] }, testIgnore: /(movil|capturas)\.spec/ },
     // La web es hoy el cliente de quien tenga iPhone (no hay app de iOS), así
     // que el móvil se prueba en los dos motores: Chromium como un Android, y
     // WebKit, que es el de Safari y el único que hay en un iPhone.
     { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: /movil\.spec/ },
     { name: 'iphone', use: { ...devices['iPhone 14'] }, testMatch: /movil\.spec/ },
+    ...(sacandoCapturas ? [{ name: 'capturas', use: { ...devices['Desktop Chrome'] }, testMatch: /capturas\.spec/ }] : []),
   ],
   webServer: {
     // En el CI, el build de producción y no el servidor de desarrollo: es lo

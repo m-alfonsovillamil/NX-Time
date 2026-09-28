@@ -274,6 +274,11 @@ carga (eso prueba la reescritura) y la sesión se retoma de la cookie
 ([ADR 030](adr/030-la-sesion-web-en-cookie.md)). Si al recargar se vuelve al
 login, falta `COOKIE_DOMAIN` o la web no está en su dominio.
 
+**Lo mismo en un iPhone, con Safari**, al menos una vez tras tocar la sesión. El
+CI prueba la web en WebKit (`e2e/movil.spec.ts`), pero no la recarga: sobre
+`http://localhost` WebKit no manda las cookies `Secure`, así que ese caso solo
+se puede ver en producción, con https.
+
 ### El dominio propio (fase W1)
 
 `nxtime-web.com`, comprado en Cloudflare el 27/09/2026. Cloudflare solo hace de

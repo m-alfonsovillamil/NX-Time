@@ -95,6 +95,13 @@ Y dos cosas que la web **no hace a propósito**, con su decisión en otro sitio:
 - **No ejecuta su test de extremo a extremo en CI**, porque necesita un backend
   con datos de demostración. Se ejecuta a mano (`npm run e2e`).
 
+> **Nota posterior (28/09/2026).** Ninguna de las dos sigue siendo verdad. La
+> sesión sobrevive a recargar desde el [ADR 030](030-la-sesion-web-en-cookie.md)
+> (cookie `HttpOnly`, con dominio propio). Y los tests de extremo a extremo
+> corren en el CI desde la fase W8 (`.github/workflows/e2e.yml`): Postgres y el
+> jar del backend con la demo, sobre una base nueva en cada ejecución, más
+> accesibilidad con axe, móvil en Chromium y WebKit, y la carga por áreas.
+
 ## Consecuencias
 
 - **La web de hoy hace menos que la app, y el README lo dice.** Quien la abra

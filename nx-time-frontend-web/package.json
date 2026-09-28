@@ -16,7 +16,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit && npm run typecheck:contrato",
     "typecheck:contrato": "tsc --noEmit --strict --skipLibCheck false --target ES2022 --lib ES2022,DOM --module ESNext --moduleResolution bundler src/api/schema.d.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "capturas": "playwright test --project=capturas"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

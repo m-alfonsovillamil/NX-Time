@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/ci.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/ci.yml)
 [![Web](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml)
+[![E2E](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://www.postgresql.org/)
@@ -192,9 +193,18 @@ tarjetas que flotan sobre él:
 | ![Mi historial](docs/capturas/07-mi-historial.png) | ![Corregir fichaje](docs/capturas/26-corregir-fichaje.png) | ![Raíl en tablet](docs/capturas/28-tablet-rail.png) |
 | Total neto, ya descontadas las pausas | Solo RRHH/ADMIN, y solo sobre jornadas cerradas | La barra inferior se vuelve raíl lateral sola |
 
-Las **28 capturas**, con la explicación de qué demuestra cada una, están en
-[`docs/capturas/`](docs/capturas/). Son reales, contra la API, con los datos que
-siembra `DemoDataSeeder`.
+Y la web, en <https://nxtime-web.com>, que hace lo mismo que la app más lo que
+solo tiene sentido con pantalla grande y teclado:
+
+| Mi jornada | Analítica | Editor de cuadrantes |
+|---|---|---|
+| ![Mi jornada en la web](docs/capturas/web/web-01-mi-jornada.png) | ![Analítica](docs/capturas/web/web-04-analitica.png) | ![Editor de cuadrantes](docs/capturas/web/web-05-editor-cuadrantes.png) |
+| Lo mismo que en la app, con las horas de la semana contra la jornada esperada | Absentismo y puntualidad por mes, trimestre o año: solo en la web | Plantillas semanales con tramos, turno partido o de noche: solo en la web |
+
+Las **28 capturas de la app y las 7 de la web**, con la explicación de qué
+demuestra cada una, están en [`docs/capturas/`](docs/capturas/). Son reales,
+contra la API, con los datos que siembra `DemoDataSeeder`; las de la web se
+repiten con `npm run capturas`.
 
 ---
 
@@ -555,13 +565,17 @@ Lo que está hecho y lo que no, sin adornos:
 Android en Jetpack Compose y sincronizada con ella, el CI en verde y los
 informes en Excel y PDF.
 
-**En marcha:** el cliente web (`nx-time-frontend-web/`), publicado en
-<https://nxtime-web.com> con su propio CI (`.github/workflows/web.yml`).
-Hoy tiene login y fichar dentro del armazón común (menú por permisos, campana de
-avisos, rutas protegidas); el resto de pantallas de la app, y las tres que son
-solo de la web, llegan por fases ([ADR 029](docs/adr/029-la-web-alcanza-a-la-app.md)).
-La sesión sobrevive a recargar: el refresh va en una cookie `HttpOnly`, con su
-protección CSRF ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)).
+**También funcionando: el cliente web** (`nx-time-frontend-web/`), publicado en
+<https://nxtime-web.com>. Hace todo lo que hace la app, más las tres pantallas
+que son solo de la web: editor de cuadrantes, analítica y visado de firmas
+([ADR 029](docs/adr/029-la-web-alcanza-a-la-app.md)). Funciona en el móvil, que
+importa porque es el cliente de quien tenga iPhone, y la sesión sobrevive a
+recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
+([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Tiene dos workflows:
+`web.yml` (tipos, 275 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+(Playwright contra el backend de verdad con Postgres y la demo: todos los
+recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
+WebKit, y la carga por áreas).
 
 **Pendiente:**
 

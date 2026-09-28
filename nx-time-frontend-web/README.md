@@ -2,15 +2,20 @@
 
 Cliente web de NX Time. **Está fuera del build de Gradle a propósito**: no
 aparece en `settings.gradle.kts` ni en `settings-docker.gradle.kts`, tiene su
-propio `npm` y tendrá su propio job de CI. Quien solo toque el backend no
-necesita Node instalado.
+propio `npm` y sus propios workflows de CI (`web.yml` y `e2e.yml`). Quien solo
+toque el backend no necesita Node instalado.
 
-Tiene **login, Mi jornada y el historial** funcionando de punta a punta contra el
-mismo backend que la app Android, dentro del **armazón** en el que irán el resto de pantallas
-(fase W0 del plan de la web, [ADR 029](../docs/adr/029-la-web-alcanza-a-la-app.md)):
-menú por authorities, campana de avisos, rutas protegidas y los componentes
-comunes. Las demás pantallas llegan por fases (W2-W7) hasta hacer todo lo que
-hace la app, más el editor de cuadrantes, la analítica y el visado de firmas.
+Hace **todo lo que hace la app Android**, más las tres pantallas que son solo de
+la web: el **editor de cuadrantes**, la **analítica** completa y el **visado de
+firmas** (plan de la web, fases W0-W8, [ADR 029](../docs/adr/029-la-web-alcanza-a-la-app.md)).
+Está publicada en <https://nxtime-web.com>, funciona en el móvil (es el cliente
+de quien tenga iPhone mientras no haya app de iOS) y la sesión sobrevive a
+recargar ([ADR 030](../docs/adr/030-la-sesion-web-en-cookie.md)). Lo que no
+hace, y por qué: el recordatorio de fichar y entrar con huella (ADR 029).
+
+| Escritorio | Móvil |
+|---|---|
+| ![Mi jornada](../docs/capturas/web/web-01-mi-jornada.png) | ![Mi jornada en el móvil](../docs/capturas/web/web-06-movil.png) |
 
 ```
 src/
@@ -19,13 +24,15 @@ src/
 ├── navegacion/   secciones.ts   EL catálogo: de aquí salen menú, rutas y destinos de avisos
 │                 Marco.tsx · Campana.tsx
 ├── rutas/        rutas.tsx      guarda por authority, 403 y 404
-├── paginas/      Login · jornada/ (Mi jornada) · historial/     (cada página, su trozo de JS)
-├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Notificaciones · Icono
+├── paginas/      una carpeta por área (jornada, historial, ausencias, cuadrante,
+│                 cuadrantes, analitica, plantilla, empresa...); cada página, su trozo de JS
+├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Barras · Notificaciones · Icono
 ├── i18n/es/      un fichero por área; ningún texto literal en los componentes
 ├── estilos/      tokens.css (generado) · base.css
-├── util/         fechas.ts · errores.ts · descargar.ts
+├── util/         fechas.ts · errores.ts · descargar.ts · numeros.ts · tema.ts
 └── pruebas/      api.tsx        servidor de mentira tipado con el contrato
-e2e/              jornada.spec.ts (Playwright, contra el backend real)
+e2e/              Playwright contra el backend real: un recorrido por área, más
+                  accesibilidad, teclado, móvil, carga por áreas y las capturas
 scripts/          tokens.mjs · presupuesto.mjs
 ```
 
@@ -77,6 +84,7 @@ npm run typecheck   # tsc del proyecto + el contrato generado
 npm run build       # bundle de produccion en dist/
 npm run presupuesto # tras el build: el JS inicial no pasa de 150 kB comprimido
 npm run e2e         # Playwright, y necesita backend (ver abajo)
+npm run capturas    # las capturas de docs/capturas/web/, también contra el backend
 ```
 
 La versión de Node está en `.node-version`, y la leen los tres sitios que la
