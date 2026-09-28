@@ -26,20 +26,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-const CUENTAS = [
-  { rol: 'EMPLEADO', email: 'javier.lopez@techcorp.demo' },
-  { rol: 'GESTOR', email: 'marta.sanchez@techcorp.demo' },
-  { rol: 'RRHH', email: 'elena.rios@techcorp.demo' },
-  { rol: 'ADMIN', email: 'raul.ortega@techcorp.demo' },
-];
-
-async function entrar(page: Page, email: string): Promise<void> {
-  await page.goto('/');
-  await page.getByLabel('Correo electrónico').fill(email);
-  await page.getByLabel('Contraseña').fill('demo1234');
-  await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
-}
+import { CUENTAS, entrar, paginaLista } from './ayudas';
 
 /** Lo que se sale por la derecha: la página, o algo que se desplaza de lado. */
 async function desbordes(page: Page): Promise<string[]> {
@@ -120,9 +107,7 @@ for (const { rol, email } of CUENTAS) {
     for (const ruta of rutas) {
       await barra.getByRole('button', { name: 'Más' }).click();
       await todas.locator(`a[href="${ruta}"]`).click();
-      await expect(page).toHaveURL(new RegExp(`${ruta}(\\?.*)?$`));
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('.nx-esqueleto')).toHaveCount(0);
+      await paginaLista(page, ruta);
       expect.soft(await desbordes(page), `${ruta} (${rol})`).toEqual([]);
     }
   });
