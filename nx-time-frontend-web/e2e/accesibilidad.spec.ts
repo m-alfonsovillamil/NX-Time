@@ -18,20 +18,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+import { CUENTAS, entrar, paginaLista } from './ayudas';
+
 const REGLAS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
-
-const CUENTAS = [
-  { rol: 'EMPLEADO', email: 'javier.lopez@techcorp.demo' },
-  { rol: 'GESTOR', email: 'marta.sanchez@techcorp.demo' },
-  { rol: 'RRHH', email: 'elena.rios@techcorp.demo' },
-  { rol: 'ADMIN', email: 'raul.ortega@techcorp.demo' },
-];
-
-/** Espera a que la página haya terminado de cargar lo que pide. */
-async function asentada(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle');
-  await expect(page.locator('.nx-esqueleto')).toHaveCount(0);
-}
 
 async function sinInfracciones(page: Page, donde: string): Promise<void> {
   const { violations } = await new AxeBuilder({ page }).withTags(REGLAS).analyze();
@@ -46,22 +35,16 @@ async function sinInfracciones(page: Page, donde: string): Promise<void> {
   expect.soft(resumen, `accesibilidad de ${donde}`).toEqual([]);
 }
 
-async function entrar(page: Page, email: string): Promise<void> {
-  await page.goto('/');
-  await page.getByLabel('Correo electrónico').fill(email);
-  await page.getByLabel('Contraseña').fill('demo1234');
-  await page.getByRole('button', { name: 'Entrar' }).click();
-  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
-}
-
 for (const tema of ['light', 'dark'] as const) {
   test.describe(`tema ${tema === 'light' ? 'claro' : 'oscuro'}`, () => {
     test.use({ colorScheme: tema });
 
     test('las páginas sin sesión', async ({ page }) => {
       for (const ruta of ['/', '/recuperar-acceso', '/registro']) {
+        // Carga inicial del documento: aquí `networkidle` sí sirve (ver ayudas.ts).
         await page.goto(ruta);
-        await asentada(page);
+        await page.waitForLoadState('networkidle');
+        await expect(page.locator('.nx-esqueleto')).toHaveCount(0);
         await sinInfracciones(page, ruta);
       }
     });
@@ -71,7 +54,7 @@ for (const tema of ['light', 'dark'] as const) {
     test('los formularios en diálogo de una jornada', async ({ page }) => {
       await entrar(page, 'javier.lopez@techcorp.demo');
       await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Historial' }).click();
-      await expect(page.getByRole('table', { name: 'Mis jornadas' })).toBeVisible();
+      await paginaLista(page, '/historial');
       const jornada = page.getByRole('group', { name: /^Acciones de la jornada del / }).first();
 
       for (const [boton, titulo] of [
@@ -81,7 +64,7 @@ for (const tema of ['light', 'dark'] as const) {
         await jornada.getByRole('button', { name: boton }).click();
         const dialogo = page.getByRole('dialog', { name: titulo });
         await expect(dialogo).toBeVisible();
-        await asentada(page);
+        await expect(page.locator('.nx-esqueleto')).toHaveCount(0);
         await sinInfracciones(page, `el diálogo «${titulo}»`);
         await page.keyboard.press('Escape');
         await expect(dialogo).toBeHidden();
@@ -99,8 +82,7 @@ for (const tema of ['light', 'dark'] as const) {
 
         for (const ruta of rutas) {
           await menu.locator(`a[href="${ruta}"]`).click();
-          await expect(page).toHaveURL(new RegExp(`${ruta}(\\?.*)?$`));
-          await asentada(page);
+          await paginaLista(page, ruta);
           await sinInfracciones(page, `${ruta} (${rol})`);
         }
       });
