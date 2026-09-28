@@ -160,6 +160,14 @@ menos permisos y así se nota si una pantalla necesita alguno que no tiene;
 GESTOR, RRHH o ADMIN para lo de gestión) y recorre sus pantallas contra los
 datos de demo.
 
+**Accesibilidad** (fase W8): `accesibilidad.spec.ts` pasa axe (WCAG 2.1 A y AA)
+por **todas** las páginas, en tema claro y oscuro. No lleva una lista de
+páginas: cada cuenta de demo recorre su propio menú, así que una página nueva
+entra sola. `teclado.spec.ts` comprueba lo que axe no ve: entrar, saltar el
+menú, fichar y manejar un diálogo sin tocar el ratón. El contraste del título
+sobre el degradado del fondo, que axe no sabe calcular, se midió a mano en los
+dos extremos: el peor caso es 5,81:1 (claro) y 7,50:1 (oscuro).
+
 **Una spec no puede depender de lo que haya dejado otra.** En el CI la base es
 nueva cada vez, así que lo que en local pasaba porque otra spec había fichado
 antes, allí falla. Si una spec necesita un dato que la demo no siembra, lo crea
