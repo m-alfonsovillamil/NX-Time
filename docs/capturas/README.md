@@ -1,5 +1,7 @@
 # Capturas de la app Android
 
+(Las de la web están más abajo, en [La web](#la-web).)
+
 Rehechas el **04/09/2026**, tras aplicar la línea visual "Fichaje". Emulador
 `Medium_Phone_API_35` (Android 15) contra el backend local con el perfil `demo`.
 
@@ -71,3 +73,20 @@ Lo que exige `empleado:gestionar`, `informe:exportar`, `fichaje:corregir` y
 
 `13-calendario-antes-en-ingles.png` **no se ha rehecho**: documenta un defecto ya
 corregido y no se puede volver a reproducir. Las 27 restantes son del 04/09/2026.
+
+## La web
+
+En [`web/`](web/). Sacadas el **28/09/2026** contra el backend local con el
+perfil `demo` y sobre una base recién creada. A diferencia de las de Android, **se
+repiten con un comando**: `npm run capturas` en `nx-time-frontend-web/`
+(`e2e/capturas.spec.ts`), con el build de producción si se lanza con `CI=1`.
+
+| Captura | Qué muestra |
+|---|---|
+| `web-01-mi-jornada.png` | Mi jornada en escritorio, con la jornada en marcha: cronómetro, el resumen del día, la semana, el mes y las vacaciones, y las horas de la semana contra la jornada esperada (gráfico en SVG propio, sin librería) |
+| `web-02-historial-equipo.png` | Historial del equipo para RRHH, en tabla: la jornada en curso sin «Corregir» (el backend respondería 409) y la auditoría de cada una |
+| `web-03-plantilla.png` | La plantilla entera, gestores incluidos, con su departamento: desde aquí se arregla a quien la app no dejaba poner departamento |
+| `web-04-analitica.png` | Analítica de absentismo y puntualidad, que solo existe en la web (ADR 022) |
+| `web-05-editor-cuadrantes.png` | El editor de plantillas de cuadrante, también solo de la web: un turno partido con dos tramos por día (sin guardar: la demo no siembra cuadrantes) |
+| `web-06-movil.png` | La misma jornada en un móvil: barra inferior con «Más» en vez del menú lateral |
+| `web-07-movil-oscuro.png` | En tema oscuro, que sigue al del sistema |
