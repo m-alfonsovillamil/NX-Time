@@ -23,6 +23,10 @@
 #
 # /actuator/health no toca la base, así que Neon sigue suspendiéndose; eso
 # lo cubre el connection-timeout de 45 s de HikariCP en application-prod.yml.
+# OJO: hasta el 28/09/2026 esta línea era FALSA. Spring trae activado el
+# indicador de la base, cada sondeo (este y, sobre todo, el de Render, cada
+# pocos segundos) tocaba Neon, y Neon agotó la cuota del mes. Ahora está
+# desactivado en application.yml y un test lo comprueba (CorsYCabecerasIT).
 name: Keep-alive
 
 on:

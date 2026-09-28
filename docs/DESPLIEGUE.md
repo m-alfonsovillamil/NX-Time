@@ -395,6 +395,16 @@ apuntar a la release nueva: un 404 justo después de publicar no es un fallo.
   **pasó de 180 s** (entre 180 y ~210 s): no es una cifra fija.
 - **Neon suspende la base de datos** por inactividad. Por eso
   `application-prod.yml` sube el `connection-timeout` de HikariCP a 45 s.
+- **Y hay que dejarla suspenderse**, porque el plan gratuito de Neon cobra
+  cómputo por hora encendida. El 28/09/2026 se agotó la cuota del mes: Neon
+  rechazaba las conexiones (*«Your account or project has exceeded the
+  quota»*), el backend no arrancaba y Render mandó el correo de *«HTTP health
+  check failed»*. La causa: `/actuator/health` traía el indicador de la base de
+  Spring, y Render lo sondea cada pocos segundos, así que Neon nunca se
+  dormía. Está desactivado (`management.health.db.enabled: false`) y
+  `CorsYCabecerasIT` lo comprueba. **Si el backend no responde, mira primero el
+  panel de Neon (Usage)**: con la base fuera, los logs de Render solo dicen que
+  no conecta.
 
 Se ataca por dos lados, y hacen falta los dos:
 

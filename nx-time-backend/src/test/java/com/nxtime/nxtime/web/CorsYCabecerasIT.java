@@ -9,8 +9,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.jdbc.DataSourceHealthIndicator;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -62,6 +64,9 @@ class CorsYCabecerasIT {
 
     @Autowired
     private TestRestTemplate rest;
+
+    @Autowired
+    private ApplicationContext contexto;
 
     /** Un preflight tal y como lo manda un navegador antes de un fetch. */
     private ResponseEntity<String> preflight(String origen, String cabeceraPedida) {
@@ -184,6 +189,17 @@ class CorsYCabecerasIT {
             ResponseEntity<String> respuesta = rest.getForEntity("/actuator/health", String.class);
 
             assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        /*
+         * Render lo sondea cada pocos segundos. Con el indicador de la base
+         * dentro, cada sondeo tocaba Postgres, Neon no se suspendía nunca y el
+         * 28/09/2026 agotó la cuota del mes: producción se quedó sin base.
+         */
+        @Test
+        @DisplayName("El health check no toca la base: si lo hiciera, Neon no se suspendería nunca")
+        void elHealthCheckNoTocaLaBase() {
+            assertThat(contexto.getBeansOfType(DataSourceHealthIndicator.class)).isEmpty();
         }
     }
 }
