@@ -129,6 +129,20 @@ management:
     # no puede decidir si la aplicación está viva.
     mail:
       enabled: false
+    # Y el de la base de datos, por lo mismo y por algo peor. Spring lo trae
+    # activado: cada sondeo pide una conexión y la valida contra Postgres.
+    # Render sondea /actuator/health cada pocos segundos, así que mientras el
+    # backend estaba despierto Neon NUNCA llegaba a suspenderse, y el plan
+    # gratuito cobra cómputo por hora encendida. El 28/09/2026 se agotó la
+    # cuota del mes y Neon empezó a rechazar conexiones: sin base, el backend
+    # no arrancaba y ni la app ni la web podían entrar.
+    #
+    # Sin este indicador, "UP" significa que el proceso está vivo, que es lo
+    # único que Render puede arreglar reiniciando. Si la base se cae,
+    # reiniciar el backend no la levanta; eso lo dicen el login (503) y
+    # Sentry, no el health check.
+    db:
+      enabled: false
 
 # Configuración personalizada de la aplicación
 application:
