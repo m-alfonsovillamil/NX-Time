@@ -23,6 +23,7 @@ import { pedir, useListaPaginada } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Boton, Selector } from '../../componentes/Basicos';
+import { ConKiosco } from '../../componentes/ConKiosco';
 import { ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { equipo } from '../../i18n/es/equipo';
@@ -46,7 +47,11 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
   const todas: (Columna<Fila> | null)[] = [
     { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha) },
     conPersona ? { clave: 'persona', cabecera: E.persona, celda: (f) => f.usuario?.nombre ?? '' } : null,
-    { clave: 'entrada', cabecera: E.entrada, celda: (f) => hora(f.horaEntrada) },
+    {
+      clave: 'entrada',
+      cabecera: E.entrada,
+      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} />,
+    },
     {
       clave: 'salida',
       cabecera: E.salida,

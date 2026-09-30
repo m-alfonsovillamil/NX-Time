@@ -18,6 +18,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
@@ -28,6 +29,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
+import { kiosco } from '../../i18n/es/kiosco';
 import { plantilla } from '../../i18n/es/plantilla';
 import { CLAVES_PLANTILLA } from './claves';
 
@@ -284,6 +286,11 @@ export function Plantilla() {
             <Boton variante="secundario" onClick={() => setAlta('gestor')}>
               {P.nuevoGestor}
             </Boton>
+          )}
+          {puede('empleado:gestionar') && (
+            <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/tarjetas-kiosco">
+              {kiosco.tarjetas.titulo}
+            </Link>
           )}
         </div>
       </header>

@@ -111,5 +111,15 @@ guardaba hasta ahora.
   decisión entre SaaS y plan de pago.
 - Fichar sin conexión (una cola en la tablet) sigue fuera. En una obra sin
   cobertura sería lo siguiente.
-- La pantalla del kiosco en la web y la gestión de kioscos, PIN y tarjetas
-  llegan en K2; el PIN y la tarjeta en el perfil de la app, en K3.
+- **La pantalla de la tablet es la web** (`/kiosco`), en cualquier tablet o
+  iPad, fuera del marco y de la sesión. Lee el QR con el `BarcodeDetector` del
+  navegador y, donde no existe (Safari), con jsQR cargado bajo demanda en su
+  propio trozo: no cuenta en el JS inicial. La web deja usar la cámara a su
+  propio origen (`Permissions-Policy: camera=(self)` en `render.yaml`).
+- La tablet **no sondea** mientras espera: solo llama al identificar, al fichar
+  y cada tres horas para refrescar la lista de nombres. Vuelve sola a la espera
+  a los cinco segundos de fichar y a los veinte si alguien se va a medias.
+- En la web: Ajustes de la empresa → Kioscos (alta con el código, lista y
+  revocar); el perfil, con el PIN y la tarjeta; «Tarjetas del kiosco» para que
+  RRHH imprima las de la plantilla; y el distintivo «Kiosco · …» en los
+  historiales. El PIN y la tarjeta en el perfil de la app llegan en K3.

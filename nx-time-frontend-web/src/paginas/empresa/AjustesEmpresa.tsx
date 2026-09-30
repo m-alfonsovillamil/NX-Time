@@ -22,6 +22,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { empresa } from '../../i18n/es/empresa';
+import { Kioscos } from './Kioscos';
 
 const A = empresa.ajustes;
 
@@ -155,6 +156,7 @@ export function AjustesEmpresa() {
       <EstadoDeConsulta consulta={ajustes} cargando={<Esqueleto lineas={3} />}>
         {(datos) => <Formulario key={`${datos.nombre}|${datos.zonaHoraria}`} ajustes={datos} />}
       </EstadoDeConsulta>
+      <Kioscos />
     </div>
   );
 }

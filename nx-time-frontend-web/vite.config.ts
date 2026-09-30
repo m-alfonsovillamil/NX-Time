@@ -18,6 +18,11 @@ import { defineConfig } from 'vitest/config';
 const proxy = {
   '/api': { target: 'http://localhost:8080', changeOrigin: true },
   '/auth': { target: 'http://localhost:8080', changeOrigin: true },
+  // Lo que habla la tablet del kiosco (ADR 033). Solo lo que va DEBAJO de
+  // /kiosco/: /kiosco a secas es la página de la web, y reenviarla mandaría la
+  // pantalla de la tablet al backend. En producción no chocan: la web y la API
+  // están en dominios distintos.
+  '^/kiosco/': { target: 'http://localhost:8080', changeOrigin: true },
 };
 
 export default defineConfig({

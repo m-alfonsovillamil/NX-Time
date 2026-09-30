@@ -44,6 +44,13 @@ const RegistroEmpresa = lazy(() =>
   import('../paginas/acceso/RegistroEmpresa').then((m) => ({ default: m.RegistroEmpresa })),
 );
 
+/*
+ * La tablet del kiosco (ADR 033): tampoco lleva sesión --la tablet no es de
+ * nadie-- ni marco, y funciona igual haya o no una sesión abierta en ese
+ * navegador. Su propio trozo: nadie más se lo descarga.
+ */
+const Kiosco = lazy(() => import('../paginas/kiosco/Kiosco').then((m) => ({ default: m.Kiosco })));
+
 /** Lo que el login lee para volver a donde se quería ir. */
 export interface EstadoDeVuelta {
   desde?: string;
@@ -142,6 +149,7 @@ export function App() {
           <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />
           <Route path="/recuperar-acceso" element={dentro ? <Navigate to="/fichar" replace /> : <RecuperarAcceso />} />
           <Route path="/registro" element={dentro ? <Navigate to="/fichar" replace /> : <RegistroEmpresa />} />
+          <Route path="/kiosco" element={<Kiosco />} />
           {dentro ? (
             <Route element={<Marco />}>
               {secciones.map(({ ruta, requiere, pagina: Pagina }) => (
