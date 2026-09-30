@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.service;
 
+import com.nxtime.nxtime.domain.Kiosk;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
+import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import java.util.List;
@@ -10,6 +12,12 @@ import java.util.Optional;
 public interface TimeEntryService {
 
     TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request);
+
+    /**
+     * El mismo fichaje, para quien se identificó en un kiosco (ADR 033): las
+     * mismas reglas y la misma auditoría, con el kiosco dicho en el motivo.
+     */
+    TimeEntry registrarDesdeKiosco(User persona, Kiosk kiosco, TimeEntryRequest request);
 
     Optional<TimeEntry> getActiveTimeEntry(String userEmail);
 

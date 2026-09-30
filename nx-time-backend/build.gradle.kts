@@ -35,6 +35,11 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.5.1")
     implementation("com.github.librepdf:openpdf:3.0.5")
 
+    // Las tarjetas QR del kiosco (fase K1, ADR 033). Solo el núcleo de ZXing,
+    // que calcula la matriz: el SVG se escribe a mano, así la web y la app no
+    // necesitan ninguna librería para pintarlo. Apache 2.0.
+    implementation("com.google.zxing:core:3.5.3")
+
     // Notificaciones por email (Fase 10). Thymeleaf solo se usa para
     // renderizar las plantillas de correo, no para servir vistas web:
     // esta aplicación no tiene interfaz propia, es una API que consume

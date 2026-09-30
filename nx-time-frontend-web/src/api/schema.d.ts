@@ -4,6 +4,30 @@
  */
 
 export interface paths {
+    "/api/v1/perfil/kiosco/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Elegir mi PIN de kiosco
+         * @description De 4 a 6 cifras, sin repetidas ni seguidas (1111, 1234). Nadie más lo ve.
+         */
+        put: operations["fijarPin"];
+        post?: never;
+        /**
+         * Quitar mi PIN de kiosco
+         * @description Dejo de salir en la lista del kiosco.
+         */
+        delete: operations["quitarPin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ofertas/{id}": {
         parameters: {
             query?: never;
@@ -92,6 +116,86 @@ export interface paths {
          * @description Solo si nadie la tiene ni la ha tenido asignada.
          */
         delete: operations["borrarPlantilla"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiosco/identificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identificarse
+         * @description Con la tarjeta ('qr') o con 'usuarioId' y 'pin'. Devuelve en qué está su jornada y sus proyectos de hoy. No deja nada abierto: al fichar se manda otra vez la credencial.
+         */
+        post: operations["identificar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiosco/fichar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fichar
+         * @description La misma credencial que al identificarse, y qué se ficha. Las mismas reglas que desde la app; en la auditoría queda dicho desde qué kiosco.
+         */
+        post: operations["fichar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiosco/emparejar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pedir un código para emparejar esta tablet
+         * @description Devuelve el código que la tablet enseña (8 caracteres, 10 minutos) y un secreto con el que preguntar por el estado. Limitado por IP.
+         */
+        post: operations["emparejar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiosco/emparejar/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ¿Me han emparejado ya?
+         * @description PENDIENTE hasta que un ADMIN teclea el código. LISTO trae el token del kiosco, y solo esa vez: después responde ENTREGADO. CADUCADO si pasaron los 10 minutos.
+         */
+        post: operations["estado"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -312,6 +416,30 @@ export interface paths {
          * @description Responde 204 si es correcta y 401 si no, y no hace nada más: no emite tokens, no abre sesión y no consume el límite de intentos del login. Lo usa la app para activar la huella, que antes hacía un /auth/login completo -- y eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.
          */
         post: operations["verificarContrasena"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/kiosco/tarjeta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi tarjeta de kiosco
+         * @description El contenido del QR y el QR en SVG. Si no tenía, se crea.
+         */
+        get: operations["tarjeta"];
+        put?: never;
+        /**
+         * Una tarjeta nueva
+         * @description La anterior, impresa o en el móvil, deja de valer.
+         */
+        post: operations["regenerar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -653,6 +781,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/kioscos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los kioscos de mi empresa
+         * @description Los activos y los revocados, el último primero.
+         */
+        get: operations["listar_2"];
+        put?: never;
+        /**
+         * Dar de alta un kiosco con el código de la tablet
+         * @description El código que enseña la tablet al abrir /kiosco. Caduca a los 10 minutos.
+         */
+        post: operations["confirmar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispositivos-push": {
         parameters: {
             query?: never;
@@ -704,7 +856,7 @@ export interface paths {
          * Departamentos de mi empresa
          * @description Ordenados por nombre, con cuánta gente tiene cada uno: es lo que decide si se puede ofrecer el botón de borrar, porque uno con plantilla no se borra.
          */
-        get: operations["listar_2"];
+        get: operations["listar_3"];
         put?: never;
         /** Crear un departamento */
         post: operations["crear_2"];
@@ -1351,6 +1503,46 @@ export interface paths {
         patch: operations["updateRequestStatus"];
         trace?: never;
     };
+    "/kiosco/yo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién soy
+         * @description El nombre del kiosco, el de su empresa y su zona horaria.
+         */
+        get: operations["yo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiosco/plantilla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La lista para identificarse con el PIN
+         * @description Quien está de alta en la empresa y tiene PIN, por nombre. Sin correo.
+         */
+        get: operations["plantilla"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/estado/tareas": {
         parameters: {
             query?: never;
@@ -1463,6 +1655,26 @@ export interface paths {
          * @description Lo mismo que el JSON, para leerlo sin herramientas. Sale del mismo objeto, así que no puede faltar en uno algo que esté en el otro. Las horas van en la hora de la empresa.
          */
         get: operations["exportarMisDatosEnPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/kiosco": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * ¿Puedo fichar en un kiosco?
+         * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
+         */
+        get: operations["estado_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1687,6 +1899,26 @@ export interface paths {
          * @description Los EMPLEADO de la empresa de quien pregunta, con su jornada semanal y sus días de vacaciones efectivos del año en curso.
          */
         get: operations["getMyEmployees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gestor/kiosco/tarjetas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las tarjetas de la plantilla, para imprimirlas
+         * @description De toda la gente de alta. A quien no tenía, se le crea.
+         */
+        get: operations["tarjetasDeLaEmpresa"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2514,6 +2746,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/kioscos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revocar un kiosco
+         * @description Deja de poder fichar desde la siguiente petición. No se borra: sus fichajes lo citan.
+         */
+        delete: operations["revocar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cuadrantes/excepciones/{excepcionId}": {
         parameters: {
             query?: never;
@@ -2538,6 +2790,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        KioskPinRequest: {
+            pin: string;
+        };
+        MyKioskStatus: {
+            tienePin?: boolean;
+            tieneTarjeta?: boolean;
+            /** Format: date-time */
+            pinBloqueadoHasta?: string;
+        };
         JobPostingRequest: {
             titulo: string;
             descripcion: string;
@@ -2694,6 +2955,58 @@ export interface components {
             borrable?: boolean;
             tramos?: components["schemas"]["Tramo"][];
         };
+        KioskCredential: {
+            qr?: string;
+            /** Format: int64 */
+            usuarioId?: number;
+            pin?: string;
+        };
+        KioskIdentity: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nombre?: string;
+            /** @enum {string} */
+            estado?: "SIN_JORNADA" | "TRABAJANDO" | "EN_PAUSA";
+            proyectos?: components["schemas"]["ProjectOption"][];
+            proyectoEnCurso?: components["schemas"]["ProjectOption"];
+        };
+        KioskClockRequest: {
+            qr?: string;
+            /** Format: int64 */
+            usuarioId?: number;
+            pin?: string;
+            /** @enum {string} */
+            tipo: "INICIO" | "FIN" | "PAUSA_INICIO" | "PAUSA_FIN";
+            /** Format: int64 */
+            proyectoId?: number;
+        };
+        KioskClockResponse: {
+            nombre?: string;
+            /** @enum {string} */
+            tipo?: "INICIO" | "FIN" | "PAUSA_INICIO" | "PAUSA_FIN";
+            /** Format: date-time */
+            instante?: string;
+        };
+        PairingStarted: {
+            codigo?: string;
+            secreto?: string;
+            /** Format: date-time */
+            caducaEn?: string;
+        };
+        PairingStatusRequest: {
+            secreto: string;
+        };
+        KioskInfo: {
+            nombre?: string;
+            empresa?: string;
+            zonaHoraria?: string;
+        };
+        PairingStatus: {
+            /** @enum {string} */
+            estado?: "PENDIENTE" | "LISTO" | "ENTREGADO" | "CADUCADO";
+            token?: string;
+            kiosco?: components["schemas"]["KioskInfo"];
+        };
         RegisterManagerRequest: {
             nombreEmpresa: string;
             nombre: string;
@@ -2787,6 +3100,13 @@ export interface components {
         VerifyPasswordRequest: {
             /** @description La contraseña actual de quien hace la petición */
             contrasena: string;
+        };
+        KioskCard: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nombre?: string;
+            codigo?: string;
+            svg?: string;
         };
         DeletionRequestDTO: {
             motivo?: string;
@@ -2946,6 +3266,7 @@ export interface components {
             segundosPausaAcumulados?: number;
             /** Format: date-time */
             inicioPausaActual?: string;
+            kiosco?: string;
         };
         ChangeProjectRequest: {
             /** Format: int64 */
@@ -2978,6 +3299,20 @@ export interface components {
             /** Format: date-time */
             pausaFin?: string;
             reparto?: components["schemas"]["ProjectShare"][];
+        };
+        ConfirmKioskRequest: {
+            codigo: string;
+            nombre: string;
+        };
+        KioskResponse: {
+            /** Format: int64 */
+            id?: number;
+            nombre?: string;
+            /** Format: date-time */
+            creadoEn?: string;
+            /** Format: date-time */
+            ultimoUso?: string;
+            activo?: boolean;
         };
         RegisterPushDeviceRequest: {
             token: string;
@@ -3275,6 +3610,12 @@ export interface components {
             /** @enum {string} */
             estado: "PENDIENTE" | "APROBADA" | "RECHAZADA";
             comentario?: string;
+        };
+        KioskPerson: {
+            /** Format: int64 */
+            id?: number;
+            nombre?: string;
+            apellidos?: string;
         };
         SystemStatusResponse: {
             ok?: boolean;
@@ -3673,6 +4014,7 @@ export interface components {
             minutosPausaAcumulados?: number;
             /** Format: int64 */
             segundosPausaAcumulados?: number;
+            kiosco?: string;
         };
         ComplaintSummaryResponse: {
             /** Format: int64 */
@@ -4036,6 +4378,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    fijarPin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KioskPinRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MyKioskStatus"];
+                };
+            };
+        };
+    };
+    quitarPin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MyKioskStatus"];
+                };
+            };
+        };
+    };
     detalle: {
         parameters: {
             query?: never;
@@ -4438,6 +4824,152 @@ export interface operations {
             };
             /** @description Alguien la tiene o la ha tenido asignada */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    identificar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KioskCredential"];
+            };
+        };
+        responses: {
+            /** @description Identificada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskIdentity"];
+                };
+            };
+            /** @description Sin credencial */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description PIN incorrecto */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description La tarjeta o la persona no valen en este kiosco */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description PIN bloqueado, o demasiados intentos en el kiosco */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    fichar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KioskClockRequest"];
+            };
+        };
+        responses: {
+            /** @description Fichado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskClockResponse"];
+                };
+            };
+            /** @description No se puede en el estado de su jornada */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    emparejar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PairingStarted"];
+                };
+            };
+        };
+    };
+    estado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PairingStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Estado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PairingStatus"];
+                };
+            };
+            /** @description Ese secreto no es de ningún emparejamiento */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4974,6 +5506,46 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    tarjeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskCard"];
+                };
+            };
+        };
+    };
+    regenerar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskCard"];
                 };
             };
         };
@@ -5993,6 +6565,59 @@ export interface operations {
             };
         };
     };
+    listar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskResponse"][];
+                };
+            };
+        };
+    };
+    confirmar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmKioskRequest"];
+            };
+        };
+        responses: {
+            /** @description Dado de alta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskResponse"];
+                };
+            };
+            /** @description El código no existe o ha caducado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     registrar: {
         parameters: {
             query?: never;
@@ -6073,7 +6698,7 @@ export interface operations {
             };
         };
     };
-    listar_2: {
+    listar_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -8206,6 +8831,46 @@ export interface operations {
             };
         };
     };
+    yo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskInfo"];
+                };
+            };
+        };
+    };
+    plantilla: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskPerson"][];
+                };
+            };
+        };
+    };
     tareas: {
         parameters: {
             query?: never;
@@ -8421,6 +9086,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    estado_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MyKioskStatus"];
                 };
             };
         };
@@ -8913,6 +9598,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    tarjetasDeLaEmpresa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tarjetas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskCard"][];
                 };
             };
         };
@@ -10539,6 +11244,35 @@ export interface operations {
             };
             /** @description Jornada ya cerrada, o pausa ya deshecha */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    revocar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revocado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description De otra empresa */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

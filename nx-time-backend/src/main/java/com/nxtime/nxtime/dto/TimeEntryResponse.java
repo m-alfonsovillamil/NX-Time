@@ -47,6 +47,12 @@ public record TimeEntryResponse(
          * web (fase W2) lo necesita para lo mismo, y con esto las dos
          * pueden calcularlo de verdad.
          */
-        Instant inicioPausaActual
+        Instant inicioPausaActual,
+
+        /**
+         * El nombre del kiosco en que se abrió la jornada, o null si se abrió
+         * desde la propia sesión (ADR 033). Para el distintivo del historial.
+         */
+        String kiosco
 ) {
 }

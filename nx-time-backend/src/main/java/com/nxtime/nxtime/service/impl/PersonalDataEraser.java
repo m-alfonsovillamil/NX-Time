@@ -70,7 +70,12 @@ class PersonalDataEraser {
                    SET fecha_nacimiento = NULL,
                        activo = FALSE,
                        fecha_baja = COALESCE(fecha_baja, NOW()),
-                       contrasena = ?
+                       contrasena = ?,
+                       -- Lo del kiosco (ADR 033): sin PIN ni tarjeta, tampoco se ficha ahí.
+                       kiosco_pin_hash = NULL,
+                       kiosco_pin_fallos = 0,
+                       kiosco_pin_bloqueado_hasta = NULL,
+                       kiosco_tarjeta_version = NULL
                  WHERE id = ?
                 """, contrasenaInutilizable(), usuarioId);
 

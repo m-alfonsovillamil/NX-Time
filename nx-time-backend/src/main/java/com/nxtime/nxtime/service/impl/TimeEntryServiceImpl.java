@@ -5,6 +5,7 @@ import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
 import com.nxtime.nxtime.config.CacheConfig;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.Kiosk;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
@@ -114,7 +115,23 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     public TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
+        return registrar(user, request, null);
+    }
 
+    /**
+     * Lo mismo, para quien se identificó en un kiosco (ADR 033). El fichaje es
+     * de la persona, igual que desde su sesión: el kiosco solo queda dicho en
+     * el motivo de la auditoría y, si abre la jornada, en {@code kiosco_id}.
+     */
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
+            key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#persona.email)")
+    public TimeEntry registrarDesdeKiosco(User persona, Kiosk kiosco, TimeEntryRequest request) {
+        return registrar(persona, request, kiosco);
+    }
+
+    private TimeEntry registrar(User user, TimeEntryRequest request, Kiosk kiosco) {
         TimeEntry activeEntry = timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null);
         // Instantánea de "antes" para la auditoría: se toma ya, antes de
         // que ninguna de las ramas de abajo mute activeEntry.
@@ -133,6 +150,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .usuario(user)
                         .empresa(user.getEmpresa())
                         .horaEntrada(Instant.now())
+                        .kiosco(kiosco)
                         .build();
                 accion = AuditAction.CREACION;
                 avisarSiNoEsLaborable(user);
@@ -204,12 +222,27 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .accion(accion)
                 .valorAnterior(beforeJson)
                 .valorNuevo(toJson(result))
-                .motivo(motivoAuditoria)
+                .motivo(conKiosco(motivoAuditoria, kiosco))
                 .build();
         eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
 
-        log.info("Fichaje {} registrado para {} (fichaje id={})", request.tipo(), userEmail, result.getId());
+        log.info("Fichaje {} registrado para {} (fichaje id={}{})", request.tipo(), user.getEmail(), result.getId(),
+                kiosco == null ? "" : ", kiosco " + kiosco.getId());
         return result;
+    }
+
+    /**
+     * El motivo de la auditoría, con el kiosco si se fichó en uno. Va en el
+     * motivo y no en otra columna porque el motivo ya entra en la huella de la
+     * cadena (ADR 003 y 018): queda dicho desde dónde se fichó sin cambiar la
+     * fórmula, y las filas antiguas se siguen verificando igual (ADR 033).
+     */
+    static String conKiosco(String motivo, Kiosk kiosco) {
+        if (kiosco == null) {
+            return motivo;
+        }
+        String desde = "Desde el kiosco «" + kiosco.getNombre() + "» (id " + kiosco.getId() + ")";
+        return motivo == null ? desde : motivo + " · " + desde;
     }
 
     /**

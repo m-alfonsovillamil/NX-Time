@@ -44,11 +44,13 @@ import org.mapstruct.Named;
 public interface TimeEntryMapper {
 
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
+    @Mapping(target = "kiosco", source = "kiosco.nombre")
     TimeEntryResponse toResponse(TimeEntry entry);
 
     @Mapping(target = "fecha", expression = "java(entry.dia())")
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     @Mapping(target = "usuarioId", source = "usuario.id")
+    @Mapping(target = "kiosco", source = "kiosco.nombre")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {

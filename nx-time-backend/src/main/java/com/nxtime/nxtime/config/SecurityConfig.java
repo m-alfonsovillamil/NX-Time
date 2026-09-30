@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.config;
 
 import com.nxtime.nxtime.security.JwtAuthenticationFilter;
+import com.nxtime.nxtime.security.KioskAuthenticationFilter;
+import com.nxtime.nxtime.security.KioskPrincipal;
 import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import com.nxtime.nxtime.security.RestAccessDeniedHandler;
 import com.nxtime.nxtime.security.RestAuthenticationEntryPoint;
@@ -41,6 +43,7 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final LoginRateLimitFilter loginRateLimitFilter;
+    private final KioskAuthenticationFilter kioskAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
     private final Environment entorno;
@@ -57,6 +60,7 @@ public class SecurityConfig {
             AuthenticationProvider authenticationProvider,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             LoginRateLimitFilter loginRateLimitFilter,
+            KioskAuthenticationFilter kioskAuthenticationFilter,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             RestAccessDeniedHandler restAccessDeniedHandler,
             Environment entorno
@@ -64,6 +68,7 @@ public class SecurityConfig {
         this.authenticationProvider = authenticationProvider;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.loginRateLimitFilter = loginRateLimitFilter;
+        this.kioskAuthenticationFilter = kioskAuthenticationFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
         this.entorno = entorno;
@@ -166,6 +171,13 @@ public class SecurityConfig {
                         // empresa, solo si cada tarea corrió y cómo acabó.
                         .requestMatchers("/estado/tareas").permitAll()
                         .requestMatchers("/api/v1/**").authenticated()
+                        // El kiosco (ADR 033). Emparejar es público: la tablet todavía no
+                        // tiene token, y lo que pide y pregunta va limitado por IP
+                        // (LoginRateLimitFilter). Lo demás pide un kiosco, y se protege
+                        // aquí y no con @PreAuthorize porque "kiosco:fichar" no es de
+                        // ningún rol: es de un dispositivo (ver RoleAuthoritiesTest).
+                        .requestMatchers("/kiosco/emparejar", "/kiosco/emparejar/estado").permitAll()
+                        .requestMatchers("/kiosco/**").hasAuthority(KioskPrincipal.AUTHORITY)
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
@@ -173,7 +185,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(kioskAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
