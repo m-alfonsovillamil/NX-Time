@@ -18,7 +18,7 @@ import java.time.YearMonth
 class DateFormatsTest {
 
     @Test
-    fun `la hora se da siempre en la zona de Espana, no en la del movil`() {
+    fun `la hora se da en la zona de la empresa, no en la del movil`() {
         // 07:00 UTC en agosto son las 09:00 en España (CEST).
         assertEquals("09:00 h", DateFormats.hora("2026-08-29T07:00:00Z"))
     }
@@ -209,5 +209,27 @@ class DateFormatsTest {
         // Noviembre de 2026 empieza en DOMINGO, el peor caso: seis huecos,
         // y es el mes que obliga a pintar seis filas.
         assertEquals(6, DateFormats.huecoInicialDelMes(YearMonth.of(2026, 11)))
+    }
+
+    // ADR 032: la zona es la de la empresa de la sesión. Canarias va una hora por detrás.
+    @Test
+    fun `en la zona de otra empresa, la hora y el dia son los suyos`() {
+        try {
+            DateFormats.fijarZona("Atlantic/Canary")
+            assertEquals("08:00 h", DateFormats.hora("2026-08-29T07:00:00Z"))
+            // Las 22:30 UTC de agosto: ya es día 30 en Madrid, todavía 29 en Canarias.
+            assertEquals(LocalDate.of(2026, 8, 29), DateFormats.fechaLocal("2026-08-29T22:30:00Z"))
+            assertEquals("2026-08-29T08:00:00Z", DateFormats.aInstanteIso(LocalDate.of(2026, 8, 29), 9, 0))
+        } finally {
+            DateFormats.fijarZona(null)
+        }
+    }
+
+    @Test
+    fun `una zona que no se entiende, o ninguna, deja la de por defecto`() {
+        DateFormats.fijarZona("Marte/Olimpo")
+        assertEquals(DateFormats.ZONA_POR_DEFECTO, DateFormats.zona)
+        DateFormats.fijarZona(null)
+        assertEquals("09:00 h", DateFormats.hora("2026-08-29T07:00:00Z"))
     }
 }

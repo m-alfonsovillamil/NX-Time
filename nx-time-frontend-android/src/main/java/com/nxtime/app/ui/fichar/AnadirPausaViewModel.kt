@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class AnadirPausaUiState(
-    val fecha: LocalDate = LocalDate.now(DateFormats.ZONA_ESPANA),
+    val fecha: LocalDate = LocalDate.now(DateFormats.zona),
 
     /** La jornada sigue abierta: se aplica en el acto, y se puede deshacer. */
     val jornadaAbierta: Boolean = true,
@@ -61,7 +61,7 @@ data class AnadirPausaUiState(
      * servidor**, y el mensaje final se basa en lo que él respondió.
      */
     val vaDirecta: Boolean
-        get() = jornadaAbierta || fecha == LocalDate.now(DateFormats.ZONA_ESPANA)
+        get() = jornadaAbierta || fecha == LocalDate.now(DateFormats.zona)
 }
 
 /**

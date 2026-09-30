@@ -24,9 +24,9 @@ import java.util.Locale
  *
  * Se fija el idioma en vez de traducir la app porque NX Time es una
  * herramienta de jornada laboral española: es la misma decisión, y por
- * el mismo motivo, que la de [DateFormats], que clava `Europe/Madrid`
- * para que un empleado de viaje siga viendo su jornada en la hora de su
- * centro de trabajo.
+ * el mismo motivo, que la de [DateFormats], que usa la zona de la empresa
+ * y no la del móvil para que un empleado de viaje siga viendo su jornada en
+ * la hora de su centro de trabajo.
  *
  * Se hace por `Configuration` y no con `AppCompatDelegate.setApplicationLocales`
  * a propósito: esa API arrastraría AppCompat de vuelta, y la MainActivity

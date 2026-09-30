@@ -43,7 +43,7 @@ fun DialogoNuevoProyecto(
     var codigo by remember { mutableStateOf("") }
     var nombre by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
-    var desde by remember { mutableStateOf(LocalDate.now(DateFormats.ZONA_ESPANA)) }
+    var desde by remember { mutableStateOf(LocalDate.now(DateFormats.zona)) }
 
     AlertDialog(
         onDismissRequest = onCancela,
@@ -109,7 +109,7 @@ fun DialogoAsignar(
     onCancela: () -> Unit
 ) {
     var elegido by remember { mutableStateOf(candidatos.firstOrNull()) }
-    var desde by remember { mutableStateOf(LocalDate.now(DateFormats.ZONA_ESPANA)) }
+    var desde by remember { mutableStateOf(LocalDate.now(DateFormats.zona)) }
     var abierto by remember { mutableStateOf(false) }
 
     AlertDialog(
@@ -181,7 +181,7 @@ fun DialogoFinalizar(
     onConfirma: (LocalDate) -> Unit,
     onCancela: () -> Unit
 ) {
-    var hasta by remember { mutableStateOf(LocalDate.now(DateFormats.ZONA_ESPANA)) }
+    var hasta by remember { mutableStateOf(LocalDate.now(DateFormats.zona)) }
 
     AlertDialog(
         onDismissRequest = onCancela,

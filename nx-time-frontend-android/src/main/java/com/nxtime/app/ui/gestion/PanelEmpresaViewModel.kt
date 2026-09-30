@@ -30,7 +30,7 @@ data class PanelEmpresaUiState(
     // En hora de España y no del dispositivo: un movil en otro huso, el dia
     // 1 a las 00:30, abriria el panel en el mes anterior. Misma politica que
     // el resto de la app (ver DateFormats).
-    val mes: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA),
+    val mes: YearMonth = YearMonth.now(DateFormats.zona),
     val descargando: Boolean = false,
     val departamentos: List<DepartamentoDTO> = emptyList(),
     /**
@@ -88,7 +88,7 @@ class PanelEmpresaViewModel(
                 // selector de informes: ese selector es solo para las
                 // descargas, y los indicadores de arriba también hablan
                 // del mes en curso.
-                val ahora = YearMonth.now(DateFormats.ZONA_ESPANA)
+                val ahora = YearMonth.now(DateFormats.zona)
                 val proyectosDiferido =
                     async { authRepository.getHorasPorProyecto(ahora.year, ahora.monthValue) }
                 val panel = panelDiferido.await()
@@ -360,7 +360,7 @@ class PanelEmpresaViewModel(
          * invitaría a pedir un informe vacío.
          */
         fun mesesDisponibles(
-            hoy: LocalDate = LocalDate.now(DateFormats.ZONA_ESPANA)
+            hoy: LocalDate = LocalDate.now(DateFormats.zona)
         ): List<YearMonth> {
             val actual = YearMonth.from(hoy)
             return (0..11).map { actual.minusMonths(it.toLong()) }

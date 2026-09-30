@@ -71,8 +71,8 @@ android {
          * el texto de asignar proyecto dice la regla de verdad (ADR 017: se
          * puede estar en varios a la vez, no dos veces en el mismo).
          */
-        versionCode = 9
-        versionName = "1.8"
+        versionCode = 10
+        versionName = "1.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

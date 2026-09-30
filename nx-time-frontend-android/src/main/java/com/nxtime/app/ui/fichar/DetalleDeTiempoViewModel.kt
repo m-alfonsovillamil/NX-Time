@@ -8,10 +8,10 @@ import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.network.Paginas
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +43,7 @@ data class DetalleDeTiempoUiState(
  */
 class DetalleDeTiempoViewModel(
     private val authRepository: AuthRepository,
-    private val hoy: () -> LocalDate = { LocalDate.now(ZoneId.of("Europe/Madrid")) }
+    private val hoy: () -> LocalDate = { LocalDate.now(DateFormats.zona) }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DetalleDeTiempoUiState())

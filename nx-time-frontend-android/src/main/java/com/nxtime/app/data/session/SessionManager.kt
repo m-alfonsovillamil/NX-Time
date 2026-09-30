@@ -2,6 +2,7 @@ package com.nxtime.app.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.nxtime.app.ui.util.DateFormats
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -52,6 +53,14 @@ class SessionManager(
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_AUTHORITIES = "user_authorities"
+        private const val KEY_ZONA = "empresa_zona_horaria"
+    }
+
+    init {
+        // Una sesión guardada de antes: sus horas, desde el primer fotograma,
+        // en la zona de su empresa (ADR 032). Sin la clave (una versión
+        // anterior de la app), la de por defecto hasta el próximo refresco.
+        DateFormats.fijarZona(prefs.getString(KEY_ZONA, null))
     }
 
     /**
@@ -67,9 +76,11 @@ class SessionManager(
         token: String,
         refreshToken: String,
         nombre: String,
-        authorities: Collection<String> = emptyList()
+        authorities: Collection<String> = emptyList(),
+        zonaHoraria: String? = null
     ) {
         val editor = prefs.edit()
+        editor.putString(KEY_ZONA, zonaHoraria)
         editor.putString(KEY_AUTH_TOKEN, token)
         editor.putString(KEY_REFRESH_TOKEN, refreshToken)
         editor.putString(KEY_USER_NAME, nombre)
@@ -80,6 +91,16 @@ class SessionManager(
         // copia en memoria al instante --así que el fetchAuthToken() de la
         // petición siguiente ya ve el token-- y escribe en segundo plano.
         editor.apply()
+        DateFormats.fijarZona(zonaHoraria)
+    }
+
+    /**
+     * La zona de la empresa, tras renovar el token: si la han cambiado en los
+     * ajustes de la empresa, llega así sin volver a entrar (ADR 032).
+     */
+    fun actualizarZona(zonaHoraria: String) {
+        prefs.edit().putString(KEY_ZONA, zonaHoraria).apply()
+        DateFormats.fijarZona(zonaHoraria)
     }
 
     /**
@@ -164,12 +185,14 @@ class SessionManager(
         editor.remove(KEY_REFRESH_TOKEN)
         editor.remove(KEY_USER_NAME)
         editor.remove(KEY_AUTHORITIES)
+        editor.remove(KEY_ZONA)
         // Aquí SÍ se mantiene commit(), al revés que en saveAuthData: una
         // sesión que se cierra tiene que quedar cerrada en el disco antes de
         // seguir. Con apply(), si el proceso muere en ese instante, los tokens
         // seguirían escritos y quien cogiera el móvil después entraría solo.
         // Es una operación única y bloquear unos milisegundos sale barato.
         editor.commit()
+        DateFormats.fijarZona(null)
 
         alCerrarSesion()
     }

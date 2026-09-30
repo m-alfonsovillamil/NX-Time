@@ -278,7 +278,7 @@ private fun Rejilla(estado: CalendarioUiState, onDia: (LocalDate) -> Unit) {
     val huecoInicial = DateFormats.huecoInicialDelMes(estado.periodo)
     val celdas = huecoInicial + estado.periodo.lengthOfMonth()
     val semanas = (celdas + 6) / 7
-    val hoy = LocalDate.now(DateFormats.ZONA_ESPANA)
+    val hoy = LocalDate.now(DateFormats.zona)
 
     Column {
         repeat(semanas) { semana ->

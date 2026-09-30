@@ -342,7 +342,7 @@ fun FicharScreen(
         DetalleDeTiempoHoja(
             estado = detalle,
             ficha = estado,
-            hoy = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Madrid")),
+            hoy = java.time.LocalDate.now(DateFormats.zona),
             onCerrar = detalleViewModel::cerrar
         )
 

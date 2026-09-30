@@ -41,7 +41,7 @@ data class HistorialUiState(
 class HistorialViewModel(
     private val authRepository: AuthRepository,
     /** "Hoy" en España. Se inyecta para poder probar la semana y el mes. */
-    private val hoy: () -> LocalDate = { LocalDate.now(DateFormats.ZONA_ESPANA) }
+    private val hoy: () -> LocalDate = { LocalDate.now(DateFormats.zona) }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HistorialUiState())
