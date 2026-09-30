@@ -100,7 +100,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class DemoDataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
+    /** La empresa de demo se crea con la zona de por defecto (ADR 032). */
+    private static final ZoneId MADRID_ZONE = ZoneId.of(Company.ZONA_POR_DEFECTO);
     private static final String DEMO_PASSWORD = "demo1234";
 
     private final CompanyRepository companyRepository;

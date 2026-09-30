@@ -9,7 +9,7 @@ import java.time.LocalDate;
  * horaEntrada/horaSalida son Instant desde la Fase 3 (antes
  * LocalDateTime; y antes de eso, String preformateado -- ver
  * auditoría, defectos de diseño). "fecha" se deriva del Instant en la
- * zona Europe/Madrid (ver TimeEntryMapper), no en UTC: el día de
+ * zona de la empresa (ver TimeEntryMapper, ADR 032), no en UTC: el día de
  * calendario en que empezó la jornada es el que importa para agrupar
  * el historial, no el día UTC.
  */

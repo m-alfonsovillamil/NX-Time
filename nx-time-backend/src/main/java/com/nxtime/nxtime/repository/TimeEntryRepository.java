@@ -233,11 +233,14 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      *
      * Tres cosas que no son evidentes en el SQL:
      *
-     * <b>1. El día se calcula en Europe/Madrid.</b> Las marcas se
-     * guardan en UTC (ADR 002), así que agrupar por la fecha del
-     * {@code TIMESTAMPTZ} en crudo mandaría al día siguiente todo lo
-     * fichado a partir de las 22:00 en verano. La misma precaución que
-     * ya hizo falta en la Fase D.
+     * <b>1. El día se calcula en la zona de la empresa</b> (ADR 032;
+     * antes, siempre Europe/Madrid). Las marcas se guardan en UTC (ADR
+     * 002), así que agrupar por la fecha del {@code TIMESTAMPTZ} en crudo
+     * mandaría al día siguiente todo lo fichado a partir de las 22:00 en
+     * verano en Madrid. La misma precaución que ya hizo falta en la Fase D.
+     * Como la consulta cruza empresas, el rango {@code desde/hasta} no
+     * coincide con los días de todas: quien la llama pide de más y descarta
+     * los días que se salen de lo que pedía.
      *
      * <b>2. Una jornada cuenta en el día en que EMPIEZA.</b> Un turno de
      * 22:00 a 06:00 son ocho horas del martes, no cuatro del martes y
@@ -256,17 +259,18 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     @Query(value = """
             SELECT r.usuario_id AS usuarioId,
                    r.empresa_id AS empresaId,
-                   (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date AS dia,
+                   (r.hora_entrada AT TIME ZONE e.zona_horaria)::date AS dia,
                    SUM(EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
                        - r.segundos_pausa_acumulados) AS segundos,
                    (ARRAY_AGG(r.id ORDER BY r.hora_entrada DESC))[1] AS ultimoRegistroId
             FROM registros r
+            JOIN empresas e ON e.id = r.empresa_id
             WHERE r.anulado = false
               AND r.hora_salida IS NOT NULL
               AND r.hora_entrada >= :desde
               AND r.hora_entrada < :hasta
             GROUP BY r.usuario_id, r.empresa_id,
-                     (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date
+                     (r.hora_entrada AT TIME ZONE e.zona_horaria)::date
             ORDER BY r.usuario_id, dia
             """, nativeQuery = true)
     List<DailyWorkProjection> sumarSegundosPorUsuarioYDia(
@@ -275,21 +279,22 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 
     /**
      * Los mismos días que {@link #sumarSegundosPorUsuarioYDia}, con las mismas
-     * reglas (día de España, cuenta el día en que empieza, se suman los de un
-     * mismo día, solo cerradas y no anuladas), pero de UNA persona: para el
+     * reglas (día de la empresa, cuenta el día en que empieza, se suman los de
+     * un mismo día, solo cerradas y no anuladas), pero de UNA persona: para el
      * gráfico de la pantalla de inicio. Los días sin fichajes no salen.
      */
     @Query(value = """
-            SELECT (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date AS dia,
+            SELECT (r.hora_entrada AT TIME ZONE e.zona_horaria)::date AS dia,
                    SUM(EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
                        - r.segundos_pausa_acumulados) AS segundos
             FROM registros r
+            JOIN empresas e ON e.id = r.empresa_id
             WHERE r.usuario_id = :usuarioId
               AND r.anulado = false
               AND r.hora_salida IS NOT NULL
               AND r.hora_entrada >= :desde
               AND r.hora_entrada < :hasta
-            GROUP BY (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date
+            GROUP BY (r.hora_entrada AT TIME ZONE e.zona_horaria)::date
             ORDER BY dia
             """, nativeQuery = true)
     List<DayHoursProjection> sumarSegundosPorDiaDeUsuario(
@@ -343,12 +348,16 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
             @Param("hasta") java.time.Instant hasta);
 
     /**
-     * Quién, de todas las empresas, tiene alguna jornada viva que empiece en
-     * el rango y sigue activo (Fase B3): a quién se le recuerda firmar el mes.
+     * Quién, de las empresas de una zona horaria, tiene alguna jornada viva
+     * que empiece en el rango y sigue activo (Fase B3): a quién se le recuerda
+     * firmar el mes. Por zona porque el rango es "el mes pasado" contado en esa
+     * zona (ADR 032).
      */
     @Query("SELECT DISTINCT t.usuario FROM registros t WHERE t.anulado = false "
-            + "AND t.usuario.activo = true AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta")
+            + "AND t.usuario.activo = true AND t.empresa.zonaHoraria = :zona "
+            + "AND t.horaEntrada >= :desde AND t.horaEntrada < :hasta")
     List<User> findUsuariosActivosQueFicharonEntre(
+            @Param("zona") String zona,
             @Param("desde") java.time.Instant desde,
             @Param("hasta") java.time.Instant hasta);
 }

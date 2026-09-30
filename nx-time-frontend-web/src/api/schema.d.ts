@@ -1105,7 +1105,7 @@ export interface paths {
         head?: never;
         /**
          * Configurar la ficha de un empleado
-         * @description Jornada semanal en horas y días de vacaciones del AÑO EN CURSO (Europe/Madrid). Es un PATCH: los campos ausentes o null NO se tocan, y un cuerpo vacío es un 200 sin efecto. Si el empleado todavía no tenía saldo de vacaciones para el año, se crea.
+         * @description Jornada semanal en horas y días de vacaciones del AÑO EN CURSO (en la zona horaria de la empresa). Es un PATCH: los campos ausentes o null NO se tocan, y un cuerpo vacío es un 200 sin efecto. Si el empleado todavía no tenía saldo de vacaciones para el año, se crea.
          */
         patch: operations["updateEmployeeProfile"];
         trace?: never;
@@ -1439,7 +1439,7 @@ export interface paths {
         };
         /**
          * Descargar todos mis datos (PDF)
-         * @description Lo mismo que el JSON, para leerlo sin herramientas. Sale del mismo objeto, así que no puede faltar en uno algo que esté en el otro. Las horas van en hora de España.
+         * @description Lo mismo que el JSON, para leerlo sin herramientas. Sale del mismo objeto, así que no puede faltar en uno algo que esté en el otro. Las horas van en la hora de la empresa.
          */
         get: operations["exportarMisDatosEnPdf"];
         put?: never;
@@ -1803,7 +1803,7 @@ export interface paths {
         };
         /**
          * Historial de fichajes propio
-         * @description Los más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.
+         * @description Los más recientes primero. Con 'desde' y 'hasta' (días de la empresa, los dos incluidos, formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.
          */
         get: operations["getHistory"];
         put?: never;
@@ -1983,7 +1983,7 @@ export interface paths {
         };
         /**
          * Mis horas día a día
-         * @description Un elemento por día entre 'desde' y 'hasta' (días de España, incluidos, 62 como máximo): minutos netos de las jornadas cerradas que empezaron ese día, minutos esperados según la jornada contratada (0 en fin de semana, festivo o ausencia aprobada), y el nombre del festivo o el tipo de ausencia si los hay. Para los gráficos de la pantalla de inicio.
+         * @description Un elemento por día entre 'desde' y 'hasta' (días de la empresa, incluidos, 62 como máximo): minutos netos de las jornadas cerradas que empezaron ese día, minutos esperados según la jornada contratada (0 en fin de semana, festivo o ausencia aprobada), y el nombre del festivo o el tipo de ausencia si los hay. Para los gráficos de la pantalla de inicio.
          */
         get: operations["getHorasPorDia"];
         put?: never;
@@ -2303,7 +2303,7 @@ export interface paths {
         };
         /**
          * Mis peticiones de ausencia
-         * @description En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
+         * @description En cualquier estado. Con 'desde' y 'hasta' (fechas de la empresa, 'hasta' incluido) solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).
          */
         get: operations["getMyRequests"];
         put?: never;
@@ -2679,6 +2679,7 @@ export interface components {
             /** @enum {string} */
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
+            zonaHoraria?: string;
         };
         RefreshTokenRequest: {
             /** @description El refresh token. Lo manda la app; el navegador lo lleva en la cookie nx_refresh y no manda cuerpo. */
@@ -3466,6 +3467,7 @@ export interface components {
             activo?: boolean;
             /** Format: date-time */
             fechaBaja?: string;
+            zonaHoraria?: string;
         };
         PersonalDataExport: {
             /** Format: date-time */

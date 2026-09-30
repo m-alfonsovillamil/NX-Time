@@ -269,7 +269,7 @@ class ReportGeneratorTest {
         TimeZone original = TimeZone.getDefault();
         try {
             TimeZone.setDefault(TimeZone.getTimeZone(otroDia));
-            assertThat(pdfGenerator.hoyEnEspana()).isEqualTo(hoyEnEspana);
+            assertThat(pdfGenerator.hoyEn(madrid)).isEqualTo(hoyEnEspana);
         } finally {
             TimeZone.setDefault(original);
         }

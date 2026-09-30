@@ -24,6 +24,7 @@ import com.nxtime.nxtime.service.VacationBalanceService;
 import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.slf4j.Logger;
@@ -310,8 +311,11 @@ public class AbsenceServiceImpl implements AbsenceService {
     }
 
     @Override
-    public VacationBalanceResponse getMyVacationBalance(String email, int anio) {
-        return vacationBalanceService.getBalance(getUser(email), anio);
+    public VacationBalanceResponse getMyVacationBalance(String email, Integer anio) {
+        User usuario = getUser(email);
+        // "El año actual" es el de la empresa, no el de UTC (ADR 032).
+        int elAnio = anio != null ? anio : Year.now(usuario.zona()).getValue();
+        return vacationBalanceService.getBalance(usuario, elAnio);
     }
 
     // Limitación conocida: en los listados, esto consulta el calendario

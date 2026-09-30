@@ -45,10 +45,15 @@ public record PersonalDataExport(
         List<String> notas
 ) {
 
+    /**
+     * {@code zonaHoraria}: la de la empresa (ADR 032). Los instantes del JSON
+     * van en UTC; es la zona en la que el PDF los enseña y en la que se
+     * cuentan los días.
+     */
     public record Persona(
             long id, String nombre, String apellidos, String email, String rol, String empresa,
             String departamento, String puesto, LocalDate fechaNacimiento, BigDecimal horasSemanales,
-            boolean activo, Instant fechaBaja) {
+            boolean activo, Instant fechaBaja, String zonaHoraria) {
     }
 
     public record Fichaje(

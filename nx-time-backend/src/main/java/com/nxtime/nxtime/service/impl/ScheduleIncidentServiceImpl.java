@@ -27,7 +27,6 @@ import com.nxtime.nxtime.service.ReglasDeCuadrante.IncidenciaDetectada;
 import com.nxtime.nxtime.service.ScheduleIncidentService;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -52,8 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
 
     private static final Logger log = LoggerFactory.getLogger(ScheduleIncidentServiceImpl.class);
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     static final String REVISAR = "cuadrante:incidencias:revisar";
 
@@ -148,7 +145,7 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
                     continue;
                 }
                 List<IncidenciaDetectada> delDia = ReglasDeCuadrante.incidencias(
-                        dia, MADRID, teorico.tramos(), teorico.minutos(),
+                        dia, persona.zona(), teorico.tramos(), teorico.minutos(),
                         fichajes.getOrDefault(persona.getId(), List.of()));
 
                 for (IncidenciaDetectada detectada : delDia) {
@@ -187,15 +184,22 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
         return creadas;
     }
 
-    /** Los fichajes que empiezan ese día (en hora de España), de todos a la vez. */
+    /**
+     * Los fichajes que empiezan ese día, de todos a la vez. "Ese día" en la
+     * hora de la empresa de cada persona (ADR 032): una consulta por zona,
+     * que casi siempre es una sola.
+     */
     private Map<Long, List<FichajeDelDia>> fichajesDelDia(List<User> personas, LocalDate dia) {
-        Instant desde = dia.atStartOfDay(MADRID).toInstant();
-        Instant hasta = dia.plusDays(1).atStartOfDay(MADRID).toInstant();
-        List<Long> ids = personas.stream().map(User::getId).toList();
-        return timeEntryRepository.findVivosDeUsuariosQueEmpiezanEntre(ids, desde, hasta).stream()
-                .collect(Collectors.groupingBy(
-                        registro -> registro.getUsuario().getId(),
-                        Collectors.mapping(ScheduleIncidentServiceImpl::aFichaje, Collectors.toList())));
+        Map<Long, List<FichajeDelDia>> porPersona = new HashMap<>();
+        personas.stream().collect(Collectors.groupingBy(User::zona)).forEach((zona, deEsaZona) -> {
+            Instant desde = dia.atStartOfDay(zona).toInstant();
+            Instant hasta = dia.plusDays(1).atStartOfDay(zona).toInstant();
+            List<Long> ids = deEsaZona.stream().map(User::getId).toList();
+            timeEntryRepository.findVivosDeUsuariosQueEmpiezanEntre(ids, desde, hasta).forEach(registro ->
+                    porPersona.computeIfAbsent(registro.getUsuario().getId(), id -> new ArrayList<>())
+                            .add(aFichaje(registro)));
+        });
+        return porPersona;
     }
 
     private static FichajeDelDia aFichaje(TimeEntry registro) {

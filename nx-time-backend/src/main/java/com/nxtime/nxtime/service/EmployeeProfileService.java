@@ -34,7 +34,7 @@ public interface EmployeeProfileService {
 
     /**
      * Configura jornada semanal y/o días de vacaciones del AÑO EN CURSO
-     * (Europe/Madrid). Los campos null no se tocan.
+     * (en la zona de la empresa). Los campos null no se tocan.
      *
      * @throws com.nxtime.nxtime.exception.ResourceNotFoundException si el empleado no existe
      * @throws com.nxtime.nxtime.exception.TenantAccessException si es de otra empresa

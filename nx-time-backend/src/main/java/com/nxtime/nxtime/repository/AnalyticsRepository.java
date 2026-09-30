@@ -21,8 +21,9 @@ import org.springframework.data.repository.query.Param;
  * ni un {@code switch} que concatene SQL según lo que se pida. Lo que cambia
  * entre una petición y otra son los parámetros, nunca el texto.
  *
- * Los días son días de España ({@code AT TIME ZONE 'Europe/Madrid'}) y una
- * jornada cuenta el día en que EMPIEZA, igual que en el resto del sistema.
+ * Los días son los de la empresa ({@code AT TIME ZONE e.zona_horaria}, ADR
+ * 032) y una jornada cuenta el día en que EMPIEZA, igual que en el resto del
+ * sistema.
  *
  * Todas las que reciben {@code usuarioIds} fallan con una lista vacía
  * ({@code IN ()} no es SQL): el servicio no las llama si no hay nadie.
@@ -47,18 +48,19 @@ public interface AnalyticsRepository extends Repository<User, Long> {
                    TRIM(u.nombre || ' ' || COALESCE(u.apellidos, '')) AS nombre,
                    d.id AS departamentoId,
                    d.nombre AS departamento,
-                   MIN((r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date) AS primerDia,
-                   (u.fecha_baja AT TIME ZONE 'Europe/Madrid')::date AS diaDeBaja
+                   MIN((r.hora_entrada AT TIME ZONE e.zona_horaria)::date) AS primerDia,
+                   (u.fecha_baja AT TIME ZONE e.zona_horaria)::date AS diaDeBaja
             FROM usuarios u
+            JOIN empresas e ON e.id = u.empresa_id
             JOIN registros r ON r.usuario_id = u.id AND r.anulado = false
             LEFT JOIN departamentos d ON d.id = u.departamento_id
             WHERE u.empresa_id = :empresaId
               AND (CAST(:departamentoId AS BIGINT) IS NULL
                    OR u.departamento_id = CAST(:departamentoId AS BIGINT))
               AND (u.fecha_baja IS NULL
-                   OR (u.fecha_baja AT TIME ZONE 'Europe/Madrid')::date >= :desde)
-            GROUP BY u.id, u.nombre, u.apellidos, d.id, d.nombre, u.fecha_baja
-            HAVING MIN((r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date) <= :hasta
+                   OR (u.fecha_baja AT TIME ZONE e.zona_horaria)::date >= :desde)
+            GROUP BY u.id, u.nombre, u.apellidos, d.id, d.nombre, u.fecha_baja, e.zona_horaria
+            HAVING MIN((r.hora_entrada AT TIME ZONE e.zona_horaria)::date) <= :hasta
             ORDER BY nombre, u.id
             """, nativeQuery = true)
     List<PersonaProjection> personas(
@@ -70,8 +72,9 @@ public interface AnalyticsRepository extends Repository<User, Long> {
     /** Los días en que cada persona tiene alguna jornada no anulada, abierta o cerrada. */
     @Query(value = """
             SELECT DISTINCT r.usuario_id AS usuarioId,
-                   (r.hora_entrada AT TIME ZONE 'Europe/Madrid')::date AS dia
+                   (r.hora_entrada AT TIME ZONE e.zona_horaria)::date AS dia
             FROM registros r
+            JOIN empresas e ON e.id = r.empresa_id
             WHERE r.usuario_id IN (:usuarioIds)
               AND r.anulado = false
               AND r.hora_entrada >= :desde

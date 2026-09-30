@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.ScheduleAssignment;
 import com.nxtime.nxtime.domain.ScheduleException;
 import com.nxtime.nxtime.domain.ScheduleExceptionType;
@@ -32,7 +33,6 @@ import com.nxtime.nxtime.service.ScheduleService;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -51,8 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class ScheduleServiceImpl implements ScheduleService {
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     /** El mismo tope que el detalle de horas por día: dos meses. */
     static final int MAXIMO_DIAS = 62;
@@ -160,7 +158,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         if (mismosTramos(actuales, nuevos)) {
             return toResponse(plantilla, actuales);
         }
-        if (assignmentRepository.haEstadoEnVigorAntesDe(plantillaId, hoy())) {
+        if (assignmentRepository.haEstadoEnVigorAntesDe(plantillaId, hoy(actor.getEmpresa()))) {
             throw new BusinessException("Esta plantilla ya se ha aplicado a días pasados, y cambiar sus "
                     + "tramos reescribiría su horario teórico. Crea una plantilla nueva y asígnala "
                     + "desde la fecha que quieras.");
@@ -198,7 +196,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         User persona = personaDeLaEmpresa(request.usuarioId(), actor);
         ScheduleTemplate plantilla = plantillaDeLaEmpresa(request.plantillaId(), actor);
 
-        if (request.fechaInicio().isBefore(hoy())) {
+        if (request.fechaInicio().isBefore(hoy(actor.getEmpresa()))) {
             throw new BusinessException("Un cuadrante no puede empezar en el pasado: reescribiría el "
                     + "horario teórico de días ya informados.", HttpStatus.BAD_REQUEST);
         }
@@ -221,7 +219,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional
     public ScheduleAssignmentResponse cerrarAsignacion(long asignacionId, LocalDate fechaFin, User actor) {
         ScheduleAssignment asignacion = asignacionDeLaEmpresa(asignacionId, actor);
-        LocalDate ayer = hoy().minusDays(1);
+        LocalDate ayer = hoy(actor.getEmpresa()).minusDays(1);
 
         // Una que ya terminó antes de ayer ya no se toca: cambiarle el fin
         // añadiría o quitaría días pasados a su cuadrante.
@@ -243,7 +241,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional
     public void borrarAsignacion(long asignacionId, User actor) {
         ScheduleAssignment asignacion = asignacionDeLaEmpresa(asignacionId, actor);
-        if (asignacion.getFechaInicio().isBefore(hoy())) {
+        if (asignacion.getFechaInicio().isBefore(hoy(actor.getEmpresa()))) {
             throw new BusinessException("Ese cuadrante ya ha estado en vigor y no se puede borrar. "
                     + "Ciérralo con una fecha de fin.");
         }
@@ -266,7 +264,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Transactional
     public List<ScheduleExceptionResponse> crearExcepcion(ScheduleExceptionRequest request, User actor) {
         User persona = personaDeLaEmpresa(request.usuarioId(), actor);
-        if (request.fecha().isBefore(hoy())) {
+        if (request.fecha().isBefore(hoy(actor.getEmpresa()))) {
             throw new BusinessException("Las excepciones son de hoy en adelante: la de un día pasado "
                     + "reescribiría su horario teórico.", HttpStatus.BAD_REQUEST);
         }
@@ -320,7 +318,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         ScheduleException excepcion = exceptionRepository.findById(excepcionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Excepción no encontrada."));
         mismaEmpresa(excepcion.getEmpresa().getId(), actor);
-        if (excepcion.getFecha().isBefore(hoy())) {
+        if (excepcion.getFecha().isBefore(hoy(actor.getEmpresa()))) {
             throw new BusinessException("Esa excepción es de un día pasado y ya no se puede quitar.");
         }
         exceptionRepository.delete(excepcion);
@@ -458,8 +456,9 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .build();
     }
 
-    private LocalDate hoy() {
-        return LocalDate.now(clock.withZone(MADRID));
+    /** Hoy en la zona de la empresa (ADR 032). */
+    private LocalDate hoy(Company empresa) {
+        return LocalDate.now(clock.withZone(Company.zonaDe(empresa)));
     }
 
     private void rangoValido(LocalDate desde, LocalDate hasta) {
@@ -534,7 +533,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .map(tramo -> tramo(tramo.getDiaSemana(), tramo.getInicio(), tramo.getFin()))
                 .toList();
         long minutos = dto.stream().mapToLong(ScheduleTemplateResponse.Tramo::minutos).sum();
-        boolean enVigorEnElPasado = assignmentRepository.haEstadoEnVigorAntesDe(plantilla.getId(), hoy());
+        boolean enVigorEnElPasado = assignmentRepository.haEstadoEnVigorAntesDe(plantilla.getId(), hoy(plantilla.getEmpresa()));
         boolean asignada = assignmentRepository.existsByPlantilla_Id(plantilla.getId());
         return new ScheduleTemplateResponse(plantilla.getId(), plantilla.getNombre(), plantilla.getDescripcion(),
                 minutos, !enVigorEnElPasado, !asignada, dto);
@@ -549,7 +548,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 asignacion.getPlantilla().getNombre(),
                 asignacion.getFechaInicio(),
                 asignacion.getFechaFin(),
-                asignacion.vigenteEl(hoy()),
+                asignacion.vigenteEl(hoy(asignacion.getEmpresa())),
                 aviso);
     }
 

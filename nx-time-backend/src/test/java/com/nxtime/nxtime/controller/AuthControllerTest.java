@@ -55,7 +55,7 @@ class AuthControllerTest {
     void registerManager_datosValidos_devuelve200() throws Exception {
         when(authService.registerManager(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
-                        RoleAuthorities.enOrden(Role.ADMIN)));
+                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid"));
 
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -92,7 +92,7 @@ class AuthControllerTest {
     void login_datosValidos_devuelve200() throws Exception {
         when(authService.login(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.GESTOR,
-                        RoleAuthorities.enOrden(Role.GESTOR)));
+                        RoleAuthorities.enOrden(Role.GESTOR), "Europe/Madrid"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

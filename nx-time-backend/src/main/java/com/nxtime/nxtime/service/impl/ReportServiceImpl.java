@@ -32,8 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ReportServiceImpl implements ReportService {
 
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
-
     private final TimeEntryRepository timeEntryRepository;
     private final UserRepository userRepository;
     private final MonthlySignatureRepository signatureRepository;
@@ -50,15 +48,18 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public MonthlyReport informeDeEmpresa(String solicitanteEmail, YearMonth mes) {
         User solicitante = getUsuario(solicitanteEmail);
+        ZoneId zona = solicitante.zona();
 
         List<TimeEntry> fichajes = timeEntryRepository.findParaInforme(
-                solicitante.getEmpresa(), inicioDelMes(mes), inicioDelMesSiguiente(mes));
+                solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));
 
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 "Todos los empleados",
                 mes,
-                fichajes.stream().map(this::aFila).toList());
+                fichajes.stream().map(fichaje -> aFila(fichaje, zona)).toList(),
+                null,
+                zona);
     }
 
     @Override
@@ -74,8 +75,9 @@ public class ReportServiceImpl implements ReportService {
             throw new TenantAccessException("No puedes generar informes de empleados de otra empresa.");
         }
 
+        ZoneId zona = solicitante.zona();
         List<TimeEntry> fichajes = timeEntryRepository.findParaInformeDeEmpleado(
-                empleado, inicioDelMes(mes), inicioDelMesSiguiente(mes));
+                empleado, inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));
 
         // La firma vigente del mes, si la hay (Fase B3). Solo la vigente: una
         // invalidada ya no dice nada del registro de hoy.
@@ -94,8 +96,9 @@ public class ReportServiceImpl implements ReportService {
                 solicitante.getEmpresa().getNombre(),
                 empleado.getNombre(),
                 mes,
-                fichajes.stream().map(this::aFila).toList(),
-                firma);
+                fichajes.stream().map(fichaje -> aFila(fichaje, zona)).toList(),
+                firma,
+                zona);
     }
 
     private User getUsuario(String email) {
@@ -105,12 +108,12 @@ public class ReportServiceImpl implements ReportService {
 
     /**
      * Convierte un fichaje a línea de informe, proyectando los instantes
-     * a hora española: el informe lo lee una persona en España, no un
+     * a la hora de la empresa: el informe lo lee una persona allí, no un
      * sistema en UTC.
      */
-    private ReportRow aFila(TimeEntry fichaje) {
-        ZonedDateTime entrada = fichaje.getHoraEntrada().atZone(MADRID_ZONE);
-        ZonedDateTime salida = fichaje.getHoraSalida().atZone(MADRID_ZONE);
+    private ReportRow aFila(TimeEntry fichaje, ZoneId zona) {
+        ZonedDateTime entrada = fichaje.getHoraEntrada().atZone(zona);
+        ZonedDateTime salida = fichaje.getHoraSalida().atZone(zona);
 
         long segundosBrutos = Duration.between(fichaje.getHoraEntrada(), fichaje.getHoraSalida()).getSeconds();
         long segundosNetos = segundosBrutos - fichaje.getSegundosPausaAcumulados();
@@ -127,11 +130,7 @@ public class ReportServiceImpl implements ReportService {
                 fichaje.isJornadaIncompleta());
     }
 
-    private Instant inicioDelMes(YearMonth mes) {
-        return mes.atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
-    }
-
-    private Instant inicioDelMesSiguiente(YearMonth mes) {
-        return mes.plusMonths(1).atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
+    private static Instant inicioDelMes(YearMonth mes, ZoneId zona) {
+        return mes.atDay(1).atStartOfDay(zona).toInstant();
     }
 }

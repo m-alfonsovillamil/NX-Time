@@ -33,12 +33,11 @@ import org.springframework.stereotype.Component;
  * se generan del mismo {@link PersonalDataExport}, así que no puede haber algo
  * en uno que falte en el otro.
  *
- * Las horas van en hora de España, no en UTC como en el JSON: aquí se leen.
+ * Las horas van en la hora de la empresa, no en UTC como en el JSON: aquí se leen.
  */
 @Component
 public class PersonalDataPdfGenerator {
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
@@ -56,11 +55,13 @@ public class PersonalDataPdfGenerator {
         PdfWriter.getInstance(documento, salida);
         documento.open();
 
+        PersonalDataExport.Persona p = datos.persona();
+        Horas en = new Horas(ZoneId.of(p.zonaHoraria()));
+
         documento.add(new Paragraph("Tus datos en NX Time", TITULO));
-        documento.add(new Paragraph("Generado el " + fechaHora(datos.generadoEn())
+        documento.add(new Paragraph("Generado el " + en.fechaHora(datos.generadoEn())
                 + ". Contiene lo mismo que el fichero JSON de la misma exportación.", SUAVE));
 
-        PersonalDataExport.Persona p = datos.persona();
         seccion(documento, "Datos personales");
         PdfPTable ficha = new PdfPTable(new float[] {1.2f, 3f});
         ficha.setWidthPercentage(100);
@@ -72,19 +73,19 @@ public class PersonalDataPdfGenerator {
         fila(ficha, "Puesto", texto(p.puesto()));
         fila(ficha, "Fecha de nacimiento", p.fechaNacimiento() != null ? p.fechaNacimiento().format(FECHA) : "—");
         fila(ficha, "Jornada semanal", p.horasSemanales() != null ? p.horasSemanales().stripTrailingZeros().toPlainString() + " h" : "—");
-        fila(ficha, "Cuenta", p.activo() ? "Activa" : "De baja desde " + fechaHora(p.fechaBaja()));
+        fila(ficha, "Cuenta", p.activo() ? "Activa" : "De baja desde " + en.fechaHora(p.fechaBaja()));
         documento.add(ficha);
 
         tabla(documento, "Fichajes (" + datos.fichajes().size() + ")", datos.fichajes(),
                 new String[] {"Fecha", "Entrada", "Salida", "Pausa", "Trabajado", "Observaciones"},
                 f -> new String[] {
-                        fecha(f.horaEntrada()), hora(f.horaEntrada()), hora(f.horaSalida()),
+                        en.fecha(f.horaEntrada()), en.hora(f.horaEntrada()), en.hora(f.horaSalida()),
                         minutos(f.segundosPausa()), neto(f), observaciones(f)});
 
         tabla(documento, "Pausas añadidas a posteriori", datos.pausasAnadidas(),
                 new String[] {"Fecha", "Desde", "Hasta", "Motivo", "Cómo entró"},
                 pa -> new String[] {
-                        fecha(pa.inicio()), hora(pa.inicio()), hora(pa.fin()), pa.motivo(),
+                        en.fecha(pa.inicio()), en.hora(pa.inicio()), en.hora(pa.fin()), pa.motivo(),
                         (pa.porAprobacion() ? "Aprobada" : "Directa") + (pa.anulada() ? " (deshecha)" : "")});
 
         tabla(documento, "Ausencias", datos.ausencias(),
@@ -100,10 +101,10 @@ public class PersonalDataPdfGenerator {
         tabla(documento, "Correcciones que has pedido", datos.correccionesPedidas(),
                 new String[] {"Pedida", "Propuesta", "Motivo", "Estado"},
                 c -> new String[] {
-                        fechaHora(c.creadoEn()),
-                        hora(c.horaEntradaPropuesta()) + "–" + hora(c.horaSalidaPropuesta())
+                        en.fechaHora(c.creadoEn()),
+                        en.hora(c.horaEntradaPropuesta()) + "–" + en.hora(c.horaSalidaPropuesta())
                                 + (c.pausaInicioPropuesta() != null
-                                        ? " (pausa " + hora(c.pausaInicioPropuesta()) + "–" + hora(c.pausaFinPropuesta()) + ")"
+                                        ? " (pausa " + en.hora(c.pausaInicioPropuesta()) + "–" + en.hora(c.pausaFinPropuesta()) + ")"
                                         : ""),
                         c.motivo(), c.estado()});
 
@@ -137,41 +138,42 @@ public class PersonalDataPdfGenerator {
         tabla(documento, "Firmas del registro mensual", datos.firmasMensuales(),
                 new String[] {"Mes", "Estado", "Firmada", "Huella"},
                 f -> new String[] {
-                        String.format("%02d/%d", f.mes(), f.anio()), f.estado(), fechaHora(f.firmadaEn()),
+                        String.format("%02d/%d", f.mes(), f.anio()), f.estado(), en.fechaHora(f.firmadaEn()),
                         f.hash().substring(0, 16) + "…"});
 
         tabla(documento, "Avisos recibidos (" + datos.avisos().size() + ")", datos.avisos(),
                 new String[] {"Fecha", "Aviso", "Leído"},
-                av -> new String[] {fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});
+                av -> new String[] {en.fechaHora(av.creadoEn()), av.titulo(), av.leido() ? "Sí" : "No"});
 
         // El token no cabe en una celda y no le dice nada a quien lo lee: se
         // enseña el final, que basta para reconocerlo. Entero va en el JSON.
         tabla(documento, "Dispositivos que reciben notificaciones push", datos.dispositivosPush(),
                 new String[] {"Plataforma", "Registrado", "Visto por última vez", "Token"},
                 d -> new String[] {
-                        d.plataforma(), fechaHora(d.registradoEn()), fechaHora(d.vistoEn()),
+                        d.plataforma(), en.fechaHora(d.registradoEn()), en.fechaHora(d.vistoEn()),
                         "…" + d.token().substring(Math.max(0, d.token().length() - 12))});
 
         tabla(documento, "Ficheros adjuntos", datos.adjuntos(),
                 new String[] {"Tipo", "Nombre", "Tamaño", "Subido", "Vigente"},
                 ad -> new String[] {
-                        ad.tipo(), ad.nombre(), (ad.tamanoBytes() / 1024) + " KB", fechaHora(ad.subidoEn()),
+                        ad.tipo(), ad.nombre(), (ad.tamanoBytes() / 1024) + " KB", en.fechaHora(ad.subidoEn()),
                         ad.vigente() ? "Sí" : "No"});
 
         tabla(documento, "Candidaturas", datos.candidaturas(),
                 new String[] {"Oferta", "Presentada", "Estado"},
-                ca -> new String[] {ca.oferta(), fechaHora(ca.creadoEn()), ca.estado()});
+                ca -> new String[] {ca.oferta(), en.fechaHora(ca.creadoEn()), ca.estado()});
 
         tabla(documento, "Denuncias presentadas identificándote", datos.denunciasIdentificadas(),
                 new String[] {"Presentada", "Categoría", "Estado"},
-                d -> new String[] {fechaHora(d.creadoEn()), etiquetaDenuncia(d.categoria()), d.estado()});
+                d -> new String[] {en.fechaHora(d.creadoEn()), etiquetaDenuncia(d.categoria()), d.estado()});
 
         seccion(documento, "Notas sobre esta exportación");
         for (String nota : datos.notas()) {
             // La nota de las horas en UTC es cierta en el JSON y falsa aquí,
-            // donde van en hora de España. Se vio al mirar el PDF generado.
+            // donde van en la hora de la empresa. Se vio al mirar el PDF generado.
             String texto = PersonalDataExportServiceImpl.NOTA_HORAS_EN_UTC.equals(nota)
-                    ? "Las horas van en hora de España. En el fichero JSON van en UTC (formato ISO 8601)."
+                    ? "Las horas van en la hora de tu empresa (" + p.zonaHoraria()
+                            + "). En el fichero JSON van en UTC (formato ISO 8601)."
                     : nota;
             documento.add(new Paragraph("• " + texto, NORMAL));
         }
@@ -266,16 +268,20 @@ public class PersonalDataPdfGenerator {
         }
     }
 
-    private static String fecha(Instant instante) {
-        return instante == null ? "—" : instante.atZone(MADRID).format(FECHA);
-    }
+    /** Los instantes, en la hora de la empresa de la persona (ADR 032). */
+    private record Horas(ZoneId zona) {
 
-    private static String hora(Instant instante) {
-        return instante == null ? "—" : instante.atZone(MADRID).format(HORA);
-    }
+        String fecha(Instant instante) {
+            return instante == null ? "—" : instante.atZone(zona).format(FECHA);
+        }
 
-    private static String fechaHora(Instant instante) {
-        return instante == null ? "—" : instante.atZone(MADRID).format(FECHA_HORA);
+        String hora(Instant instante) {
+            return instante == null ? "—" : instante.atZone(zona).format(HORA);
+        }
+
+        String fechaHora(Instant instante) {
+            return instante == null ? "—" : instante.atZone(zona).format(FECHA_HORA);
+        }
     }
 
     private static String fechaLocal(LocalDate fecha) {

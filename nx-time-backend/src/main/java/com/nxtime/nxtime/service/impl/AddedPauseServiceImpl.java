@@ -26,7 +26,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,12 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AddedPauseServiceImpl implements AddedPauseService {
 
     private static final Logger log = LoggerFactory.getLogger(AddedPauseServiceImpl.class);
-
-    /**
-     * "Hoy" es el hoy de Madrid, que es donde vive la jornada laboral. Es la
-     * misma zona con la que los agregados parten los días.
-     */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private static final String VER_EQUIPO = "fichaje:leer:equipo";
 
@@ -251,7 +244,9 @@ public class AddedPauseServiceImpl implements AddedPauseService {
     // ------------------------------------------------------------------
 
     /**
-     * Directa si la jornada sigue abierta, o si se cerró y empezó hoy.
+     * Directa si la jornada sigue abierta, o si se cerró y empezó hoy. "Hoy"
+     * es el de la empresa, la misma zona con la que los agregados parten los
+     * días (ADR 032).
      *
      * Por la hora de ENTRADA y no por la de salida, a propósito: los
      * agregados asignan cada jornada al día en que empezó, así que "la
@@ -261,8 +256,8 @@ public class AddedPauseServiceImpl implements AddedPauseService {
         if (fichaje.getHoraSalida() == null) {
             return true;
         }
-        LocalDate hoy = LocalDate.ofInstant(clock.instant(), MADRID);
-        return LocalDate.ofInstant(fichaje.getHoraEntrada(), MADRID).equals(hoy);
+        LocalDate hoy = LocalDate.ofInstant(clock.instant(), fichaje.zona());
+        return fichaje.dia().equals(hoy);
     }
 
     private TimeEntry cargar(long fichajeId, User actor) {

@@ -72,8 +72,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AnalyticsServiceImpl implements AnalyticsService {
 
-    static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
-
     /** Quien la tiene ve la empresa entera; quien no, su departamento. */
     static final String VE_LA_EMPRESA = "empleado:gestionar";
 
@@ -90,7 +88,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             AnalyticsRepository analyticsRepository,
             UserRepository userRepository,
             JornadaTeoricaService jornadaTeoricaService) {
-        this(analyticsRepository, userRepository, jornadaTeoricaService, Clock.system(MADRID));
+        this(analyticsRepository, userRepository, jornadaTeoricaService, Clock.systemUTC());
     }
 
     AnalyticsServiceImpl(
@@ -110,7 +108,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     @Cacheable(cacheNames = CacheConfig.ANALITICA,
-            key = "'resumen:' + #actor.id + ':' + #periodo + ':' + #fecha + ':' + T(java.time.LocalDate).now()")
+            key = "'resumen:' + #actor.id + ':' + #periodo + ':' + #fecha + ':' + T(java.time.LocalDate).now(#actor.zona())")
     public AnalyticsSummaryResponse resumen(User actor, AnalyticsPeriod periodo, LocalDate fecha) {
         Ventana ventana = ventana(actor, periodo, fecha);
         Censo censo = censar(ventana);
@@ -121,7 +119,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         Long minutosMedios = null;
         if (!censo.vacio()) {
             JornadasProjection jornadas = analyticsRepository.jornadas(
-                    censo.ids(), inicioDelDia(ventana.desde()), inicioDelDia(ventana.evaluadoHasta().plusDays(1)));
+                    censo.ids(), inicioDelDia(ventana.desde(), ventana.zona()),
+                    inicioDelDia(ventana.evaluadoHasta().plusDays(1), ventana.zona()));
             incompletas = ReglasDeAbsentismo.porcentaje(numero(jornadas.getIncompletas()), numero(jornadas.getJornadas()));
             long diasConJornada = censo.diasConJornada();
             if (diasConJornada > 0 && jornadas.getSegundos() != null) {
@@ -144,7 +143,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     @Cacheable(cacheNames = CacheConfig.ANALITICA,
             key = "'absentismo:' + #actor.id + ':' + #periodo + ':' + #fecha + ':' + #agrupar + ':' "
-                    + "+ T(java.time.LocalDate).now()")
+                    + "+ T(java.time.LocalDate).now(#actor.zona())")
     public AbsenteeismResponse absentismo(
             User actor, AnalyticsPeriod periodo, LocalDate fecha, AnalyticsGrouping agrupar) {
         Ventana ventana = ventana(actor, periodo, fecha);
@@ -159,7 +158,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     @Cacheable(cacheNames = CacheConfig.ANALITICA,
             key = "'puntualidad:' + #actor.id + ':' + #periodo + ':' + #fecha + ':' + #agrupar + ':' "
-                    + "+ T(java.time.LocalDate).now()")
+                    + "+ T(java.time.LocalDate).now(#actor.zona())")
     public PunctualityResponse puntualidad(
             User actor, AnalyticsPeriod periodo, LocalDate fecha, AnalyticsGrouping agrupar) {
         Ventana ventana = ventana(actor, periodo, fecha);
@@ -184,14 +183,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     Ventana ventana(User actor, AnalyticsPeriod periodo, LocalDate fecha) {
         LocalDate desde = periodo.inicio(fecha);
         LocalDate hasta = periodo.fin(fecha);
-        LocalDate ayer = LocalDate.now(clock).minusDays(1);
+        ZoneId zona = actor.zona();
+        LocalDate ayer = LocalDate.now(clock.withZone(zona)).minusDays(1);
         LocalDate evaluadoHasta = desde.isAfter(ayer) ? null : (hasta.isBefore(ayer) ? hasta : ayer);
 
         long empresaId = actor.getEmpresa().getId();
         if (RoleAuthorities.tiene(actor, VE_LA_EMPRESA)) {
             return new Ventana(
                     new AnalyticsWindow(periodo, desde, hasta, evaluadoHasta, AnalyticsScope.EMPRESA, null),
-                    empresaId, null);
+                    empresaId, null, zona);
         }
         Department departamento = actor.getDepartamento();
         if (departamento == null) {
@@ -203,10 +203,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return new Ventana(
                 new AnalyticsWindow(periodo, desde, hasta, evaluadoHasta,
                         AnalyticsScope.DEPARTAMENTO, departamento.getNombre()),
-                empresaId, departamento.getId());
+                empresaId, departamento.getId(), zona);
     }
 
-    record Ventana(AnalyticsWindow dto, long empresaId, Long departamentoId) {
+    /** {@code zona}: la de la empresa, en la que se cuentan sus días (ADR 032). */
+    record Ventana(AnalyticsWindow dto, long empresaId, Long departamentoId, ZoneId zona) {
 
         LocalDate desde() {
             return dto.desde();
@@ -239,7 +240,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         Map<Long, List<DiaTeorico>> planificado =
                 jornadaTeoricaService.planificadoDeVarios(userRepository.findAllById(ids), desde, hasta);
         Map<Long, Set<LocalDate>> fichados = analyticsRepository
-                .diasConJornada(ids, inicioDelDia(desde), inicioDelDia(hasta.plusDays(1))).stream()
+                .diasConJornada(ids, inicioDelDia(desde, ventana.zona()),
+                        inicioDelDia(hasta.plusDays(1), ventana.zona())).stream()
                 .collect(Collectors.groupingBy(AnalyticsRepository.UsuarioDiaProjection::getUsuarioId,
                         Collectors.mapping(AnalyticsRepository.UsuarioDiaProjection::getDia, Collectors.toSet())));
         Map<Long, Map<LocalDate, AbsenceType>> ausencias = new HashMap<>();
@@ -452,8 +454,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     // ------------------------------------------------------------------
 
-    private static Instant inicioDelDia(LocalDate dia) {
-        return dia.atStartOfDay(MADRID).toInstant();
+    private static Instant inicioDelDia(LocalDate dia, ZoneId zona) {
+        return dia.atStartOfDay(zona).toInstant();
     }
 
     private static LocalDate max(LocalDate a, LocalDate b) {

@@ -5,7 +5,6 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.SimpleUserDTO;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
-import java.time.ZoneId;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -36,19 +35,18 @@ import org.mapstruct.Named;
  * explícitamente.
  *
  * "fecha" (TeamTimeEntryDTO) se deriva del Instant horaEntrada
- * proyectado a MADRID_ZONE (Fase 3: horaEntrada dejó de ser
- * LocalDateTime "ingenuo" para ser un Instant real -- necesita zona
- * explícita para saber a qué día de calendario pertenece).
+ * proyectado a la zona de la empresa del fichaje (Fase 3: horaEntrada dejó
+ * de ser LocalDateTime "ingenuo" para ser un Instant real -- necesita zona
+ * explícita para saber a qué día de calendario pertenece; ADR 032: esa zona
+ * es la de cada empresa).
  */
 @Mapper(componentModel = "spring")
 public interface TimeEntryMapper {
 
-    ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
-
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     TimeEntryResponse toResponse(TimeEntry entry);
 
-    @Mapping(target = "fecha", expression = "java(entry.getHoraEntrada().atZone(MADRID_ZONE).toLocalDate())")
+    @Mapping(target = "fecha", expression = "java(entry.dia())")
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     @Mapping(target = "usuarioId", source = "usuario.id")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);

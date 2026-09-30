@@ -23,9 +23,15 @@ import java.util.List;
  *   {@code @PreAuthorize} de cada endpoint --, solo decide qué se enseña.
  *   El campo {@code rol} se queda porque hay sitios donde lo que se
  *   quiere es nombrarlo ("Gestor"), no comprobar un permiso.
+ *
+ * @param zonaHoraria la zona de su empresa, en nombre IANA (ADR 032). Con ella
+ *   el cliente decide qué día es "hoy" y en qué hora enseña los fichajes, en
+ *   vez de suponer Madrid. Viaja en el refresco por lo mismo que las
+ *   authorities: un cambio de zona llega sin volver a entrar.
  */
 public record AuthenticationResponse(
-        String token, String refreshToken, String nombre, Role rol, List<String> authorities) {
+        String token, String refreshToken, String nombre, Role rol, List<String> authorities,
+        String zonaHoraria) {
 
     /**
      * La misma respuesta sin el refresh, para el navegador (ADR 030): allí el
@@ -34,6 +40,6 @@ public record AuthenticationResponse(
      * quiere esconder.
      */
     public AuthenticationResponse sinRefreshToken() {
-        return new AuthenticationResponse(token, null, nombre, rol, authorities);
+        return new AuthenticationResponse(token, null, nombre, rol, authorities, zonaHoraria);
     }
 }

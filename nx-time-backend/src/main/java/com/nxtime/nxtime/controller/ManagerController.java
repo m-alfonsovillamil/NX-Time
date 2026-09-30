@@ -198,7 +198,7 @@ public class ManagerController {
     // endpoint que los escribiera, así que toda la plantilla se
     // quedaba en 40 h/semana y en los 22 días por defecto para siempre.
     @Operation(summary = "Configurar la ficha de un empleado",
-            description = "Jornada semanal en horas y días de vacaciones del AÑO EN CURSO (Europe/Madrid). "
+            description = "Jornada semanal en horas y días de vacaciones del AÑO EN CURSO (en la zona horaria de la empresa). "
                     + "Es un PATCH: los campos ausentes o null NO se tocan, y un cuerpo vacío es un 200 sin "
                     + "efecto. Si el empleado todavía no tenía saldo de vacaciones para el año, se crea.")
     @ApiResponses({

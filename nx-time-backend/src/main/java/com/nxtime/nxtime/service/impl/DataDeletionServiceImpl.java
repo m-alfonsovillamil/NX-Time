@@ -47,7 +47,6 @@ public class DataDeletionServiceImpl implements DataDeletionService {
     /** RD-ley 8/2019: el registro horario se conserva cuatro años. */
     static final int ANIOS_DE_CONSERVACION = 4;
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final DeletionRequestRepository repository;
     private final UserRepository userRepository;
@@ -214,7 +213,7 @@ public class DataDeletionServiceImpl implements DataDeletionService {
         String nombre = persona.getNombre();
         String empresa = persona.getEmpresa().getNombre();
 
-        LocalDate anonimizarDesde = anonimizarDesde(usuarioId);
+        LocalDate anonimizarDesde = anonimizarDesde(usuarioId, persona.zona());
         Map<String, Integer> borrado = eraser.purgar(usuarioId);
 
         solicitud.setEstado(DeletionStatus.EJECUTADA);
@@ -323,14 +322,15 @@ public class DataDeletionServiceImpl implements DataDeletionService {
     }
 
     /**
-     * Cuatro años desde el día del último fichaje, en hora de España. Sin
-     * fichajes, desde hoy: no hay registro que conservar, pero la solicitud
-     * tiene que llevar fecha (el CHECK lo exige) y así la regla es una sola.
+     * Cuatro años desde el día del último fichaje, en la hora de la empresa.
+     * Sin fichajes, desde hoy: no hay registro que conservar, pero la
+     * solicitud tiene que llevar fecha (el CHECK lo exige) y así la regla es
+     * una sola.
      */
-    private LocalDate anonimizarDesde(long usuarioId) {
+    private LocalDate anonimizarDesde(long usuarioId, ZoneId zona) {
         LocalDate base = repository.ultimaEntrada(usuarioId)
-                .map(instante -> instante.atZone(MADRID).toLocalDate())
-                .orElseGet(() -> LocalDate.now(clock.withZone(MADRID)));
+                .map(instante -> instante.atZone(zona).toLocalDate())
+                .orElseGet(() -> LocalDate.now(clock.withZone(zona)));
         return base.plusYears(ANIOS_DE_CONSERVACION);
     }
 

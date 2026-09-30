@@ -26,7 +26,6 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.time.temporal.TemporalAdjusters;
@@ -44,8 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AllocationEditServiceImpl implements AllocationEditService {
 
     private static final Logger log = LoggerFactory.getLogger(AllocationEditServiceImpl.class);
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private static final String VER_EQUIPO = "fichaje:leer:equipo";
 
@@ -176,16 +173,16 @@ public class AllocationEditServiceImpl implements AllocationEditService {
                 .toList());
     }
 
-    /** Lunes a domingo, en hora de España: el plazo del reparto libre. */
+    /** Lunes a domingo, en la hora de la empresa: el plazo del reparto libre. */
     private boolean esDeLaSemanaEnCurso(TimeEntry fichaje) {
-        LocalDate dia = fichaje.getHoraEntrada().atZone(MADRID).toLocalDate();
-        LocalDate lunes = LocalDate.now(clock.withZone(MADRID))
+        LocalDate dia = fichaje.dia();
+        LocalDate lunes = LocalDate.now(clock.withZone(fichaje.zona()))
                 .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         return !dia.isBefore(lunes);
     }
 
     private AllocationsResponse respuesta(TimeEntry fichaje) {
-        LocalDate dia = fichaje.getHoraEntrada().atZone(MADRID).toLocalDate();
+        LocalDate dia = fichaje.dia();
         List<AllocationsResponse.Linea> lineas = allocationRepository.findByRegistroOrderByIdAsc(fichaje).stream()
                 .map(i -> new AllocationsResponse.Linea(
                         i.getProyecto().getId(), i.getProyecto().getCodigo(), i.getProyecto().getNombre(),

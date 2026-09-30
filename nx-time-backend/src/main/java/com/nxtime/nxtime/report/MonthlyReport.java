@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.report;
 
+import com.nxtime.nxtime.domain.Company;
 import java.time.Instant;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -12,18 +14,28 @@ import java.util.List;
  * si cada uno consultara y calculara por su cuenta, el Excel y el PDF
  * del mismo mes podrían no cuadrar, que es el peor defecto posible en
  * un documento que se entrega ante una inspección.
+ *
+ * {@code zona} es la de la empresa (ADR 032): las filas ya vienen en ella, y
+ * el PDF la usa para las fechas de las firmas y la del pie.
  */
 public record MonthlyReport(
         String nombreEmpresa,
         String nombreEmpleado,
         YearMonth mes,
         List<ReportRow> filas,
-        FirmaDelInforme firma
+        FirmaDelInforme firma,
+        ZoneId zona
 ) {
 
     /** Sin firma: el Excel de la empresa, o un mes que nadie ha firmado. */
     public MonthlyReport(String nombreEmpresa, String nombreEmpleado, YearMonth mes, List<ReportRow> filas) {
         this(nombreEmpresa, nombreEmpleado, mes, filas, null);
+    }
+
+    /** En la zona de por defecto. */
+    public MonthlyReport(String nombreEmpresa, String nombreEmpleado, YearMonth mes, List<ReportRow> filas,
+            FirmaDelInforme firma) {
+        this(nombreEmpresa, nombreEmpleado, mes, filas, firma, ZoneId.of(Company.ZONA_POR_DEFECTO));
     }
 
     /**
