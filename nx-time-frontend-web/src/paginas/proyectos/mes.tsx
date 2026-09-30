@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 import { Boton } from '../../componentes/Basicos';
 import { proyectos } from '../../i18n/es/proyectos';
-import { hoyEnEspana } from '../../util/fechas';
+import { hoyEnEmpresa } from '../../util/fechas';
 
 const M = proyectos.mes;
 
@@ -22,7 +22,7 @@ export interface Mes {
 
 /** @param desplazamiento meses respecto al actual con que empieza: -1 para el anterior. */
 export function useMes(desplazamiento = 0): Mes {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const actual = { anio: Number(hoy.slice(0, 4)), mes: Number(hoy.slice(5, 7)) };
   const [elegido, setElegido] = useState(() => {
     const indice = actual.anio * 12 + (actual.mes - 1) + desplazamiento;

@@ -164,6 +164,7 @@ interface RespuestaDeSesion {
   token?: string;
   nombre?: string;
   authorities?: string[];
+  zonaHoraria?: string;
 }
 
 async function pedirTokensNuevos(): Promise<string | null> {
@@ -187,11 +188,13 @@ async function pedirTokensNuevos(): Promise<string | null> {
 
     const cuerpo = (await respuesta.json()) as RespuestaDeSesion;
     if (cuerpo.token === undefined) return null;
-    // El nombre y las authorities también: un cambio de rol llega así.
+    // El nombre, las authorities y la zona también: un cambio de rol o de
+    // zona llega así.
     abrirSesion({
       accessToken: cuerpo.token,
       nombre: cuerpo.nombre ?? sesionActual()?.nombre ?? '',
       authorities: cuerpo.authorities ?? sesionActual()?.authorities ?? [],
+      zonaHoraria: cuerpo.zonaHoraria ?? sesionActual()?.zonaHoraria,
     });
     return cuerpo.token;
   } catch {

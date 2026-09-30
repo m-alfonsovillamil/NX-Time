@@ -13,7 +13,7 @@ import { T } from '../../i18n/es';
 import { fichar } from '../../i18n/es/fichar';
 import { historial } from '../../i18n/es/historial';
 import { json, pintar, sesionDe, simularApi, type Manejador, type Ruta } from '../../pruebas/api';
-import { hoyEnEspana, lunesDe, sumarDias } from '../../util/fechas';
+import { hoyEnEmpresa, lunesDe, sumarDias } from '../../util/fechas';
 import { DialogoCorreccion } from './DialogoCorreccion';
 import { DialogoReparto } from './DialogoReparto';
 import { Historial, minutosCerrados, rangoDe } from './Historial';
@@ -107,7 +107,7 @@ describe('un periodo', () => {
 
     await userEvent.click(await screen.findByRole('tab', { name: H.semana }));
 
-    const lunes = lunesDe(hoyEnEspana());
+    const lunes = lunesDe(hoyEnEmpresa());
     await screen.findByText(/16h 00m trabajadas$/);
     const delPeriodo = llamadas.a('GET', '/api/v1/fichaje/historial').filter((l) => l.query.has('desde'));
     expect(delPeriodo.map((l) => [l.query.get('desde'), l.query.get('hasta'), l.query.get('pagina')])).toEqual([

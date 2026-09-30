@@ -46,6 +46,7 @@ export function RegistroEmpresa() {
           accessToken: sesion.token ?? '',
           nombre: sesion.nombre ?? '',
           authorities: sesion.authorities ?? [],
+          zonaHoraria: sesion.zonaHoraria,
         });
         navegar('/fichar', { replace: true });
       },

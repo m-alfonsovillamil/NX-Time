@@ -24,7 +24,7 @@ import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
-import { diaEnEspana, fechaCompleta, fechaCorta, hoyEnEspana } from '../../util/fechas';
+import { diaEnEmpresa, fechaCompleta, fechaCorta, hoyEnEmpresa } from '../../util/fechas';
 import { subirAdjunto } from './adjuntos';
 
 const P = cuenta.perfil;
@@ -155,7 +155,7 @@ function Personales({ perfil }: { perfil: Perfil }) {
   function enviar(evento: FormEvent) {
     evento.preventDefault();
     if (nombre.trim() === '') return setError(P.nombreObligatorio);
-    if (fecha !== '' && fecha >= hoyEnEspana()) return setError(P.fechaFutura);
+    if (fecha !== '' && fecha >= hoyEnEmpresa()) return setError(P.fechaFutura);
     setError(null);
     // Es un PATCH: una cadena vacía borra el dato. La fecha vacía no se manda,
     // porque «» no es una fecha y el servidor la rechazaría.
@@ -199,7 +199,7 @@ function Personales({ perfil }: { perfil: Perfil }) {
           <Campo id="perfil-apellidos" etiqueta={P.apellidos} value={apellidos} maxLength={150} autoComplete="family-name" onChange={(e) => setApellidos(e.target.value)} />
         </div>
         <div className="nx-fila-campos">
-          <Campo id="perfil-fecha" etiqueta={P.fechaNacimiento} type="date" value={fecha} max={diaEnEspana()} onChange={(e) => setFecha(e.target.value)} />
+          <Campo id="perfil-fecha" etiqueta={P.fechaNacimiento} type="date" value={fecha} max={diaEnEmpresa()} onChange={(e) => setFecha(e.target.value)} />
           <Campo id="perfil-puesto" etiqueta={P.puesto} value={puesto} maxLength={120} onChange={(e) => setPuesto(e.target.value)} />
         </div>
         {(error ?? guardar.error?.message) && <Aviso>{error ?? guardar.error?.message}</Aviso>}
@@ -268,7 +268,7 @@ function Curriculum({ cv }: { cv: Adjunto | undefined }) {
         <p className="nx-sutil">{P.cv.vacio}</p>
       ) : (
         <div className="nx-fila-accion">
-          <span>{P.cv.detalle(cv.nombreOriginal ?? '', cv.subidoEn ? fechaCorta(diaEnEspana(cv.subidoEn)) : '')}</span>
+          <span>{P.cv.detalle(cv.nombreOriginal ?? '', cv.subidoEn ? fechaCorta(diaEnEmpresa(cv.subidoEn)) : '')}</span>
           <span className="nx-acciones-fila">
             <Boton variante="texto" onClick={() => void abrir(cv)}>
               {P.cv.abrir}

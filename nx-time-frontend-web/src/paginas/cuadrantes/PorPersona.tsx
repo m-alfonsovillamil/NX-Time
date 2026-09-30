@@ -24,7 +24,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuadrantes } from '../../i18n/es/cuadrantes';
-import { fechaCorta, hoyEnEspana, sumarDias } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, sumarDias } from '../../util/fechas';
 import { Dia } from '../cuadrante/MiCuadrante';
 import { ListaDeTramos } from './ListaDeTramos';
 import { CLAVE_CUADRANTES } from './Plantillas';
@@ -35,7 +35,7 @@ const C = cuadrantes.persona;
 type Asignacion = components['schemas']['ScheduleAssignmentResponse'];
 
 function FormularioDeAsignacion({ usuarioId, alTerminar }: { usuarioId: number; alTerminar: (aviso: string | null) => void }) {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const plantillas = useQuery({
     queryKey: [...CLAVE_CUADRANTES, 'plantillas'],
     queryFn: () => pedir(cliente.GET('/api/v1/cuadrantes/plantillas', {})),
@@ -86,7 +86,7 @@ function FormularioDeAsignacion({ usuarioId, alTerminar }: { usuarioId: number; 
 }
 
 function FormularioDeCierre({ asignacion, alTerminar }: { asignacion: Asignacion; alTerminar: () => void }) {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [ultimo, setUltimo] = useState(hoy);
   const cerrar = useMutacion(
     (fechaFin: string) =>
@@ -118,7 +118,7 @@ function FormularioDeCierre({ asignacion, alTerminar }: { asignacion: Asignacion
 }
 
 function FormularioDeExcepcion({ usuarioId, alTerminar }: { usuarioId: number; alTerminar: () => void }) {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [fecha, setFecha] = useState(hoy);
   const [tipo, setTipo] = useState<'LIBRE' | 'TRAMO'>('LIBRE');
   const [tramos, setTramos] = useState<TramoEditable[]>([{ inicio: '09:00', fin: '14:00', alDiaSiguiente: false }]);
@@ -182,7 +182,7 @@ function FormularioDeExcepcion({ usuarioId, alTerminar }: { usuarioId: number; a
 }
 
 export function PorPersona({ usuarioId, nombre }: { usuarioId: number; nombre: string }) {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [asignando, setAsignando] = useState(false);
   const [cerrando, setCerrando] = useState<Asignacion | null>(null);
   const [anadiendo, setAnadiendo] = useState(false);

@@ -31,6 +31,9 @@
     "name" : "Push",
     "description" : "Registrar y dar de baja el dispositivo que recibe las notificaciones push."
   }, {
+    "name" : "Empresa",
+    "description" : "Ajustes de la empresa: nombre y zona horaria."
+  }, {
     "name" : "Fichaje",
     "description" : "Registro horario: iniciar/finalizar jornada, pausas e historial."
   }, {
@@ -342,6 +345,119 @@
           },
           "409" : {
             "description" : "Jornada abierta, anulada, o con una corrección sin resolver",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/ajustes" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Ajustes de mi empresa",
+        "operationId" : "leer",
+        "responses" : {
+          "200" : {
+            "description" : "Ajustes",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanySettingsResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Guardar los ajustes de mi empresa",
+        "description" : "Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.",
+        "operationId" : "guardar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateCompanySettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Guardados",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanySettingsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Nombre vacío o zona horaria desconocida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Otra empresa ya se llama así",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -8731,6 +8847,37 @@
         "properties" : {
           "nombre" : {
             "type" : "string"
+          }
+        }
+      },
+      "UpdateCompanySettingsRequest" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
+          },
+          "zonaHoraria" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "nombre", "zonaHoraria" ]
+      },
+      "CompanySettingsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string"
+          },
+          "zonaHoraria" : {
+            "type" : "string"
+          },
+          "firmasInvalidadas" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

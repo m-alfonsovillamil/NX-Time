@@ -136,7 +136,7 @@ const RRHH = [
   ...GESTOR, 'correccion:disputa:resolver', 'departamento:gestionar', 'empleado:configurar',
   'empleado:gestionar', 'fichaje:auditoria', 'fichaje:corregir', 'firma:visar', 'informe:exportar',
 ];
-const ADMIN = [...RRHH, 'denuncia:instruir', 'gestor:crear'];
+const ADMIN = [...RRHH, 'denuncia:instruir', 'empresa:configurar', 'gestor:crear'];
 
 export const AUTHORITIES = { EMPLEADO, GESTOR, RRHH, ADMIN } as const;
 

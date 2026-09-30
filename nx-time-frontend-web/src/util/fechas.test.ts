@@ -1,21 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   aInstante,
-  diaEnEspana,
+  diaEnEmpresa,
   diasDelRango,
   duracion,
   fechaCompleta,
   fechaCorta,
+  fijarZona,
   hora,
   horaDeSalida,
-  horaEnEspana,
+  horaEnEmpresa,
   lunesDe,
   minutos,
   primeroDeMes,
   segundosTrabajados,
   sumarDias,
   ultimoDeMes,
+  ZONA_POR_DEFECTO,
+  zonaActual,
 } from './fechas';
 
 describe('la hora', () => {
@@ -136,13 +139,13 @@ describe('días e instantes de España', () => {
   });
 
   it('la ida y la vuelta dan la misma hora', () => {
-    expect(horaEnEspana(aInstante('2026-03-02', '22:52'))).toBe('22:52');
+    expect(horaEnEmpresa(aInstante('2026-03-02', '22:52'))).toBe('22:52');
   });
 
   /* Las 23:30 UTC de un día de verano ya son el día siguiente en España. */
   it('el día de un instante es el de España, no el de UTC', () => {
-    expect(diaEnEspana('2026-09-21T22:30:00Z')).toBe('2026-09-22');
-    expect(diaEnEspana('2026-09-21T21:59:00Z')).toBe('2026-09-21');
+    expect(diaEnEmpresa('2026-09-21T22:30:00Z')).toBe('2026-09-22');
+    expect(diaEnEmpresa('2026-09-21T21:59:00Z')).toBe('2026-09-21');
   });
 
   it('la semana empieza en lunes, también si hoy es domingo', () => {
@@ -160,6 +163,28 @@ describe('días e instantes de España', () => {
   it('la salida de un turno de noche dice que es de otro día', () => {
     expect(horaDeSalida('2026-09-21T20:52:00Z', '2026-09-21T22:29:00Z')).toBe('00:29 h (+1 d)');
     expect(horaDeSalida('2026-09-21T07:00:00Z', '2026-09-21T15:00:00Z')).toBe('17:00 h');
+  });
+});
+
+/* ADR 032: la zona es la de la empresa de la sesión. Canarias va una hora por detrás. */
+describe('en la zona de otra empresa', () => {
+  afterEach(() => fijarZona(null));
+
+  it('las mismas 22:30 UTC de verano son las 23:30 del mismo día en Canarias', () => {
+    fijarZona('Atlantic/Canary');
+    expect(zonaActual()).toBe('Atlantic/Canary');
+    expect(diaEnEmpresa('2026-09-21T22:30:00Z')).toBe('2026-09-21');
+    expect(hora('2026-09-21T22:30:00Z')).toBe('23:30 h');
+    expect(aInstante('2026-09-21', '09:03')).toBe('2026-09-21T08:03:00.000Z');
+  });
+
+  it('una zona que el navegador no conoce, o ninguna, deja la de por defecto', () => {
+    fijarZona('Marte/Olimpo');
+    expect(zonaActual()).toBe(ZONA_POR_DEFECTO);
+    fijarZona('Atlantic/Canary');
+    fijarZona(undefined);
+    expect(zonaActual()).toBe(ZONA_POR_DEFECTO);
+    expect(hora('2026-09-21T22:30:00Z')).toBe('00:30 h');
   });
 });
 

@@ -25,7 +25,7 @@ import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { revisiones } from '../../i18n/es/revisiones';
-import { fechaCorta, hoyEnEspana, minutos } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, minutos } from '../../util/fechas';
 
 const H = revisiones.horasExtra;
 
@@ -220,7 +220,7 @@ function DelEquipo({ anio }: { anio: number }) {
 export function HorasExtra() {
   const { puede } = useSesion();
   const puedeRevisar = puede('horasextra:revisar');
-  const anioActual = Number(hoyEnEspana().slice(0, 4));
+  const anioActual = Number(hoyEnEmpresa().slice(0, 4));
   const [anio, setAnio] = useState(anioActual);
   const [pestana, setPestana] = useState<'mios' | 'equipo'>('mios');
 

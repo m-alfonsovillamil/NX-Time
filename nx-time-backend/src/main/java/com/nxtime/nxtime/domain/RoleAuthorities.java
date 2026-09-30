@@ -120,6 +120,9 @@ import java.util.stream.Collectors;
  * hacen la misma operación, "leer la analítica", sobre conjuntos distintos. Lo
  * decide "empleado:gestionar", que es justo quien responde de la plantilla
  * entera. Exportar el CSV pide además "informe:exportar".
+ * "empresa:configurar" (fase Z2) es solo de ADMIN: el nombre y la zona
+ * horaria de la empresa (ADR 032). La zona decide a qué día pertenece cada
+ * fichaje de todo el histórico, y cambiarla puede tumbar firmas mensuales.
  */
 public final class RoleAuthorities {
 
@@ -171,7 +174,8 @@ public final class RoleAuthorities {
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(
             "gestor:crear",
-            "denuncia:instruir"
+            "denuncia:instruir",
+            "empresa:configurar"
     ));
 
     public static Set<String> forRole(Role role) {

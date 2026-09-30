@@ -10,7 +10,7 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { cuadrante } from '../../i18n/es/cuadrante';
 import { pintar, problema, sesionDe, simularApi } from '../../pruebas/api';
-import { hoyEnEspana, primeroDeMes, sumarDias } from '../../util/fechas';
+import { hoyEnEmpresa, primeroDeMes, sumarDias } from '../../util/fechas';
 import { VisadoFirmas, resumenDe } from './VisadoFirmas';
 
 const V = cuadrante.visado;
@@ -64,7 +64,7 @@ describe('visado de firmas', () => {
     pintar(<VisadoFirmas />, { sesion: sesionDe('RRHH') });
 
     expect(await screen.findByText(V.resumen(2, 4, 1))).toBeTruthy();
-    const anterior = sumarDias(primeroDeMes(hoyEnEspana()), -1);
+    const anterior = sumarDias(primeroDeMes(hoyEnEmpresa()), -1);
     const [pedida] = llamadas.a('GET', '/api/v1/firmas/equipo');
     expect([pedida?.query.get('anio'), pedida?.query.get('mes')]).toEqual([anterior.slice(0, 4), String(Number(anterior.slice(5, 7)))]);
 

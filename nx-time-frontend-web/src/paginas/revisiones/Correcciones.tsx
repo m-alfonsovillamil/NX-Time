@@ -25,7 +25,7 @@ import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { revisiones } from '../../i18n/es/revisiones';
-import { diaEnEspana, fechaCorta, hora, horaDeSalida, horaEnEspana, minutos } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta, hora, horaDeSalida, horaEnEmpresa, minutos } from '../../util/fechas';
 
 const C = revisiones.correcciones;
 
@@ -35,7 +35,7 @@ const TONO: Record<string, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECH
 const CLAVE = ['correcciones'] as const;
 
 function tramo(entrada: string | undefined, salida: string | undefined): string {
-  return `${horaEnEspana(entrada)}–${horaDeSalida(entrada, salida)}`;
+  return `${horaEnEmpresa(entrada)}–${horaDeSalida(entrada, salida)}`;
 }
 
 /** Lo que cambia, línea a línea: las horas (si cambian), la pausa y el reparto. */
@@ -65,7 +65,7 @@ function TarjetaDeCorreccion({ c, acciones }: { c: Correccion; acciones?: ReactN
   return (
     <li className="nx-incidencia">
       <div className="nx-incidencia__cabecera">
-        <strong>{fechaCorta(c.horaEntradaActual ? diaEnEspana(c.horaEntradaActual) : undefined)}</strong>
+        <strong>{fechaCorta(c.horaEntradaActual ? diaEnEmpresa(c.horaEntradaActual) : undefined)}</strong>
         {c.estado && <Insignia tono={TONO[c.estado] ?? 'neutro'}>{C.estados[c.estado] ?? c.estado}</Insignia>}
       </div>
       <span className="nx-sutil">{quien(c)}</span>

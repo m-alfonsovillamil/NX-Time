@@ -16,6 +16,9 @@ public interface MonthlySignatureRepository extends JpaRepository<MonthlySignatu
     /** Todas las de una persona, la más reciente primero: las vigentes y el histórico. */
     List<MonthlySignature> findByUsuario_IdOrderByAnioDescMesDescFirmadaEnDesc(long usuarioId);
 
+    /** Las de una empresa en un estado: las vigentes se revisan al cambiar la zona (ADR 032). */
+    List<MonthlySignature> findByEmpresa_IdAndEstado(long empresaId, MonthlySignatureStatus estado);
+
     /** Las de una empresa en un mes, para quien visa. */
     List<MonthlySignature> findByEmpresa_IdAndAnioAndMes(long empresaId, int anio, int mes);
 

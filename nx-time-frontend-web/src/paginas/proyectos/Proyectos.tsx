@@ -28,7 +28,7 @@ import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { proyectos } from '../../i18n/es/proyectos';
-import { fechaCorta, hoyEnEspana, mesYAnio } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, mesYAnio } from '../../util/fechas';
 import { ordenar, usePlantilla } from '../plantilla/Plantilla';
 import { NavegadorDeMes, useMes } from './mes';
 
@@ -52,7 +52,7 @@ function FormularioDeProyecto({ proyecto, alTerminar }: { proyecto: Proyecto | n
   const [codigo, setCodigo] = useState(proyecto?.codigo ?? '');
   const [nombre, setNombre] = useState(proyecto?.nombre ?? '');
   const [descripcion, setDescripcion] = useState(proyecto?.descripcion ?? '');
-  const [inicio, setInicio] = useState(proyecto?.fechaInicio ?? hoyEnEspana());
+  const [inicio, setInicio] = useState(proyecto?.fechaInicio ?? hoyEnEmpresa());
   const [fin, setFin] = useState(proyecto?.fechaFin ?? '');
   const [error, setError] = useState<string | null>(null);
 
@@ -110,7 +110,7 @@ function FormularioDeProyecto({ proyecto, alTerminar }: { proyecto: Proyecto | n
 function FormularioDeAsignacion({ proyectoId, alTerminar }: { proyectoId: number; alTerminar: () => void }) {
   const { consulta: personas } = usePlantilla();
   const [persona, setPersona] = useState('');
-  const [desde, setDesde] = useState(hoyEnEspana());
+  const [desde, setDesde] = useState(hoyEnEmpresa());
   const [hasta, setHasta] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +182,7 @@ function Detalle({ id, alVolver }: { id: number; alVolver: () => void }) {
         cliente.PATCH('/api/v1/proyectos/asignaciones/{asignacionId}', {
           params: { path: { asignacionId } },
           // Hasta hoy incluido: deja de estar a partir de mañana.
-          body: { fechaFin: hoyEnEspana() },
+          body: { fechaFin: hoyEnEmpresa() },
         }),
       ),
     { invalida: [CLAVE], exito: D.sacado, alTerminar: () => setSacando(null) },
@@ -243,7 +243,7 @@ function Detalle({ id, alVolver }: { id: number; alVolver: () => void }) {
                       </div>
                       <span className="nx-sutil">{vigenciaDe(a)}</span>
                       {/* Sacar pone fin hoy: si ya acaba hoy o antes, no hay nada que sacar. */}
-                      {a.vigente === true && (a.fechaFin === undefined || a.fechaFin > hoyEnEspana()) && (
+                      {a.vigente === true && (a.fechaFin === undefined || a.fechaFin > hoyEnEmpresa()) && (
                         <div className="nx-acciones-fila">
                           <Boton variante="texto" onClick={() => setSacando(a)}>
                             {D.sacar}

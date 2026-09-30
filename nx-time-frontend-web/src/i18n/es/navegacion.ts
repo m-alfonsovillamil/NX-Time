@@ -44,6 +44,7 @@ export const navegacion = {
     cuadrantes: 'Cuadrantes',
     analitica: 'Analítica',
     visadoFirmas: 'Visado de firmas',
+    ajustesEmpresa: 'Ajustes de la empresa',
   },
 
   usuario: {

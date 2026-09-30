@@ -52,6 +52,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/ajustes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ajustes de mi empresa */
+        get: operations["leer"];
+        /**
+         * Guardar los ajustes de mi empresa
+         * @description Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.
+         */
+        put: operations["guardar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cuadrantes/plantillas/{plantillaId}": {
         parameters: {
             query?: never;
@@ -2631,6 +2652,16 @@ export interface components {
         SimpleUserDTO: {
             nombre?: string;
         };
+        UpdateCompanySettingsRequest: {
+            nombre: string;
+            zonaHoraria: string;
+        };
+        CompanySettingsResponse: {
+            nombre?: string;
+            zonaHoraria?: string;
+            /** Format: int32 */
+            firmasInvalidadas?: number;
+        };
         ScheduleTemplateRequest: {
             nombre: string;
             descripcion?: string;
@@ -4199,6 +4230,104 @@ export interface operations {
                 };
             };
             /** @description Jornada abierta, anulada, o con una corrección sin resolver */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    leer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ajustes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanySettingsResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    guardar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCompanySettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Guardados */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanySettingsResponse"];
+                };
+            };
+            /** @description Nombre vacío o zona horaria desconocida */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Otra empresa ya se llama así */
             409: {
                 headers: {
                     [name: string]: unknown;

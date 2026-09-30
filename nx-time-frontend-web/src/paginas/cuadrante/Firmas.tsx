@@ -25,7 +25,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuadrante } from '../../i18n/es/cuadrante';
-import { diaEnEspana, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
+import { diaEnEmpresa, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
 
 const F = cuadrante.firmas;
 
@@ -78,7 +78,7 @@ function FilaDelMes({ m, alFirmar }: { m: Mes; alFirmar: (m: Mes) => void }) {
       </div>
       <span className="nx-sutil">{F.jornadas(m.jornadas ?? 0, duracion(m.segundosNetos ?? 0))}</span>
       {vigente && firma?.firmadaEn && (
-        <span className="nx-sutil">{F.firmadoEl(fechaCorta(diaEnEspana(firma.firmadaEn)), (firma.hash ?? '').slice(0, 12))}</span>
+        <span className="nx-sutil">{F.firmadoEl(fechaCorta(diaEnEmpresa(firma.firmadaEn)), (firma.hash ?? '').slice(0, 12))}</span>
       )}
       {vigente && firma?.visadaPor && <span className="nx-sutil">{F.visado(firma.visadaPor)}</span>}
       {invalidada && firma?.motivoInvalidacion && <span>{F.invalidadaPorque(firma.motivoInvalidacion)}</span>}

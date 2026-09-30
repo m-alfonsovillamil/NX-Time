@@ -10,7 +10,7 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { proyectos } from '../../i18n/es/proyectos';
 import { json, pintar, problema, sesionDe, sinContenido, simularApi } from '../../pruebas/api';
-import { hoyEnEspana } from '../../util/fechas';
+import { hoyEnEmpresa } from '../../util/fechas';
 import { CalendarioLaboral } from './CalendarioLaboral';
 import { Proyectos } from './Proyectos';
 
@@ -69,7 +69,7 @@ describe('proyectos', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: P.crear }));
 
     await waitFor(() =>
-      expect(llamadas.a('POST', '/api/v1/proyectos').map((l) => l.cuerpo)).toEqual([{ codigo: 'NX-WEB', nombre: 'Web', fechaInicio: hoyEnEspana() }]),
+      expect(llamadas.a('POST', '/api/v1/proyectos').map((l) => l.cuerpo)).toEqual([{ codigo: 'NX-WEB', nombre: 'Web', fechaInicio: hoyEnEmpresa() }]),
     );
   });
 
@@ -94,7 +94,7 @@ describe('proyectos', () => {
     const dialogo = await screen.findByRole('dialog', { name: D.sacarTitulo('Javier') });
     await userEvent.click(within(dialogo).getByRole('button', { name: D.sacar }));
     await waitFor(() =>
-      expect(llamadas.a('PATCH', '/api/v1/proyectos/asignaciones/30').map((l) => l.cuerpo)).toEqual([{ fechaFin: hoyEnEspana() }]),
+      expect(llamadas.a('PATCH', '/api/v1/proyectos/asignaciones/30').map((l) => l.cuerpo)).toEqual([{ fechaFin: hoyEnEmpresa() }]),
     );
   });
 

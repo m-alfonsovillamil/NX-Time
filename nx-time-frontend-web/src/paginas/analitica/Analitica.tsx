@@ -29,7 +29,7 @@ import { Pestanas } from '../../componentes/Pestanas';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { analitica } from '../../i18n/es/analitica';
 import { descargar } from '../../util/descargar';
-import { fechaCorta, hoyEnEspana, minutos } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, minutos } from '../../util/fechas';
 import { porcentaje } from '../../util/numeros';
 
 const A = analitica;
@@ -204,7 +204,7 @@ export function Analitica() {
   const [busqueda, setBusqueda] = useSearchParams();
   const periodo = valido(busqueda.get('periodo'), PERIODOS, 'MES');
   const agrupar = valido(busqueda.get('agrupar'), AGRUPACIONES, 'DEPARTAMENTO');
-  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(busqueda.get('fecha') ?? '') ? (busqueda.get('fecha') as string) : hoyEnEspana();
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(busqueda.get('fecha') ?? '') ? (busqueda.get('fecha') as string) : hoyEnEmpresa();
   const que = busqueda.get('ver') === 'puntualidad' ? 'puntualidad' : 'absentismo';
 
   function cambiar(clave: string, valor: string) {
@@ -239,7 +239,7 @@ export function Analitica() {
             id="analitica-fecha"
             etiqueta={A.fecha}
             type="date"
-            max={hoyEnEspana()}
+            max={hoyEnEmpresa()}
             value={fecha}
             onChange={(e) => e.target.value !== '' && cambiar('fecha', e.target.value)}
           />

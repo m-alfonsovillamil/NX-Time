@@ -17,7 +17,7 @@ import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { ausencias as A, type EstadoAusencia, type TipoAusencia } from '../../i18n/es/ausencias';
-import { fechaCorta, hoyEnEspana } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa } from '../../util/fechas';
 import { TRAS_SOLICITAR, useMisAusencias, useSaldoDeVacaciones, type Ausencia } from './consultas';
 
 const TONO: Record<EstadoAusencia, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error' };
@@ -56,7 +56,7 @@ function aniosDe(lista: readonly Ausencia[]): string[] {
 }
 
 function Saldo() {
-  const anio = Number(hoyEnEspana().slice(0, 4));
+  const anio = Number(hoyEnEmpresa().slice(0, 4));
   const saldo = useSaldoDeVacaciones(anio);
   // Como el resumen de «Mi jornada»: un extra. Si falla, no se enseña.
   if (saldo.data === undefined) return saldo.isPending ? <Esqueleto lineas={2} /> : null;

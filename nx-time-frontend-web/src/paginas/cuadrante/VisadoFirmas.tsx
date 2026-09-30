@@ -22,7 +22,7 @@ import { Aviso, Boton, Insignia, type Tono } from '../../componentes/Basicos';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { cuadrante } from '../../i18n/es/cuadrante';
-import { diaEnEspana, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
+import { diaEnEmpresa, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
 import { NavegadorDeMes, useMes } from '../proyectos/mes';
 import { Comprobacion } from './Firmas';
 
@@ -65,7 +65,7 @@ export function VisadoFirmas() {
         </div>
       ),
     },
-    { clave: 'firmada', cabecera: V.firmadaEl, celda: (f) => (f.firma?.firmadaEn ? fechaCorta(diaEnEspana(f.firma.firmadaEn)) : '') },
+    { clave: 'firmada', cabecera: V.firmadaEl, celda: (f) => (f.firma?.firmadaEn ? fechaCorta(diaEnEmpresa(f.firma.firmadaEn)) : '') },
     {
       clave: 'registro',
       cabecera: V.registro,
@@ -74,7 +74,7 @@ export function VisadoFirmas() {
     {
       clave: 'visado',
       cabecera: V.visadoCol,
-      celda: (f) => (f.firma?.visadaPor ? V.visadaPor(f.firma.visadaPor, f.firma.visadaEn ? fechaCorta(diaEnEspana(f.firma.visadaEn)) : '') : ''),
+      celda: (f) => (f.firma?.visadaPor ? V.visadaPor(f.firma.visadaPor, f.firma.visadaEn ? fechaCorta(diaEnEmpresa(f.firma.visadaEn)) : '') : ''),
     },
     {
       clave: 'acciones',

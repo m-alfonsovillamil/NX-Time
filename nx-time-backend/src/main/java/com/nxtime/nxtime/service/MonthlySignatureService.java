@@ -51,6 +51,17 @@ public interface MonthlySignatureService {
     void revisarTrasCambio(TimeEntry registro, Instant entradaAnterior, String motivo);
 
     /**
+     * Tras cambiar la zona horaria de una empresa (ADR 032): los días de todo
+     * su histórico se cuentan en la zona nueva, así que un fichaje cerca de la
+     * medianoche puede cambiar de mes. Se revisan todas sus firmas vigentes y
+     * cae la de cada mes cuyo contenido ya no es el firmado. Corre dentro de la
+     * transacción del cambio, con la zona nueva ya puesta.
+     *
+     * @return cuántas firmas se han invalidado
+     */
+    int revisarTrasCambioDeZona(long empresaId, String motivo);
+
+    /**
      * El recordatorio: a quien fichó el mes anterior a {@code hoy}, no lo ha
      * firmado y no ha recibido ya el recordatorio este mes.
      *
