@@ -1149,4 +1149,31 @@
     <string name="ajustes_borrar_datos_enviar">Pedir el borrado</string>
     <string name="ajustes_borrar_datos_enviada">Solicitud enviada</string>
     <string name="ajustes_borrar_datos_retirada">Solicitud retirada</string>
+
+    <!-- Fichar en un kiosco (ADR 033): el PIN y la tarjeta, desde el perfil -->
+    <string name="kiosco_ver">Fichar en un kiosco</string>
+    <string name="kiosco_titulo">Fichar en un kiosco</string>
+    <string name="kiosco_explicacion">Si tu empresa tiene una tablet de fichaje en la entrada, puedes fichar en ella pasando tu tarjeta por la cámara o eligiendo tu nombre y tecleando tu PIN.</string>
+    <string name="kiosco_pin_seccion">Tu PIN</string>
+    <string name="kiosco_pin_campo">PIN (de 4 a 6 cifras)</string>
+    <string name="kiosco_pin_ayuda">Sin cifras repetidas ni seguidas. Nadie más lo ve, ni quien administra.</string>
+    <string name="kiosco_tiene_pin">Tienes un PIN para el kiosco.</string>
+    <string name="kiosco_sin_pin">Todavía no tienes PIN: no apareces en la lista del kiosco.</string>
+    <string name="kiosco_pin_bloqueado">Tu PIN está bloqueado por demasiados intentos hasta las %1$s. Si lo cambias, se desbloquea.</string>
+    <string name="kiosco_guardar_pin">Guardar el PIN</string>
+    <string name="kiosco_cambiar_pin">Cambiar el PIN</string>
+    <string name="kiosco_quitar_pin">Quitar el PIN</string>
+    <string name="kiosco_pin_guardado">PIN guardado</string>
+    <string name="kiosco_pin_quitado">PIN quitado: ya no apareces en la lista del kiosco</string>
+    <string name="kiosco_pin_invalido">El PIN tiene que tener de 4 a 6 cifras.</string>
+    <string name="kiosco_tarjeta_seccion">Tu tarjeta</string>
+    <string name="kiosco_tarjeta_ayuda">Enséñala a la cámara de la tablet. Al abrirla, la pantalla se pone al máximo de brillo para que se lea mejor.</string>
+    <string name="kiosco_ensenar_tarjeta">Enseñar mi tarjeta</string>
+    <string name="kiosco_tarjeta_descripcion">Tarjeta QR para fichar en el kiosco</string>
+    <string name="kiosco_cerrar_tarjeta">Cerrar</string>
+    <string name="kiosco_regenerar">Hacer una tarjeta nueva</string>
+    <string name="kiosco_regenerar_titulo">¿Hacer una tarjeta nueva?</string>
+    <string name="kiosco_regenerar_texto">La que tienes ahora, impresa o en el móvil, dejará de valer.</string>
+    <string name="kiosco_tarjeta_regenerada">Tarjeta nueva. La anterior ya no vale.</string>
+    <string name="kiosco_distintivo">Kiosco · %1$s</string>
 </resources>

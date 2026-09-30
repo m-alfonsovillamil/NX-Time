@@ -778,4 +778,24 @@ interface ApiService {
     @PATCH("api/v1/avisos/leer-todos")
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
 
+    /*  Fichar en un kiosco (ADR 033): el PIN y la tarjeta de cada uno  */
+
+    @GET("api/v1/perfil/kiosco")
+    suspend fun getEstadoKiosco(): Response<EstadoKioscoDTO>
+
+    /** 400 si el PIN es demasiado fácil (1111, 1234...). */
+    @PUT("api/v1/perfil/kiosco/pin")
+    suspend fun fijarPinKiosco(@Body peticion: PinKioscoRequest): Response<EstadoKioscoDTO>
+
+    @DELETE("api/v1/perfil/kiosco/pin")
+    suspend fun quitarPinKiosco(): Response<EstadoKioscoDTO>
+
+    /** La crea si no existía. */
+    @GET("api/v1/perfil/kiosco/tarjeta")
+    suspend fun getTarjetaKiosco(): Response<TarjetaKioscoDTO>
+
+    /** Una nueva: la anterior deja de valer. */
+    @POST("api/v1/perfil/kiosco/tarjeta")
+    suspend fun regenerarTarjetaKiosco(): Response<TarjetaKioscoDTO>
+
 }

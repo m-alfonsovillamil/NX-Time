@@ -303,6 +303,13 @@ private fun TarjetaJornada(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
+            registro.kiosco?.let { kiosco ->
+                Text(
+                    text = stringResource(R.string.kiosco_distintivo, kiosco),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(Modifier.height(12.dp))
             HorizontalDivider()

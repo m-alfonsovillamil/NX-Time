@@ -87,6 +87,7 @@ fun PerfilScreen(
     onIrHorasExtra: () -> Unit,
     onIrIncidencias: () -> Unit,
     onIrFirmas: () -> Unit,
+    onIrKiosco: () -> Unit,
     onIrDenuncias: () -> Unit,
     onIrOfertas: () -> Unit,
     viewModel: PerfilViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -206,6 +207,12 @@ fun PerfilScreen(
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(onClick = onIrFirmas, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.firma_ver))
+                    }
+
+                    // ADR 033. Sin gatear, como la firma: fichar es de todos los roles.
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(onClick = onIrKiosco, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.kiosco_ver))
                     }
 
                     // Fase G. Sin gatear por rol, y a propósito: el canal

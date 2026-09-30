@@ -23,5 +23,11 @@ data class Registro(
      * trabajo que no existieron. Lo destapó el cronómetro en vivo, que
      * seguía corriendo durante toda la pausa.
      */
-    val segundosPausaAcumulados: Long = 0
+    val segundosPausaAcumulados: Long = 0,
+
+    /**
+     * El nombre del kiosco en que se abrió la jornada, o null si se abrió desde
+     * la propia sesión (ADR 033). Para el distintivo del historial.
+     */
+    val kiosco: String? = null
 )

@@ -14,5 +14,8 @@ data class RegistroEquipoDTO(
     val minutosPausaAcumulados: Long = 0,
 
     /** Para calcular. Ver el mismo campo en [Registro]. */
-    val segundosPausaAcumulados: Long = 0
+    val segundosPausaAcumulados: Long = 0,
+
+    /** El kiosco en que se abrió, o null. Ver [Registro.kiosco]. */
+    val kiosco: String? = null
 )

@@ -288,4 +288,11 @@ interface AuthRepository {
     suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit>
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
 
+    /* Fichar en un kiosco (ADR 033) */
+    suspend fun getEstadoKiosco(): Response<EstadoKioscoDTO>
+    suspend fun fijarPinKiosco(pin: String): Response<EstadoKioscoDTO>
+    suspend fun quitarPinKiosco(): Response<EstadoKioscoDTO>
+    suspend fun getTarjetaKiosco(): Response<TarjetaKioscoDTO>
+    suspend fun regenerarTarjetaKiosco(): Response<TarjetaKioscoDTO>
+
 }

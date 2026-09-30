@@ -122,4 +122,9 @@ guardaba hasta ahora.
 - En la web: Ajustes de la empresa → Kioscos (alta con el código, lista y
   revocar); el perfil, con el PIN y la tarjeta; «Tarjetas del kiosco» para que
   RRHH imprima las de la plantilla; y el distintivo «Kiosco · …» en los
-  historiales. El PIN y la tarjeta en el perfil de la app llegan en K3.
+  historiales.
+- En la app Android (K3): Perfil → «Fichar en un kiosco» para elegir el PIN y
+  enseñar la tarjeta a pantalla completa, sobre blanco y con el brillo al
+  máximo mientras está abierta. El QR se dibuja en el móvil a partir de su
+  código con ZXing core; la app no lee QR ni tiene modo kiosco: la tablet es
+  la web.
