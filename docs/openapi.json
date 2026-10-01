@@ -76,6 +76,9 @@
     "name" : "Autenticación",
     "description" : "Registro de empresa, login, renovación y cierre de sesión, y elegir contraseña con un código. Público (sin token), pero limitado a 10 peticiones/minuto por IP en login, register-manager y recuperar."
   }, {
+    "name" : "Kiosco",
+    "description" : "La tablet de fichaje compartida: emparejarla, identificarse y fichar. Con 'Authorization: Kiosco <token>', salvo las dos de emparejar."
+  }, {
     "name" : "Horas extra",
     "description" : "Excesos de jornada detectados y bolsa anual del art. 35.2 ET."
   }, {
@@ -95,6 +98,60 @@
     "description" : "Avisos in-app del usuario autenticado: listado, contador de no leídos y marcado como leído. Se generan desde los mismos eventos que envían los correos."
   } ],
   "paths" : {
+    "/api/v1/perfil/kiosco/pin" : {
+      "put" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Elegir mi PIN de kiosco",
+        "description" : "De 4 a 6 cifras, sin repetidas ni seguidas (1111, 1234). Nadie más lo ve.",
+        "operationId" : "fijarPin",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KioskPinRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MyKioskStatus"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Quitar mi PIN de kiosco",
+        "description" : "Dejo de salir en la lista del kiosco.",
+        "operationId" : "quitarPin",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MyKioskStatus"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/ofertas/{id}" : {
       "get" : {
         "tags" : [ "Ofertas internas" ],
@@ -605,6 +662,176 @@
         "security" : [ {
           "bearerAuth" : [ ]
         } ]
+      }
+    },
+    "/kiosco/identificar" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Identificarse",
+        "description" : "Con la tarjeta ('qr') o con 'usuarioId' y 'pin'. Devuelve en qué está su jornada y sus proyectos de hoy. No deja nada abierto: al fichar se manda otra vez la credencial.",
+        "operationId" : "identificar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KioskCredential"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Identificada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskIdentity"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Sin credencial",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "PIN incorrecto",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "La tarjeta o la persona no valen en este kiosco",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "PIN bloqueado, o demasiados intentos en el kiosco",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kiosco/fichar" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Fichar",
+        "description" : "La misma credencial que al identificarse, y qué se ficha. Las mismas reglas que desde la app; en la auditoría queda dicho desde qué kiosco.",
+        "operationId" : "fichar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KioskClockRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Fichado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskClockResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No se puede en el estado de su jornada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kiosco/emparejar" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Pedir un código para emparejar esta tablet",
+        "description" : "Devuelve el código que la tablet enseña (8 caracteres, 10 minutos) y un secreto con el que preguntar por el estado. Limitado por IP.",
+        "operationId" : "emparejar",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PairingStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kiosco/emparejar/estado" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "¿Me han emparejado ya?",
+        "description" : "PENDIENTE hasta que un ADMIN teclea el código. LISTO trae el token del kiosco, y solo esa vez: después responde ENTREGADO. CADUCADO si pasaron los 10 minutos.",
+        "operationId" : "estado",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PairingStatusRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Estado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PairingStatus"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Ese secreto no es de ningún emparejamiento",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/auth/register-manager" : {
@@ -1210,6 +1437,50 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/kiosco/tarjeta" : {
+      "get" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Mi tarjeta de kiosco",
+        "description" : "El contenido del QR y el QR en SVG. Si no tenía, se crea.",
+        "operationId" : "tarjeta",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskCard"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Una tarjeta nueva",
+        "description" : "La anterior, impresa o en el móvil, deja de valer.",
+        "operationId" : "regenerar",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskCard"
                 }
               }
             }
@@ -2495,6 +2766,73 @@
         } ]
       }
     },
+    "/api/v1/empresa/kioscos" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Los kioscos de mi empresa",
+        "description" : "Los activos y los revocados, el último primero.",
+        "operationId" : "listar_2",
+        "responses" : {
+          "200" : {
+            "description" : "Lista",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KioskResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Dar de alta un kiosco con el código de la tablet",
+        "description" : "El código que enseña la tablet al abrir /kiosco. Caduca a los 10 minutos.",
+        "operationId" : "confirmar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmKioskRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Dado de alta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "El código no existe o ha caducado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/dispositivos-push" : {
       "post" : {
         "tags" : [ "Push" ],
@@ -2592,7 +2930,7 @@
         "tags" : [ "Departamentos" ],
         "summary" : "Departamentos de mi empresa",
         "description" : "Ordenados por nombre, con cuánta gente tiene cada uno: es lo que decide si se puede ofrecer el botón de borrar, porque uno con plantilla no se borra.",
-        "operationId" : "listar_2",
+        "operationId" : "listar_3",
         "responses" : {
           "200" : {
             "description" : "Listado",
@@ -5299,6 +5637,49 @@
         } ]
       }
     },
+    "/kiosco/yo" : {
+      "get" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Quién soy",
+        "description" : "El nombre del kiosco, el de su empresa y su zona horaria.",
+        "operationId" : "yo",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KioskInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/kiosco/plantilla" : {
+      "get" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "La lista para identificarse con el PIN",
+        "description" : "Quien está de alta en la empresa y tiene PIN, por nombre. Sin correo.",
+        "operationId" : "plantilla",
+        "responses" : {
+          "200" : {
+            "description" : "Lista",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KioskPerson"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/estado/tareas" : {
       "get" : {
         "tags" : [ "Estado" ],
@@ -5560,6 +5941,29 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/kiosco" : {
+      "get" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "¿Puedo fichar en un kiosco?",
+        "description" : "Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.",
+        "operationId" : "estado_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MyKioskStatus"
                 }
               }
             }
@@ -6231,6 +6635,32 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/gestor/kiosco/tarjetas" : {
+      "get" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Las tarjetas de la plantilla, para imprimirlas",
+        "description" : "De toda la gente de alta. A quien no tenía, se le crea.",
+        "operationId" : "tarjetasDeLaEmpresa",
+        "responses" : {
+          "200" : {
+            "description" : "Tarjetas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KioskCard"
+                  }
                 }
               }
             }
@@ -8499,6 +8929,41 @@
         } ]
       }
     },
+    "/api/v1/empresa/kioscos/{id}" : {
+      "delete" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Revocar un kiosco",
+        "description" : "Deja de poder fichar desde la siguiente petición. No se borra: sus fichajes lo citan.",
+        "operationId" : "revocar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Revocado"
+          },
+          "403" : {
+            "description" : "De otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/cuadrantes/excepciones/{excepcionId}" : {
       "delete" : {
         "tags" : [ "Cuadrantes" ],
@@ -8557,6 +9022,32 @@
   },
   "components" : {
     "schemas" : {
+      "KioskPinRequest" : {
+        "type" : "object",
+        "properties" : {
+          "pin" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "\\d{4,6}"
+          }
+        },
+        "required" : [ "pin" ]
+      },
+      "MyKioskStatus" : {
+        "type" : "object",
+        "properties" : {
+          "tienePin" : {
+            "type" : "boolean"
+          },
+          "tieneTarjeta" : {
+            "type" : "boolean"
+          },
+          "pinBloqueadoHasta" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "JobPostingRequest" : {
         "type" : "object",
         "properties" : {
@@ -8969,6 +9460,148 @@
           }
         }
       },
+      "KioskCredential" : {
+        "type" : "object",
+        "properties" : {
+          "qr" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "pin" : {
+            "type" : "string",
+            "maxLength" : 6,
+            "minLength" : 0
+          }
+        }
+      },
+      "KioskIdentity" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "SIN_JORNADA", "TRABAJANDO", "EN_PAUSA" ]
+          },
+          "proyectos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProjectOption"
+            }
+          },
+          "proyectoEnCurso" : {
+            "$ref" : "#/components/schemas/ProjectOption"
+          }
+        }
+      },
+      "KioskClockRequest" : {
+        "type" : "object",
+        "properties" : {
+          "qr" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "pin" : {
+            "type" : "string",
+            "maxLength" : 6,
+            "minLength" : 0
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "INICIO", "FIN", "PAUSA_INICIO", "PAUSA_FIN" ]
+          },
+          "proyectoId" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "tipo" ]
+      },
+      "KioskClockResponse" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "INICIO", "FIN", "PAUSA_INICIO", "PAUSA_FIN" ]
+          },
+          "instante" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PairingStarted" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string"
+          },
+          "secreto" : {
+            "type" : "string"
+          },
+          "caducaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PairingStatusRequest" : {
+        "type" : "object",
+        "properties" : {
+          "secreto" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "secreto" ]
+      },
+      "KioskInfo" : {
+        "type" : "object",
+        "properties" : {
+          "nombre" : {
+            "type" : "string"
+          },
+          "empresa" : {
+            "type" : "string"
+          },
+          "zonaHoraria" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PairingStatus" : {
+        "type" : "object",
+        "properties" : {
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "PENDIENTE", "LISTO", "ENTREGADO", "CADUCADO" ]
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "kiosco" : {
+            "$ref" : "#/components/schemas/KioskInfo"
+          }
+        }
+      },
       "RegisterManagerRequest" : {
         "type" : "object",
         "properties" : {
@@ -9231,6 +9864,24 @@
           }
         },
         "required" : [ "contrasena" ]
+      },
+      "KioskCard" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "codigo" : {
+            "type" : "string"
+          },
+          "svg" : {
+            "type" : "string"
+          }
+        }
       },
       "DeletionRequestDTO" : {
         "type" : "object",
@@ -9627,6 +10278,9 @@
           "inicioPausaActual" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "kiosco" : {
+            "type" : "string"
           }
         }
       },
@@ -9720,6 +10374,45 @@
           }
         },
         "required" : [ "horaEntrada", "horaSalida", "motivo" ]
+      },
+      "ConfirmKioskRequest" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "minLength" : 0
+          },
+          "nombre" : {
+            "type" : "string",
+            "maxLength" : 80,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo", "nombre" ]
+      },
+      "KioskResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "creadoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoUso" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "activo" : {
+            "type" : "boolean"
+          }
+        }
       },
       "RegisterPushDeviceRequest" : {
         "type" : "object",
@@ -10493,6 +11186,21 @@
           }
         },
         "required" : [ "estado" ]
+      },
+      "KioskPerson" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "apellidos" : {
+            "type" : "string"
+          }
+        }
       },
       "SystemStatusResponse" : {
         "type" : "object",
@@ -11487,6 +12195,9 @@
           "segundosPausaAcumulados" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "kiosco" : {
+            "type" : "string"
           }
         }
       },

@@ -94,6 +94,15 @@ public class TimeEntry {
     @JoinColumn(name = "registro_original_id")
     private TimeEntry registroOriginal;
 
+    /**
+     * En qué kiosco se abrió la jornada, o null si se abrió desde la propia
+     * sesión (ADR 033). Cada movimiento hecho en un kiosco lo dice además en el
+     * motivo de su fila de auditoría.
+     */
+    @ManyToOne
+    @JoinColumn(name = "kiosco_id")
+    private Kiosk kiosco;
+
     @Version
     private long version;
 

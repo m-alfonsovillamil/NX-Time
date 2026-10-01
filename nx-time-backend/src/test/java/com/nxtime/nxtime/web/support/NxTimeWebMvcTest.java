@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.web.support;
 
 import com.nxtime.nxtime.security.JwtAuthenticationFilter;
+import com.nxtime.nxtime.security.KioskAuthenticationFilter;
 import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -31,7 +32,7 @@ import org.springframework.core.annotation.AliasFor;
 @Target(ElementType.TYPE)
 @WebMvcTest(excludeFilters = @ComponentScan.Filter(
         type = FilterType.ASSIGNABLE_TYPE,
-        classes = {JwtAuthenticationFilter.class, LoginRateLimitFilter.class}))
+        classes = {JwtAuthenticationFilter.class, LoginRateLimitFilter.class, KioskAuthenticationFilter.class}))
 public @interface NxTimeWebMvcTest {
 
     @AliasFor(annotation = WebMvcTest.class, attribute = "controllers")

@@ -58,6 +58,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByEmpresaAndActivoTrue(Company empresa);
 
     /**
+     * La lista del kiosco (ADR 033): quien está de alta en la empresa y tiene
+     * PIN, por nombre. Quien no lo ha elegido no sale: no podría identificarse.
+     */
+    List<User> findByEmpresa_IdAndActivoTrueAndKioscoPinHashIsNotNullOrderByNombreAscApellidosAsc(long empresaId);
+
+    /**
      * Cuánta gente hay en un departamento (Fase B).
      *
      * Borrar un departamento con plantilla dentro tiene que fallar con

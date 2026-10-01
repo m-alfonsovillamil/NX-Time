@@ -98,6 +98,21 @@ public class User {
     @JoinColumn(name = "departamento_id")
     private Department departamento;
 
+    /*
+     * Fichar en un kiosco (ADR 033). El PIN lo elige la persona y va con
+     * BCrypt; los fallos seguidos lo bloquean un rato. La tarjeta QR no guarda
+     * secreto: su contenido es una firma del servidor sobre (id, versión), y
+     * regenerarla sube la versión. Null = sin PIN / sin tarjeta.
+     */
+    private String kioscoPinHash;
+
+    @Builder.Default
+    private int kioscoPinFallos = 0;
+
+    private Instant kioscoPinBloqueadoHasta;
+
+    private Integer kioscoTarjetaVersion;
+
     @Version
     private long version;
 

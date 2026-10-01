@@ -53,7 +53,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private static final Set<String> RUTAS_LIMITADAS = Set.of(
-            "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar");
+            "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar",
+            // Pedir un código para emparejar un kiosco es público (ADR 033). Preguntar
+            // por su estado no se limita: la tablet lo hace cada pocos segundos, y va
+            // con un secreto de 256 bits que no se puede adivinar a base de probar.
+            "/kiosco/emparejar");
     static final int PETICIONES_POR_MINUTO = 10;
 
     /**
@@ -132,35 +136,8 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         return Bucket.builder().addLimit(limite).build();
     }
 
-    /**
-     * La IP en la que se apoya el límite, contando desde el final.
-     *
-     * X-Forwarded-For se lee de izquierda a derecha como "quien llamó
-     * primero, y luego cada proxy por el que pasó". El PRIMER valor lo
-     * escribe el cliente y por lo tanto se lo puede inventar; cada proxy
-     * AÑADE al final la dirección que él ha visto. La única entrada en la
-     * que se puede confiar es la que puso el último proxy de confianza, así
-     * que se cuenta desde el final tantas posiciones como proxies haya.
-     *
-     * Con un proxy delante (Render) y la cabecera
-     * "1.2.3.4, 198.51.100.7", la buena es 198.51.100.7 -- la que vio
-     * Render --, no la 1.2.3.4 que mandó quien llamaba.
-     *
-     * Si la cabecera trae menos entradas de las que deberia, se usa
-     * getRemoteAddr(): es la del salto inmediato y no se puede falsificar.
-     */
+    /** La IP en la que se apoya el límite, contando desde el final: ver {@link IpDelCliente}. */
     private String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank() && proxiesDeConfianza > 0) {
-            String[] saltos = forwardedFor.split(",");
-            int posicion = saltos.length - proxiesDeConfianza;
-            if (posicion >= 0 && posicion < saltos.length) {
-                String ip = saltos[posicion].trim();
-                if (!ip.isEmpty()) {
-                    return ip;
-                }
-            }
-        }
-        return request.getRemoteAddr();
+        return IpDelCliente.de(request, proxiesDeConfianza);
     }
 }

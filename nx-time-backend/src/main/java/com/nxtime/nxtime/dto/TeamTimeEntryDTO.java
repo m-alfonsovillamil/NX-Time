@@ -34,6 +34,9 @@ public record TeamTimeEntryDTO(
          * {@link TimeEntryResponse}: con solo los minutos, una pausa de
          * 40 s vale 0 y el total sale inflado en esos 40 s.
          */
-        long segundosPausaAcumulados
+        long segundosPausaAcumulados,
+
+        /** El nombre del kiosco en que se abrió, o null (ADR 033). Ver {@link TimeEntryResponse}. */
+        String kiosco
 ) {
 }

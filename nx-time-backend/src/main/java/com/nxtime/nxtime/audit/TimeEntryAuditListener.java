@@ -2,10 +2,13 @@ package com.nxtime.nxtime.audit;
 
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
+import com.nxtime.nxtime.security.IpDelCliente;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -62,10 +65,20 @@ public class TimeEntryAuditListener {
 
     private final TimeEntryAuditRepository auditRepository;
     private final HuellaDeAuditoria huella;
+    private final int proxiesDeConfianza;
 
     public TimeEntryAuditListener(TimeEntryAuditRepository auditRepository, HuellaDeAuditoria huella) {
+        this(auditRepository, huella, 1);
+    }
+
+    @Autowired
+    public TimeEntryAuditListener(
+            TimeEntryAuditRepository auditRepository,
+            HuellaDeAuditoria huella,
+            @Value(IpDelCliente.PROXIES_DE_CONFIANZA) int proxiesDeConfianza) {
         this.auditRepository = auditRepository;
         this.huella = huella;
+        this.proxiesDeConfianza = Math.max(0, proxiesDeConfianza);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -104,7 +117,8 @@ public class TimeEntryAuditListener {
     private String currentClientIp() {
         try {
             var attributes = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
-            return attributes.getRequest().getRemoteAddr();
+            // La del cliente y no la del proxy de Render (fase K1): ver IpDelCliente.
+            return IpDelCliente.de(attributes.getRequest(), proxiesDeConfianza);
         } catch (IllegalStateException e) {
             return null;
         }
