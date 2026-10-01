@@ -7,6 +7,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('editor de cuadrantes para una gestora', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('marta.sanchez@techcorp.demo');
@@ -14,7 +16,7 @@ test('editor de cuadrantes para una gestora', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Cuadrantes' }).click();
+  await irASeccion(page, 'Cuadrantes');
   await expect(page.getByRole('heading', { name: /^Semana del / })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Plantillas' }).click();

@@ -9,6 +9,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('ausencias y calendario: saldo, lista y un festivo nacional', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('javier.lopez@techcorp.demo');
@@ -16,12 +18,11 @@ test('ausencias y calendario: saldo, lista y un festivo nacional', async ({ page
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
-  await menu.getByRole('link', { name: 'Ausencias' }).click();
+  await irASeccion(page, 'Ausencias');
   await expect(page.getByRole('heading', { name: /^Vacaciones de \d{4}$/ })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Mis solicitudes de ausencia' })).toBeVisible();
 
-  await menu.getByRole('link', { name: 'Calendario' }).click();
+  await irASeccion(page, 'Calendario');
   await expect(page.getByRole('table')).toBeVisible();
   // Hasta octubre: su festivo nacional lo pone el backend, sin que nadie lo cargue.
   const siguiente = page.getByRole('button', { name: 'Mes siguiente' });

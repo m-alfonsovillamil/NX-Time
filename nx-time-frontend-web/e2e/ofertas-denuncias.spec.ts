@@ -8,6 +8,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('ofertas internas y canal de denuncias', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('javier.lopez@techcorp.demo');
@@ -15,15 +17,14 @@ test('ofertas internas y canal de denuncias', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
-  await menu.getByRole('link', { name: 'Ofertas internas' }).click();
+  await irASeccion(page, 'Ofertas internas');
   await expect(page.getByRole('heading', { name: 'Ofertas internas' })).toBeVisible();
   // La demo trae una vacante abierta a la que Javier ya se presentó.
   await expect(page.getByText(/Ya te has presentado a esta vacante/)).toBeVisible();
   await page.getByRole('tab', { name: 'Mis candidaturas' }).click();
   await expect(page.getByText(/^CV adjunto: /).first()).toBeVisible();
 
-  await menu.getByRole('link', { name: 'Canal de denuncias' }).click();
+  await irASeccion(page, 'Canal de denuncias');
   await expect(page.getByRole('heading', { name: 'Canal de denuncias' })).toBeVisible();
   // Un código que no existe: el 404 del servidor, sin confirmar cuáles valen.
   await page.getByLabel('Código de seguimiento').fill('NO-EXISTE-1234');
