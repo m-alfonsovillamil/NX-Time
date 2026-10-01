@@ -17,7 +17,17 @@ test('panel de empresa, informes e integridad para RRHH', async ({ page }) => {
 
   await menu.getByRole('link', { name: 'Panel de empresa' }).click();
   await expect(page.getByRole('heading', { name: 'Horas por empleado' })).toBeVisible();
-  await expect(page.getByText(/^La raya es la media del equipo/)).toBeVisible();
+  // El día 1 el mes solo tiene jornadas si alguna spec anterior ya ha fichado
+  // (los datos de demo son de días pasados), y sin ellas no hay media que
+  // pintar. Falló así el 1/10/2026.
+  const dia = Number(new Intl.DateTimeFormat('es-ES', { day: 'numeric', timeZone: 'Europe/Madrid' }).format(new Date()));
+  await expect(
+    page.getByText(
+      dia === 1
+        ? /^(La raya es la media del equipo|Nadie ha fichado todavía este mes\.)/
+        : /^La raya es la media del equipo/,
+    ),
+  ).toBeVisible();
 
   await menu.getByRole('link', { name: 'Informes' }).click();
   const excel = page.waitForEvent('download');
