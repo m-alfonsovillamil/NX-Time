@@ -4,12 +4,15 @@
  * El push se entrega con el protocolo de depuración de Chromium
  * (`ServiceWorker.deliverPushMessage`), que dispara el mismo evento `push` que
  * un mensaje de FCM, con la forma que tiene uno de datos: `{ data: {...} }`.
- * Lo que no se puede probar aquí es el tramo de Google (el token y la entrega):
- * eso necesita la app web dada de alta en Firebase, y se comprueba en
- * producción (ver docs/DESPLIEGUE.md).
+ * Lo que no se puede probar aquí es el tramo de Google de verdad (el token y la
+ * entrega): eso necesita la app web dada de alta en Firebase, y se comprueba en
+ * producción (ver docs/DESPLIEGUE.md). Encender desde Ajustes sí se prueba, con
+ * Google simulado en la red (`simularGoogle`).
  */
 
 import { expect, test, type Page } from '@playwright/test';
+
+import { entrar } from './ayudas';
 
 // El Chromium completo y no el «headless shell» que Playwright usa por
 // defecto sin ventana: en ese, el permiso de notificaciones sale siempre
@@ -86,6 +89,97 @@ for (const ruta of ['//otra-web.example/robo', 'https://otra-web.example/robo'])
       .toEqual(['http://localhost:5173']);
   });
 }
+
+/**
+ * El tramo de Google, simulado: las dos APIs de Firebase que usa `getToken`
+ * (instalaciones y registro en FCM) y la suscripción del navegador, que en el
+ * Chromium de Playwright no existe (no trae servicio de push). Lo demás es de
+ * verdad: el permiso, el SDK de Firebase, el service worker y el registro del
+ * token en el backend.
+ */
+async function simularGoogle(page: Page, registro: { status: number; token?: string }) {
+  await page.addInitScript(() => {
+    const suscripcion = {
+      endpoint: 'https://fcm.googleapis.com/fcm/send/e2e',
+      expirationTime: null,
+      options: { userVisibleOnly: true, applicationServerKey: null },
+      getKey: (nombre: string) => new Uint8Array(nombre === 'auth' ? 16 : 65).fill(7).buffer,
+      toJSON: () => ({}),
+      unsubscribe: async () => true,
+    };
+    let suscrita = false;
+    PushManager.prototype.subscribe = async function () {
+      suscrita = true;
+      return suscripcion as unknown as PushSubscription;
+    };
+    PushManager.prototype.getSubscription = async function () {
+      return suscrita ? (suscripcion as unknown as PushSubscription) : null;
+    };
+  });
+  await page.route('https://firebaseinstallations.googleapis.com/**', (ruta) =>
+    ruta.fulfill({
+      json: {
+        name: 'projects/1/installations/fid-e2e',
+        fid: 'fid-e2e',
+        refreshToken: 'refresco-e2e',
+        authToken: { token: 'autorizacion-e2e', expiresIn: '604800s' },
+      },
+    }),
+  );
+  await page.route('https://fcmregistrations.googleapis.com/**', (ruta) =>
+    ruta.request().method() === 'DELETE'
+      ? ruta.fulfill({ json: {} })
+      : registro.status === 200
+        ? ruta.fulfill({ json: { token: registro.token } })
+        : ruta.fulfill({
+            status: registro.status,
+            json: { error: { code: registro.status, message: 'API desactivada', status: 'PERMISSION_DENIED' } },
+          }),
+  );
+}
+
+async function irAAjustes(page: Page) {
+  await page.getByLabel(/^Menú de /).click();
+  await page.getByRole('link', { name: 'Ajustes' }).click();
+  await expect(page.getByRole('heading', { name: 'Ajustes' })).toBeVisible();
+}
+
+test('encender las notificaciones en Ajustes registra el token en el servidor, y apagarlas lo da de baja', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
+  // Uno distinto en cada ejecución: el backend no admite el mismo token dos veces para dos personas.
+  const token = `token-e2e-${Date.now()}`;
+  await simularGoogle(page, { status: 200, token });
+  await entrar(page, 'javier.lopez@techcorp.demo');
+  await irAAjustes(page);
+
+  const alta = page.waitForResponse((r) => r.url().endsWith('/api/v1/dispositivos-push') && r.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Recibir notificaciones aquí' }).click();
+  const respuesta = await alta;
+  expect(respuesta.ok()).toBe(true);
+  expect(respuesta.request().postDataJSON()).toEqual({ token, plataforma: 'WEB' });
+  await expect(page.getByText('Encendidas', { exact: true })).toBeVisible();
+
+  const baja = page.waitForResponse((r) => r.url().endsWith('/api/v1/dispositivos-push/baja'));
+  await page.getByRole('button', { name: 'Dejar de recibirlas aquí' }).click();
+  expect((await baja).ok()).toBe(true);
+  await expect(page.getByRole('button', { name: 'Recibir notificaciones aquí' })).toBeVisible();
+});
+
+test('si Google no da el token, la página dice qué falló y deja volver a intentarlo', async ({ page, context }) => {
+  await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
+  await simularGoogle(page, { status: 403 });
+  await entrar(page, 'javier.lopez@techcorp.demo');
+  await irAAjustes(page);
+
+  await page.getByRole('button', { name: 'Recibir notificaciones aquí' }).click();
+
+  await expect(page.getByRole('alert')).toContainText('El servicio de avisos no ha respondido');
+  await expect(page.getByRole('alert')).toContainText('Detalle:');
+  await expect(page.getByRole('button', { name: 'Volver a intentarlo' })).toBeVisible();
+});
 
 test('la web es instalable: manifest con sus iconos', async ({ page, request }) => {
   await page.goto('/');
