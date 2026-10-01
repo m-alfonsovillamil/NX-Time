@@ -25,7 +25,7 @@ import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton } from '../../componentes/Basicos';
 import { EstadoDeConsulta } from '../../componentes/Estados';
 import { fichar } from '../../i18n/es/fichar';
-import { duracion, fechaLarga, hora, hoyEnEspana } from '../../util/fechas';
+import { duracion, fechaLarga, hora, hoyEnEmpresa } from '../../util/fechas';
 import {
   CLAVES,
   TRAS_CAMBIAR_TIEMPO,
@@ -63,7 +63,7 @@ function useLatido(activo: boolean) {
  * laborable.
  */
 function AvisoDeCuadrante() {
-  const { data: dia } = useCuadranteDelDia(hoyEnEspana());
+  const { data: dia } = useCuadranteDelDia(hoyEnEmpresa());
   if (dia === undefined || dia === null) return null;
   if (dia.origen !== 'CUADRANTE' && dia.origen !== 'EXCEPCION') return null;
   return <p className="nx-sutil">{dia.entrada ? F.entradaPrevista(dia.entrada) : F.sinTurnoHoy}</p>;

@@ -22,7 +22,7 @@ import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } fro
 import { Pestanas } from '../../componentes/Pestanas';
 import { ausencias } from '../../i18n/es/ausencias';
 import { gestion } from '../../i18n/es/gestion';
-import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
 import { CLAVE_PENDIENTES } from './claves';
 
 const G = gestion.ausencias;
@@ -48,7 +48,7 @@ function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode 
       </span>
       {a.motivo && <span className="nx-sutil">{G.motivo(a.motivo)}</span>}
       {a.aprobadoPor?.nombre && a.fechaResolucion && (
-        <span className="nx-sutil">{G.resueltaPor(a.aprobadoPor.nombre, fechaCorta(diaEnEspana(a.fechaResolucion)))}</span>
+        <span className="nx-sutil">{G.resueltaPor(a.aprobadoPor.nombre, fechaCorta(diaEnEmpresa(a.fechaResolucion)))}</span>
       )}
       {a.comentarioResolucion && <span>{G.respuesta(a.comentarioResolucion)}</span>}
       {acciones && (

@@ -20,7 +20,7 @@ import { AreaDeTexto, Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { T } from '../../i18n/es';
 import { historial } from '../../i18n/es/historial';
-import { aInstante, diaEnEspana, diasEntre, fechaCorta, horaEnEspana, sumarDias } from '../../util/fechas';
+import { aInstante, diaEnEmpresa, diasEntre, fechaCorta, horaEnEmpresa, sumarDias } from '../../util/fechas';
 import { TRAS_CAMBIAR_TIEMPO } from '../jornada/consultas';
 
 const C = historial.correccion;
@@ -40,10 +40,10 @@ function Formulario({
   persona: string | undefined;
   alTerminar: () => void;
 }) {
-  const dia = diaEnEspana(jornada.horaEntrada);
-  const [entrada, setEntrada] = useState(horaEnEspana(jornada.horaEntrada));
-  const [salida, setSalida] = useState(horaEnEspana(jornada.horaSalida));
-  const [salidaOtroDia, setSalidaOtroDia] = useState(diasEntre(dia, diaEnEspana(jornada.horaSalida)) > 0);
+  const dia = diaEnEmpresa(jornada.horaEntrada);
+  const [entrada, setEntrada] = useState(horaEnEmpresa(jornada.horaEntrada));
+  const [salida, setSalida] = useState(horaEnEmpresa(jornada.horaSalida));
+  const [salidaOtroDia, setSalidaOtroDia] = useState(diasEntre(dia, diaEnEmpresa(jornada.horaSalida)) > 0);
   const [motivo, setMotivo] = useState('');
   const [error, setError] = useState<string | null>(null);
 

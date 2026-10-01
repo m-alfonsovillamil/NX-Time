@@ -33,7 +33,7 @@ import {
   fechaLarga,
   hora,
   horaDeSalida,
-  hoyEnEspana,
+  hoyEnEmpresa,
   lunesDe,
   minutos,
   primeroDeMes,
@@ -181,7 +181,7 @@ function DelPeriodo({ desde, hasta, acciones }: { desde: string; hasta: string; 
 
 /** «Elegir fechas»: dos días y un botón, con el límite del servidor comprobado antes. */
 function ElegirFechas({ alElegir }: { alElegir: (desde: string, hasta: string) => void }) {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [desde, setDesde] = useState(primeroDeMes(hoy));
   const [hasta, setHasta] = useState(hoy);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +216,7 @@ export function Historial() {
 
   const acciones: Acciones = { alCorregir: setCorregir, alAnadirPausa: setPausaDe, alRepartir: setRepartir };
   // «Esta semana» se recalcula en cada pintado: la pestaña puede quedarse abierta de un lunes a otro.
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
 
   let contenido;
   if (periodo === 'recientes') {

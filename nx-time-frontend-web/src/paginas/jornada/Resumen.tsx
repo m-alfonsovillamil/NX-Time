@@ -18,7 +18,7 @@ import { Esqueleto } from '../../componentes/Estados';
 import { fichar } from '../../i18n/es/fichar';
 import {
   diasDelRango,
-  hoyEnEspana,
+  hoyEnEmpresa,
   inicialDelDia,
   lunesDe,
   minutos,
@@ -62,7 +62,7 @@ function rangoDe(periodo: Periodo, hoy: string): [string, string] {
 
 function MisHoras({ minutosEnCurso }: { minutosEnCurso: number }) {
   const [periodo, setPeriodo] = useState<Periodo>('semana');
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [desde, hasta] = rangoDe(periodo, hoy);
   const consulta = useHorasPorDia(desde, hasta);
 

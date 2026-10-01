@@ -23,7 +23,7 @@ import { AreaDeTexto, Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { T } from '../../i18n/es';
 import { fichar } from '../../i18n/es/fichar';
-import { aInstante, diaEnEspana, hora, hoyEnEspana, minutos, sumarDias } from '../../util/fechas';
+import { aInstante, diaEnEmpresa, hora, hoyEnEmpresa, minutos, sumarDias } from '../../util/fechas';
 import { CLAVES, TRAS_CAMBIAR_TIEMPO } from './consultas';
 
 const P = fichar.pausa;
@@ -36,8 +36,8 @@ export interface JornadaParaPausa {
 
 function Formulario({ jornada, alTerminar }: { jornada: JornadaParaPausa; alTerminar: () => void }) {
   const abierta = jornada.horaSalida === undefined;
-  const dia = diaEnEspana(jornada.horaEntrada);
-  const vaDirecta = abierta || dia === hoyEnEspana();
+  const dia = diaEnEmpresa(jornada.horaEntrada);
+  const vaDirecta = abierta || dia === hoyEnEmpresa();
 
   // 14:00-15:00 de partida: el caso que motivó esto es la comida.
   const [inicio, setInicio] = useState('14:00');

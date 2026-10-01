@@ -21,7 +21,7 @@ import { Boton, Insignia, Selector } from '../../componentes/Basicos';
 import { ErrorConReintento, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { cuadrantes } from '../../i18n/es/cuadrantes';
-import { fechaCorta, hoyEnEspana, inicialDelDia, lunesDe, sumarDias } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, inicialDelDia, lunesDe, sumarDias } from '../../util/fechas';
 import { textoDelTramo } from '../cuadrante/MiCuadrante';
 import { NavegadorDeMes } from '../proyectos/mes';
 import { ordenar, usePlantilla } from '../plantilla/Plantilla';
@@ -44,7 +44,7 @@ export function textoDelDia(dia: DiaTeorico | undefined): { texto: string; marca
 
 function SemanaDelEquipo({ alVerPersona }: { alVerPersona: (id: number) => void }) {
   const [busqueda, setBusqueda] = useSearchParams();
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const elegido = busqueda.get('semana');
   const lunes = elegido && /^\d{4}-\d{2}-\d{2}$/.test(elegido) ? lunesDe(elegido) : lunesDe(hoy);
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));

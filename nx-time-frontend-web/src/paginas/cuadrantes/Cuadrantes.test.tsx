@@ -10,7 +10,7 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { cuadrantes } from '../../i18n/es/cuadrantes';
 import { json, pintar, sesionDe, simularApi } from '../../pruebas/api';
-import { hoyEnEspana } from '../../util/fechas';
+import { hoyEnEmpresa } from '../../util/fechas';
 import { Cuadrantes, textoDelDia } from './Cuadrantes';
 
 const P = cuadrantes.plantilla;
@@ -123,7 +123,7 @@ describe('el cuadrante de una persona', () => {
     const llamadas = simularApi(
       rutas({
         'POST /api/v1/cuadrantes/asignaciones': () =>
-          json({ id: 1, usuarioId: 2, plantillaId: 7, fechaInicio: hoyEnEspana(), aviso: 'La plantilla suma 8h 00m y su contrato 40h 00m a la semana.' }, 201),
+          json({ id: 1, usuarioId: 2, plantillaId: 7, fechaInicio: hoyEnEmpresa(), aviso: 'La plantilla suma 8h 00m y su contrato 40h 00m a la semana.' }, 201),
       }),
     );
     pintar(<Cuadrantes />, { sesion: sesionDe('GESTOR'), ruta: '/cuadrantes?ver=persona&persona=2' });
@@ -136,7 +136,7 @@ describe('el cuadrante de una persona', () => {
 
     expect(await screen.findByText('La plantilla suma 8h 00m y su contrato 40h 00m a la semana.')).toBeTruthy();
     expect(llamadas.a('POST', '/api/v1/cuadrantes/asignaciones').map((l) => l.cuerpo)).toEqual([
-      { usuarioId: 2, plantillaId: 7, fechaInicio: hoyEnEspana() },
+      { usuarioId: 2, plantillaId: 7, fechaInicio: hoyEnEmpresa() },
     ]);
   });
 
@@ -152,7 +152,7 @@ describe('el cuadrante de una persona', () => {
 
     await waitFor(() =>
       expect(llamadas.a('POST', '/api/v1/cuadrantes/excepciones').map((l) => l.cuerpo)).toEqual([
-        { usuarioId: 2, fecha: hoyEnEspana(), tipo: 'TRAMO', tramos: [{ inicio: 540, fin: 840 }], motivo: 'Formación' },
+        { usuarioId: 2, fecha: hoyEnEmpresa(), tipo: 'TRAMO', tramos: [{ inicio: 540, fin: 840 }], motivo: 'Formación' },
       ]),
     );
   });

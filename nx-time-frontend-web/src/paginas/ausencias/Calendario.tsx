@@ -22,7 +22,7 @@ import { Boton, Insignia } from '../../componentes/Basicos';
 import { ErrorConReintento, Esqueleto } from '../../componentes/Estados';
 import { ausencias as A } from '../../i18n/es/ausencias';
 import type { components } from '../../api/schema';
-import { diaLargo, diasDelRango, fechaCorta, hoyEnEspana, lunesDe, mesYAnio, sumarDias, ultimoDeMes } from '../../util/fechas';
+import { diaLargo, diasDelRango, fechaCorta, hoyEnEmpresa, lunesDe, mesYAnio, sumarDias, ultimoDeMes } from '../../util/fechas';
 import { useMesDelCalendario } from './consultas';
 
 const C = A.calendario;
@@ -62,7 +62,7 @@ function resumenDelDia(dia: string, festivo: Festivo | undefined, ausentes: numb
 
 export function Calendario() {
   const { puede } = useSesion();
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [anio, setAnio] = useState(Number(hoy.slice(0, 4)));
   const [mes, setMes] = useState(Number(hoy.slice(5, 7)));
   const [conEquipo, setConEquipo] = useState(false);

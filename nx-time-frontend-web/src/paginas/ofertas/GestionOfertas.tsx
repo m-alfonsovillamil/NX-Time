@@ -31,7 +31,7 @@ import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { ofertas } from '../../i18n/es/ofertas';
 import { descargar } from '../../util/descargar';
-import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
 import { plazoDe } from './Ofertas';
 
 const O = ofertas;
@@ -168,7 +168,7 @@ function Candidaturas({ oferta }: { oferta: Oferta }) {
                     <strong>{c.candidato}</strong>
                     {c.estado && <Insignia tono={TONO_CANDIDATURA[c.estado] ?? 'neutro'}>{O.estadosCandidatura[c.estado] ?? c.estado}</Insignia>}
                   </div>
-                  {c.creadoEn && <span className="nx-sutil">{O.presentadaEl(fechaCorta(diaEnEspana(c.creadoEn)))}</span>}
+                  {c.creadoEn && <span className="nx-sutil">{O.presentadaEl(fechaCorta(diaEnEmpresa(c.creadoEn)))}</span>}
                   {c.carta && <p className="nx-texto-largo">{c.carta}</p>}
                   {c.comentario && <span>{O.comentario(c.comentario)}</span>}
                   {c.resueltaPor && <span className="nx-sutil">{O.resueltaPor(c.resueltaPor)}</span>}

@@ -1,8 +1,16 @@
 package com.nxtime.nxtime.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.MonthlySignatureStatus;
+import com.nxtime.nxtime.dto.CompanySettingsResponse;
+import com.nxtime.nxtime.dto.UpdateCompanySettingsRequest;
+import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.repository.MonthlySignatureRepository;
+import com.nxtime.nxtime.service.CompanySettingsService;
+import org.springframework.http.HttpStatus;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.OvertimeType;
 import com.nxtime.nxtime.domain.Role;
@@ -92,6 +100,8 @@ class ZonaHorariaIT {
     @Autowired private ReportService reportService;
     @Autowired private MonthlySignatureService signatureService;
     @Autowired private CapturaDeRecordatorios capturas;
+    @Autowired private CompanySettingsService ajustes;
+    @Autowired private MonthlySignatureRepository signatureRepository;
 
     private User enMadrid;
     private User enCanarias;
@@ -186,7 +196,62 @@ class ZonaHorariaIT {
         assertThat(recordados).doesNotContain(enMadrid.getId());
     }
 
+    @Test
+    @DisplayName("Los ajustes rechazan una zona inventada y un desfase fijo, que no sabe de horario de verano")
+    void zonaInvalida() {
+        assertThatThrownBy(() -> ajustes.guardar(
+                new UpdateCompanySettingsRequest("Empresa", "Marte/Olimpo"), enMadrid))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThatThrownBy(() -> ajustes.guardar(
+                new UpdateCompanySettingsRequest("Empresa", "+01:00"), enMadrid))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("Cambiar la zona anula solo la firma del mes cuyo contenido cambia")
+    void cambiarLaZonaRevisaLasFirmas() {
+        // Ana, en Madrid: el 28 de febrero a las 23:30 UTC es 1 de marzo allí.
+        // Con la zona de Canarias pasa a ser 28 de febrero: marzo cambia.
+        jornada(enMadrid, Instant.parse("2026-02-28T23:30:00Z"), 8 * 60);
+        jornada(enMadrid, Instant.parse("2026-03-10T08:00:00Z"), 8 * 60);
+        // Enero, a media mañana: es de enero en cualquiera de las dos zonas.
+        jornada(enMadrid, Instant.parse("2026-01-15T09:00:00Z"), 8 * 60);
+        signatureService.firmar(enMadrid, YearMonth.of(2026, 3), null);
+        signatureService.firmar(enMadrid, YearMonth.of(2026, 1), null);
+
+        CompanySettingsResponse respuesta = ajustes.guardar(
+                new UpdateCompanySettingsRequest(enMadrid.getEmpresa().getNombre(), CANARIAS), enMadrid);
+
+        assertThat(respuesta.zonaHoraria()).isEqualTo(CANARIAS);
+        assertThat(respuesta.firmasInvalidadas()).isEqualTo(1);
+        assertThat(firmaVigente(enMadrid, 3)).isFalse();
+        assertThat(firmaVigente(enMadrid, 1)).isTrue();
+        assertThat(companyRepository.findById(enMadrid.getEmpresa().getId()).orElseThrow().zona())
+                .isEqualTo(ZoneId.of(CANARIAS));
+
+        // Guardar otra vez la misma zona no revisa nada.
+        assertThat(ajustes.guardar(new UpdateCompanySettingsRequest(
+                enMadrid.getEmpresa().getNombre(), CANARIAS), enMadrid).firmasInvalidadas()).isZero();
+    }
+
+    @Test
+    @DisplayName("No se puede poner el nombre de otra empresa")
+    void nombreDeOtraEmpresa() {
+        assertThatThrownBy(() -> ajustes.guardar(new UpdateCompanySettingsRequest(
+                enCanarias.getEmpresa().getNombre(), Company.ZONA_POR_DEFECTO), enMadrid))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
     // ------------------------------------------------------------------
+
+    private boolean firmaVigente(User persona, int mes) {
+        return signatureRepository.findByUsuario_IdAndAnioAndMesAndEstado(
+                persona.getId(), 2026, mes, MonthlySignatureStatus.VIGENTE).isPresent();
+    }
 
     private Company empresa(String zona) {
         return companyRepository.save(Company.builder()

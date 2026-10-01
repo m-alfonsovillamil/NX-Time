@@ -20,7 +20,7 @@ import { useSesion } from '../../api/useSesion';
 import { Barras } from '../../componentes/Barras';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { empresa } from '../../i18n/es/empresa';
-import { fechaCorta, hoyEnEspana, mesYAnio, minutos } from '../../util/fechas';
+import { fechaCorta, hoyEnEmpresa, mesYAnio, minutos } from '../../util/fechas';
 import { porcentaje } from '../../util/numeros';
 
 const E = empresa.panel;
@@ -70,7 +70,7 @@ function TarjetaDeAnalitica() {
 
 export function PanelEmpresa() {
   const { puede } = useSesion();
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const anio = Number(hoy.slice(0, 4));
   const mes = Number(hoy.slice(5, 7));
 

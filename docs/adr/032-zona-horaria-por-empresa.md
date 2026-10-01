@@ -44,9 +44,15 @@ pero a cambio habría dos fuentes de verdad (el instante y el día) que se puede
 contradecir, y una corrección tendría que mantenerlas a la par. Cambiar de zona
 es algo que una empresa hace una vez, al darse de alta, así que se permite con
 un aviso, y la firma mensual se revisa como tras cualquier otro cambio: si la
-huella de un mes firmado cambia, la firma se invalida (ADR 025). Las dos cosas
-llegan con la pantalla que permite cambiarla (fase Z2); hasta entonces la zona
-solo se fija al crear la empresa.
+huella de un mes firmado cambia, la firma se invalida (ADR 025).
+
+La cambia solo ADMIN (`empresa:configurar`), desde **Ajustes de la empresa** en
+la web (`PUT /api/v1/empresa/ajustes`). La web pide confirmación explicando lo
+de arriba; el servidor guarda la zona, revisa todas las firmas vigentes de la
+empresa con la zona nueva ya puesta (`revisarTrasCambioDeZona`) y responde
+cuántas cayeron. Se aceptan solo nombres de región IANA: un desfase fijo
+(`+01:00`) no sabe del horario de verano y dejaría medio año desplazado una
+hora.
 
 ### Las consultas que cruzan empresas van zona por zona
 
@@ -89,5 +95,7 @@ esa zona.
   sirven para que una entrada de un minuto no cruce de un día a otro.
 - Los tests que dan por hecho Madrid siguen valiendo sin tocarlos: su empresa se
   crea con la zona por defecto.
-- Queda pendiente la pantalla para elegir la zona (fase Z2) y que la app Android
-  la lea de la sesión (Z3).
+- La web cuenta los días y pinta las horas en la zona de la sesión
+  (`util/fechas.ts`, `fijarZona`); al cambiarla en los ajustes se aplica en el
+  acto y se vuelve a pedir todo lo que había en caché.
+- Queda pendiente que la app Android la lea de la sesión (Z3).

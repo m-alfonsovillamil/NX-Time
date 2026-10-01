@@ -23,7 +23,7 @@ import type { components } from '../../api/schema';
 import { Boton, Insignia } from '../../componentes/Basicos';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { cuadrante } from '../../i18n/es/cuadrante';
-import { diaLargo, fechaCorta, hoyEnEspana, lunesDe, minutos, sumarDias } from '../../util/fechas';
+import { diaLargo, fechaCorta, hoyEnEmpresa, lunesDe, minutos, sumarDias } from '../../util/fechas';
 
 const C = cuadrante.cuadrante;
 
@@ -72,7 +72,7 @@ export function Dia({ dia, esHoy }: { dia: DiaTeorico; esHoy: boolean }) {
 }
 
 export function MiCuadrante() {
-  const hoy = hoyEnEspana();
+  const hoy = hoyEnEmpresa();
   const [lunes, setLunes] = useState(lunesDe(hoy));
   const domingo = sumarDias(lunes, 6);
 

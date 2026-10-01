@@ -261,21 +261,42 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
         // lo que más pasa por aquí.
         for (MonthlySignature firma : signatureRepository.findVigentesDeUsuarioEnMeses(
                 registro.getUsuario().getId(), meses)) {
-            // Se recalcula en vez de invalidar a ciegas: cambiar el proyecto
-            // de una jornada, o anularla y volverla a crear igual, no cambia
-            // lo que se firmó, y tumbar la firma por eso sería ruido.
-            if (huellaDeHoy(firma).equals(firma.getHash())) {
-                continue;
-            }
-            firma.setEstado(MonthlySignatureStatus.INVALIDADA);
-            firma.setInvalidadaEn(Instant.now(clock));
-            firma.setMotivoInvalidacion(motivo.length() > 300 ? motivo.substring(0, 300) : motivo);
-            signatureRepository.save(firma);
-            log.info("Firma {} ({} de {}) invalidada: {}", firma.getId(), firma.periodo(),
-                    firma.getUsuario().getId(), motivo);
-            eventPublisher.publishEvent(new NotificationEvents.SignatureInvalidated(
-                    firma.getEmpresa().getId(), firma.getAnio(), firma.getMes(), motivo, List.of(firma.getUsuario())));
+            invalidarSiCambio(firma, motivo);
         }
+    }
+
+    @Override
+    @Transactional
+    public int revisarTrasCambioDeZona(long empresaId, String motivo) {
+        int invalidadas = 0;
+        for (MonthlySignature firma : signatureRepository.findByEmpresa_IdAndEstado(
+                empresaId, MonthlySignatureStatus.VIGENTE)) {
+            if (invalidarSiCambio(firma, motivo)) {
+                invalidadas++;
+            }
+        }
+        return invalidadas;
+    }
+
+    /**
+     * Se recalcula la huella en vez de invalidar a ciegas: cambiar el proyecto
+     * de una jornada, o anularla y volverla a crear igual, no cambia lo que se
+     * firmó, y tumbar la firma por eso sería ruido. Lo mismo al cambiar de
+     * zona: solo cae el mes cuyo contenido se mueve de verdad (ADR 032).
+     */
+    private boolean invalidarSiCambio(MonthlySignature firma, String motivo) {
+        if (huellaDeHoy(firma).equals(firma.getHash())) {
+            return false;
+        }
+        firma.setEstado(MonthlySignatureStatus.INVALIDADA);
+        firma.setInvalidadaEn(Instant.now(clock));
+        firma.setMotivoInvalidacion(motivo.length() > 300 ? motivo.substring(0, 300) : motivo);
+        signatureRepository.save(firma);
+        log.info("Firma {} ({} de {}) invalidada: {}", firma.getId(), firma.periodo(),
+                firma.getUsuario().getId(), motivo);
+        eventPublisher.publishEvent(new NotificationEvents.SignatureInvalidated(
+                firma.getEmpresa().getId(), firma.getAnio(), firma.getMes(), motivo, List.of(firma.getUsuario())));
+        return true;
     }
 
     @Override

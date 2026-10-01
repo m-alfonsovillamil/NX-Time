@@ -81,6 +81,9 @@ const CalendarioLaboral = lazy(() => import('../paginas/proyectos/CalendarioLabo
 const PanelEmpresa = lazy(() => import('../paginas/empresa/PanelEmpresa').then((m) => ({ default: m.PanelEmpresa })));
 const Informes = lazy(() => import('../paginas/empresa/Informes').then((m) => ({ default: m.Informes })));
 const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) => ({ default: m.Integridad })));
+const AjustesEmpresa = lazy(() =>
+  import('../paginas/empresa/AjustesEmpresa').then((m) => ({ default: m.AjustesEmpresa })),
+);
 const Borrados = lazy(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
 const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
 const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
@@ -128,6 +131,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
+  { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'panel', grupo: 'gestion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */

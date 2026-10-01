@@ -24,7 +24,7 @@ import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { cuadrante } from '../../i18n/es/cuadrante';
-import { fechaCorta, hora, hoyEnEspana, minutos } from '../../util/fechas';
+import { fechaCorta, hora, hoyEnEmpresa, minutos } from '../../util/fechas';
 
 const I = cuadrante.incidencias;
 
@@ -76,7 +76,7 @@ function TarjetaDeIncidencia({ i, delEquipo, acciones }: { i: Incidencia; delEqu
 }
 
 function Mias() {
-  const anioActual = Number(hoyEnEspana().slice(0, 4));
+  const anioActual = Number(hoyEnEmpresa().slice(0, 4));
   const [anio, setAnio] = useState(anioActual);
   const [explicando, setExplicando] = useState<Incidencia | null>(null);
 

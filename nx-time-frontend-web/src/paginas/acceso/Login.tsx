@@ -61,6 +61,7 @@ export function Login() {
         accessToken: data.token ?? '',
         nombre: data.nombre ?? '',
         authorities: data.authorities ?? [],
+        zonaHoraria: data.zonaHoraria,
       });
       navegar(desde, { replace: true });
     } catch (fallo) {

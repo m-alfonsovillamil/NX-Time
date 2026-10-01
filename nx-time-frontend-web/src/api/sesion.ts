@@ -17,6 +17,8 @@
  * `useSesion` conecta a `useSyncExternalStore`.
  */
 
+import { fijarZona } from '../util/fechas';
+
 /** Lo que el servidor dice de quien acaba de entrar. */
 export interface Sesion {
   accessToken: string;
@@ -30,6 +32,12 @@ export interface Sesion {
    * pantallas que luego dan 403.
    */
   authorities: readonly string[];
+  /**
+   * La zona de su empresa (ADR 032), en la que `util/fechas.ts` cuenta los
+   * días y enseña las horas. Opcional: un servidor de antes no la manda, y
+   * entonces se queda la de por defecto.
+   */
+  zonaHoraria?: string | undefined;
 }
 
 let sesion: Sesion | null = null;
@@ -53,11 +61,14 @@ export function haySesion(): boolean {
  */
 export function abrirSesion(nueva: Sesion): void {
   sesion = nueva;
+  // Antes de avisar: quien se entera del cambio ya tiene que pintar en la zona nueva.
+  fijarZona(nueva.zonaHoraria);
   avisar();
 }
 
 export function cerrarSesion(): void {
   sesion = null;
+  fijarZona(null);
   avisar();
 }
 

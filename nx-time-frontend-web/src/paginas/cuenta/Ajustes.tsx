@@ -22,7 +22,7 @@ import { Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
-import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
 import { apagarPush, encenderPush, estadoPush, PermisoDenegado, type EstadoPush } from '../../push/push';
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
 
@@ -289,7 +289,7 @@ function Borrado() {
       ) : pendiente ? (
         <>
           <p>
-            <Insignia tono="aviso">{B.pendiente(fechaCorta(diaEnEspana(solicitud.data?.creadaEn ?? '')))}</Insignia>
+            <Insignia tono="aviso">{B.pendiente(fechaCorta(diaEnEmpresa(solicitud.data?.creadaEn ?? '')))}</Insignia>
           </p>
           <Boton variante="secundario" ocupado={retirar.isPending} onClick={() => retirar.mutate(undefined)}>
             {B.retirar}

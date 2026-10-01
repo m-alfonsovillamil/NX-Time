@@ -2,42 +2,77 @@
  * Todo el formateo de fechas de la web, en un solo sitio.
  *
  * Espeja `DateFormats.kt`, incluida la decisión que más importa: **la zona es
- * fija y española**. El backend guarda instantes en UTC (`Instant`,
- * `TIMESTAMPTZ`) y la jornada laboral que representan es la del centro de
- * trabajo, no la del sitio donde esté abierto el navegador. Alguien de viaje
- * tiene que seguir viendo su jornada en la hora de su empresa, y en un
- * navegador eso no es una hipótesis: la zona del sistema viaja con el portátil.
+ * la de la empresa, no la del navegador**. El backend guarda instantes en UTC
+ * (`Instant`, `TIMESTAMPTZ`) y la jornada laboral que representan es la del
+ * centro de trabajo, no la del sitio donde esté abierto el navegador. Alguien
+ * de viaje tiene que seguir viendo su jornada en la hora de su empresa, y en
+ * un navegador eso no es una hipótesis: la zona del sistema viaja con el
+ * portátil.
+ *
+ * La zona llega en la sesión (`zonaHoraria`, ADR 032) y la fija `abrirSesion`
+ * con [fijarZona]. Hasta que hay sesión, y en las pantallas sin ella, es la de
+ * Madrid, la de todas las empresas antes del ADR 032.
  *
  * Por eso no se usa `toLocaleTimeString()` a secas en ningún componente. Ese
  * es exactamente el fallo que se cuela solo: funciona en el portátil de quien
  * lo escribe y enseña otra hora en el de al lado.
  */
 
-const ZONA_ESPANA = 'Europe/Madrid';
+export const ZONA_POR_DEFECTO = 'Europe/Madrid';
 const ES = 'es-ES';
 
-const HORA = new Intl.DateTimeFormat(ES, {
-  timeZone: ZONA_ESPANA,
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
+let zona = ZONA_POR_DEFECTO;
+let formatos = crearFormatos(zona);
 
-const FECHA_LARGA = new Intl.DateTimeFormat(ES, {
-  timeZone: ZONA_ESPANA,
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-});
+/** La zona de la empresa de la sesión. Una zona que el navegador no conoce se ignora. */
+export function fijarZona(nueva: string | null | undefined): void {
+  const elegida = nueva && zonaValida(nueva) ? nueva : ZONA_POR_DEFECTO;
+  if (elegida === zona) return;
+  zona = elegida;
+  formatos = crearFormatos(zona);
+}
 
-const FECHA_HORA_CORTA = new Intl.DateTimeFormat(ES, {
-  timeZone: ZONA_ESPANA,
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
+export function zonaActual(): string {
+  return zona;
+}
+
+function zonaValida(candidata: string): boolean {
+  try {
+    new Intl.DateTimeFormat(ES, { timeZone: candidata });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Los formateadores que dependen de la zona, creados una vez por zona: crear
+ * un `Intl.DateTimeFormat` es caro y hay listas que formatean cientos de horas.
+ */
+function crearFormatos(timeZone: string) {
+  return {
+    hora: new Intl.DateTimeFormat(ES, { timeZone, hour: '2-digit', minute: '2-digit', hour12: false }),
+    fechaLarga: new Intl.DateTimeFormat(ES, { timeZone, weekday: 'long', day: 'numeric', month: 'long' }),
+    fechaHoraCorta: new Intl.DateTimeFormat(ES, {
+      timeZone,
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }),
+    partes: new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }),
+  };
+}
 
 const FECHA_CORTA = new Intl.DateTimeFormat(ES, {
   // Un `LocalDate` es un día, no un instante (ADR 002). Se construye como
@@ -49,22 +84,22 @@ const FECHA_CORTA = new Intl.DateTimeFormat(ES, {
   month: 'short',
 });
 
-/** `2026-09-21T07:03:11Z` → `09:03 h`, siempre en hora de España. */
+/** `2026-09-21T07:03:11Z` → `09:03 h`, siempre en la hora de la empresa. */
 export function hora(instante: string | null | undefined): string {
   const fecha = aFecha(instante);
-  return fecha === null ? '' : `${HORA.format(fecha)} h`;
+  return fecha === null ? '' : `${formatos.hora.format(fecha)} h`;
 }
 
 /** `lunes, 21 de septiembre`, con la inicial en mayúscula. */
 export function fechaLarga(instante: Date = new Date()): string {
-  const texto = FECHA_LARGA.format(instante);
+  const texto = formatos.fechaLarga.format(instante);
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /** `2026-09-21T07:03:11Z` → `21 sept, 09:03`: para listas de avisos o de cambios. */
 export function fechaHoraCorta(instante: string | null | undefined): string {
   const fecha = aFecha(instante);
-  return fecha === null ? '' : FECHA_HORA_CORTA.format(fecha);
+  return fecha === null ? '' : formatos.fechaHoraCorta.format(fecha);
 }
 
 /**
@@ -142,30 +177,19 @@ function dos(n: number): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Días de España, y de hora de España a instante                      */
+/* Días de la empresa, y de hora de la empresa a instante              */
 /* ------------------------------------------------------------------ */
 
 /*
  * Los días viajan como `aaaa-mm-dd` (el `LocalDate` de la API) y se operan
  * como fechas UTC a medianoche: sumar un día a un `Date` local cruzaría mal el
  * cambio de hora, y en UTC no hay cambio de hora. Qué día es «hoy» o en qué día
- * cae un instante, en cambio, se pregunta siempre a la zona de España.
+ * cae un instante, en cambio, se pregunta siempre a la zona de la empresa.
  */
 
-const PARTES_ESPANA = new Intl.DateTimeFormat('en-CA', {
-  timeZone: ZONA_ESPANA,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
-
-function partesEnEspana(fecha: Date): Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', number> {
+function partesEnEmpresa(fecha: Date): Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', number> {
   const partes = Object.fromEntries(
-    PARTES_ESPANA.formatToParts(fecha)
+    formatos.partes.formatToParts(fecha)
       .filter((p) => p.type !== 'literal')
       .map((p) => [p.type, Number(p.value)]),
   );
@@ -180,30 +204,30 @@ function deDia(dia: string): Date {
   return new Date(`${dia}T00:00:00Z`);
 }
 
-/** El día de España en que cae un instante: `2026-09-21T23:30:00Z` → `2026-09-22`. */
-export function diaEnEspana(instante: string | Date = new Date()): string {
-  const p = partesEnEspana(typeof instante === 'string' ? new Date(instante) : instante);
+/** El día de la empresa en que cae un instante: `2026-09-21T23:30:00Z` → `2026-09-22`. */
+export function diaEnEmpresa(instante: string | Date = new Date()): string {
+  const p = partesEnEmpresa(typeof instante === 'string' ? new Date(instante) : instante);
   return `${p.year}-${dos(p.month)}-${dos(p.day)}`;
 }
 
-/** Hoy, en España. */
-export function hoyEnEspana(ahora: Date = new Date()): string {
-  return diaEnEspana(ahora);
+/** Hoy, en la zona de la empresa. */
+export function hoyEnEmpresa(ahora: Date = new Date()): string {
+  return diaEnEmpresa(ahora);
 }
 
-/** La hora de España de un instante, como la quiere un `<input type="time">`: `09:03`. */
-export function horaEnEspana(instante: string | null | undefined): string {
+/** La hora de la empresa de un instante, como la quiere un `<input type="time">`: `09:03`. */
+export function horaEnEmpresa(instante: string | null | undefined): string {
   const fecha = aFecha(instante);
   if (fecha === null) return '';
-  const p = partesEnEspana(fecha);
+  const p = partesEnEmpresa(fecha);
   return `${dos(p.hour)}:${dos(p.minute)}`;
 }
 
 /**
- * Un día y una hora de España → el instante UTC que espera la API.
+ * Un día y una hora de la empresa → el instante UTC que espera la API.
  *
- * Es el `aInstanteIso` de Android. Sin `Temporal`, el desfase de Madrid se
- * averigua preguntándole a `Intl` qué hora de España es un instante de
+ * Es el `aInstanteIso` de Android. Sin `Temporal`, el desfase de la zona se
+ * averigua preguntándole a `Intl` qué hora de la empresa es un instante de
  * prueba, y se corrige una segunda vez por si el de prueba y el bueno caen a
  * distinto lado de un cambio de hora.
  */
@@ -213,7 +237,7 @@ export function aInstante(dia: string, hora: string): string {
   const comoSiFueraUtc = Date.UTC(a, m - 1, d, h, mi);
 
   const desfase = (instante: number) => {
-    const p = partesEnEspana(new Date(instante));
+    const p = partesEnEmpresa(new Date(instante));
     return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - instante;
   };
 
@@ -276,7 +300,7 @@ export function horaDeSalida(entrada: string | null | undefined, salida: string 
   if (!salida) return '';
   const texto = hora(salida);
   if (!entrada) return texto;
-  const dias = diasEntre(diaEnEspana(entrada), diaEnEspana(salida));
+  const dias = diasEntre(diaEnEmpresa(entrada), diaEnEmpresa(salida));
   return dias > 0 ? `${texto} (+${dias} d)` : texto;
 }
 

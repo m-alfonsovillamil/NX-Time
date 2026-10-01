@@ -108,20 +108,47 @@ export function AreaDeTexto({ id, etiqueta, error, ayuda, rows = 3, ...resto }: 
   );
 }
 
+interface OpcionDeSelector {
+  valor: string;
+  texto: string;
+  /** Las opciones seguidas con el mismo grupo van juntas en un `<optgroup>`. */
+  grupo?: string;
+}
+
 type SelectorProps = Etiquetado &
   Omit<SelectHTMLAttributes<HTMLSelectElement>, 'id'> & {
-    opciones: readonly { valor: string; texto: string }[];
+    opciones: readonly OpcionDeSelector[];
   };
 
+/** Las opciones partidas en tramos seguidos del mismo grupo (o sin grupo). */
+function tramos(opciones: readonly OpcionDeSelector[]): { grupo: string | undefined; opciones: OpcionDeSelector[] }[] {
+  const resultado: { grupo: string | undefined; opciones: OpcionDeSelector[] }[] = [];
+  for (const opcion of opciones) {
+    const ultimo = resultado.at(-1);
+    if (ultimo !== undefined && ultimo.grupo === opcion.grupo) ultimo.opciones.push(opcion);
+    else resultado.push({ grupo: opcion.grupo, opciones: [opcion] });
+  }
+  return resultado;
+}
+
 export function Selector({ id, etiqueta, error, ayuda, opciones, ...resto }: SelectorProps) {
+  const pintar = (o: OpcionDeSelector) => (
+    <option key={o.valor} value={o.valor}>
+      {o.texto}
+    </option>
+  );
   return (
     <Envoltura id={id} etiqueta={etiqueta} error={error} ayuda={ayuda}>
       <select {...resto} id={id} {...describir({ id, etiqueta, error, ayuda })}>
-        {opciones.map((o) => (
-          <option key={o.valor} value={o.valor}>
-            {o.texto}
-          </option>
-        ))}
+        {tramos(opciones).map((tramo, i) =>
+          tramo.grupo === undefined ? (
+            tramo.opciones.map(pintar)
+          ) : (
+            <optgroup key={`${tramo.grupo}-${i}`} label={tramo.grupo}>
+              {tramo.opciones.map(pintar)}
+            </optgroup>
+          ),
+        )}
       </select>
     </Envoltura>
   );

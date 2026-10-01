@@ -15,13 +15,13 @@ import { ErrorDeApi } from '../../api/consultas';
 import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
 import { empresa } from '../../i18n/es/empresa';
 import { descargar } from '../../util/descargar';
-import { hoyEnEspana, primeroDeMes, sumarDias } from '../../util/fechas';
+import { hoyEnEmpresa, primeroDeMes, sumarDias } from '../../util/fechas';
 import { ordenar, usePlantilla } from '../plantilla/Plantilla';
 
 const I = empresa.informes;
 
 /** `2026-09` del mes anterior al de hoy (en España). */
-export function mesAnterior(hoy: string = hoyEnEspana()): string {
+export function mesAnterior(hoy: string = hoyEnEmpresa()): string {
   return sumarDias(primeroDeMes(hoy), -1).slice(0, 7);
 }
 
@@ -69,7 +69,7 @@ export function Informes() {
 
       <section className="nx-tarjeta">
         <div className="nx-filtros">
-          <Campo id="informe-mes" etiqueta={I.mes} type="month" max={hoyEnEspana().slice(0, 7)} value={mes} onChange={(e) => e.target.value !== '' && setMes(e.target.value)} />
+          <Campo id="informe-mes" etiqueta={I.mes} type="month" max={hoyEnEmpresa().slice(0, 7)} value={mes} onChange={(e) => e.target.value !== '' && setMes(e.target.value)} />
         </div>
       </section>
 

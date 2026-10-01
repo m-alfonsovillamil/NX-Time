@@ -24,7 +24,7 @@ import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { borrados } from '../../i18n/es/borrados';
-import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
 
 const B = borrados;
 
@@ -161,7 +161,7 @@ export function Borrados() {
                         <strong>{s.nombre}</strong>
                         <span className="nx-sutil">{s.email}</span>
                       </div>
-                      {s.creadaEn && <span className="nx-sutil">{B.pedidaEl(fechaCorta(diaEnEspana(s.creadaEn)))}</span>}
+                      {s.creadaEn && <span className="nx-sutil">{B.pedidaEl(fechaCorta(diaEnEmpresa(s.creadaEn)))}</span>}
                       {s.registradaPor && <span className="nx-sutil">{B.registradaPor(s.registradaPor)}</span>}
                       {s.motivo && <span>{B.motivo(s.motivo)}</span>}
                       {bloqueos.length > 0 && (

@@ -41,6 +41,28 @@ export const empresa = {
     faltaPersona: 'Elige de quién es el informe.',
   },
 
+  ajustes: {
+    titulo: 'Ajustes de la empresa',
+    nombre: 'Nombre de la empresa',
+    nombreVacio: 'Pon el nombre de la empresa.',
+    zona: 'Zona horaria',
+    zonaAyuda:
+      'Decide a qué día pertenece cada fichaje y en qué hora se ven las entradas y salidas, en la web, en la app y en los informes.',
+    peninsula: 'Península, Baleares, Ceuta y Melilla',
+    canarias: 'Canarias',
+    otras: 'Otras zonas',
+    guardar: 'Guardar',
+    guardado: 'Ajustes guardados.',
+    confirmarTitulo: '¿Cambiar la zona horaria?',
+    confirmarTexto: (zona: string) =>
+      `A partir de ahora, todos los días se contarán en ${zona}, también los del pasado: una jornada que empezó cerca de la medianoche puede pasar al día de antes o al de después. Si eso cambia un mes ya firmado, la firma se anula y la persona tendrá que volver a firmarlo.`,
+    confirmar: 'Cambiar la zona',
+    firmasAnuladas: (n: number) =>
+      n === 1
+        ? 'Zona cambiada. Se ha anulado 1 firma mensual cuyo mes ha cambiado: se le ha avisado para que vuelva a firmar.'
+        : `Zona cambiada. Se han anulado ${n} firmas mensuales cuyo mes ha cambiado: se ha avisado a cada persona para que vuelva a firmar.`,
+  },
+
   integridad: {
     titulo: 'Integridad de la auditoría',
     explicacion:

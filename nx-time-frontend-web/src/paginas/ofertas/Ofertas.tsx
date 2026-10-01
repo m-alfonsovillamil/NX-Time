@@ -30,7 +30,7 @@ import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { T } from '../../i18n/es';
 import { ofertas } from '../../i18n/es/ofertas';
-import { diaEnEspana, fechaCorta } from '../../util/fechas';
+import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
 
 const O = ofertas;
 
@@ -199,7 +199,7 @@ function TarjetaDeCandidatura({ c }: { c: Candidatura }) {
           <Insignia tono={TONO_CANDIDATURA[c.estado] ?? 'neutro'}>{O.estadosCandidatura[c.estado] ?? c.estado}</Insignia>
         )}
       </div>
-      {c.creadoEn && <span className="nx-sutil">{O.presentadaEl(fechaCorta(diaEnEspana(c.creadoEn)))}</span>}
+      {c.creadoEn && <span className="nx-sutil">{O.presentadaEl(fechaCorta(diaEnEmpresa(c.creadoEn)))}</span>}
       {c.cvNombre && <span className="nx-sutil">{O.cvAdjunto(c.cvNombre)}</span>}
       {c.comentario && <span>{O.comentario(c.comentario)}</span>}
       {c.resueltaPor && <span className="nx-sutil">{O.resueltaPor(c.resueltaPor)}</span>}
