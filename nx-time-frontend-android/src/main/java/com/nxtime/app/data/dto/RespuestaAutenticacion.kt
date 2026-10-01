@@ -25,5 +25,11 @@ data class RespuestaAutenticacion(
      * --o un test que no la ponga-- signifique "sin permisos", nunca
      * "todos".
      */
-    val authorities: List<String> = emptyList()
+    val authorities: List<String> = emptyList(),
+    /**
+     * La zona de su empresa, en nombre IANA (ADR 032): en ella se cuentan
+     * los días y se enseñan las horas. Null con un backend de antes, y
+     * entonces se queda la de por defecto (ver `DateFormats.fijarZona`).
+     */
+    val zonaHoraria: String? = null
 )

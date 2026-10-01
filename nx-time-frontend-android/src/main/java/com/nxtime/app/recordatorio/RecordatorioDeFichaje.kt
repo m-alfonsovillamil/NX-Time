@@ -68,7 +68,7 @@ object RecordatorioDeFichaje {
 
     private fun encolar(work: WorkManager, nombre: String, tipo: TipoDeAviso, horaTexto: String) {
         val hora = ReglaDelRecordatorio.hora(horaTexto) ?: return
-        val retardo = ReglaDelRecordatorio.minutosHasta(hora, LocalTime.now(DateFormats.ZONA_ESPANA))
+        val retardo = ReglaDelRecordatorio.minutosHasta(hora, LocalTime.now(DateFormats.zona))
 
         val peticion = PeriodicWorkRequestBuilder<RecordatorioWorker>(24, TimeUnit.HOURS)
             .setInitialDelay(retardo, TimeUnit.MINUTES)
@@ -123,7 +123,7 @@ class RecordatorioWorker(
             return Result.success()
         }
 
-        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now(DateFormats.ZONA_ESPANA).dayOfWeek)) {
+        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now(DateFormats.zona).dayOfWeek)) {
             return Result.success()
         }
 

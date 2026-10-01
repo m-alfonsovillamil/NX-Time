@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class CorregirFichajeUiState(
-    val fecha: LocalDate = LocalDate.now(DateFormats.ZONA_ESPANA),
+    val fecha: LocalDate = LocalDate.now(DateFormats.zona),
     val horaEntrada: Int = 9,
     val minutoEntrada: Int = 0,
     val horaSalida: Int = 18,

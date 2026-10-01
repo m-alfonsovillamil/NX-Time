@@ -139,7 +139,7 @@ class FicharViewModel(
      */
     private fun cargarCuadranteDeHoy() {
         viewModelScope.launch {
-            val hoy = LocalDate.now(DateFormats.ZONA_ESPANA)
+            val hoy = LocalDate.now(DateFormats.zona)
             val dia = try {
                 authRepository.getMiCuadrante(hoy, hoy).takeIf { it.isSuccessful }?.body()?.firstOrNull()
             } catch (e: Exception) {

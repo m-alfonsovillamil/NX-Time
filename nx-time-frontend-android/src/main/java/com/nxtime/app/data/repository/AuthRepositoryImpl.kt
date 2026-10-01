@@ -46,7 +46,8 @@ class AuthRepositoryImpl(
             token = authResponse.token,
             refreshToken = authResponse.refreshToken,
             nombre = authResponse.nombre,
-            authorities = authResponse.authorities
+            authorities = authResponse.authorities,
+            zonaHoraria = authResponse.zonaHoraria
         )
         alEntrar()
     }

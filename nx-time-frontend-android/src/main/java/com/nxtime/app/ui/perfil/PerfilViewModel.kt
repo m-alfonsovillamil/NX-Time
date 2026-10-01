@@ -13,6 +13,7 @@ import com.nxtime.app.data.dto.PerfilDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -353,7 +354,7 @@ class PerfilViewModel(
             }
             // El backend también lo rechaza (@Past), pero un viaje de
             // ida y vuelta para decir que no se nace mañana sobra.
-            if (!comoFecha.isBefore(LocalDate.now())) {
+            if (!comoFecha.isBefore(LocalDate.now(DateFormats.zona))) {
                 _uiState.update { it.copy(errorFormulario = MensajeUi.Recurso(R.string.perfil_fecha_futura)) }
                 return
             }

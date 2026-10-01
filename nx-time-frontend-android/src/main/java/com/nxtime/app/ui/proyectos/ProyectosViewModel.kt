@@ -27,7 +27,7 @@ data class ProyectosUiState(
     val detalle: DetalleProyectoDTO? = null,
     /** Para el desplegable de "asignar a...". */
     val empleados: List<EmpleadoSimpleDTO> = emptyList(),
-    val periodo: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA),
+    val periodo: YearMonth = YearMonth.now(DateFormats.zona),
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 ) {
@@ -59,7 +59,7 @@ data class ProyectosUiState(
  */
 class ProyectosViewModel(
     private val authRepository: AuthRepository,
-    periodoInicial: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA)
+    periodoInicial: YearMonth = YearMonth.now(DateFormats.zona)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProyectosUiState(periodo = periodoInicial))

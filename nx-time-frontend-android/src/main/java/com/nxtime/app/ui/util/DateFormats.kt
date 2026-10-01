@@ -19,15 +19,34 @@ import java.util.Locale
  * **sin `Locale`**, así que en un móvil configurado en inglés esa hora
  * se formateaba distinto que el resto de la aplicación.
  *
- * La zona es fija y española a propósito: el backend guarda instantes en
- * UTC (`Instant`, desde la Fase 3) y la jornada laboral que representan
- * es la española, no la del sitio donde esté el móvil. Un empleado de
- * viaje debe seguir viendo su jornada en la hora de su centro de
- * trabajo.
+ * La zona es la de la empresa, no la del móvil: el backend guarda instantes
+ * en UTC (`Instant`, desde la Fase 3) y la jornada laboral que representan
+ * es la del centro de trabajo, no la del sitio donde esté el móvil. Un
+ * empleado de viaje debe seguir viendo su jornada en la hora de su empresa.
+ *
+ * Esa zona llega en la sesión (`zonaHoraria`, ADR 032) y la fija
+ * `SessionManager` con [fijarZona] al entrar, al renovar el token y al
+ * arrancar la app con una sesión guardada. Sin sesión, o con una sesión de
+ * una versión anterior que no la guardó, es la de Madrid.
  */
 object DateFormats {
 
-    val ZONA_ESPANA: ZoneId = ZoneId.of("Europe/Madrid")
+    /** La de todas las empresas antes del ADR 032, y la de una sesión que no dice otra. */
+    val ZONA_POR_DEFECTO: ZoneId = ZoneId.of("Europe/Madrid")
+
+    /**
+     * La zona de la empresa de la sesión. `@Volatile` porque la escribe el
+     * hilo que renueva el token y la leen la interfaz y WorkManager.
+     */
+    @Volatile
+    var zona: ZoneId = ZONA_POR_DEFECTO
+        private set
+
+    /** Una zona que no se entiende, o ninguna, deja la de por defecto. */
+    fun fijarZona(nombre: String?) {
+        zona = nombre?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZONA_POR_DEFECTO
+    }
+
     private val ES = Locale.forLanguageTag("es-ES")
 
     private val FECHA_CORTA = DateTimeFormatter.ofPattern("dd/MM/yyyy", ES)
@@ -254,7 +273,7 @@ object DateFormats {
      */
     fun horaYMinutoLocal(instanteIso: String?): Pair<Int, Int>? = try {
         instanteIso?.let {
-            val local = Instant.parse(it).atZone(ZONA_ESPANA)
+            val local = Instant.parse(it).atZone(zona)
             local.hour to local.minute
         }
     } catch (e: DateTimeParseException) {
@@ -263,7 +282,7 @@ object DateFormats {
 
     /** El día de calendario español al que pertenece un instante. */
     fun fechaLocal(instanteIso: String?): LocalDate? = try {
-        instanteIso?.let { Instant.parse(it).atZone(ZONA_ESPANA).toLocalDate() }
+        instanteIso?.let { Instant.parse(it).atZone(zona).toLocalDate() }
     } catch (e: DateTimeParseException) {
         null
     }
@@ -298,13 +317,13 @@ object DateFormats {
      * encima quedaría firmado en la auditoría.
      */
     fun aInstanteIso(fecha: LocalDate, hora: Int, minuto: Int): String =
-        fecha.atTime(hora, minuto).atZone(ZONA_ESPANA).toInstant().toString()
+        fecha.atTime(hora, minuto).atZone(zona).toInstant().toString()
 
     private inline fun conInstante(
         instanteIso: String?,
         formatear: (java.time.ZonedDateTime) -> String
     ): String = try {
-        instanteIso?.let { formatear(Instant.parse(it).atZone(ZONA_ESPANA)) } ?: SIN_DATO
+        instanteIso?.let { formatear(Instant.parse(it).atZone(zona)) } ?: SIN_DATO
     } catch (e: DateTimeParseException) {
         SIN_DATO
     }

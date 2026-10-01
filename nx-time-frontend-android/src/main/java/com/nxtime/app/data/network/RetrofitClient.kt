@@ -126,7 +126,7 @@ class RetrofitClient(
         if (respuesta.isSuccessful && cuerpo != null) {
             // El refresh que viene NO es el que se mandó: el servidor rota en
             // cada renovación. Hay que quedarse con los dos.
-            RefrescoDeToken.TokensRenovados(cuerpo.token, cuerpo.refreshToken)
+            RefrescoDeToken.TokensRenovados(cuerpo.token, cuerpo.refreshToken, cuerpo.zonaHoraria)
         } else {
             null
         }

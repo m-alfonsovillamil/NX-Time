@@ -20,7 +20,7 @@ import java.time.YearMonth
 
 data class CalendarioUiState(
     val cargando: Boolean = false,
-    val periodo: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA),
+    val periodo: YearMonth = YearMonth.now(DateFormats.zona),
     val festivos: List<FestivoDTO> = emptyList(),
     val ausencias: List<AusenciaCalendarioDTO> = emptyList(),
     /** Si la respuesta trae gente además de uno mismo. Lo dice el servidor. */
@@ -84,7 +84,7 @@ class CalendarioViewModel(
      * que cambia el calendario real, o comprobar el reparto por días
      * contra un mes distinto en cada ejecución.
      */
-    periodoInicial: YearMonth = YearMonth.now(DateFormats.ZONA_ESPANA)
+    periodoInicial: YearMonth = YearMonth.now(DateFormats.zona)
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarioUiState(periodo = periodoInicial))
@@ -135,7 +135,7 @@ class CalendarioViewModel(
 
     /** Vuelve al mes de hoy y deja el día de hoy seleccionado. */
     fun irAHoy() {
-        val hoy = LocalDate.now(DateFormats.ZONA_ESPANA)
+        val hoy = LocalDate.now(DateFormats.zona)
         _uiState.update { it.copy(periodo = YearMonth.from(hoy), diaSeleccionado = hoy) }
         cargar()
     }

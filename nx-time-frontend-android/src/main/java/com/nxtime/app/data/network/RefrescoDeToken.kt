@@ -47,8 +47,15 @@ class RefrescoDeToken(
      * guardara solo el access, la siguiente renovación llegaría con un token ya
      * rotado, el servidor lo leería como que alguien tiene una copia y cerraría
      * la sesión entera.
+     *
+     * Trae también la zona de la empresa (ADR 032), por si ha cambiado desde
+     * que se entró. Null si el servidor no la manda.
      */
-    data class TokensRenovados(val accessToken: String, val refreshToken: String)
+    data class TokensRenovados(
+        val accessToken: String,
+        val refreshToken: String,
+        val zonaHoraria: String? = null
+    )
 
     private val cerrojo = Any()
 
@@ -88,6 +95,7 @@ class RefrescoDeToken(
         // Los DOS, y en una sola escritura: el refresh que se acaba de usar ya
         // no vale.
         sessionManager.actualizarTokens(nuevo.accessToken, nuevo.refreshToken)
+        nuevo.zonaHoraria?.let(sessionManager::actualizarZona)
         return nuevo.accessToken
     }
 }
