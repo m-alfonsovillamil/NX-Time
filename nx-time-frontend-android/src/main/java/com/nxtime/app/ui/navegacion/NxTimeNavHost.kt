@@ -60,6 +60,7 @@ import com.nxtime.app.ui.denuncias.DenunciasScreen
 import com.nxtime.app.ui.horasextra.HorasExtraScreen
 import com.nxtime.app.ui.cuadrante.IncidenciasScreen
 import com.nxtime.app.ui.firma.FirmaMensualScreen
+import com.nxtime.app.ui.kiosco.FicharEnKioscoScreen
 import com.nxtime.app.ui.cuadrante.MiCuadranteScreen
 import com.nxtime.app.ui.ofertas.GestionOfertasScreen
 import com.nxtime.app.ui.ofertas.OfertasScreen
@@ -130,6 +131,9 @@ enum class Pantalla(val ruta: String) {
     // Fase B3. Hoja del perfil: firmar el registro de cada mes. El visado de
     // la empresa va a la web (ADR 022).
     FIRMAS("firmas"),
+    // ADR 033. Hoja del perfil: el PIN y la tarjeta para fichar en el kiosco.
+    // La pantalla de la tablet es la web: aquí solo se prepara.
+    KIOSCO("kiosco"),
     // Fase G. Dos hojas y no una: presentar/seguir una denuncia y
     // instruir el canal son dos trabajos distintos con dos permisos
     // distintos, y la segunda solo la abre un ADMIN.
@@ -629,6 +633,7 @@ fun NxTimeNavHost(
                     onIrHorasExtra = { navController.navigate(Pantalla.HORAS_EXTRA.ruta) },
                     onIrIncidencias = { navController.navigate(Pantalla.INCIDENCIAS.ruta) },
                     onIrFirmas = { navController.navigate(Pantalla.FIRMAS.ruta) },
+                    onIrKiosco = { navController.navigate(Pantalla.KIOSCO.ruta) },
                     onIrDenuncias = { navController.navigate(Pantalla.DENUNCIAS.ruta) },
                     onIrOfertas = { navController.navigate(Pantalla.OFERTAS.ruta) },
                     viewModel = perfilViewModel
@@ -732,6 +737,10 @@ fun NxTimeNavHost(
 
             composable(Pantalla.FIRMAS.ruta) {
                 FirmaMensualScreen(onVolver = navController::navigateUp)
+            }
+
+            composable(Pantalla.KIOSCO.ruta) {
+                FicharEnKioscoScreen(onVolver = navController::navigateUp)
             }
 
             composable(Pantalla.INCIDENCIAS.ruta) {

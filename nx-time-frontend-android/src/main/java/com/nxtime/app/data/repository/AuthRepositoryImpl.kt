@@ -633,4 +633,15 @@ class AuthRepositoryImpl(
 
     override suspend fun rechazarBorrado(solicitudId: Long, comentario: String): Response<SolicitudBorradoDTO> =
         apiService.rechazarBorrado(solicitudId, RechazoBorrado(comentario.trim()))
+
+    override suspend fun getEstadoKiosco(): Response<EstadoKioscoDTO> = apiService.getEstadoKiosco()
+
+    override suspend fun fijarPinKiosco(pin: String): Response<EstadoKioscoDTO> =
+        apiService.fijarPinKiosco(PinKioscoRequest(pin))
+
+    override suspend fun quitarPinKiosco(): Response<EstadoKioscoDTO> = apiService.quitarPinKiosco()
+
+    override suspend fun getTarjetaKiosco(): Response<TarjetaKioscoDTO> = apiService.getTarjetaKiosco()
+
+    override suspend fun regenerarTarjetaKiosco(): Response<TarjetaKioscoDTO> = apiService.regenerarTarjetaKiosco()
 }

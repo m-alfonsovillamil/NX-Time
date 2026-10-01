@@ -325,6 +325,11 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
     implementation("com.google.firebase:firebase-messaging")
 
+    // La tarjeta del kiosco (ADR 033): el QR se dibuja aquí a partir de su
+    // código, con el núcleo de ZXing, el mismo que usa el backend. Sin cámara
+    // ni lector: la app solo lo ENSEÑA, lo lee la tablet. Apache 2.0.
+    implementation("com.google.zxing:core:3.5.3")
+
     /*
      * NO se añade androidx.security:security-crypto. Llegó a estar aquí
      * "para cifrar el almacén de sesión", pero **nada lo usaba**: una
