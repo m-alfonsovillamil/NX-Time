@@ -84,6 +84,9 @@ const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) =
 const AjustesEmpresa = lazy(() =>
   import('../paginas/empresa/AjustesEmpresa').then((m) => ({ default: m.AjustesEmpresa })),
 );
+const TarjetasKiosco = lazy(() =>
+  import('../paginas/plantilla/TarjetasKiosco').then((m) => ({ default: m.TarjetasKiosco })),
+);
 const Borrados = lazy(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
 const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
 const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
@@ -132,6 +135,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
   { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'panel', grupo: 'gestion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
+  { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'documento', grupo: 'gestion', requiere: 'empleado:gestionar', enMenu: false, pagina: TarjetasKiosco },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */

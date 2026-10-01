@@ -21,6 +21,7 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, todasLasPaginas, useListaPaginada } from '../../api/consultas';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { ConKiosco } from '../../componentes/ConKiosco';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -82,7 +83,11 @@ interface Acciones {
 function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<Jornada>[] {
   return [
     { clave: 'dia', cabecera: H.dia, celda: (j) => (j.horaEntrada !== undefined ? fechaLarga(new Date(j.horaEntrada)) : '') },
-    { clave: 'entrada', cabecera: H.entrada, celda: (j) => hora(j.horaEntrada) },
+    {
+      clave: 'entrada',
+      cabecera: H.entrada,
+      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} />,
+    },
     {
       clave: 'salida',
       cabecera: H.salida,

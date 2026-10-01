@@ -18,6 +18,7 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
+import { useSesion } from '../../api/useSesion';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Tarjeta } from '../../componentes/Basicos';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
@@ -26,6 +27,7 @@ import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
 import { diaEnEmpresa, fechaCompleta, fechaCorta, hoyEnEmpresa } from '../../util/fechas';
 import { subirAdjunto } from './adjuntos';
+import { FicharEnKiosco } from './FicharEnKiosco';
 
 const P = cuenta.perfil;
 const CINCO_MB = 5 * 1024 * 1024;
@@ -294,6 +296,7 @@ function Curriculum({ cv }: { cv: Adjunto | undefined }) {
 }
 
 export function PaginaPerfil() {
+  const { puede } = useSesion();
   const perfil = useQuery({ queryKey: CLAVES_PERFIL.perfil, queryFn: () => pedir(cliente.GET('/api/v1/perfil', {})) });
   const adjuntos = useQuery({
     queryKey: CLAVES_PERFIL.adjuntos,
@@ -317,6 +320,7 @@ export function PaginaPerfil() {
               <Laborales perfil={p} />
             </div>
             <Curriculum cv={ultimo(lista, 'CV')} />
+            {puede('fichaje:escribir') && <FicharEnKiosco />}
           </>
         )}
       </EstadoDeConsulta>

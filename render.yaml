@@ -235,9 +235,12 @@ services:
       - path: /*
         name: Referrer-Policy
         value: no-referrer
+      # La cámara, solo para esta misma web (self) y no para nada incrustado:
+      # la usa el kiosco de fichaje para leer las tarjetas QR (ADR 033). Con
+      # camera=() el navegador ni siquiera llegaba a pedir permiso.
       - path: /*
         name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=(), payment=()
+        value: camera=(self), microphone=(), geolocation=(), payment=()
       - path: /*
         name: X-Frame-Options
         value: DENY

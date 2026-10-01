@@ -45,6 +45,7 @@ export const navegacion = {
     analitica: 'Analítica',
     visadoFirmas: 'Visado de firmas',
     ajustesEmpresa: 'Ajustes de la empresa',
+    tarjetasKiosco: 'Tarjetas del kiosco',
   },
 
   usuario: {

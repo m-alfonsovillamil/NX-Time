@@ -389,6 +389,36 @@ cliente.use(arranqueEnFrio);
 cliente.use(autenticacion);
 
 /**
+ * El cliente de la tablet del kiosco (ADR 033).
+ *
+ * Aparte del de las personas porque no tiene nada de su sesión: ni cookies, ni
+ * refresco, ni `Bearer`. Lleva el token del kiosco con su propio esquema
+ * (`Authorization: Kiosco …`), que el backend solo acepta en `/kiosco/**`. Sí
+ * comparte el aviso de servidor dormido: es justo donde más se nota, con gente
+ * esperando a fichar.
+ *
+ * @param token se lee en cada petición: la tablet lo recibe a mitad de camino,
+ *   al emparejarse, y lo olvida si el servidor dice que ya no vale.
+ */
+export function clienteDeKiosco(token: () => string | null) {
+  const deKiosco = createClient<paths>({ baseUrl: BASE, fetch: (peticion) => globalThis.fetch(peticion) });
+  deKiosco.use(sinNulos);
+  deKiosco.use(arranqueEnFrio);
+  deKiosco.use({
+    async onRequest({ request }) {
+      const actual = token();
+      if (actual !== null) request.headers.set('Authorization', `Kiosco ${actual}`);
+      return request;
+    },
+    async onResponse({ response }) {
+      anotarRespuesta(response.status);
+      return response;
+    },
+  });
+  return deKiosco;
+}
+
+/**
  * Cerrar la sesión: la local siempre, la del servidor si se puede, y la de
  * las demás pestañas.
  *
