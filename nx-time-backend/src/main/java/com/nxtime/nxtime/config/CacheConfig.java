@@ -52,9 +52,14 @@ public class CacheConfig {
      * ({@code TimeEntryServiceImpl}): escrita dos veces a mano, un cambio en
      * una dejaría de casar con la otra y el borrado no borraría nada, sin
      * error ninguno.
+     *
+     * La fecha solo está para que una entrada no cruce de un día a otro, y la
+     * caché vive un minuto: da igual qué medianoche se use, pero que sea
+     * siempre la misma y no la zona que tenga la JVM. Por eso UTC, y no la
+     * zona de la empresa, que costaría leer a la persona para montar la clave.
      */
     public static String clavePanelPersonal(String email) {
-        return "personal:" + email + ":" + java.time.LocalDate.now();
+        return "personal:" + email + ":" + java.time.LocalDate.now(java.time.ZoneOffset.UTC);
     }
 
     @Bean

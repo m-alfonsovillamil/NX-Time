@@ -55,8 +55,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DashboardServiceImpl implements DashboardService {
 
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
-
     private final TimeEntryRepository timeEntryRepository;
     private final AbsenceRequestRepository absenceRequestRepository;
     private final UserRepository userRepository;
@@ -87,13 +85,14 @@ public class DashboardServiceImpl implements DashboardService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
 
-        LocalDate hoy = LocalDate.now(MADRID_ZONE);
-        Instant inicioDeHoy = inicioDelDia(hoy);
-        Instant inicioDeSemana = inicioDelDia(hoy.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)));
-        Instant inicioDeMes = inicioDelDia(hoy.withDayOfMonth(1));
+        ZoneId zona = user.zona();
+        LocalDate hoy = LocalDate.now(zona);
+        Instant inicioDeHoy = inicioDelDia(hoy, zona);
+        Instant inicioDeSemana = inicioDelDia(hoy.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), zona);
+        Instant inicioDeMes = inicioDelDia(hoy.withDayOfMonth(1), zona);
         // Fin exclusivo: mañana a las 00:00. Cubre la jornada de hoy
         // entera sin depender de la hora a la que se consulte.
-        Instant finExclusivo = inicioDelDia(hoy.plusDays(1));
+        Instant finExclusivo = inicioDelDia(hoy.plusDays(1), zona);
 
         long segundosHoy = timeEntryRepository.sumarSegundosTrabajados(user.getId(), inicioDeHoy, finExclusivo);
         long segundosSemana = timeEntryRepository.sumarSegundosTrabajados(user.getId(), inicioDeSemana, finExclusivo);
@@ -113,15 +112,16 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    @Cacheable(cacheNames = CacheConfig.DASHBOARD, key = "'empresa:' + #managerEmail + ':' + T(java.time.LocalDate).now()")
+    @Cacheable(cacheNames = CacheConfig.DASHBOARD, key = "'empresa:' + #managerEmail + ':' + T(java.time.LocalDate).now(T(java.time.ZoneOffset).UTC)")
     public CompanyDashboardResponse getCompanyDashboard(String managerEmail) {
         User manager = userRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Gestor no encontrado con email: " + managerEmail));
 
         Company empresa = manager.getEmpresa();
-        LocalDate hoy = LocalDate.now(MADRID_ZONE);
-        Instant inicioDeMes = inicioDelDia(hoy.withDayOfMonth(1));
-        Instant finExclusivo = inicioDelDia(hoy.plusDays(1));
+        ZoneId zona = empresa.zona();
+        LocalDate hoy = LocalDate.now(zona);
+        Instant inicioDeMes = inicioDelDia(hoy.withDayOfMonth(1), zona);
+        Instant finExclusivo = inicioDelDia(hoy.plusDays(1), zona);
 
         long segundosMes =
                 timeEntryRepository.sumarSegundosTrabajadosEmpresa(empresa.getId(), inicioDeMes, finExclusivo);
@@ -177,8 +177,8 @@ public class DashboardServiceImpl implements DashboardService {
         return activa.get().isEnPausa() ? WorkStatus.EN_PAUSA : WorkStatus.TRABAJANDO;
     }
 
-    private Instant inicioDelDia(LocalDate fecha) {
-        return fecha.atStartOfDay(MADRID_ZONE).toInstant();
+    private Instant inicioDelDia(LocalDate fecha, ZoneId zona) {
+        return fecha.atStartOfDay(zona).toInstant();
     }
 
     /** Truncado, no redondeado: 89 segundos son 1 minuto trabajado, no 2. */

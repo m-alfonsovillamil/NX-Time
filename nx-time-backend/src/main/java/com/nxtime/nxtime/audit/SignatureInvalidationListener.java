@@ -8,7 +8,6 @@ import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.service.MonthlySignatureService;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
 import java.util.Set;
@@ -36,7 +35,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class SignatureInvalidationListener {
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
@@ -71,7 +69,7 @@ public class SignatureInvalidationListener {
 
     /** "Se corrigió el fichaje del 14/08/2026." Sin el texto libre de quien corrigió: se guarda para siempre. */
     static String motivo(TimeEntryAudit fila) {
-        String dia = FECHA.format(fila.getRegistro().getHoraEntrada().atZone(MADRID));
+        String dia = FECHA.format(fila.getRegistro().dia());
         return switch (fila.getAccion()) {
             case CORRECCION, ANULACION -> "Se corrigió el fichaje del " + dia + ".";
             case PAUSA_ANADIDA -> "Se añadió una pausa al fichaje del " + dia + ".";

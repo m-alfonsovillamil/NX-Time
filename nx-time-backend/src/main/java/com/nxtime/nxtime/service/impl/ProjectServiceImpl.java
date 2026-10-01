@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Project;
 import com.nxtime.nxtime.domain.ProjectAssignment;
 import com.nxtime.nxtime.domain.User;
@@ -36,8 +37,6 @@ public class ProjectServiceImpl implements ProjectService {
     private static final Logger log = LoggerFactory.getLogger(ProjectServiceImpl.class);
 
     /** El mes es el español, no el de UTC (ver TimeEntryMapper). */
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
-
     /**
      * Nombre de la restricción que impide que una persona esté dos veces en
      * el mismo proyecto a la vez (V23). Se busca en el mensaje de la excepción
@@ -85,7 +84,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         List<ProjectDetailResponse.EmployeeHoursItem> horas =
                 allocationRepository.sumarSegundosDelProyectoPorEmpleado(
-                                id, inicioDelMes(periodo), finExclusivo(periodo)).stream()
+                                id, inicioDelMes(periodo, actor.zona()), finExclusivo(periodo, actor.zona())).stream()
                         .map(fila -> new ProjectDetailResponse.EmployeeHoursItem(
                                 fila.getUsuarioId(), fila.getNombre(), aMinutos(fila.getSegundos())))
                         .toList();
@@ -263,8 +262,8 @@ public class ProjectServiceImpl implements ProjectService {
         List<ProjectHoursResponse.ProjectHoursItem> items =
                 allocationRepository.sumarSegundosPorProyecto(
                                 actor.getEmpresa().getId(),
-                                inicioDelMes(periodo),
-                                finExclusivo(periodo)).stream()
+                                inicioDelMes(periodo, actor.zona()),
+                                finExclusivo(periodo, actor.zona())).stream()
                         .map(fila -> new ProjectHoursResponse.ProjectHoursItem(
                                 fila.getProyectoId(),
                                 fila.getCodigo(),
@@ -337,13 +336,13 @@ public class ProjectServiceImpl implements ProjectService {
         return YearMonth.of(anio, mes);
     }
 
-    private Instant inicioDelMes(YearMonth periodo) {
-        return periodo.atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
+    private static Instant inicioDelMes(YearMonth periodo, ZoneId zona) {
+        return periodo.atDay(1).atStartOfDay(zona).toInstant();
     }
 
     /** Fin exclusivo: el día 1 del mes siguiente a las 00:00. */
-    private Instant finExclusivo(YearMonth periodo) {
-        return periodo.plusMonths(1).atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
+    private static Instant finExclusivo(YearMonth periodo, ZoneId zona) {
+        return periodo.plusMonths(1).atDay(1).atStartOfDay(zona).toInstant();
     }
 
     /** Truncado, no redondeado: 89 segundos son 1 minuto (ver DashboardServiceImpl). */
@@ -379,6 +378,6 @@ public class ProjectServiceImpl implements ProjectService {
                 proyecto.getNombre(),
                 asignacion.getFechaInicio(),
                 asignacion.getFechaFin(),
-                asignacion.vigenteEl(LocalDate.now(MADRID_ZONE)));
+                asignacion.vigenteEl(LocalDate.now(Company.zonaDe(asignacion.getEmpresa()))));
     }
 }

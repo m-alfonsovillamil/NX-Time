@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -53,8 +52,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class ProjectController {
 
-    /** "El mes actual" es el de España, no el de UTC (ver TimeEntryMapper). */
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
 
     private final ProjectService projectService;
 
@@ -103,7 +100,7 @@ public class ProjectController {
             @Parameter(description = "Mes (1-12). Por defecto, el actual.")
             @RequestParam(required = false) Integer mes,
             @AuthenticationPrincipal SecurityUser usuario) {
-        YearMonth ahora = YearMonth.now(MADRID_ZONE);
+        YearMonth ahora = YearMonth.now(usuario.getUser().zona());
         return ResponseEntity.ok(projectService.detalle(
                 id,
                 anio != null ? anio : ahora.getYear(),
@@ -134,7 +131,7 @@ public class ProjectController {
             @Parameter(description = "Mes (1-12). Por defecto, el actual.")
             @RequestParam(required = false) Integer mes,
             @AuthenticationPrincipal SecurityUser usuario) {
-        YearMonth ahora = YearMonth.now(MADRID_ZONE);
+        YearMonth ahora = YearMonth.now(usuario.getUser().zona());
         return ResponseEntity.ok(projectService.horasDelMes(
                 anio != null ? anio : ahora.getYear(),
                 mes != null ? mes : ahora.getMonthValue(),

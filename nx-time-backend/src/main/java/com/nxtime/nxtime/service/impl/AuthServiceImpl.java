@@ -220,7 +220,7 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtService.generateToken(new SecurityUser(user));
         log.info("Access token renovado para {}", user.getEmail());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
-                RoleAuthorities.enOrden(user.getRol()));
+                RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
     }
 
     @Override
@@ -356,7 +356,7 @@ public class AuthServiceImpl implements AuthService {
         // arrastra a las demás de esa persona.
         TokenEmitido refreshToken = issueRefreshToken(user, origen, UUID.randomUUID());
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
-                RoleAuthorities.enOrden(user.getRol()));
+                RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
     }
 
     /**

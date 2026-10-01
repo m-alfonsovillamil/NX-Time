@@ -14,7 +14,6 @@ import com.nxtime.nxtime.service.DailyHoursService;
 import com.nxtime.nxtime.service.OvertimeCalculator;
 import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,8 +40,6 @@ public class DailyHoursServiceImpl implements DailyHoursService {
 
     /** Un mes largo con margen. El gráfico más grande es el de un mes. */
     static final int MAXIMO_DIAS = 62;
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final UserRepository userRepository;
     private final TimeEntryRepository timeEntryRepository;
@@ -77,8 +74,8 @@ public class DailyHoursServiceImpl implements DailyHoursService {
         Map<LocalDate, Long> segundos = new HashMap<>();
         timeEntryRepository.sumarSegundosPorDiaDeUsuario(
                         usuario.getId(),
-                        desde.atStartOfDay(MADRID).toInstant(),
-                        hasta.plusDays(1).atStartOfDay(MADRID).toInstant())
+                        desde.atStartOfDay(usuario.zona()).toInstant(),
+                        hasta.plusDays(1).atStartOfDay(usuario.zona()).toInstant())
                 .forEach(fila -> segundos.put(fila.getDia(), fila.getSegundos()));
 
         Set<LocalDate> habiles = workingDayService.diasHabiles(usuario.getEmpresa(), desde, hasta);

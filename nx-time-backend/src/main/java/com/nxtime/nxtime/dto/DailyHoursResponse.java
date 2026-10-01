@@ -6,7 +6,7 @@ import java.time.LocalDate;
  * Un día del gráfico de horas de la pantalla de inicio.
  *
  * @param minutosTrabajados netos, de las jornadas CERRADAS que empezaron ese
- *     día en España (la abierta la suma la app, que ya lleva el cronómetro).
+ *     día de la empresa (la abierta la suma la app, que ya lleva el cronómetro).
  * @param minutosEsperados la parte diaria de la jornada contratada si el día
  *     es laborable para esta persona; 0 en fin de semana, festivo o ausencia
  *     aprobada. Es la línea de referencia del gráfico.

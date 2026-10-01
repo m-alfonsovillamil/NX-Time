@@ -41,16 +41,12 @@ public class PdfReportGenerator {
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    /**
-     * La zona del documento, fijada y no heredada de la máquina.
-     *
-     * El contenedor de producción corre en UTC, así que un informe generado
-     * de madrugada en España llevaba en el pie la fecha del día ANTERIOR.
-     * Es el único sitio del proyecto donde se escapaba: los otros 33 usos de
-     * la zona la nombran, y el generador del PDF de datos personales ya
-     * tiene su propia constante igual que esta.
+    /*
+     * La zona del documento es la de la empresa, que viaja en el informe
+     * (ADR 032), y nunca la de la máquina: el contenedor de producción corre
+     * en UTC, y un informe generado de madrugada en España llevaba en el pie
+     * la fecha del día ANTERIOR.
      */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
     private static final String[] CABECERAS = {"Fecha", "Entrada", "Salida", "Pausa", "Tiempo efectivo"};
 
     private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
@@ -81,8 +77,8 @@ public class PdfReportGenerator {
         }
 
         documento.add(espacio());
-        documento.add(bloqueDeFirma(informe.firma()));
-        documento.add(pieLegal());
+        documento.add(bloqueDeFirma(informe.firma(), informe.zona()));
+        documento.add(pieLegal(informe.zona()));
 
         documento.close();
     }
@@ -149,7 +145,7 @@ public class PdfReportGenerator {
      * trabajador dice quién firmó, cuándo, y el principio de la huella: con
      * eso cualquiera puede pedir que se compruebe que el PDF dice lo firmado.
      */
-    private PdfPTable bloqueDeFirma(MonthlyReport.FirmaDelInforme firma) {
+    private PdfPTable bloqueDeFirma(MonthlyReport.FirmaDelInforme firma, ZoneId zona) {
         PdfPTable firmas = new PdfPTable(2);
         firmas.setWidthPercentage(100);
         firmas.setSpacingBefore(30);
@@ -160,14 +156,14 @@ public class PdfReportGenerator {
             return firmas;
         }
         firmas.addCell(celdaDeFirma("Firmado electrónicamente por " + firma.firmadaPor()
-                + " el " + FECHA_Y_HORA.format(firma.firmadaEn().atZone(MADRID))
+                + " el " + FECHA_Y_HORA.format(firma.firmadaEn().atZone(zona))
                 + "\nHuella " + firma.hash().substring(0, 16) + "…"
                 + "\n(firma de aceptación, no firma electrónica cualificada)"
                 + "\n\nFirma del trabajador"));
         firmas.addCell(celdaDeFirma(firma.visadaPor() == null
                 ? "Firma de la empresa"
                 : "Visado por " + firma.visadaPor() + " el "
-                        + FECHA_Y_HORA.format(firma.visadaEn().atZone(MADRID)) + "\n\nFirma de la empresa"));
+                        + FECHA_Y_HORA.format(firma.visadaEn().atZone(zona)) + "\n\nFirma de la empresa"));
         return firmas;
     }
 
@@ -180,19 +176,19 @@ public class PdfReportGenerator {
     }
 
     /**
-     * Qué día es hoy AQUÍ, no en la máquina que genera el documento.
+     * Qué día es hoy en la empresa, no en la máquina que genera el documento.
      *
      * Paquete y no privado para poder probarlo: el fallo solo se ve entre
      * medianoche y las dos de la mañana, y montar ese momento es mucho más
      * fácil sobre este método que sobre el PDF entero.
      */
-    LocalDate hoyEnEspana() {
-        return LocalDate.now(MADRID);
+    LocalDate hoyEn(ZoneId zona) {
+        return LocalDate.now(zona);
     }
 
-    private Paragraph pieLegal() {
+    private Paragraph pieLegal(ZoneId zona) {
         Paragraph pie = new Paragraph(
-                "Documento generado por NX Time el " + hoyEnEspana().format(FECHA)
+                "Documento generado por NX Time el " + hoyEn(zona).format(FECHA)
                         + ". Registro de jornada conforme al RD-ley 8/2019; conservar durante cuatro años.",
                 PIE);
         pie.setSpacingBefore(20);

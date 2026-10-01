@@ -16,7 +16,6 @@ import com.nxtime.nxtime.service.ProjectAllocationService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -31,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(propagation = Propagation.MANDATORY)
 public class ProjectAllocationServiceImpl implements ProjectAllocationService {
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final ProjectAllocationRepository allocationRepository;
     private final ProjectSegmentRepository segmentRepository;
@@ -198,7 +195,7 @@ public class ProjectAllocationServiceImpl implements ProjectAllocationService {
             return;
         }
 
-        LocalDate dia = registro.getHoraEntrada().atZone(MADRID).toLocalDate();
+        LocalDate dia = registro.dia();
         List<ProjectAssignment> vigentes = assignmentRepository.findVigentesDe(registro.getUsuario().getId(), dia);
         if (vigentes.size() == 1) {
             sustituir(registro, Map.of(vigentes.get(0).getProyecto(), neto), Origen.TRAMOS);

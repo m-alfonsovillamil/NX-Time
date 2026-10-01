@@ -26,7 +26,7 @@ import java.math.BigDecimal;
  * @param horasSemanales jornada contractual. BigDecimal y no int porque
  *                       37,5 h es una jornada real y frecuente; la
  *                       columna es NUMERIC(4,1).
- * @param diasVacaciones derecho anual del AÑO EN CURSO (Europe/Madrid).
+ * @param diasVacaciones derecho anual del AÑO EN CURSO (en la zona de la empresa).
  *                       El saldo se guarda por año, así que "los días de
  *                       vacaciones" a secas no existe.
  */

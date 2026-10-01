@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -45,8 +44,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Analítica", description = "Absentismo y puntualidad por periodo, departamento o persona.")
 @SecurityRequirement(name = "bearerAuth")
 public class AnalyticsController {
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private static final String DESCRIPCION_PERIODO = " El periodo es el mes, trimestre o año natural que contiene "
             + "'fecha' (hoy si no se da), y se cuenta hasta ayer. RRHH y ADMIN ven la empresa; un GESTOR, su "
@@ -77,7 +74,7 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "MES") AnalyticsPeriod periodo,
             @RequestParam(required = false) LocalDate fecha,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(analyticsService.resumen(usuario.getUser(), periodo, oHoy(fecha)));
+        return ResponseEntity.ok(analyticsService.resumen(usuario.getUser(), periodo, oHoy(fecha, usuario)));
     }
 
     @Operation(summary = "Absentismo",
@@ -100,7 +97,7 @@ public class AnalyticsController {
             @RequestParam(required = false) LocalDate fecha,
             @RequestParam(defaultValue = "DEPARTAMENTO") AnalyticsGrouping agrupar,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(analyticsService.absentismo(usuario.getUser(), periodo, oHoy(fecha), agrupar));
+        return ResponseEntity.ok(analyticsService.absentismo(usuario.getUser(), periodo, oHoy(fecha, usuario), agrupar));
     }
 
     @Operation(summary = "Puntualidad",
@@ -123,7 +120,7 @@ public class AnalyticsController {
             @RequestParam(required = false) LocalDate fecha,
             @RequestParam(defaultValue = "DEPARTAMENTO") AnalyticsGrouping agrupar,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(analyticsService.puntualidad(usuario.getUser(), periodo, oHoy(fecha), agrupar));
+        return ResponseEntity.ok(analyticsService.puntualidad(usuario.getUser(), periodo, oHoy(fecha, usuario), agrupar));
     }
 
     @Operation(summary = "Absentismo en CSV",
@@ -144,7 +141,7 @@ public class AnalyticsController {
             @RequestParam(defaultValue = "DEPARTAMENTO") AnalyticsGrouping agrupar,
             @AuthenticationPrincipal SecurityUser usuario) {
         AbsenteeismResponse absentismo =
-                analyticsService.absentismo(usuario.getUser(), periodo, oHoy(fecha), agrupar);
+                analyticsService.absentismo(usuario.getUser(), periodo, oHoy(fecha, usuario), agrupar);
         String nombre = "absentismo-" + absentismo.ventana().desde() + "-a-" + absentismo.ventana().hasta() + ".csv";
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
@@ -152,7 +149,7 @@ public class AnalyticsController {
                 .body(AbsenteeismCsv.generar(absentismo));
     }
 
-    private static LocalDate oHoy(LocalDate fecha) {
-        return fecha != null ? fecha : LocalDate.now(MADRID);
+    private static LocalDate oHoy(LocalDate fecha, SecurityUser usuario) {
+        return fecha != null ? fecha : LocalDate.now(usuario.getUser().zona());
     }
 }

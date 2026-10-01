@@ -17,7 +17,6 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
 import com.nxtime.nxtime.service.EmployeeProfileService;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,8 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
     private static final Logger log = LoggerFactory.getLogger(EmployeeProfileServiceImpl.class);
-
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
 
     /** Para que las iniciales pasen a mayúscula con reglas de aquí. */
     private static final Locale SPAIN = Locale.forLanguageTag("es-ES");
@@ -61,7 +58,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         // Una consulta para todos los saldos, no una por empleado: en
         // una empresa de cincuenta personas la alternativa son cincuenta
         // SELECT cada vez que se abre el panel.
-        Map<Long, Integer> saldosPorUsuario = saldosDelAnio(empleados, anioActual());
+        Map<Long, Integer> saldosPorUsuario = saldosDelAnio(empleados, anioActual(manager));
 
         return empleados.stream()
                 .map(empleado -> toDto(empleado, saldosPorUsuario))
@@ -73,7 +70,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         List<User> plantilla = userRepository.findByEmpresa(actor.getEmpresa());
         Map<Long, Integer> saldosPorUsuario = plantilla.isEmpty()
                 ? Map.of()
-                : saldosDelAnio(plantilla, anioActual());
+                : saldosDelAnio(plantilla, anioActual(actor));
         return plantilla.stream()
                 .map(persona -> toDto(persona, saldosPorUsuario))
                 .toList();
@@ -91,7 +88,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
             throw new TenantAccessException("No puedes configurar empleados de otra empresa.");
         }
 
-        int anio = anioActual();
+        int anio = anioActual(actor);
 
         if (request.horasSemanales() != null) {
             empleado.setHorasSemanales(request.horasSemanales());
@@ -202,7 +199,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     }
 
     private ProfileResponse toProfile(User usuario) {
-        int anio = anioActual();
+        int anio = anioActual(usuario);
         int dias = vacationBalanceRepository.findByUsuarioAndAnio(usuario, anio)
                 .map(VacationBalance::getDiasTotales)
                 .orElse(VacationBalanceServiceImpl.DIAS_POR_DEFECTO);
@@ -254,9 +251,9 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         return nombre.substring(0, Math.min(2, nombre.length())).toUpperCase(SPAIN);
     }
 
-    /** El año en curso en Madrid, que es la zona en la que opera la aplicación. */
-    private int anioActual() {
-        return LocalDate.now(MADRID_ZONE).getYear();
+    /** El año en curso en la zona de la empresa (ADR 032). */
+    private static int anioActual(User deLaEmpresa) {
+        return LocalDate.now(deLaEmpresa.zona()).getYear();
     }
 
     private Map<Long, Integer> saldosDelAnio(List<User> empleados, int anio) {

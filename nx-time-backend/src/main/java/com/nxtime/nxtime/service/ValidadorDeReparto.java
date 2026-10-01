@@ -4,7 +4,6 @@ import com.nxtime.nxtime.domain.Project;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.exception.BusinessException;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,13 +56,6 @@ import org.springframework.stereotype.Component;
 public class ValidadorDeReparto {
 
     /**
-     * La zona que decide de qué día es una jornada. Ver ADR 002 y el comentario
-     * de {@code DateFormats} en la app: un fichaje es un instante, pero «los
-     * proyectos de ese día» solo tiene sentido en una zona concreta.
-     */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
-
-    /**
      * Tope de líneas. No es una regla de negocio sino un freno: sin él, una
      * petición con miles de líneas se recorre entera antes de rechazarse.
      * Generoso a propósito — quien reparta una jornada entre más de cincuenta
@@ -102,7 +94,9 @@ public class ValidadorDeReparto {
                     "El reparto no puede tener más de " + MAX_LINEAS + " líneas.", HttpStatus.BAD_REQUEST);
         }
 
-        LocalDate dia = fichaje.getHoraEntrada().atZone(MADRID).toLocalDate();
+        // Un fichaje es un instante, pero «los proyectos de ese día» solo tiene
+        // sentido en una zona concreta: la de la empresa (ADR 002 y 032).
+        LocalDate dia = fichaje.dia();
         Map<Long, Project> disponibles = new LinkedHashMap<>();
         projectAllocationService.proyectosDelDia(fichaje.getUsuario(), dia)
                 .forEach(proyecto -> disponibles.put(proyecto.getId(), proyecto));

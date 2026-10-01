@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -170,14 +169,14 @@ public class ProfileController {
     public ResponseEntity<PersonalDataExport> exportarMisDatos(@AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + nombreDeFichero("json") + "\"")
+                        "attachment; filename=\"" + nombreDeFichero("json", usuario) + "\"")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(exportService.exportar(usuario.getUser()));
     }
 
     @Operation(summary = "Descargar todos mis datos (PDF)",
             description = "Lo mismo que el JSON, para leerlo sin herramientas. Sale del mismo objeto, así que "
-                    + "no puede faltar en uno algo que esté en el otro. Las horas van en hora de España.")
+                    + "no puede faltar en uno algo que esté en el otro. Las horas van en la hora de la empresa.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Documento PDF",
                     content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
@@ -194,11 +193,11 @@ public class ProfileController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + nombreDeFichero("pdf") + "\"")
+                        "attachment; filename=\"" + nombreDeFichero("pdf", usuario) + "\"")
                 .body(cuerpo);
     }
 
-    private static String nombreDeFichero(String extension) {
-        return "nxtime-mis-datos-" + LocalDate.now(ZoneId.of("Europe/Madrid")) + "." + extension;
+    private static String nombreDeFichero(String extension, SecurityUser usuario) {
+        return "nxtime-mis-datos-" + LocalDate.now(usuario.getUser().zona()) + "." + extension;
     }
 }

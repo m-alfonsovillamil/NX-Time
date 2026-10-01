@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -46,8 +45,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class ScheduleIncidentController {
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
-
     private final ScheduleIncidentService incidentService;
 
     public ScheduleIncidentController(ScheduleIncidentService incidentService) {
@@ -66,7 +63,7 @@ public class ScheduleIncidentController {
     public ResponseEntity<List<ScheduleIncidentResponse>> mias(
             @RequestParam(required = false) Integer anio,
             @AuthenticationPrincipal SecurityUser usuario) {
-        int elAnio = anio != null ? anio : LocalDate.now(MADRID).getYear();
+        int elAnio = anio != null ? anio : LocalDate.now(usuario.getUser().zona()).getYear();
         return ResponseEntity.ok(incidentService.mias(usuario.getUser(), elAnio));
     }
 

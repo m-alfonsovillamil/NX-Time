@@ -15,6 +15,7 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.MonthlySignatureRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
@@ -48,8 +49,6 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
 
     private static final Logger log = LoggerFactory.getLogger(MonthlySignatureServiceImpl.class);
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
-
     static final String VISAR = "firma:visar";
 
     /** Cuántos meses terminados enseña "mis meses": medio año basta para ponerse al día. */
@@ -59,6 +58,7 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
     private final TimeEntryRepository timeEntryRepository;
     private final UserRepository userRepository;
     private final NoticeRepository noticeRepository;
+    private final CompanyRepository companyRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
@@ -68,9 +68,10 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
             NoticeRepository noticeRepository,
+            CompanyRepository companyRepository,
             ApplicationEventPublisher eventPublisher) {
-        this(signatureRepository, timeEntryRepository, userRepository, noticeRepository, eventPublisher,
-                Clock.systemUTC());
+        this(signatureRepository, timeEntryRepository, userRepository, noticeRepository, companyRepository,
+                eventPublisher, Clock.systemUTC());
     }
 
     /** Con el reloj inyectable, para los tests: "el mes ha terminado" depende de hoy. */
@@ -79,12 +80,14 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
             NoticeRepository noticeRepository,
+            CompanyRepository companyRepository,
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
         this.signatureRepository = signatureRepository;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.noticeRepository = noticeRepository;
+        this.companyRepository = companyRepository;
         this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
@@ -95,13 +98,14 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
 
     @Override
     public List<SignableMonthResponse> misMeses(User actor) {
-        YearMonth actual = YearMonth.now(clock.withZone(MADRID));
+        ZoneId zona = actor.zona();
+        YearMonth actual = YearMonth.now(clock.withZone(zona));
         YearMonth primero = actual.minusMonths(MESES_A_LA_VISTA);
 
         Map<YearMonth, List<TimeEntry>> porMes = timeEntryRepository
-                .findVivosDeUsuariosQueEmpiezanEntre(List.of(actor.getId()), inicio(primero), inicio(actual))
+                .findVivosDeUsuariosQueEmpiezanEntre(List.of(actor.getId()), inicio(primero, zona), inicio(actual, zona))
                 .stream()
-                .collect(Collectors.groupingBy(fichaje -> YearMonth.from(fichaje.getHoraEntrada().atZone(MADRID))));
+                .collect(Collectors.groupingBy(fichaje -> YearMonth.from(fichaje.dia())));
 
         // La vigente de cada mes o, si no la hay, la última que se cayó.
         Map<YearMonth, MonthlySignature> firmaDelMes = new HashMap<>();
@@ -130,7 +134,7 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
     @Override
     @Transactional
     public MonthlySignatureResponse firmar(User actor, YearMonth mes, String ip) {
-        YearMonth actual = YearMonth.now(clock.withZone(MADRID));
+        YearMonth actual = YearMonth.now(clock.withZone(actor.zona()));
         if (!mes.isBefore(actual)) {
             throw new BusinessException("Ese mes todavía no ha terminado.", HttpStatus.BAD_REQUEST);
         }
@@ -139,7 +143,7 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
             throw new BusinessException("Ese mes ya está firmado.");
         }
 
-        List<TimeEntry> fichajes = fichajesDelMes(actor.getId(), mes);
+        List<TimeEntry> fichajes = fichajesDelMes(actor.getId(), mes, actor.zona());
         String bloqueo = bloqueo(fichajes);
         if (bloqueo != null) {
             throw new BusinessException(bloqueo, HttpStatus.UNPROCESSABLE_ENTITY);
@@ -249,9 +253,9 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
     @Transactional
     public void revisarTrasCambio(TimeEntry registro, Instant entradaAnterior, String motivo) {
         Set<Integer> meses = new LinkedHashSet<>();
-        meses.add(clave(YearMonth.from(registro.getHoraEntrada().atZone(MADRID))));
+        meses.add(clave(YearMonth.from(registro.dia())));
         if (entradaAnterior != null) {
-            meses.add(clave(YearMonth.from(entradaAnterior.atZone(MADRID))));
+            meses.add(clave(YearMonth.from(entradaAnterior.atZone(registro.zona()))));
         }
         // Casi siempre vacía: el mes en curso nunca está firmado, y fichar es
         // lo que más pasa por aquí.
@@ -280,15 +284,22 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
         YearMonth mes = YearMonth.from(hoy).minusMonths(1);
         Set<Long> firmados = new HashSet<>(
                 signatureRepository.findUsuariosConFirmaVigente(mes.getYear(), mes.getMonthValue()));
-        // Un recordatorio por persona y mes: la tarea corre a diario para
-        // ponerse al día si un día no corrió, no para insistir.
-        Set<Long> yaRecordados = new HashSet<>(noticeRepository.findDestinatariosDeTipoDesde(
-                NoticeType.RECORDATORIO_FIRMA, hoy.withDayOfMonth(1).atStartOfDay(MADRID).toInstant()));
 
-        List<User> pendientes = timeEntryRepository.findUsuariosActivosQueFicharonEntre(inicio(mes), inicio(mes.plusMonths(1)))
-                .stream()
-                .filter(persona -> !firmados.contains(persona.getId()) && !yaRecordados.contains(persona.getId()))
-                .toList();
+        // Zona por zona: "el mes pasado" empieza a otra hora en Canarias que en
+        // Madrid (ADR 032). Casi siempre es una sola vuelta.
+        List<User> pendientes = new ArrayList<>();
+        for (String nombreDeZona : companyRepository.findZonasEnUso()) {
+            ZoneId zona = ZoneId.of(nombreDeZona);
+            // Un recordatorio por persona y mes: la tarea corre a diario para
+            // ponerse al día si un día no corrió, no para insistir.
+            Set<Long> yaRecordados = new HashSet<>(noticeRepository.findDestinatariosDeTipoDesde(
+                    NoticeType.RECORDATORIO_FIRMA, hoy.withDayOfMonth(1).atStartOfDay(zona).toInstant()));
+            timeEntryRepository.findUsuariosActivosQueFicharonEntre(
+                            nombreDeZona, inicio(mes, zona), inicio(mes.plusMonths(1), zona))
+                    .stream()
+                    .filter(persona -> !firmados.contains(persona.getId()) && !yaRecordados.contains(persona.getId()))
+                    .forEach(pendientes::add);
+        }
         if (!pendientes.isEmpty()) {
             eventPublisher.publishEvent(new NotificationEvents.SignatureReminder(mes, pendientes));
         }
@@ -299,12 +310,12 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
 
     private String huellaDeHoy(MonthlySignature firma) {
         return HuellaDelMes.hash(HuellaDelMes.resumen(firma.getUsuario().getId(), firma.getEmpresa().getId(),
-                firma.periodo(), fichajesDelMes(firma.getUsuario().getId(), firma.periodo())));
+                firma.periodo(), fichajesDelMes(firma.getUsuario().getId(), firma.periodo(), firma.getEmpresa().zona())));
     }
 
-    private List<TimeEntry> fichajesDelMes(long usuarioId, YearMonth mes) {
+    private List<TimeEntry> fichajesDelMes(long usuarioId, YearMonth mes, ZoneId zona) {
         return timeEntryRepository.findVivosDeUsuariosQueEmpiezanEntre(
-                List.of(usuarioId), inicio(mes), inicio(mes.plusMonths(1)));
+                List.of(usuarioId), inicio(mes, zona), inicio(mes.plusMonths(1), zona));
     }
 
     private MonthlySignature deLaEmpresa(long firmaId, User actor) {
@@ -330,8 +341,8 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
         return mes.getYear() * 12 + mes.getMonthValue();
     }
 
-    private static Instant inicio(YearMonth mes) {
-        return mes.atDay(1).atStartOfDay(MADRID).toInstant();
+    private static Instant inicio(YearMonth mes, ZoneId zona) {
+        return mes.atDay(1).atStartOfDay(zona).toInstant();
     }
 
     private static String nombreCompleto(User persona) {

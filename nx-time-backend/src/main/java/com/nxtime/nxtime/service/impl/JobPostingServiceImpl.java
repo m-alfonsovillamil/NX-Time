@@ -28,7 +28,6 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.JobPostingService;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +63,6 @@ public class JobPostingServiceImpl implements JobPostingService {
 
     private static final String PUBLICAR = "oferta:publicar";
     private static final String GESTIONAR_CANDIDATURAS = "candidatura:gestionar";
-
-    /** El día es el español, como en las jornadas y en los plazos. */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final JobPostingRepository jobPostingRepository;
     private final JobApplicationRepository applicationRepository;
@@ -205,7 +201,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         // al título.
         if (oferta.getFechaCierre() != null
                 && !oferta.getEstado().estaPublicada()
-                && oferta.getFechaCierre().isBefore(LocalDate.now(MADRID))) {
+                && oferta.getFechaCierre().isBefore(LocalDate.now(actor.zona()))) {
             throw new BusinessException(
                     "La fecha de cierre ya ha pasado.", HttpStatus.BAD_REQUEST);
         }

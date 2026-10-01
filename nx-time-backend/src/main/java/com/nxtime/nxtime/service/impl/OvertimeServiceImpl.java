@@ -28,7 +28,7 @@ import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -84,12 +84,6 @@ public class OvertimeServiceImpl implements OvertimeService {
     private static final Logger log = LoggerFactory.getLogger(OvertimeServiceImpl.class);
 
     private static final String REVISAR = "horasextra:revisar";
-
-    /**
-     * La zona en la que se agrupan los días. Los fichajes se guardan en
-     * UTC (ADR 002) y "el martes" solo existe una vez proyectados aquí.
-     */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final OvertimeAlertRepository overtimeRepository;
     private final TimeEntryRepository timeEntryRepository;
@@ -287,12 +281,19 @@ public class OvertimeServiceImpl implements OvertimeService {
             return 0;
         }
 
+        // Un día de margen por cada lado: la consulta cruza empresas de zonas
+        // distintas (ADR 032), así que el "desde" de Madrid no es el de
+        // Canarias. Los días ya salen contados en la zona de cada empresa, y
+        // aquí se descartan los que caen fuera de lo pedido.
         List<TimeEntryRepository.DailyWorkProjection> jornadas =
                 timeEntryRepository.sumarSegundosPorUsuarioYDia(
-                        inicioDelDia(desde), inicioDelDia(hasta.plusDays(1)));
+                        inicioDelDiaUtc(desde.minusDays(1)), inicioDelDiaUtc(hasta.plusDays(2)));
 
         Map<Long, List<TimeEntryRepository.DailyWorkProjection>> porUsuario = new HashMap<>();
         for (TimeEntryRepository.DailyWorkProjection jornada : jornadas) {
+            if (jornada.getDia().isBefore(desde) || jornada.getDia().isAfter(hasta)) {
+                continue;
+            }
             porUsuario.computeIfAbsent(jornada.getUsuarioId(), k -> new ArrayList<>()).add(jornada);
         }
 
@@ -389,7 +390,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             minutosPorSemana.merge(lunes, dia.getSegundos() / 60, Long::sum);
         }
 
-        LocalDate hoy = LocalDate.now(MADRID);
+        LocalDate hoy = LocalDate.now(usuario.zona());
         int tocados = 0;
 
         for (Map.Entry<LocalDate, Long> semana : minutosPorSemana.entrySet()) {
@@ -702,8 +703,9 @@ public class OvertimeServiceImpl implements OvertimeService {
         return LocalDate.of(anio, 12, 31);
     }
 
-    private static Instant inicioDelDia(LocalDate fecha) {
-        return fecha.atStartOfDay(MADRID).toInstant();
+    /** Solo para acotar la consulta, con margen: los días de verdad los cuenta el SQL en cada zona. */
+    private static Instant inicioDelDiaUtc(LocalDate fecha) {
+        return fecha.atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     private OvertimeAlertResponse toResponse(OvertimeAlert aviso) {

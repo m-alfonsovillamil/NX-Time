@@ -55,7 +55,7 @@ public class DashboardController {
     }
 
     @Operation(summary = "Mis horas día a día",
-            description = "Un elemento por día entre 'desde' y 'hasta' (días de España, incluidos, 62 como máximo): "
+            description = "Un elemento por día entre 'desde' y 'hasta' (días de la empresa, incluidos, 62 como máximo): "
                     + "minutos netos de las jornadas cerradas que empezaron ese día, minutos esperados según la "
                     + "jornada contratada (0 en fin de semana, festivo o ausencia aprobada), y el nombre del "
                     + "festivo o el tipo de ausencia si los hay. Para los gráficos de la pantalla de inicio.")

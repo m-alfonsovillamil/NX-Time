@@ -25,7 +25,6 @@ import com.nxtime.nxtime.service.ComplaintService;
 import com.nxtime.nxtime.service.TrackingCode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -87,7 +86,6 @@ public class ComplaintServiceImpl implements ComplaintService {
      * española es del 31 en UTC, y el plazo empezaría a contar un día
      * antes. Es el mismo cuidado que la fase D tuvo con las jornadas.
      */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final ComplaintRepository complaintRepository;
     private final ComplaintMessageRepository messageRepository;
@@ -462,7 +460,7 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (denuncia.getAcuseReciboEn() != null) {
             return null;
         }
-        return diasHasta(diaEspanol(denuncia.getCreadoEn()).plusDays(DIAS_PARA_ACUSAR));
+        return diasHasta(denuncia, diaDeLaEmpresa(denuncia).plusDays(DIAS_PARA_ACUSAR));
     }
 
     /** Igual, con los 3 meses de la respuesta. Null si ya está cerrada. */
@@ -470,12 +468,12 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (!denuncia.getEstado().estaAbierta()) {
             return null;
         }
-        return diasHasta(diaEspanol(denuncia.getCreadoEn()).plusMonths(MESES_PARA_RESPONDER));
+        return diasHasta(denuncia, diaDeLaEmpresa(denuncia).plusMonths(MESES_PARA_RESPONDER));
     }
 
     /**
-     * Días completos entre hoy y una fecha límite, en el calendario de
-     * aquí.
+     * Días completos entre hoy y una fecha límite, en el calendario de la
+     * empresa (ADR 032).
      *
      * Se cuenta sobre fechas y no sobre instantes a propósito: un plazo
      * en días naturales se mide en el calendario, así que "quedan 2
@@ -483,12 +481,13 @@ public class ComplaintServiceImpl implements ComplaintService {
      * mismo día. Restando instantes, ese mismo plazo pasaría de 2 a 1 a
      * media tarde sin que hubiera cambiado el día.
      */
-    private long diasHasta(LocalDate limite) {
-        return ChronoUnit.DAYS.between(LocalDate.now(MADRID), limite);
+    private long diasHasta(Complaint denuncia, LocalDate limite) {
+        return ChronoUnit.DAYS.between(LocalDate.now(Company.zonaDe(denuncia.getEmpresa())), limite);
     }
 
-    private LocalDate diaEspanol(Instant instante) {
-        return instante.atZone(MADRID).toLocalDate();
+    /** El día en que se presentó, en el calendario de la empresa. */
+    private LocalDate diaDeLaEmpresa(Complaint denuncia) {
+        return denuncia.getCreadoEn().atZone(Company.zonaDe(denuncia.getEmpresa())).toLocalDate();
     }
 
     // ------------------------------------------------------------------

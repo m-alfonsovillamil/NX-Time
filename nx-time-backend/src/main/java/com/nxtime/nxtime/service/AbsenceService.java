@@ -14,7 +14,7 @@ public interface AbsenceService {
 
 
     /**
-     * Mis ausencias de un periodo. Las dos fechas son de España y "hasta"
+     * Mis ausencias de un periodo. Las dos fechas son de la empresa y "hasta"
      * entra. Sin rango se comportan como siempre (lo manda todo), para no
      * romper la app ya instalada.
      */
@@ -35,6 +35,9 @@ public interface AbsenceService {
     com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getHistory(
             String managerEmail, org.springframework.data.domain.Pageable pagina);
 
-    /** Saldo de vacaciones del propio usuario para ese año (Fase 9). */
-    VacationBalanceResponse getMyVacationBalance(String email, int anio);
+    /**
+     * Saldo de vacaciones del propio usuario para ese año (Fase 9). Con
+     * {@code anio} null, el año en curso en la zona de su empresa.
+     */
+    VacationBalanceResponse getMyVacationBalance(String email, Integer anio);
 }

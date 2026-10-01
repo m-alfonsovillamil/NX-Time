@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -50,8 +49,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class OvertimeController {
 
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
-
     private final OvertimeService overtimeService;
 
     public OvertimeController(OvertimeService overtimeService) {
@@ -72,7 +69,7 @@ public class OvertimeController {
     public ResponseEntity<List<OvertimeAlertResponse>> mios(
             @RequestParam(required = false) Integer anio,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(overtimeService.mios(usuario.getUser(), anioOEsteAnio(anio)));
+        return ResponseEntity.ok(overtimeService.mios(usuario.getUser(), anioOEsteAnio(anio, usuario)));
     }
 
     @Operation(summary = "Los avisos de toda la empresa",
@@ -89,7 +86,7 @@ public class OvertimeController {
     public ResponseEntity<List<OvertimeAlertResponse>> delEquipo(
             @RequestParam(required = false) Integer anio,
             @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(overtimeService.delEquipo(usuario.getUser(), anioOEsteAnio(anio)));
+        return ResponseEntity.ok(overtimeService.delEquipo(usuario.getUser(), anioOEsteAnio(anio, usuario)));
     }
 
     @Operation(summary = "Decidir si un exceso cuenta como horas extra",
@@ -138,15 +135,15 @@ public class OvertimeController {
             @RequestParam(required = false) Integer anio,
             @AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(
-                overtimeService.bolsa(usuario.getUser(), usuarioId, anioOEsteAnio(anio)));
+                overtimeService.bolsa(usuario.getUser(), usuarioId, anioOEsteAnio(anio, usuario)));
     }
 
     /**
-     * El año por defecto es el de hoy EN MADRID, no el del reloj del
-     * servidor: el 31 de diciembre a las 23:30 en España ya es 1 de enero
-     * en UTC, y la bolsa anual se vaciaría media hora antes de tiempo.
+     * El año por defecto es el de hoy en la zona de la empresa, no el del
+     * reloj del servidor: el 31 de diciembre a las 23:30 en Madrid ya es 1
+     * de enero en UTC, y la bolsa anual se vaciaría media hora antes de tiempo.
      */
-    private int anioOEsteAnio(Integer anio) {
-        return anio != null ? anio : LocalDate.now(MADRID).getYear();
+    private int anioOEsteAnio(Integer anio, SecurityUser usuario) {
+        return anio != null ? anio : LocalDate.now(usuario.getUser().zona()).getYear();
     }
 }

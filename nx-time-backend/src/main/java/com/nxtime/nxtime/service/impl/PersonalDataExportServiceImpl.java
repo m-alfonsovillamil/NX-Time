@@ -45,7 +45,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private static final Logger log = LoggerFactory.getLogger(PersonalDataExportServiceImpl.class);
 
     /**
-     * Solo es verdad en el JSON: el PDF pinta las horas en hora de España y la
+     * Solo es verdad en el JSON: el PDF pinta las horas en la hora de la empresa y la
      * sustituye (ver PersonalDataPdfGenerator). Es pública por eso.
      */
     public static final String NOTA_HORAS_EN_UTC = "Las horas son instantes en UTC (formato ISO 8601).";
@@ -133,7 +133,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                         p.getEmpresa() != null ? p.getEmpresa().getNombre() : null,
                         p.getDepartamento() != null ? p.getDepartamento().getNombre() : null,
                         p.getPuesto(), p.getFechaNacimiento(), p.getHorasSemanales(),
-                        p.isActivo(), p.getFechaBaja()),
+                        p.isActivo(), p.getFechaBaja(), p.zona().getId()),
 
                 timeEntryRepository.findByUsuarioOrderByHoraEntradaAsc(p).stream()
                         .map(f -> new PersonalDataExport.Fichaje(

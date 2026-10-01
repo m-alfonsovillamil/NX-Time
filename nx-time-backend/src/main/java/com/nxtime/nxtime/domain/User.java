@@ -15,6 +15,7 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -114,6 +115,14 @@ public class User {
     @PreUpdate
     private void normalizarEmail() {
         this.email = Emails.normalizar(this.email);
+    }
+
+    /**
+     * La zona en la que se cuentan los días de esta persona: la de su empresa
+     * (ADR 032). Sin empresa -- solo pasa en tests unitarios -- la de por defecto.
+     */
+    public ZoneId zona() {
+        return Company.zonaDe(empresa);
     }
 
     @Override

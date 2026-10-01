@@ -19,8 +19,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import java.time.Year;
-import java.time.ZoneId;
 import java.util.List;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.HttpStatus;
@@ -45,8 +43,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class AbsenceController {
 
-    /** "El año actual" es el año en España, no en UTC (ver TimeEntryMapper). */
-    private static final ZoneId MADRID_ZONE = ZoneId.of("Europe/Madrid");
 
     private final AbsenceService absenceService;
 
@@ -73,7 +69,7 @@ public class AbsenceController {
     }
 
     @Operation(summary = "Mis peticiones de ausencia",
-            description = "En cualquier estado. Con 'desde' y 'hasta' (fechas de España, 'hasta' incluido) "
+            description = "En cualquier estado. Con 'desde' y 'hasta' (fechas de la empresa, 'hasta' incluido) "
                     + "solo las que tocan ese periodo, de un año como mucho. Sin ellas, todas. Las más recientes "
                     + "primero. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto).")
     @ApiResponses({
@@ -166,7 +162,6 @@ public class AbsenceController {
             @Parameter(description = "Año a consultar. Por defecto, el actual.")
             @RequestParam(required = false) Integer anio,
             Authentication authentication) {
-        int anioConsultado = (anio != null) ? anio : Year.now(MADRID_ZONE).getValue();
-        return ResponseEntity.ok(absenceService.getMyVacationBalance(authentication.getName(), anioConsultado));
+        return ResponseEntity.ok(absenceService.getMyVacationBalance(authentication.getName(), anio));
     }
 }

@@ -27,7 +27,6 @@ import com.nxtime.nxtime.service.TimeEntryService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,8 +70,6 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 
     /** Un año bisiesto entero. Ver {@link #getHistory(String, LocalDate, LocalDate)}. */
     static final int MAXIMO_DIAS_HISTORIAL = 366;
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final TimeEntryRepository timeEntryRepository;
     private final TimeEntryAuditRepository timeEntryAuditRepository;
@@ -229,7 +226,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      * </ul>
      */
     private Project proyectoAlIniciar(User user, Long proyectoId) {
-        List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID));
+        List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, LocalDate.now(user.zona()));
         if (proyectoId != null) {
             return disponibles.stream()
                     .filter(p -> p.getId() == proyectoId)
@@ -265,7 +262,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         if (registro.isEnPausa()) {
             throw new BusinessException("Reanuda la jornada antes de cambiar de proyecto.");
         }
-        Project nuevo = projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID)).stream()
+        Project nuevo = projectAllocationService.proyectosParaFichar(user, LocalDate.now(user.zona())).stream()
                 .filter(p -> p.getId() == proyectoId)
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("No tienes asignado ese proyecto hoy.", HttpStatus.FORBIDDEN));
@@ -294,7 +291,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 
     private ClockProjectsResponse respuestaDeProyectos(User user, TimeEntry abierta) {
         List<ClockProjectsResponse.ProjectOption> disponibles =
-                projectAllocationService.proyectosParaFichar(user, LocalDate.now(MADRID)).stream()
+                projectAllocationService.proyectosParaFichar(user, LocalDate.now(user.zona())).stream()
                         .map(TimeEntryServiceImpl::opcion)
                         .toList();
         ClockProjectsResponse.ProjectOption enCurso = abierta == null ? null
@@ -314,7 +311,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      * falla no se avisa de nada.
      */
     private void avisarSiNoEsLaborable(User user) {
-        LocalDate hoy = LocalDate.now(MADRID);
+        LocalDate hoy = LocalDate.now(user.zona());
         nonWorkingDayService.motivo(user, hoy).ifPresent(motivo -> {
             List<User> destinatarios = Destinatarios.conAuthority(
                     userRepository, user.getEmpresa(), "ausencia:aprobar", user);
@@ -329,7 +326,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     public Optional<NonWorkingDayService.Motivo> motivoNoLaborableHoy(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        return nonWorkingDayService.motivo(user, LocalDate.now(MADRID));
+        return nonWorkingDayService.motivo(user, LocalDate.now(user.zona()));
     }
 
     @Override
@@ -358,11 +355,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         }
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
-        // Días de España: un fichaje a las 23:30 UTC del día 31 es del día 1.
+        // Días de la empresa: en Madrid, un fichaje a las 23:30 UTC del día 31 es del día 1.
         return timeEntryRepository.findHistoryByUsuarioEntre(
                 user,
-                desde.atStartOfDay(MADRID).toInstant(),
-                hasta.plusDays(1).atStartOfDay(MADRID).toInstant(),
+                desde.atStartOfDay(user.zona()).toInstant(),
+                hasta.plusDays(1).atStartOfDay(user.zona()).toInstant(),
                 pagina);
     }
 

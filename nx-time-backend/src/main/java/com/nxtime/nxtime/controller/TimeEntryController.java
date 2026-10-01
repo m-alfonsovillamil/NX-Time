@@ -246,7 +246,7 @@ public class TimeEntryController {
     }
 
     @Operation(summary = "Historial de fichajes propio",
-            description = "Los más recientes primero. Con 'desde' y 'hasta' (días de España, los dos incluidos, "
+            description = "Los más recientes primero. Con 'desde' y 'hasta' (días de la empresa, los dos incluidos, "
                     + "formato YYYY-MM-DD), solo los de ese periodo, de un año como máximo; hay que pasar las dos "
                     + "o ninguna. Por páginas: 'pagina' desde 0 y 'tamano' de 1 a 200 (50 por defecto). Quien "
                     + "necesite el periodo entero, para sumarlo, pide páginas hasta que 'hayMas' sea false.")

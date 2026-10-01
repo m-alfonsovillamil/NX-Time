@@ -8,6 +8,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -94,6 +96,25 @@ public class TimeEntry {
 
     @Version
     private long version;
+
+    /**
+     * La zona de la empresa del fichaje (ADR 032). Sin empresa -- solo en
+     * tests unitarios -- la de la persona, y si tampoco, la de por defecto.
+     */
+    public ZoneId zona() {
+        if (empresa != null) {
+            return empresa.zona();
+        }
+        return usuario != null ? usuario.zona() : ZoneId.of(Company.ZONA_POR_DEFECTO);
+    }
+
+    /**
+     * El día de la jornada: el de su ENTRADA, en la zona de la empresa. Una
+     * jornada cuenta entera en el día en que empieza, termine cuando termine.
+     */
+    public LocalDate dia() {
+        return horaEntrada.atZone(zona()).toLocalDate();
+    }
 
     @Override
     public boolean equals(Object o) {

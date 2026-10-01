@@ -11,7 +11,6 @@ import com.nxtime.nxtime.service.OvertimeService;
 import com.nxtime.nxtime.service.PendingWorkService;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class PendingWorkServiceImpl implements PendingWorkService {
-
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private final AbsenceService absenceService;
     private final CorrectionService correctionService;
@@ -83,7 +80,7 @@ public class PendingWorkServiceImpl implements PendingWorkService {
         // aceptados o justificados no esperan nada.
         int horasExtra = authorities.contains("horasextra:revisar")
                 ? (int) overtimeService.contarAbiertosDelEquipo(
-                        actor, LocalDate.now(clock.withZone(MADRID)).getYear())
+                        actor, LocalDate.now(clock.withZone(actor.zona())).getYear())
                 : 0;
 
         // Todas las de la empresa, como la bandeja: no hay reparto de quién

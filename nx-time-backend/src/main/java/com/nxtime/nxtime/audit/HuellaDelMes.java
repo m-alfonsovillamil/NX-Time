@@ -58,7 +58,7 @@ public final class HuellaDelMes {
 
     /**
      * El resumen del mes a partir de sus fichajes. Quien llama pasa los
-     * fichajes vivos (sin anulados) que EMPIEZAN en el mes, en hora de España:
+     * fichajes vivos (sin anulados) que EMPIEZAN en el mes, en la hora de la empresa:
      * el mismo criterio que el informe mensual.
      */
     public static Resumen resumen(long usuarioId, long empresaId, YearMonth mes, List<TimeEntry> fichajes) {

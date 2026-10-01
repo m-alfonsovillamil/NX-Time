@@ -149,10 +149,10 @@ class AbsenceControllerTest {
 
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "ausencia:leer")
-    @DisplayName("GET /ausencias/saldo-vacaciones sin parámetro 'anio' usa el año actual")
+    @DisplayName("GET /ausencias/saldo-vacaciones sin parámetro 'anio' deja que el servicio elija el año de la empresa")
     void getMyVacationBalance_sinAnio_usaElAnioActual() throws Exception {
         int anioActual = Year.now(ZoneId.of("Europe/Madrid")).getValue();
-        when(absenceService.getMyVacationBalance("empleado@nxtime.test", anioActual))
+        when(absenceService.getMyVacationBalance(eq("empleado@nxtime.test"), isNull()))
                 .thenReturn(new VacationBalanceResponse(anioActual, 22, 5, 0, 17));
 
         mockMvc.perform(get("/api/v1/ausencias/saldo-vacaciones"))

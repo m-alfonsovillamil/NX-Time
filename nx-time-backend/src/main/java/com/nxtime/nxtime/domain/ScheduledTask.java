@@ -96,6 +96,13 @@ public enum ScheduledTask {
      */
     public static final String CRON_RECORDATORIO_FIRMA = "0 0 9 * * *";
 
+    /**
+     * La zona del RELOJ de las tareas: a qué hora arrancan y cuándo las da por
+     * perdidas el vigilante. No es la zona de los datos: desde el ADR 032 cada
+     * empresa cuenta sus días en la suya, y cada tarea los calcula por empresa.
+     * Con el arranque a las 3:00 de Madrid, el día anterior ya está cerrado en
+     * cualquier zona entre UTC-3 y UTC+3; más allá, la tarea va un día tarde.
+     */
     public static final String ZONA = "Europe/Madrid";
 
     private final String cron;

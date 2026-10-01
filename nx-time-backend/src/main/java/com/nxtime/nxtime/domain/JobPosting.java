@@ -11,7 +11,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,14 +30,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class JobPosting {
-
-    /**
-     * El día es el ESPAÑOL, como en las jornadas (fase D) y en los
-     * plazos de las denuncias (fase G). Una oferta que cierra el 30 de
-     * junio admite candidaturas hasta las 23:59 de aquí, no hasta las
-     * 02:00 del día siguiente que sería el corte en UTC.
-     */
-    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -93,9 +84,16 @@ public class JobPosting {
         return estado.estaPublicada() && !plazoVencido();
     }
 
-    /** Si tenía fecha de cierre y ya pasó. Sin fecha, nunca vence. */
+    /**
+     * Si tenía fecha de cierre y ya pasó. Sin fecha, nunca vence.
+     *
+     * El día es el de la empresa (ADR 032), como en las jornadas (fase D) y
+     * en los plazos de las denuncias (fase G). Una oferta de Madrid que
+     * cierra el 30 de junio admite candidaturas hasta las 23:59 de allí, no
+     * hasta las 02:00 del día siguiente que sería el corte en UTC.
+     */
     public boolean plazoVencido() {
-        return fechaCierre != null && LocalDate.now(MADRID).isAfter(fechaCierre);
+        return fechaCierre != null && LocalDate.now(Company.zonaDe(empresa)).isAfter(fechaCierre);
     }
 
     @Override
