@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.dto.ChangePasswordRequest;
+import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,12 +12,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,12 +33,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
-    public UserController(AuthService authService) {
+    public UserController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
-    @Operation(summary = "Cambiar la contraseña propia", description = "Exige la contraseña antigua.")
+    @Operation(summary = "Cambiar la contraseña propia", description = "Exige la contraseña antigua. Cierra las "
+            + "demás sesiones abiertas de la cuenta; la desde la que se cambia sigue abierta (ADR 034).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Contraseña cambiada"),
             @ApiResponse(responseCode = "400", description = "Contraseña nueva demasiado corta, "
@@ -47,8 +53,14 @@ public class UserController {
     @PostMapping("/cambiar-contrasena")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
-            @Valid @RequestBody ChangePasswordRequest request, @AuthenticationPrincipal SecurityUser user) {
-        authService.changePassword(request, user.getUser());
+            @Valid @RequestBody ChangePasswordRequest request, @AuthenticationPrincipal SecurityUser user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String autorizacion) {
+        // La sesión desde la que se cambia sigue abierta; las demás se cierran (ADR 034).
+        java.util.Optional<java.util.UUID> sesion = autorizacion != null && autorizacion.startsWith("Bearer ")
+                ? jwtService.extractSesion(autorizacion.substring(7))
+                : java.util.Optional.empty();
+        authService.changePassword(request, user.getUser(), sesion);
         return ResponseEntity.ok().build();
     }
 

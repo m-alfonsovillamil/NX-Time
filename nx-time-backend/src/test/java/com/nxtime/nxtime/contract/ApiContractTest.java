@@ -3250,14 +3250,20 @@ class ApiContractTest {
         // el resto de tests de esta clase (comparten IP real). 10
         // peticiones por minuto (ver LoginRateLimitFilter): la 11ª
         // debe rechazarse.
+        //
+        // Un correo distinto en cada intento: desde el ADR 034, a partir del
+        // quinto fallo contra una misma cuenta hay que esperar, y eso es otro
+        // límite. Y quince intentos y no once: el cupo se rellena a uno cada
+        // seis segundos, y cada intento fallido cuesta un BCrypt.
         HttpHeaders headers = jsonHeaders();
         headers.set("X-Forwarded-For", "203.0.113.55");
-        Map<String, Object> credencialesFalsas = mapOf("email", "nadie@nxtime.test", "contrasena", "loquesea");
-        HttpEntity<String> peticion = new HttpEntity<>(toJson(credencialesFalsas), headers);
 
         ResponseEntity<String> ultima = null;
-        for (int i = 0; i < 11; i++) {
-            ultima = rest.postForEntity(url("/auth/login"), peticion, String.class);
+        for (int i = 0; i < 15; i++) {
+            Map<String, Object> credencialesFalsas =
+                    mapOf("email", "nadie" + i + "@nxtime.test", "contrasena", "loquesea");
+            ultima = rest.postForEntity(url("/auth/login"),
+                    new HttpEntity<>(toJson(credencialesFalsas), headers), String.class);
         }
 
         assertThat(ultima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);

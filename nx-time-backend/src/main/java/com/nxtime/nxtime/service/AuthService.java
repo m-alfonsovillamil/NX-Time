@@ -46,7 +46,11 @@ public interface AuthService {
 
     void createManager(CreateManagerRequest request, User admin);
 
-    void changePassword(ChangePasswordRequest request, User user);
+    /**
+     * Cambia la contraseña y cierra las demás sesiones; la de {@code sesionActual}
+     * sigue abierta. Sin ella (un token de antes del ADR 034), se cierran todas.
+     */
+    void changePassword(ChangePasswordRequest request, User user, java.util.Optional<java.util.UUID> sesionActual);
 
     /** Da de alta o de baja a un empleado de la misma empresa que quien gestiona. */
     void setEmployeeActive(long employeeId, boolean activo, User actingManager);

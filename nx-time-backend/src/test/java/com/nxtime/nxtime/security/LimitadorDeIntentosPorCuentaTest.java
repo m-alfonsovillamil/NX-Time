@@ -68,4 +68,67 @@ class LimitadorDeIntentosPorCuentaTest {
         assertThatThrownBy(() -> limitador.comprobar("  Alguien@NXTime.test  "))
                 .isInstanceOf(BusinessException.class);
     }
+
+    // ---- la espera creciente tras fallos seguidos (ADR 034) ----
+
+    /** Un reloj que se adelanta a mano. */
+    private static final class Reloj extends java.time.Clock {
+        private java.time.Instant ahora = java.time.Instant.parse("2026-10-03T10:00:00Z");
+
+        void avanzar(java.time.Duration cuanto) {
+            ahora = ahora.plus(cuanto);
+        }
+
+        @Override
+        public java.time.ZoneId getZone() {
+            return java.time.ZoneOffset.UTC;
+        }
+
+        @Override
+        public java.time.Clock withZone(java.time.ZoneId zona) {
+            return this;
+        }
+
+        @Override
+        public java.time.Instant instant() {
+            return ahora;
+        }
+    }
+
+    @Test
+    @DisplayName("La espera se dobla a partir del quinto fallo seguido, con un techo de 15 minutos")
+    void laEsperaSeDobla() {
+        org.assertj.core.api.Assertions.assertThat(LimitadorDeIntentosPorCuenta.esperaTras(4))
+                .isEqualTo(java.time.Duration.ZERO);
+        org.assertj.core.api.Assertions.assertThat(LimitadorDeIntentosPorCuenta.esperaTras(5))
+                .isEqualTo(java.time.Duration.ofSeconds(1));
+        org.assertj.core.api.Assertions.assertThat(LimitadorDeIntentosPorCuenta.esperaTras(8))
+                .isEqualTo(java.time.Duration.ofSeconds(8));
+        org.assertj.core.api.Assertions.assertThat(LimitadorDeIntentosPorCuenta.esperaTras(40))
+                .isEqualTo(LimitadorDeIntentosPorCuenta.ESPERA_MAXIMA);
+    }
+
+    @Test
+    @DisplayName("Tras cinco fallos hay que esperar; pasada la espera se puede probar, y acertar la pone a cero")
+    void trasCincoFallosHayQueEsperar() {
+        Reloj reloj = new Reloj();
+        LimitadorDeIntentosPorCuenta limitador = new LimitadorDeIntentosPorCuenta(reloj);
+        for (int i = 0; i < 5; i++) {
+            limitador.comprobar("ana@nxtime.test");
+            limitador.fallo("ana@nxtime.test");
+        }
+
+        assertThatThrownBy(() -> limitador.comprobar("ANA@nxtime.test"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Espera");
+        // Otra cuenta no paga por esta.
+        assertThatCode(() -> limitador.comprobar("luis@nxtime.test")).doesNotThrowAnyException();
+
+        reloj.avanzar(java.time.Duration.ofSeconds(2));
+        assertThatCode(() -> limitador.comprobar("ana@nxtime.test")).doesNotThrowAnyException();
+
+        limitador.acierto("ana@nxtime.test");
+        limitador.fallo("ana@nxtime.test");
+        assertThatCode(() -> limitador.comprobar("ana@nxtime.test")).doesNotThrowAnyException();
+    }
 }

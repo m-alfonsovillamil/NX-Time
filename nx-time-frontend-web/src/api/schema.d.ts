@@ -372,7 +372,7 @@ export interface paths {
         put?: never;
         /**
          * Cambiar la contraseña propia
-         * @description Exige la contraseña antigua.
+         * @description Exige la contraseña antigua. Cierra las demás sesiones abiertas de la cuenta; la desde la que se cambia sigue abierta (ADR 034).
          */
         post: operations["changePassword"];
         delete?: never;

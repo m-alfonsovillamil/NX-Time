@@ -95,6 +95,7 @@ class AuthServiceImplTest {
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
+        lenient().when(jwtService.generateToken(any(), any())).thenReturn("access-token");
         lenient().when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -502,10 +503,28 @@ class AuthServiceImplTest {
         when(passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())).thenReturn(true);
         when(passwordEncoder.encode(request.contrasenaNueva())).thenReturn("hashNuevo");
 
-        service.changePassword(request, user);
+        java.util.UUID estaSesion = java.util.UUID.randomUUID();
+        service.changePassword(request, user, Optional.of(estaSesion));
 
         assertThat(user.getContrasena()).isEqualTo("hashNuevo");
         verify(userRepository).save(user);
+        // Las demás sesiones se cierran; esta no (ADR 034).
+        verify(refreshTokenRepository).revocarTodasLasDeMenos(org.mockito.ArgumentMatchers.eq(user),
+                org.mockito.ArgumentMatchers.eq(estaSesion), any());
+        verify(refreshTokenRepository, never()).revocarTodasLasDe(any(), any());
+    }
+
+    @Test
+    @DisplayName("changePassword con un token sin sesión (de antes del ADR 034) cierra todas las sesiones")
+    void changePassword_sinSesionEnElToken_cierraTodas() {
+        User user = User.builder().id(1L).contrasena("hashViejo").build();
+        ChangePasswordRequest request = new ChangePasswordRequest("viejo123", "nuevo123");
+        when(passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())).thenReturn(true);
+        when(passwordEncoder.encode(request.contrasenaNueva())).thenReturn("hashNuevo");
+
+        service.changePassword(request, user, Optional.empty());
+
+        verify(refreshTokenRepository).revocarTodasLasDe(org.mockito.ArgumentMatchers.eq(user), any());
     }
 
     @Test
@@ -515,7 +534,8 @@ class AuthServiceImplTest {
         ChangePasswordRequest request = new ChangePasswordRequest("incorrecta", "nuevo123");
         when(passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())).thenReturn(false);
 
-        assertThatThrownBy(() -> service.changePassword(request, user)).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> service.changePassword(request, user, Optional.empty()))
+                .isInstanceOf(BusinessException.class);
         verify(userRepository, never()).save(any());
     }
 
