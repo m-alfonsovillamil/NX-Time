@@ -85,8 +85,8 @@ dependencies {
     // Boot 3 ("-jakarta"); con Boot 4 sería sentry-spring-boot-4. Con
     // sentry-logback, cada log.error se convierte en un evento. Sin DSN
     // (SENTRY_DSN vacía, como en local y en los tests) no envía nada.
-    implementation("io.sentry:sentry-spring-boot-starter-jakarta:8.56.0")
-    implementation("io.sentry:sentry-logback:8.56.0")
+    implementation("io.sentry:sentry-spring-boot-starter-jakarta:8.59.0")
+    implementation("io.sentry:sentry-logback:8.59.0")
 
     // Documentación de la API (Swagger UI / OpenAPI), Fase 6. 2.8.17 (no
     // la 2.6.0 fijada desde la Fase 0): esa version es anterior al
@@ -157,13 +157,16 @@ dependencies {
      * Dependencias para JSON Web Tokens (JWT). 0.12.x desde la Fase 4
      * (antes 0.11.5, con la API setClaims/parserBuilder ya deprecada).
      */
-    implementation("io.jsonwebtoken:jjwt-api:0.12.6")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+    implementation("io.jsonwebtoken:jjwt-api:0.12.7")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.7")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.7")
 
     // Rate limiting en /auth/login y /auth/register-manager (ver
     // LoginRateLimitFilter) -- antes la fuerza bruta era libre.
-    implementation("com.bucket4j:bucket4j-core:8.10.1")
+    // bucket4j_jdk17-core y no bucket4j-core (10/2026, ADR 034): el artefacto
+    // sin sufijo se quedó en la 8.10.1 y las versiones nuevas salen con el
+    // sufijo del JDK. Mismo paquete (io.github.bucket4j).
+    implementation("com.bucket4j:bucket4j_jdk17-core:8.21.0")
 }
 
 // El plugin de Spring Boot genera dos jars: el "boot jar" ejecutable

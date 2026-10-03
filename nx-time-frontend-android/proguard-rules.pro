@@ -45,7 +45,10 @@
 # al primer uso de ApiService, antes de mandar nada.
 #
 # Retrofit trae estas reglas dentro del jar desde la 2.10.0; la 2.9.0 que
-# usa el proyecto no, así que van aquí. Se descubrió el 11/09/2026 al
+# usaba el proyecto no, así que se pusieron aquí. Desde octubre de 2026 va la
+# 2.12.0, que ya las trae, y estas sobran; se dejan porque repetir una regla
+# no cuesta nada, y comprobar que sin ellas todo sigue bien solo se puede con
+# un APK de release en un móvil. Se descubrió el 11/09/2026 al
 # instalar por primera vez un APK de release firmado: el login respondía
 # "No se ha podido conectar con el servidor" al instante, porque
 # ApiErrorParser.mensajeDeRed traduce cualquier excepción a eso. En debug

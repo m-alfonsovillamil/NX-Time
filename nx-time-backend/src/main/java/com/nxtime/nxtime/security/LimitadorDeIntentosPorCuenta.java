@@ -123,7 +123,7 @@ public class LimitadorDeIntentosPorCuenta {
             }
         }
         Bucket bucket = intentos.get(cuenta, clave -> Bucket.builder()
-                .addLimit(Bandwidth.simple(INTENTOS_POR_MINUTO, Duration.ofMinutes(1)))
+                .addLimit(Bandwidth.builder().capacity(INTENTOS_POR_MINUTO).refillGreedy(INTENTOS_POR_MINUTO, Duration.ofMinutes(1)).build())
                 .build());
 
         if (!bucket.tryConsume(1)) {

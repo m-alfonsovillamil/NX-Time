@@ -204,9 +204,9 @@ dependencies {
     /*
      * Dependencias de Retrofit:
      */
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+    implementation("com.squareup.retrofit2:retrofit:2.12.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     /*
      * Gson, declarado a propósito aunque converter-gson ya lo arrastre.
@@ -217,7 +217,7 @@ dependencies {
      * la 2.8.5, anterior a `JsonParser.parseString` (2.8.6), así que
      * heredarla en silencio hacía que ese fichero no compilara.
      */
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.13.2")
 
     /*
      * Jetpack Compose. El BOM fija de una vez las versiones de todas las
@@ -277,7 +277,7 @@ dependencies {
      * nativa (NDK), dos librerías .so que subían el APK de 2,5 a 6,2 MB
      * para capturar cierres de un código nativo que la app no tiene.
      */
-    implementation("io.sentry:sentry-android-core:8.56.0")
+    implementation("io.sentry:sentry-android-core:8.59.0")
 
     /*
      * Entrar con huella (paso 6).
@@ -318,7 +318,7 @@ dependencies {
      * exacto pediría permiso aparte desde Android 12 para una precisión
      * que aquí no aporta nada.
      */
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
     // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
