@@ -81,7 +81,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
             invalidadas = signatureService.revisarTrasCambioDeZona(empresa.getId(),
                     "La empresa cambió su zona horaria a " + zona + ".");
             log.info("{} cambió la zona de la empresa {} a {}: {} firmas invalidadas.",
-                    actor.getEmail(), empresa.getId(), zona, invalidadas);
+                    actor.getId(), empresa.getId(), zona, invalidadas);
         }
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(), invalidadas);
     }

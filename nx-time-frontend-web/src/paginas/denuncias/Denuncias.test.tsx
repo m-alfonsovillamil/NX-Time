@@ -106,8 +106,8 @@ describe('canal de denuncias', () => {
   it('seguir por código abre el expediente y responde por el mismo código', async () => {
     const llamadas = simularApi({
       'GET /api/v1/denuncias/mias': () => [],
-      'GET /api/v1/denuncias/seguimiento/{codigo}': () => EXPEDIENTE,
-      'POST /api/v1/denuncias/seguimiento/{codigo}/mensajes': ({ cuerpo }) => ({
+      'POST /api/v1/denuncias/seguimiento': () => EXPEDIENTE,
+      'POST /api/v1/denuncias/seguimiento/mensajes': ({ cuerpo }) => ({
         ...EXPEDIENTE,
         mensajes: [
           ...EXPEDIENTE.mensajes,
@@ -130,15 +130,20 @@ describe('canal de denuncias', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: D.enviarMensaje }));
 
     expect(await within(dialogo).findByText('Desde el lunes')).toBeTruthy();
-    expect(llamadas.a('POST', '/api/v1/denuncias/seguimiento/K7Q2-9XMA-3PLD/mensajes').map((l) => l.cuerpo)).toEqual([
-      { texto: 'Desde el lunes' },
+    // El código va en el cuerpo, nunca en la URL (ADR 034).
+    expect(llamadas.a('POST', '/api/v1/denuncias/seguimiento').map((l) => l.cuerpo)).toEqual([
+      { codigo: 'K7Q2-9XMA-3PLD' },
     ]);
+    expect(llamadas.a('POST', '/api/v1/denuncias/seguimiento/mensajes').map((l) => l.cuerpo)).toEqual([
+      { codigo: 'K7Q2-9XMA-3PLD', texto: 'Desde el lunes' },
+    ]);
+    expect(llamadas.llamadas.some((l) => l.ruta.includes('K7Q2'))).toBe(false);
   });
 
   it('un código que no existe dice lo que diga el servidor', async () => {
     simularApi({
       'GET /api/v1/denuncias/mias': () => [],
-      'GET /api/v1/denuncias/seguimiento/{codigo}': () => problema(404, 'No hay ninguna denuncia con ese código.'),
+      'POST /api/v1/denuncias/seguimiento': () => problema(404, 'No hay ninguna denuncia con ese código.'),
     });
     pintar(<Denuncias />, { sesion: sesionDe('EMPLEADO') });
 

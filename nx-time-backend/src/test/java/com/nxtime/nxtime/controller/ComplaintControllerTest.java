@@ -176,6 +176,36 @@ class ComplaintControllerTest {
 
     @Test
     @WithMockSecurityUser(rol = Role.EMPLEADO)
+    @DisplayName("POST /denuncias/seguimiento: el código va en el cuerpo y no en la URL (ADR 034)")
+    void seguimiento_conElCodigoEnElCuerpo_devuelve200() throws Exception {
+        when(complaintService.seguimiento(eq("el-codigo"), any())).thenReturn(expediente());
+
+        mockMvc.perform(post("/api/v1/denuncias/seguimiento")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"codigo\":\"el-codigo\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.anonima").value(true));
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.EMPLEADO)
+    @DisplayName("POST /denuncias/seguimiento/mensajes: código y texto en el cuerpo; sin texto, 400")
+    void responder_conElCodigoEnElCuerpo() throws Exception {
+        when(complaintService.responder(eq("el-codigo"), any(), any())).thenReturn(expediente());
+
+        mockMvc.perform(post("/api/v1/denuncias/seguimiento/mensajes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"codigo\":\"el-codigo\",\"texto\":\"Sigue pasando\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/denuncias/seguimiento/mensajes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"codigo\":\"el-codigo\",\"texto\":\" \"}"))
+                .andExpect(status().isBadRequest());
+        verify(complaintService).responder(eq("el-codigo"), any(), any());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.EMPLEADO)
     @DisplayName("GET /denuncias/mias devuelve solo las identificadas y NO choca con /{id}")
     void mias_comoEmpleado_devuelve200() throws Exception {
         // "/mias" es una ruta literal y gana a la plantilla "/{id}": si

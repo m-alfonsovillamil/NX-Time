@@ -120,7 +120,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
                     request.inicio(),
                     request.fin()), actor);
             log.info("{} pide añadir una pausa al fichaje {} (día pasado): solicitud {}",
-                    actor.getEmail(), fichajeId, solicitud.id());
+                    actor.getId(), fichajeId, solicitud.id());
             return new Resultado(null, solicitud);
         }
 
@@ -163,7 +163,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
 
         anotar(guardado, actor, AuditAction.PAUSA_ANADIDA, antes, request.motivo().trim());
         log.info("{} añade una pausa de {} min al fichaje {}",
-                actor.getEmail(), pausa.getSegundos() / 60, fichajeId);
+                actor.getId(), pausa.getSegundos() / 60, fichajeId);
         return new Resultado(guardado, null);
     }
 

@@ -259,7 +259,7 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         avisarAlDenunciante(denuncia, "Han respondido en tu denuncia.");
 
-        log.info("{} ha escrito en la denuncia {}", actor.getEmail(), denuncia.getId());
+        log.info("{} ha escrito en la denuncia {}", actor.getId(), denuncia.getId());
         return toResponse(denuncia);
     }
 
@@ -312,7 +312,7 @@ public class ComplaintServiceImpl implements ComplaintService {
                 ? "Tu denuncia se ha cerrado y ya tiene conclusión."
                 : "Tu denuncia ha pasado a estar en investigación.");
 
-        log.info("{} ha movido la denuncia {} a {}", actor.getEmail(), denuncia.getId(), destino);
+        log.info("{} ha movido la denuncia {} a {}", actor.getId(), denuncia.getId(), destino);
         return toResponse(denuncia);
     }
 

@@ -135,7 +135,7 @@ public class AllocationEditServiceImpl implements AllocationEditService {
             String antes = snapshotSerializer.toJson(fichaje);
             projectAllocationService.aplicarReparto(fichaje, reparto);
             anotar(fichaje, actor, antes, descripcion(reparto));
-            log.info("{} reparte las horas del fichaje {}: {}", actor.getEmail(), fichajeId, descripcion(reparto));
+            log.info("{} reparte las horas del fichaje {}: {}", actor.getId(), fichajeId, descripcion(reparto));
             return new Resultado(respuesta(fichaje), null);
         }
 

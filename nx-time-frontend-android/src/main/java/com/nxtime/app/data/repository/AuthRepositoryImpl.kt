@@ -217,15 +217,14 @@ class AuthRepositoryImpl(
     override suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO> {
         // Se recorta aquí y no en la pantalla: el código se copia y se
         // pega, y un espacio de más al final no es un código distinto.
-        return apiService.getDenunciaPorCodigo(codigo.trim())
+        return apiService.getDenunciaPorCodigo(SeguimientoDenunciaRequest(codigo.trim()))
     }
 
     override suspend fun responderDenunciaPorCodigo(
         codigo: String,
         texto: String
     ): Response<DenunciaDTO> {
-        return apiService.responderDenunciaPorCodigo(
-            codigo.trim(), MensajeDenunciaRequest(texto))
+        return apiService.responderDenunciaPorCodigo(SeguimientoDenunciaRequest(codigo.trim(), texto))
     }
 
     override suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>> {

@@ -910,6 +910,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/denuncias/seguimiento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seguir una denuncia con su código
+         * @description Autenticado pero SIN comprobar identidad: el código es la credencial, y va en el cuerpo y no en la URL (ADR 034). Un código inexistente y uno de otra empresa dan el mismo 404, para no confirmar cuáles son válidos.
+         */
+        post: operations["seguimientoConCodigo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/denuncias/seguimiento/{codigo}/mensajes": {
         parameters: {
             query?: never;
@@ -920,10 +940,31 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Responder en una denuncia con su código
-         * @description El mensaje se guarda SIN autor si la denuncia es anónima, aunque quien escribe esté autenticado.
+         * Responder en una denuncia con su código (OBSOLETA: el código en la URL)
+         * @deprecated
+         * @description Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.
          */
         post: operations["responder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/denuncias/seguimiento/mensajes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Responder en una denuncia con su código
+         * @description El código y el mensaje, en el cuerpo (ADR 034). El mensaje se guarda SIN autor si la denuncia es anónima, aunque quien escribe esté autenticado.
+         */
+        post: operations["responderConCodigo"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2135,8 +2176,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Seguir una denuncia con su código
-         * @description Autenticado pero SIN comprobar identidad: el código es la credencial. Un código inexistente y uno de otra empresa dan el mismo 404, para no confirmar cuáles son válidos.
+         * Seguir una denuncia con su código (OBSOLETA: el código en la URL)
+         * @deprecated
+         * @description Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.
          */
         get: operations["seguimiento"];
         put?: never;
@@ -3381,6 +3423,10 @@ export interface components {
             /** Format: int64 */
             diasHastaRespuesta?: number;
             mensajes?: components["schemas"]["ComplaintMessageResponse"][];
+        };
+        ComplaintTrackingRequest: {
+            codigo: string;
+            texto?: string;
         };
         ScheduleExceptionRequest: {
             /** Format: int64 */
@@ -6911,6 +6957,39 @@ export interface operations {
             };
         };
     };
+    seguimientoConCodigo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplaintTrackingRequest"];
+            };
+        };
+        responses: {
+            /** @description El expediente y su conversación */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintResponse"];
+                };
+            };
+            /** @description No hay ninguna denuncia con ese código */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     responder: {
         parameters: {
             query?: never;
@@ -6933,6 +7012,57 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ComplaintResponse"];
+                };
+            };
+            /** @description No hay ninguna denuncia con ese código */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description El expediente está cerrado */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    responderConCodigo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplaintTrackingRequest"];
+            };
+        };
+        responses: {
+            /** @description Expediente con el mensaje añadido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintResponse"];
+                };
+            };
+            /** @description Falta el mensaje */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description No hay ninguna denuncia con ese código */

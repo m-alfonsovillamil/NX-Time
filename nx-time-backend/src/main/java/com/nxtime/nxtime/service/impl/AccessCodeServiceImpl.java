@@ -140,7 +140,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             emailSender.enviarObligatorio(
                     usuario.getEmail(), "Tu cuenta de NX Time", "access-code-welcome", variables);
         } catch (EmailNotSentException e) {
-            log.error("No se pudo enviar el código de alta a {}: {}", usuario.getEmail(), e.getCause().getMessage());
+            log.error("No se pudo enviar el código de alta a {}: {}", usuario.getId(), e.getCause().getMessage());
             // Al lanzar, la transacción del alta se deshace: ni cuenta ni código.
             throw new BusinessException(
                     "No se ha podido enviar el correo con el código de acceso, así que la cuenta no se ha creado. "
@@ -164,7 +164,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         Instant haceUnaHora = clock.instant().minus(Duration.ofHours(1));
         if (accessCodeRepository.countByUsuarioAndCreadoEnAfter(usuario, haceUnaHora) >= MAXIMO_CODIGOS_POR_HORA) {
             log.warn("Recuperación denegada para {}: ya tiene {} códigos en la última hora.",
-                    usuario.getEmail(), MAXIMO_CODIGOS_POR_HORA);
+                    usuario.getId(), MAXIMO_CODIGOS_POR_HORA);
             return;
         }
 
@@ -195,7 +195,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         guardar(usuario, AccessCodeType.RECUPERACION, codigo);
         eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
                 usuario.getEmail(), variables(usuario, codigo, AccessCodeType.RECUPERACION)));
-        log.info("Código de recuperación emitido para {}", usuario.getEmail());
+        log.info("Código de recuperación emitido para {}", usuario.getId());
     }
 
     /*
@@ -225,7 +225,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             if (codigoAcceso.getIntentosFallidos() >= AccessCode.MAXIMO_INTENTOS) {
                 codigoAcceso.setAnuladoEn(ahora);
                 log.warn("Código de acceso de {} anulado tras {} intentos fallidos.",
-                        codigoAcceso.getUsuario().getEmail(), AccessCode.MAXIMO_INTENTOS);
+                        codigoAcceso.getUsuario().getId(), AccessCode.MAXIMO_INTENTOS);
             }
             accessCodeRepository.save(codigoAcceso);
             throw new BusinessException(CODIGO_NO_VALIDO, HttpStatus.BAD_REQUEST);
@@ -241,7 +241,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         // puede ser justo quien la robó -- deja de tenerla.
         int cerradas = refreshTokenRepository.revocarTodasLasDe(usuario, ahora);
         log.info("Contraseña fijada con un código de {} para {} ({} sesiones cerradas).",
-                codigoAcceso.getTipo(), usuario.getEmail(), cerradas);
+                codigoAcceso.getTipo(), usuario.getId(), cerradas);
     }
 
     private void guardar(User usuario, AccessCodeType tipo, String codigo) {
