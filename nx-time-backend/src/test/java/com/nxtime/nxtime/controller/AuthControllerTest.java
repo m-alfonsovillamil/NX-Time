@@ -3,6 +3,7 @@ package com.nxtime.nxtime.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SesionWeb;
 import com.nxtime.nxtime.service.AccessCodeService;
@@ -51,18 +53,43 @@ class AuthControllerTest {
     private AccessCodeService accessCodeService;
 
     @Test
-    @DisplayName("POST /auth/register-manager con datos válidos (sin autenticar) devuelve 200")
-    void registerManager_datosValidos_devuelve200() throws Exception {
+    @DisplayName("POST /auth/register-manager con datos válidos (sin autenticar) devuelve 202, sin sesión")
+    void registerManager_datosValidos_devuelve202() throws Exception {
         when(authService.registerManager(any()))
-                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
-                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid"));
+                .thenReturn(new RegistrationPendingResponse("ada@nxtime.test", "Te hemos mandado un código"));
 
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
                                 + "\"contrasena\":\"password123\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.email").value("ada@nxtime.test"))
+                .andExpect(jsonPath("$.token").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("POST /auth/registro/confirmar con un código abre la sesión como el login")
+    void confirmarRegistro_devuelveLaSesion() throws Exception {
+        when(authService.confirmarRegistro(any()))
+                .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
+                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid"));
+
+        mockMvc.perform(post("/auth/registro/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@nxtime.test\",\"codigo\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("token"));
+    }
+
+    @Test
+    @DisplayName("POST /auth/registro/confirmar con un código que no son 6 dígitos devuelve 400 sin llegar al servicio")
+    void confirmarRegistro_codigoMalFormado_devuelve400() throws Exception {
+        mockMvc.perform(post("/auth/registro/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@nxtime.test\",\"codigo\":\"12ab\"}"))
+                .andExpect(status().isBadRequest());
+        verify(authService, never()).confirmarRegistro(any());
     }
 
     @Test

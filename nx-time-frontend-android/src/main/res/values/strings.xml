@@ -68,6 +68,11 @@
     <string name="registro_nombre">Tu nombre</string>
     <string name="registro_apellidos">Tus apellidos</string>
     <string name="registro_crear">Crear empresa</string>
+    <!-- Confirmar el correo al registrar la empresa (ADR 034) -->
+    <string name="confirmar_correo_titulo">Confirma tu correo</string>
+    <string name="confirmar_correo_explicacion">Te hemos mandado un código de 6 cifras a %1$s. Escríbelo para entrar. Si no llega en unos minutos, mira en la carpeta de spam.</string>
+    <string name="confirmar_correo_entrar">Confirmar y entrar</string>
+    <string name="confirmar_correo_otro">¿No te ha llegado? Entra con tu correo y tu contraseña y te mandaremos otro.</string>
 
     <!-- Fichar -->
     <string name="fichar_titulo">Mi jornada</string>

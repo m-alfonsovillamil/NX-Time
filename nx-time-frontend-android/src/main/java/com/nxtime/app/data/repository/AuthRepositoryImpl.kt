@@ -37,8 +37,12 @@ class AuthRepositoryImpl(
         return response
     }
 
-    override suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RespuestaAutenticacion> {
+    override suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RegistroPendienteDTO> {
         return apiService.registrarEmpresaGestor(request)
+    }
+
+    override suspend fun confirmarRegistro(email: String, codigo: String): Response<RespuestaAutenticacion> {
+        return apiService.confirmarRegistro(ConfirmarRegistroRequest(email, codigo))
     }
 
     override fun procesarLoginExitoso(authResponse: RespuestaAutenticacion) {
