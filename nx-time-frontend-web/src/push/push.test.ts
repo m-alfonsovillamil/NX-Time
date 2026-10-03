@@ -10,7 +10,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reiniciarEstadoDeRed } from '../api/cliente';
 import { abrirSesion, cerrarSesion } from '../api/sesion';
 import { sesionDe, simularApi, sinContenido } from '../pruebas/api';
-import { apagarPush, encenderPush, estadoPush, PermisoDenegado, seguirLaSesion } from './push';
+import {
+  apagarPush,
+  encenderPush,
+  ESPERA_MAXIMA_MS,
+  estadoPush,
+  FalloDePush,
+  PermisoDenegado,
+  seguirLaSesion,
+} from './push';
 
 const firebase = vi.hoisted(() => ({
   getToken: vi.fn(async () => 'token-web-1'),
@@ -113,12 +121,107 @@ describe('encender y apagar', () => {
     expect(estadoPush()).toBe('bloqueado');
   });
 
-  it('si el servidor no lo registra, siguen apagadas', async () => {
+  it('si el servidor no lo registra, siguen apagadas y se dice que fue el servidor', async () => {
     simularApi({ 'POST /api/v1/dispositivos-push': () => new Response(null, { status: 500 }) });
 
-    await expect(encenderPush()).rejects.toThrow();
+    await expect(encenderPush()).rejects.toMatchObject({ paso: 'servidor' });
 
     expect(estadoPush()).toBe('apagado');
+  });
+
+  it('va diciendo por qué paso va, en orden', async () => {
+    simularApi({ 'POST /api/v1/dispositivos-push': () => sinContenido() });
+    const pasos: string[] = [];
+
+    await encenderPush((paso) => pasos.push(paso));
+
+    expect(pasos).toEqual(['permiso', 'sdk', 'service-worker', 'token', 'servidor']);
+  });
+
+  it('con el permiso ya concedido, no se vuelve a preguntar', async () => {
+    const permiso = simularPermiso('granted');
+    simularApi({ 'POST /api/v1/dispositivos-push': () => sinContenido() });
+
+    await encenderPush();
+
+    expect(permiso.requestPermission).not.toHaveBeenCalled();
+    expect(estadoPush()).toBe('encendido');
+  });
+
+  it('si se cierra la pregunta sin contestar, se distingue de denegarla', async () => {
+    simularPermiso('default', 'default');
+    simularApi({});
+
+    const fallo = await encenderPush().catch((e: unknown) => e);
+
+    expect(fallo).toBeInstanceOf(PermisoDenegado);
+    expect((fallo as PermisoDenegado).respuesta).toBe('default');
+    expect(estadoPush()).toBe('apagado');
+  });
+});
+
+describe('cada paso que falla dice cuál fue', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('un service worker que no llega a activarse no deja el botón pensando para siempre', async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: new Promise(() => undefined), register: vi.fn(async () => ({})) },
+      configurable: true,
+    });
+    const api = simularApi({});
+
+    const fallo = encenderPush().catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(ESPERA_MAXIMA_MS);
+
+    expect(await fallo).toMatchObject({ paso: 'service-worker', detalle: expect.stringContaining('Sin respuesta') });
+    expect(firebase.getToken).not.toHaveBeenCalled();
+    expect(api.llamadas).toEqual([]);
+  });
+
+  it('si no se puede registrar el service worker, lo dice con el error del navegador', async () => {
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { ready: Promise.resolve({}), register: vi.fn(async () => Promise.reject(new Error('SecurityError'))) },
+      configurable: true,
+    });
+    simularApi({});
+
+    const fallo = await encenderPush().catch((e: unknown) => e);
+
+    expect(fallo).toBeInstanceOf(FalloDePush);
+    expect(fallo).toMatchObject({ paso: 'service-worker', detalle: 'SecurityError' });
+  });
+
+  it('si Google no da el token, el fallo es del token', async () => {
+    firebase.getToken.mockRejectedValueOnce(new Error('Registration failed - push service error'));
+    const api = simularApi({});
+
+    const fallo = await encenderPush().catch((e: unknown) => e);
+
+    expect(fallo).toMatchObject({ paso: 'token', detalle: 'Registration failed - push service error' });
+    expect(api.llamadas).toEqual([]);
+    expect(estadoPush()).toBe('apagado');
+  });
+
+  it('si Google no contesta, también acaba', async () => {
+    vi.useFakeTimers();
+    firebase.getToken.mockReturnValueOnce(new Promise<string>(() => undefined));
+    simularApi({});
+
+    const fallo = encenderPush().catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(ESPERA_MAXIMA_MS);
+
+    expect(await fallo).toMatchObject({ paso: 'token' });
+  });
+
+  it('si el navegador no admite el push de Firebase, el fallo es del SDK', async () => {
+    firebase.isSupported.mockResolvedValueOnce(false);
+    simularApi({});
+
+    await expect(encenderPush()).rejects.toMatchObject({ paso: 'sdk' });
+    expect(firebase.getToken).not.toHaveBeenCalled();
   });
 
   it('apagar da de baja ese token en el servidor y lo borra en Google', async () => {
