@@ -7,6 +7,8 @@ import com.nxtime.nxtime.repository.PushDeviceRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.PushDeviceService;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class PushDeviceServiceImpl implements PushDeviceService {
 
     private static final Logger log = LoggerFactory.getLogger(PushDeviceServiceImpl.class);
+
+    /**
+     * Los dispositivos que se guardan por persona (revisión de seguridad del
+     * 1/10/2026). Cada navegador en que se encienden las notificaciones es uno,
+     * y sin tope una cuenta podía registrar tokens sin fin: cada aviso suyo
+     * saldría hacia todos. Se quedan los más recientes; el más viejo, que es
+     * casi seguro un navegador que ya no se usa, deja de recibir.
+     */
+    static final int DISPOSITIVOS_POR_PERSONA = 10;
 
     private final PushDeviceRepository deviceRepository;
     private final UserRepository userRepository;
@@ -46,6 +57,17 @@ public class PushDeviceServiceImpl implements PushDeviceService {
                         .plataforma(plataforma)
                         .token(limpio)
                         .build()));
+        deviceRepository.flush();
+        List<PushDevice> suyos = deviceRepository.findByUsuario_IdOrderByRegistradoEnDesc(actor.getId());
+        if (suyos.size() > DISPOSITIVOS_POR_PERSONA) {
+            List<PushDevice> sobran = suyos.stream()
+                    .sorted(Comparator.comparing(PushDevice::getVistoEn).reversed())
+                    .skip(DISPOSITIVOS_POR_PERSONA)
+                    .toList();
+            deviceRepository.deleteAll(sobran);
+            log.info("Usuario {}: {} dispositivos de push viejos dados de baja (tope {}).",
+                    actor.getId(), sobran.size(), DISPOSITIVOS_POR_PERSONA);
+        }
     }
 
     @Override
