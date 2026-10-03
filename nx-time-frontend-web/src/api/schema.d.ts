@@ -970,27 +970,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/denuncias/seguimiento/{codigo}/mensajes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Responder en una denuncia con su código (OBSOLETA: el código en la URL)
-         * @deprecated
-         * @description Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.
-         */
-        post: operations["responder"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/denuncias/seguimiento/mensajes": {
         parameters: {
             query?: never;
@@ -2180,27 +2159,6 @@ export interface paths {
          * @description Solo ADMIN.
          */
         get: operations["detalle_2"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/denuncias/seguimiento/{codigo}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Seguir una denuncia con su código (OBSOLETA: el código en la URL)
-         * @deprecated
-         * @description Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.
-         */
-        get: operations["seguimiento"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7082,50 +7040,6 @@ export interface operations {
             };
         };
     };
-    responder: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                codigo: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ComplaintMessageRequest"];
-            };
-        };
-        responses: {
-            /** @description Expediente con el mensaje añadido */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ComplaintResponse"];
-                };
-            };
-            /** @description No hay ninguna denuncia con ese código */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description El expediente está cerrado */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ProblemDetail"];
-                };
-            };
-        };
-    };
     responderConCodigo: {
         parameters: {
             query?: never;
@@ -10204,37 +10118,6 @@ export interface operations {
                 };
             };
             /** @description No existe, o es de otra empresa */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ProblemDetail"];
-                };
-            };
-        };
-    };
-    seguimiento: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                codigo: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description El expediente y su conversación */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ComplaintResponse"];
-                };
-            };
-            /** @description No hay ninguna denuncia con ese código */
             404: {
                 headers: {
                     [name: string]: unknown;

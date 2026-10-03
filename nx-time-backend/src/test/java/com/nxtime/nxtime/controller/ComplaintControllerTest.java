@@ -152,30 +152,6 @@ class ComplaintControllerTest {
 
     @Test
     @WithMockSecurityUser(rol = Role.EMPLEADO)
-    @DisplayName("GET /denuncias/seguimiento/{codigo}: basta el código, no se mira quién eres")
-    void seguimiento_conCodigo_devuelve200() throws Exception {
-        when(complaintService.seguimiento(eq("el-codigo"), any())).thenReturn(expediente());
-
-        mockMvc.perform(get("/api/v1/denuncias/seguimiento/el-codigo"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.anonima").value(true))
-                .andExpect(jsonPath("$.denunciante").isEmpty())
-                .andExpect(jsonPath("$.estado").value("EN_INVESTIGACION"));
-    }
-
-    @Test
-    @WithMockSecurityUser(rol = Role.EMPLEADO)
-    @DisplayName("POST /denuncias/seguimiento/{codigo}/mensajes con texto vacío devuelve 400")
-    void responder_sinTexto_devuelve400() throws Exception {
-        mockMvc.perform(post("/api/v1/denuncias/seguimiento/el-codigo/mensajes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"texto\":\"\"}"))
-                .andExpect(status().isBadRequest());
-        verify(complaintService, never()).responder(any(), any(), any());
-    }
-
-    @Test
-    @WithMockSecurityUser(rol = Role.EMPLEADO)
     @DisplayName("POST /denuncias/seguimiento: el código va en el cuerpo y no en la URL (ADR 034)")
     void seguimiento_conElCodigoEnElCuerpo_devuelve200() throws Exception {
         when(complaintService.seguimiento(eq("el-codigo"), any())).thenReturn(expediente());
@@ -254,7 +230,7 @@ class ComplaintControllerTest {
     @WithMockSecurityUser(rol = Role.EMPLEADO)
     @DisplayName("GET /denuncias/{id} como EMPLEADO devuelve 403 aunque sea suya")
     void detalle_comoEmpleado_devuelve403() throws Exception {
-        // A lo suyo se llega por /seguimiento/{codigo}, no por id: si el
+        // A lo suyo se llega por /seguimiento con el código, no por id: si el
         // id valiera, un empleado podría probar números ajenos.
         mockMvc.perform(get("/api/v1/denuncias/100")).andExpect(status().isForbidden());
         verify(complaintService, never()).detalle(anyLong(), any());

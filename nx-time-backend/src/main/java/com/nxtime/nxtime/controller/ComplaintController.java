@@ -41,7 +41,8 @@ import org.springframework.web.bind.annotation.RestController;
  * es el que manda:
  *
  * <ul>
- *   <li>{@code /seguimiento/{codigo}} — la puerta del denunciante. Pide
+ *   <li>{@code /seguimiento} — la puerta del denunciante, con el código en
+ *       el cuerpo y nunca en la URL (ADR 034). Pide
  *       estar autenticado (el canal es interno) pero <b>no comprueba
  *       quién eres</b>: el código es la credencial, y comprobar la
  *       identidad sería negar el anonimato.</li>
@@ -135,51 +136,6 @@ public class ComplaintController {
         }
         return ResponseEntity.ok(complaintService.responder(
                 request.codigo(), new ComplaintMessageRequest(request.texto()), usuario.getUser()));
-    }
-
-    /*
-     * Las dos de abajo son las de antes, con el código en la URL. Se quedan un
-     * tiempo para las apps Android anteriores a la 1.10, y se quitan cuando ya
-     * no las use nadie (ADR 034).
-     */
-
-    @Deprecated
-    @Operation(summary = "Seguir una denuncia con su código (OBSOLETA: el código en la URL)",
-            deprecated = true,
-            description = "Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "El expediente y su conversación",
-                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
-            @ApiResponse(responseCode = "404", description = "No hay ninguna denuncia con ese código",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    })
-    @GetMapping("/seguimiento/{codigo}")
-    @PreAuthorize("hasAuthority('denuncia:crear')")
-    public ResponseEntity<ComplaintResponse> seguimiento(
-            @PathVariable String codigo,
-            @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(complaintService.seguimiento(codigo, usuario.getUser()));
-    }
-
-    @Deprecated
-    @Operation(summary = "Responder en una denuncia con su código (OBSOLETA: el código en la URL)",
-            deprecated = true,
-            description = "Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Expediente con el mensaje añadido",
-                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
-            @ApiResponse(responseCode = "404", description = "No hay ninguna denuncia con ese código",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "El expediente está cerrado",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
-    })
-    @PostMapping("/seguimiento/{codigo}/mensajes")
-    @PreAuthorize("hasAuthority('denuncia:crear')")
-    public ResponseEntity<ComplaintResponse> responder(
-            @PathVariable String codigo,
-            @Valid @RequestBody ComplaintMessageRequest request,
-            @AuthenticationPrincipal SecurityUser usuario) {
-        return ResponseEntity.ok(complaintService.responder(codigo, request, usuario.getUser()));
     }
 
     @Operation(summary = "Las denuncias que he presentado identificándome",

@@ -3309,68 +3309,6 @@
         } ]
       }
     },
-    "/api/v1/denuncias/seguimiento/{codigo}/mensajes" : {
-      "post" : {
-        "tags" : [ "Canal de denuncias" ],
-        "summary" : "Responder en una denuncia con su código (OBSOLETA: el código en la URL)",
-        "description" : "Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.",
-        "operationId" : "responder",
-        "parameters" : [ {
-          "name" : "codigo",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/ComplaintMessageRequest"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "description" : "Expediente con el mensaje añadido",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ComplaintResponse"
-                }
-              }
-            }
-          },
-          "404" : {
-            "description" : "No hay ninguna denuncia con ese código",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409" : {
-            "description" : "El expediente está cerrado",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "deprecated" : true,
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
     "/api/v1/denuncias/seguimiento/mensajes" : {
       "post" : {
         "tags" : [ "Canal de denuncias" ],
@@ -7369,48 +7307,6 @@
             }
           }
         },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
-    "/api/v1/denuncias/seguimiento/{codigo}" : {
-      "get" : {
-        "tags" : [ "Canal de denuncias" ],
-        "summary" : "Seguir una denuncia con su código (OBSOLETA: el código en la URL)",
-        "description" : "Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.",
-        "operationId" : "seguimiento",
-        "parameters" : [ {
-          "name" : "codigo",
-          "in" : "path",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "El expediente y su conversación",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ComplaintResponse"
-                }
-              }
-            }
-          },
-          "404" : {
-            "description" : "No hay ninguna denuncia con ese código",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "deprecated" : true,
         "security" : [ {
           "bearerAuth" : [ ]
         } ]

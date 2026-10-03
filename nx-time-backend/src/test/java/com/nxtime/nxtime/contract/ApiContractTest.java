@@ -2508,9 +2508,9 @@ class ApiContractTest {
     @Order(121)
     void elCodigoAbreElExpedienteYNoDiceQuienLaPuso() throws Exception {
         ResponseEntity<String> response = rest.exchange(
-                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima),
-                HttpMethod.GET,
-                new HttpEntity<>(authHeaders(empleadoToken)),
+                url("/api/v1/denuncias/seguimiento"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("codigo", codigoDenunciaAnonima)), authHeaders(empleadoToken)),
                 String.class
         );
 
@@ -2600,15 +2600,15 @@ class ApiContractTest {
         // Un 403 aqui confirmaria que el codigo es valido en algun sitio,
         // que es la mitad de lo que necesita quien va probando.
         ResponseEntity<String> ajena = rest.exchange(
-                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima),
-                HttpMethod.GET,
-                new HttpEntity<>(authHeaders(gestorOtraEmpresaToken)),
+                url("/api/v1/denuncias/seguimiento"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("codigo", codigoDenunciaAnonima)), authHeaders(gestorOtraEmpresaToken)),
                 String.class
         );
         ResponseEntity<String> inventado = rest.exchange(
-                url("/api/v1/denuncias/seguimiento/no-existe-este-codigo"),
-                HttpMethod.GET,
-                new HttpEntity<>(authHeaders(empleadoToken)),
+                url("/api/v1/denuncias/seguimiento"),
+                HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("codigo", "no-existe-este-codigo")), authHeaders(empleadoToken)),
                 String.class
         );
 
@@ -2669,9 +2669,9 @@ class ApiContractTest {
         assertThat(bodyOf(cierre).get("diasHastaRespuesta").isNull()).isTrue();
 
         ResponseEntity<String> mensajeTardio = rest.exchange(
-                url("/api/v1/denuncias/seguimiento/" + codigoDenunciaAnonima + "/mensajes"),
+                url("/api/v1/denuncias/seguimiento/mensajes"),
                 HttpMethod.POST,
-                new HttpEntity<>(toJson(mapOf("texto", "Una cosa mas.")),
+                new HttpEntity<>(toJson(mapOf("codigo", codigoDenunciaAnonima, "texto", "Una cosa mas.")),
                         authHeaders(empleadoToken)),
                 String.class
         );

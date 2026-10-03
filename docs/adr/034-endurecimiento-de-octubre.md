@@ -107,8 +107,9 @@ confirmar: es más estricto y más fácil de explicar.
   base, del servidor de correo) en las migas, el mensaje o las excepciones.
 - El código de seguimiento de una denuncia va en el **cuerpo**, no en la URL:
   es la credencial de una denuncia anónima, y una URL acaba en los logs de
-  acceso, el historial del navegador y Sentry. Las rutas viejas quedan,
-  obsoletas, para las apps de antes de la 1.10.
+  acceso, el historial del navegador y Sentry. Las rutas viejas, con el
+  código en la URL, se quitaron el 4/10/2026, cuando ya nadie usaba apps
+  anteriores a la 1.10.
 
 ### Rendimiento y la cuota de Neon
 
