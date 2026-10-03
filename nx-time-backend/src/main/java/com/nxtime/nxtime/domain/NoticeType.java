@@ -143,7 +143,14 @@ public enum NoticeType {
     // se puede firmar; la invalidación, al mes que vuelve a pedir firma.
     RECORDATORIO_FIRMA("firmas"),
 
-    FIRMA_INVALIDADA("firmas");
+    FIRMA_INVALIDADA("firmas"),
+
+    // 10/2026 (ADR 034): un PIN de kiosco anulado tras tres bloqueos. A su
+    // dueño, al perfil, donde se elige otro; a quien gestiona los kioscos, a
+    // los ajustes de la empresa, porque alguien ha estado probando PIN.
+    PIN_KIOSCO_ANULADO("perfil"),
+
+    PIN_KIOSCO_ANULADO_EQUIPO("ajustes-empresa");
 
     private final String rutaDestinoPorDefecto;
 

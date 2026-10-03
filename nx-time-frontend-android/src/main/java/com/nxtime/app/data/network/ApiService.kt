@@ -32,9 +32,16 @@ interface ApiService {
         @Body peticion: PeticionLogin
     ): Response<RespuestaAutenticacion>
 
+    // Desde la V37 (ADR 034) el registro no abre sesión: 202 y un código al
+    // correo, que se canjea en auth/registro/confirmar.
     @POST("auth/register-manager")
     suspend fun registrarEmpresaGestor(
         @Body peticion: RegistroGestorRequest
+    ): Response<RegistroPendienteDTO>
+
+    @POST("auth/registro/confirmar")
+    suspend fun confirmarRegistro(
+        @Body peticion: ConfirmarRegistroRequest
     ): Response<RespuestaAutenticacion>
 
     @POST("auth/refresh")

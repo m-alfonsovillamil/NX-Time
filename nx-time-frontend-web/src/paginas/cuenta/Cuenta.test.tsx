@@ -11,6 +11,7 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion, haySesion } from '../../api/sesion';
 import { Notificaciones } from '../../componentes/Notificaciones';
 import { cuenta } from '../../i18n/es/cuenta';
+import { encenderPush, FalloDePush } from '../../push/push';
 import { json, pintar, sesionDe, simularApi, sinContenido, type Manejador, type Ruta } from '../../pruebas/api';
 import { Ajustes } from './Ajustes';
 import { Avisos } from './Avisos';
@@ -218,6 +219,30 @@ describe('ajustes', () => {
 
     expect(await screen.findByText(N.encendidas)).toBeTruthy();
     expect(screen.getByRole('button', { name: N.apagar })).toBeTruthy();
+  });
+
+  it('las notificaciones: el botón dice por qué paso va, y si uno falla, cuál y por qué', async () => {
+    const N = cuenta.ajustes.notificaciones;
+    api();
+    push.estado = 'apagado';
+    let fallar: (e: unknown) => void = () => undefined;
+    vi.mocked(encenderPush).mockImplementationOnce(async (alAvanzar) => {
+      alAvanzar?.('token');
+      await new Promise((_, rechazar) => {
+        fallar = rechazar;
+      });
+    });
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(screen.getByRole('button', { name: N.encender }));
+    expect(await screen.findByRole('button', { name: N.pasos.token })).toBeTruthy();
+
+    fallar(new FalloDePush('token', 'Registration failed - push service error'));
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso.textContent).toContain(N.fallos.token);
+    expect(aviso.textContent).toContain(N.detalleTecnico('Registration failed - push service error'));
+    expect(screen.getByRole('button', { name: N.reintentar })).toBeTruthy();
   });
 
   it('el tema se aplica en el acto y se recuerda', async () => {

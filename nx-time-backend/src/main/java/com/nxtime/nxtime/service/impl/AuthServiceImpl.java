@@ -7,10 +7,12 @@ import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.ChangePasswordRequest;
+import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
@@ -24,6 +26,7 @@ import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -60,6 +63,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+
+    /**
+     * Lo que responde el login (403) a quien registró una empresa y no ha
+     * confirmado su correo. Los clientes lo reconocen por el 403, que el login
+     * no da por nada más, y pasan a la pantalla del código.
+     */
+    static final String CORREO_SIN_CONFIRMAR =
+            "Falta confirmar tu correo. Te hemos mandado un código: escríbelo para entrar.";
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -100,33 +111,92 @@ public class AuthServiceImpl implements AuthService {
     // normal: los dos save() (Company y User) son atómicos de verdad.
     @Override
     @Transactional
-    public AuthenticationResponse registerManager(RegisterManagerRequest request) {
-        if (companyRepository.findByNombre(request.nombreEmpresa()).isPresent()) {
-            throw new BusinessException("La empresa ya existe. Solicita acceso al administrador.");
+    public RegistrationPendingResponse registerManager(RegisterManagerRequest request) {
+        // El hash de la contraseña, se use o no: así el registro cuesta lo
+        // mismo con un correo que ya tiene cuenta que con uno nuevo, y el
+        // tiempo de respuesta no dice cuál es cuál.
+        String contrasena = passwordEncoder.encode(request.contrasena());
+        Optional<User> existente = userRepository.findByEmail(request.email());
+
+        if (existente.isPresent() && !existente.get().correoPendienteDeConfirmar()) {
+            // Ese correo ya es de alguien. Ni se dice (enumeraría cuentas) ni
+            // se le manda nada: la respuesta es la de siempre y aquí acaba.
+            passwordEncoder.encode(contrasena); // el BCrypt del código que no se emite
+            log.info("Registro con un correo que ya tiene cuenta (usuario {}): no se crea nada.",
+                    existente.get().getId());
+            return pendienteDeConfirmar(request.email());
         }
 
-        Company company = companyRepository.save(Company.builder().nombre(request.nombreEmpresa()).build());
+        User usuario;
+        if (existente.isPresent()) {
+            // Un registro que se quedó a medias con este correo (el código no
+            // llegó, caducó, o alguien probó con un correo que no es suyo): se
+            // rehace con los datos nuevos y sale otro código. Quien no tenga
+            // el buzón sigue sin poder entrar.
+            usuario = existente.get();
+            Company suya = usuario.getEmpresa();
+            if (!suya.getNombre().equals(request.nombreEmpresa())) {
+                exigirNombreLibre(request.nombreEmpresa());
+                suya.setNombre(request.nombreEmpresa());
+                companyRepository.save(suya);
+            }
+            usuario.setNombre(request.nombre());
+            usuario.setApellidos(request.apellidos());
+            usuario.setContrasena(contrasena);
+            usuario.setCorreoSinConfirmarDesde(Instant.now());
+            usuario = userRepository.save(usuario);
+        } else {
+            exigirNombreLibre(request.nombreEmpresa());
+            Company company = companyRepository.save(Company.builder().nombre(request.nombreEmpresa()).build());
+            usuario = userRepository.save(User.builder()
+                    .nombre(request.nombre())
+                    .apellidos(request.apellidos())
+                    .email(request.email())
+                    .contrasena(contrasena)
+                    .rol(Role.ADMIN)
+                    .empresa(company)
+                    .correoSinConfirmarDesde(Instant.now())
+                    .build());
+        }
 
-        User user = User.builder()
-                .nombre(request.nombre())
-                .apellidos(request.apellidos())
-                .email(request.email())
-                .contrasena(passwordEncoder.encode(request.contrasena()))
-                .rol(Role.ADMIN)
-                .empresa(company)
-                .build();
+        accessCodeService.emitirCodigoDeConfirmacion(usuario);
+        log.info("Empresa '{}' registrada; su ADMIN (usuario {}) tiene que confirmar el correo.",
+                usuario.getEmpresa().getNombre(), usuario.getId());
+        return pendienteDeConfirmar(request.email());
+    }
 
-        User savedUser = userRepository.save(user);
-        log.info("Nueva empresa registrada: '{}' con administrador {}", company.getNombre(), savedUser.getId());
-        return buildAuthResponse(savedUser, origenDe(request.origen()));
+    private void exigirNombreLibre(String nombreEmpresa) {
+        if (companyRepository.findByNombre(nombreEmpresa).isPresent()) {
+            throw new BusinessException("La empresa ya existe. Solicita acceso al administrador.");
+        }
+    }
+
+    private static RegistrationPendingResponse pendienteDeConfirmar(String email) {
+        return new RegistrationPendingResponse(email,
+                "Te hemos mandado un código a " + email + ". Escríbelo para entrar. Si no llega en unos minutos, "
+                        + "mira en la carpeta de spam.");
+    }
+
+    /*
+     * noRollbackFor, como AccessCodeServiceImpl#confirmar: un código
+     * incorrecto suma un intento y lanza, y la suma tiene que quedarse.
+     */
+    @Override
+    @Transactional(noRollbackFor = BusinessException.class)
+    public AuthenticationResponse confirmarRegistro(ConfirmRegistrationRequest request) {
+        User usuario = accessCodeService.confirmarCorreo(request.email(), request.codigo());
+        return buildAuthResponse(usuario, origenDe(request.origen()));
     }
 
     // @Transactional de escritura: desde la Fase 4, login() también
     // persiste un RefreshToken (ver buildAuthResponse). Sin esto, la
     // transacción de solo lectura heredada de la clase rechaza el
     // INSERT con "cannot execute INSERT in a read-only transaction".
+    // noRollbackFor: a quien entra con la contraseña buena pero sin haber
+    // confirmado el correo se le manda otro código Y se le responde 403; el
+    // código tiene que guardarse aunque se lance.
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public AuthenticationResponse login(LoginRequest request) {
         // Además del límite por IP (LoginRateLimitFilter), un límite por
         // CUENTA: la IP sale de una cabecera y depende de los proxies que
@@ -134,11 +204,25 @@ public class AuthServiceImpl implements AuthService {
         // frena probar contraseñas de alguien desde muchos sitios a la vez.
         limitadorPorCuenta.comprobar(request.email());
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            // Cada fallo alarga la espera hasta el siguiente intento (ADR 034).
+            limitadorPorCuenta.fallo(request.email());
+            throw e;
+        }
+        limitadorPorCuenta.acierto(request.email());
 
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + request.email()));
+
+        // Después de comprobar la contraseña, no antes: así el 403 solo lo ve
+        // quien la sabe, y no dice a nadie más qué cuentas están a medias.
+        if (user.correoPendienteDeConfirmar()) {
+            accessCodeService.emitirCodigoDeConfirmacion(user);
+            throw new BusinessException(CORREO_SIN_CONFIRMAR, HttpStatus.FORBIDDEN);
+        }
 
         log.info("Login correcto: {}", user.getId());
         return buildAuthResponse(user, origenDe(request.origen()));
@@ -217,7 +301,7 @@ public class AuthServiceImpl implements AuthService {
         stored.setSustituidoPor(sucesor.fila());
         refreshTokenRepository.save(stored);
 
-        String newAccessToken = jwtService.generateToken(new SecurityUser(user));
+        String newAccessToken = jwtService.generateToken(new SecurityUser(user), stored.getFamilia());
         log.info("Access token renovado para {}", user.getId());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
                 RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
@@ -295,7 +379,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void changePassword(ChangePasswordRequest request, User user) {
+    public void changePassword(ChangePasswordRequest request, User user, Optional<UUID> sesionActual) {
         if (!passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())) {
             log.warn("Intento de cambio de contraseña con contraseña antigua incorrecta: {}", user.getId());
             throw new BusinessException("La contraseña antigua no es correcta.", HttpStatus.BAD_REQUEST);
@@ -303,7 +387,17 @@ public class AuthServiceImpl implements AuthService {
 
         user.setContrasena(passwordEncoder.encode(request.contrasenaNueva()));
         userRepository.save(user);
-        log.info("Contraseña cambiada: {}", user.getId());
+
+        // Las demás sesiones se cierran, como al elegir contraseña con un
+        // código (revisión de seguridad del 1/10/2026, ADR 034): quien cambia
+        // la contraseña porque sospecha que se la han robado tiene que poder
+        // echar al que entró con ella. La suya sigue abierta. Un access token
+        // de antes del ADR 034 no dice su sesión: entonces se cierran todas.
+        Instant ahora = Instant.now();
+        int cerradas = sesionActual
+                .map(familia -> refreshTokenRepository.revocarTodasLasDeMenos(user, familia, ahora))
+                .orElseGet(() -> refreshTokenRepository.revocarTodasLasDe(user, ahora));
+        log.info("Contraseña cambiada: {} ({} sesiones cerradas)", user.getId(), cerradas);
     }
 
     @Override
@@ -351,10 +445,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private AuthenticationResponse buildAuthResponse(User user, RefreshToken.Origen origen) {
-        String accessToken = jwtService.generateToken(new SecurityUser(user));
         // Familia nueva en cada login: así cerrar una sesión comprometida no
-        // arrastra a las demás de esa persona.
-        TokenEmitido refreshToken = issueRefreshToken(user, origen, UUID.randomUUID());
+        // arrastra a las demás de esa persona. El access token la lleva
+        // (claim sid, ADR 034) para saber, al cambiar la contraseña, cuál es
+        // la sesión que NO hay que cerrar.
+        UUID familia = UUID.randomUUID();
+        String accessToken = jwtService.generateToken(new SecurityUser(user), familia);
+        TokenEmitido refreshToken = issueRefreshToken(user, origen, familia);
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
                 RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
     }

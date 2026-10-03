@@ -6,11 +6,21 @@ import com.nxtime.nxtime.dto.ChangePasswordRequest;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
+import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 
 public interface AuthService {
 
-    AuthenticationResponse registerManager(RegisterManagerRequest request);
+    /**
+     * Registra la empresa y deja a su ADMIN pendiente de confirmar el correo
+     * (V37, ADR 034): no abre sesión. Responde lo mismo aunque el correo ya
+     * tenga cuenta.
+     */
+    RegistrationPendingResponse registerManager(RegisterManagerRequest request);
+
+    /** Canjea el código del registro y abre la sesión, como el login. */
+    AuthenticationResponse confirmarRegistro(ConfirmRegistrationRequest request);
 
     AuthenticationResponse login(LoginRequest request);
 
@@ -36,7 +46,11 @@ public interface AuthService {
 
     void createManager(CreateManagerRequest request, User admin);
 
-    void changePassword(ChangePasswordRequest request, User user);
+    /**
+     * Cambia la contraseña y cierra las demás sesiones; la de {@code sesionActual}
+     * sigue abierta. Sin ella (un token de antes del ADR 034), se cierran todas.
+     */
+    void changePassword(ChangePasswordRequest request, User user, java.util.Optional<java.util.UUID> sesionActual);
 
     /** Da de alta o de baja a un empleado de la misma empresa que quien gestiona. */
     void setEmployeeActive(long employeeId, boolean activo, User actingManager);

@@ -21,6 +21,9 @@ data class RegistroEmpresaUiState(
     val contrasena: String = "",
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
+    /** El correo al que ha salido el código del registro (ADR 034): con él, se pide el código. */
+    val pendienteDe: String? = null,
+    val codigo: String = "",
     val registrado: Boolean = false
 )
 
@@ -36,6 +39,7 @@ class RegistroEmpresaViewModel(
     fun onApellidosCambia(v: String) = _uiState.update { it.copy(apellidos = v, error = null) }
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
     fun onContrasenaCambia(v: String) = _uiState.update { it.copy(contrasena = v, error = null) }
+    fun onCodigoCambia(v: String) = _uiState.update { it.copy(codigo = v, error = null) }
 
     fun registrar() {
         val e = _uiState.value
@@ -64,10 +68,11 @@ class RegistroEmpresaViewModel(
                         contrasena = e.contrasena
                     )
                 )
-                val cuerpo = respuesta.body()
-                if (respuesta.isSuccessful && cuerpo != null) {
-                    authRepository.procesarLoginExitoso(cuerpo)
-                    _uiState.update { it.copy(cargando = false, registrado = true) }
+                if (respuesta.isSuccessful) {
+                    // Desde la V37 no hay sesión todavía: se pide el código
+                    // que acaba de salir hacia ese correo.
+                    val correo = respuesta.body()?.email ?: e.email.trim()
+                    _uiState.update { it.copy(cargando = false, pendienteDe = correo) }
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
@@ -77,6 +82,31 @@ class RegistroEmpresaViewModel(
                 _uiState.update {
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(ex))
                 }
+            }
+        }
+    }
+
+    /** Canjea el código del correo; si vale, la sesión queda abierta como tras el login. */
+    fun confirmar() {
+        val e = _uiState.value
+        val correo = e.pendienteDe ?: return
+        val codigo = codigoLimpio(e.codigo) ?: run {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.recuperar_codigo_incompleto)) }
+            return
+        }
+        _uiState.update { it.copy(cargando = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.confirmarRegistro(correo, codigo)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    authRepository.procesarLoginExitoso(cuerpo)
+                    _uiState.update { it.copy(cargando = false, registrado = true) }
+                } else {
+                    _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (ex: Exception) {
+                _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(ex)) }
             }
         }
     }

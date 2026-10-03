@@ -10,6 +10,22 @@ export const navegacion = {
     gestion: 'Gestión',
   },
 
+  /**
+   * Los apartados plegables del menú. Distintos de los nombres de las
+   * secciones a propósito: «Ausencias» como apartado y como sección a la vez
+   * sería un botón y un enlace que se llaman igual.
+   */
+  subgrupos: {
+    jornada: 'Jornada y fichajes',
+    ausencias: 'Mis ausencias',
+    'en-la-empresa': 'En la empresa',
+    cuenta: 'Mi cuenta',
+    equipo: 'Mi equipo',
+    organizacion: 'Organización',
+    control: 'Informes y control',
+    administracion: 'Administración',
+  },
+
   /** Una por sección del catálogo (`navegacion/secciones.tsx`), también las que aún no tienen página. */
   secciones: {
     fichar: 'Mi jornada',

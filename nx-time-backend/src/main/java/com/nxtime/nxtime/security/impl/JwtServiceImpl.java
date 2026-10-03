@@ -26,6 +26,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtServiceImpl implements JwtService {
 
+    /** La familia del refresh con el que se emitió: la sesión (ADR 034). */
+    static final String CLAIM_SESION = "sid";
+
     @Value("${application.security.jwt.secret-key}")
     private String secretKey;
 
@@ -40,6 +43,23 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
+    }
+
+    @Override
+    public String generateToken(UserDetails userDetails, java.util.UUID sesion) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(CLAIM_SESION, sesion.toString());
+        return generateToken(claims, userDetails);
+    }
+
+    @Override
+    public java.util.Optional<java.util.UUID> extractSesion(String token) {
+        try {
+            String sesion = extractClaim(token, claims -> claims.get(CLAIM_SESION, String.class));
+            return java.util.Optional.ofNullable(sesion).map(java.util.UUID::fromString);
+        } catch (RuntimeException e) {
+            return java.util.Optional.empty();
+        }
     }
 
     @Override

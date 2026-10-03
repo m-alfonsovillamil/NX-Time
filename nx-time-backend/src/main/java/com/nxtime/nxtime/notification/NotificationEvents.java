@@ -376,7 +376,13 @@ public final class NotificationEvents {
      * Lleva los datos copiados y no el {@link User} porque el listener corre
      * {@code @Async}, con la sesión de JPA ya cerrada.
      */
-    public record AccessCodeRequested(String email, java.util.Map<String, Object> variables) {
+    public record AccessCodeRequested(String email, java.util.Map<String, Object> variables,
+            String plantilla, String asunto) {
+
+        /** El de "He olvidado mi contraseña", que fue el primero. */
+        public AccessCodeRequested(String email, java.util.Map<String, Object> variables) {
+            this(email, variables, "access-code-recovery", "Tu código para entrar en NX Time");
+        }
     }
 
     /**
@@ -388,5 +394,14 @@ public final class NotificationEvents {
      * nada más que necesite.
      */
     public record NoticePublished(long destinatarioId, NoticeType tipo, String rutaDestino) {
+    }
+
+    /**
+     * El PIN de kiosco de alguien se ha anulado tras tres bloqueos (V38, ADR
+     * 034). Lleva los datos copiados y no las entidades: el listener corre
+     * {@code @Async}, con la sesión de JPA ya cerrada.
+     */
+    public record KioskPinAnnulled(long empresaId, long personaId, String nombrePersona, String nombreKiosco,
+            java.util.List<Long> gestoresIds) {
     }
 }

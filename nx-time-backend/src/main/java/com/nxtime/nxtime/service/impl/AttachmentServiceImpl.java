@@ -84,6 +84,13 @@ public class AttachmentServiceImpl implements AttachmentService {
             // cortesía, aquí es una garantía (ver ADR 007).
             try {
                 aGuardar = AvatarScaler.aAvatar(original);
+            } catch (AvatarScaler.ImagenDemasiadoGrande e) {
+                // Pesa menos de 5 MB pero dice medir más de 40 MP: o es una
+                // trampa para agotar la memoria, o no es una foto de nadie.
+                log.warn("{} ha intentado subir una foto demasiado grande: {}", actor.getId(), e.getMessage());
+                throw new BusinessException(
+                        "La imagen es demasiado grande (más de 40 megapíxeles). Prueba con otra.",
+                        HttpStatus.BAD_REQUEST);
             } catch (IOException e) {
                 // Cabecera válida pero cuerpo ilegible: el fichero
                 // empieza como un PNG y no lo es.
