@@ -81,12 +81,19 @@ public class ProfileKioskController {
         return ResponseEntity.ok(service.regenerarTarjeta(usuario.getUser()));
     }
 
+    /*
+     * Revisión de seguridad del 1/10/2026 (ADR 034): con una tarjeta se ficha
+     * por su dueño, así que sacar las de toda la plantilla es de quien
+     * gestiona los kioscos (ADMIN), no de cualquiera con empleado:gestionar.
+     * Y es un POST porque crea las que faltan: un GET que escribe en la base
+     * lo repite cualquier precarga o caché sin que nadie lo pida.
+     */
     @Operation(summary = "Las tarjetas de la plantilla, para imprimirlas",
-            description = "De toda la gente de alta. A quien no tenía, se le crea.")
+            description = "De toda la gente de alta. A quien no tenía, se le crea. Queda registrado quién las saca.")
     @ApiResponse(responseCode = "200", description = "Tarjetas",
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = KioskCard.class))))
-    @GetMapping("/api/v1/gestor/kiosco/tarjetas")
-    @PreAuthorize("hasAuthority('empleado:gestionar')")
+    @PostMapping("/api/v1/empresa/kioscos/tarjetas")
+    @PreAuthorize("hasAuthority('empresa:configurar')")
     public ResponseEntity<List<KioskCard>> tarjetasDeLaEmpresa(@AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(service.tarjetasDeLaEmpresa(usuario.getUser()));
     }
