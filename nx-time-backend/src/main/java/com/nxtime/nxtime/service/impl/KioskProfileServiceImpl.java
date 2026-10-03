@@ -10,6 +10,8 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.KioskProfileService;
 import java.util.Comparator;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class KioskProfileServiceImpl implements KioskProfileService {
+
+    private static final Logger log = LoggerFactory.getLogger(KioskProfileServiceImpl.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -54,6 +58,8 @@ public class KioskProfileServiceImpl implements KioskProfileService {
         // Un PIN nuevo empieza sin fallos: quien se bloqueó y lo cambia ya sabe cuál es.
         persona.setKioscoPinFallos(0);
         persona.setKioscoPinBloqueadoHasta(null);
+        // Un PIN nuevo empieza sin bloqueos: los de antes eran contra el otro (V38).
+        persona.setKioscoPinBloqueos(0);
         return estadoDe(userRepository.save(persona));
     }
 
@@ -64,6 +70,7 @@ public class KioskProfileServiceImpl implements KioskProfileService {
         persona.setKioscoPinHash(null);
         persona.setKioscoPinFallos(0);
         persona.setKioscoPinBloqueadoHasta(null);
+        persona.setKioscoPinBloqueos(0);
         return estadoDe(userRepository.save(persona));
     }
 
@@ -90,7 +97,11 @@ public class KioskProfileServiceImpl implements KioskProfileService {
     @Override
     @Transactional
     public List<KioskCard> tarjetasDeLaEmpresa(User actor) {
-        return userRepository.findByEmpresaAndActivoTrue(actor.getEmpresa()).stream()
+        List<User> plantilla = userRepository.findByEmpresaAndActivoTrue(actor.getEmpresa());
+        // Con estas tarjetas se ficha por cualquiera: que quede quién las sacó.
+        log.warn("El usuario {} ha sacado las tarjetas de kiosco de {} personas de la empresa {}.",
+                actor.getId(), plantilla.size(), actor.getEmpresa().getId());
+        return plantilla.stream()
                 .map(persona -> {
                     if (persona.getKioscoTarjetaVersion() == null) {
                         persona.setKioscoTarjetaVersion(1);

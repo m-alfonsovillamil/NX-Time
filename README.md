@@ -151,7 +151,7 @@ La API está desplegada y funcionando:
 | | |
 |---|---|
 | **API** | https://nxtime-backend.onrender.com |
-| **Swagger UI** | https://nxtime-backend.onrender.com/swagger-ui.html |
+| **Contrato de la API** | [`docs/openapi.json`](docs/openapi.json) (Swagger UI está apagado en producción; en local, abajo) |
 | **Salud** | https://nxtime-backend.onrender.com/actuator/health |
 
 Cuenta de demostración, con rol **ADMIN** sobre una empresa de prueba:
@@ -377,7 +377,8 @@ Algunas garantías viven **en la base de datos**, no solo en el código:
 
 ## API
 
-Documentación interactiva en **`/swagger-ui/index.html`**, con los códigos de
+Documentación interactiva en **`/swagger-ui/index.html`** al levantarla en local
+(en producción está apagada salvo con `SWAGGER_PUBLICO=true`), con los códigos de
 error documentados endpoint por endpoint. La especificación versionada está en
 [`docs/openapi.json`](docs/openapi.json) y se puede importar en Postman o
 Insomnia directamente.

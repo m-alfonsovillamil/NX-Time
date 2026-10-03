@@ -48,6 +48,20 @@ export const acceso = {
     yaTengoCuenta: 'Ya tengo cuenta: entrar',
   },
 
+  /** Confirmar el correo con el código, tras registrar la empresa (ADR 034). */
+  confirmarCorreo: {
+    titulo: 'Confirma tu correo',
+    explicacion: (email: string) =>
+      `Te hemos mandado un código de 6 cifras a ${email}. Escríbelo para entrar. Si no llega en unos minutos, mira en la carpeta de spam.`,
+    codigo: 'Código',
+    faltaCodigo: 'El código son 6 cifras.',
+    entrar: 'Confirmar y entrar',
+    entrando: 'Comprobando…',
+    otroCodigo:
+      '¿No te ha llegado? Entra con tu correo y tu contraseña y te mandaremos otro, o regístrate otra vez con los mismos datos.',
+    volver: 'Volver al inicio',
+  },
+
   contrasenas: {
     corta: 'La contraseña debe tener al menos 8 caracteres.',
     larga: 'La contraseña no puede pasar de 72 caracteres.',

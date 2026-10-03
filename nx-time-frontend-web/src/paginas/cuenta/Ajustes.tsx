@@ -12,7 +12,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { cliente, salir } from '../../api/cliente';
 import { pedir, pedirOpcional, useMutacion } from '../../api/consultas';
@@ -23,7 +23,15 @@ import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
 import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
-import { apagarPush, encenderPush, estadoPush, PermisoDenegado, type EstadoPush } from '../../push/push';
+import {
+  apagarPush,
+  encenderPush,
+  estadoPush,
+  FalloDePush,
+  PermisoDenegado,
+  type EstadoPush,
+  type PasoPush,
+} from '../../push/push';
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
 
 const J = cuenta.ajustes;
@@ -49,28 +57,53 @@ function Apariencia() {
   );
 }
 
+/** Lo que se dice si algo falla al encender: qué paso, y el detalle técnico si lo hay. */
+function falloDe(e: unknown): { texto: string; detalle: string | null } {
+  const N = J.notificaciones;
+  if (e instanceof PermisoDenegado) {
+    return { texto: e.respuesta === 'denied' ? N.sinPermiso : N.sinContestar, detalle: null };
+  }
+  if (e instanceof FalloDePush) return { texto: N.fallos[e.paso], detalle: e.detalle };
+  return { texto: N.error, detalle: e instanceof Error ? e.message : null };
+}
+
+/** Tras cuánto sin contestar al permiso se sugiere mirar la barra de direcciones. */
+const PISTA_DEL_PERMISO_MS = 6000;
+
 /**
  * Encender o apagar las notificaciones push en este navegador (W9, ADR 031).
  * El permiso se pide aquí, al pulsar, y no al abrir la web: pedido sin
  * contexto se deniega, y en Safari solo se puede pedir desde un clic.
+ *
+ * Mientras se encienden, el botón dice por qué paso va, y si uno falla, cuál:
+ * con solo un botón atenuado, un paso que no contestaba parecía «no hace nada».
  */
 function Notificaciones() {
   const N = J.notificaciones;
   const [estado, setEstado] = useState<EstadoPush>(estadoPush());
   const [ocupado, setOcupado] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [paso, setPaso] = useState<PasoPush | null>(null);
+  const [pistaDelPermiso, setPistaDelPermiso] = useState(false);
+  const [error, setError] = useState<{ texto: string; detalle: string | null } | null>(null);
+
+  useEffect(() => {
+    if (paso !== 'permiso') return setPistaDelPermiso(false);
+    const reloj = setTimeout(() => setPistaDelPermiso(true), PISTA_DEL_PERMISO_MS);
+    return () => clearTimeout(reloj);
+  }, [paso]);
 
   const cambiar = async (encender: boolean) => {
     setOcupado(true);
     setError(null);
     try {
-      if (encender) await encenderPush();
+      if (encender) await encenderPush(setPaso);
       else await apagarPush();
     } catch (e) {
-      setError(e instanceof PermisoDenegado ? N.sinPermiso : N.error);
+      setError(falloDe(e));
     } finally {
       setEstado(estadoPush());
       setOcupado(false);
+      setPaso(null);
     }
   };
 
@@ -86,18 +119,33 @@ function Notificaciones() {
         {estado === 'apagado' && (
           <div>
             <Boton ocupado={ocupado} onClick={() => void cambiar(true)}>
-              {N.encender}
+              {ocupado ? N.pasos[paso ?? 'permiso'] : error !== null ? N.reintentar : N.encender}
             </Boton>
           </div>
         )}
         {estado === 'encendido' && (
           <div>
             <Boton variante="secundario" ocupado={ocupado} onClick={() => void cambiar(false)}>
-              {N.apagar}
+              {ocupado ? N.apagando : N.apagar}
             </Boton>
           </div>
         )}
-        {error !== null && <Aviso>{error}</Aviso>}
+        {ocupado && pistaDelPermiso && (
+          <p className="nx-sutil" role="status">
+            {N.permisoSinVer}
+          </p>
+        )}
+        {error !== null && (
+          <Aviso>
+            {error.texto}
+            {error.detalle !== null && (
+              <>
+                <br />
+                <small>{N.detalleTecnico(error.detalle)}</small>
+              </>
+            )}
+          </Aviso>
+        )}
       </div>
     </Tarjeta>
   );

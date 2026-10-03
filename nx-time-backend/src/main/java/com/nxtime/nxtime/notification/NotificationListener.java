@@ -176,6 +176,34 @@ public class NotificationListener {
                 NoticeType.BIENVENIDA.getRutaDestinoPorDefecto()));
     }
 
+    /**
+     * Un PIN de kiosco anulado tras tres bloqueos (ADR 034). Solo avisos, sin
+     * correo: a su dueño, para que elija otro, y a quien gestiona los kioscos,
+     * porque alguien ha estado probando PIN delante de la tablet.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onKioskPinAnnulled(NotificationEvents.KioskPinAnnulled evento) {
+        avisar(new CreateNoticeCommand(
+                evento.empresaId(),
+                evento.personaId(),
+                NoticeType.PIN_KIOSCO_ANULADO,
+                "Tu PIN del kiosco se ha anulado",
+                "Se ha tecleado mal demasiadas veces en «" + evento.nombreKiosco() + "». Elige otro en tu perfil "
+                        + "para volver a fichar con PIN; la tarjeta sigue valiendo.",
+                NoticeType.PIN_KIOSCO_ANULADO.getRutaDestinoPorDefecto()));
+        for (Long gestor : evento.gestoresIds()) {
+            avisar(new CreateNoticeCommand(
+                    evento.empresaId(),
+                    gestor,
+                    NoticeType.PIN_KIOSCO_ANULADO_EQUIPO,
+                    "PIN de kiosco anulado: " + evento.nombrePersona(),
+                    "En «" + evento.nombreKiosco() + "» se ha tecleado mal su PIN en tres tandas seguidas. Si no "
+                            + "ha sido ella, alguien ha estado probando.",
+                    NoticeType.PIN_KIOSCO_ANULADO_EQUIPO.getRutaDestinoPorDefecto()));
+        }
+    }
+
     /** "Vacaciones, del 01/03/2027 al 03/03/2027". */
     private String rango(AbsenceRequest peticion) {
         return peticion.getTipo().getEtiqueta()
@@ -954,11 +982,7 @@ public class NotificationListener {
     @Async(AsyncConfig.EMAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAccessCodeRequested(NotificationEvents.AccessCodeRequested evento) {
-        emailSender.enviar(
-                evento.email(),
-                "Tu código para entrar en NX Time",
-                "access-code-recovery",
-                evento.variables());
+        emailSender.enviar(evento.email(), evento.asunto(), evento.plantilla(), evento.variables());
     }
 
     /**

@@ -36,6 +36,7 @@ fun rutaDeAviso(rutaDestino: String?): String? = when (rutaDestino) {
     DESTINO_AJUSTES -> Pantalla.AJUSTES.ruta
     DESTINO_INCIDENCIAS -> Pantalla.INCIDENCIAS.ruta
     DESTINO_FIRMAS -> Pantalla.FIRMAS.ruta
+    DESTINO_PERFIL -> Pantalla.PERFIL.ruta
     else -> null
 }
 
@@ -89,3 +90,8 @@ const val DESTINO_INCIDENCIAS = "incidencias"
 // Fase B3. El recordatorio de firmar el mes y la firma que una corrección
 // dejó sin efecto llevan al mismo sitio: donde se firma.
 const val DESTINO_FIRMAS = "firmas"
+
+// 10/2026 (ADR 034). Un PIN de kiosco anulado tras tres bloqueos: a su dueño,
+// al perfil, donde se elige otro. El aviso al ADMIN va a los ajustes de la
+// empresa, que solo están en la web: aquí se lee y no navega.
+const val DESTINO_PERFIL = "perfil"

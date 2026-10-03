@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.web;
 
+import com.nxtime.nxtime.web.support.CodigosEnviados;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -44,6 +45,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * todo funciona como antes, sin cookies ni CSRF.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.context.annotation.Import(CodigosEnviados.class)
 class SesionWebIT {
 
     private static final String ORIGEN_WEB = "https://nxtime-web.com";
@@ -73,6 +75,9 @@ class SesionWebIT {
     @Autowired
     private TestRestTemplate rest;
 
+    @Autowired
+    private CodigosEnviados codigos;
+
     private final ObjectMapper json = new ObjectMapper();
 
     private String email;
@@ -95,7 +100,18 @@ class SesionWebIT {
                 """.formatted(System.nanoTime(), email, CONTRASENA);
         ResponseEntity<String> alta = rest.exchange("/auth/register-manager", HttpMethod.POST,
                 new HttpEntity<>(cuerpo, conIp(jsonHeaders())), String.class);
-        assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        // Desde la V37 hay que confirmar el correo antes de poder entrar.
+        assertThat(confirmar(email, null).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    private ResponseEntity<String> confirmar(String correo, String origen) {
+        String cuerpo = origen == null
+                ? "{\"email\":\"%s\",\"codigo\":\"%s\"}".formatted(correo, codigos.ultimoPara(correo))
+                : "{\"email\":\"%s\",\"codigo\":\"%s\",\"origen\":\"%s\"}"
+                        .formatted(correo, codigos.ultimoPara(correo), origen);
+        return rest.exchange("/auth/registro/confirmar", HttpMethod.POST,
+                new HttpEntity<>(cuerpo, conIp(jsonHeaders())), String.class);
     }
 
     /* ---------------------------------------------------------------- */
@@ -183,16 +199,23 @@ class SesionWebIT {
         }
 
         @Test
-        @DisplayName("registrar una empresa desde la web se comporta igual: cookie, y nada en el cuerpo")
+        @DisplayName("registrar una empresa desde la web: sin sesión hasta confirmar, y al confirmar, cookie y nada en el cuerpo")
         void registroDesdeLaWeb() throws Exception {
+            String eva = "eva." + System.nanoTime() + "@nxtime.test";
             String cuerpo = """
-                    {"nombreEmpresa":"Web %s","nombre":"Eva","apellidos":"Web","email":"eva.%s@nxtime.test",
+                    {"nombreEmpresa":"Web %s","nombre":"Eva","apellidos":"Web","email":"%s",
                      "contrasena":"%s","origen":"WEB"}
-                    """.formatted(System.nanoTime(), System.nanoTime(), CONTRASENA);
-            ResponseEntity<String> alta = rest.exchange("/auth/register-manager", HttpMethod.POST,
+                    """.formatted(System.nanoTime(), eva, CONTRASENA);
+            ResponseEntity<String> registro = rest.exchange("/auth/register-manager", HttpMethod.POST,
                     new HttpEntity<>(cuerpo, conIp(jsonHeaders())), String.class);
+            assertThat(registro.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+            assertThat(setCookies(registro)).isEmpty();
+            assertThat(cuerpo(registro).path("token").isMissingNode()).isTrue();
+
+            ResponseEntity<String> alta = confirmar(eva, "WEB");
 
             assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(cuerpo(alta).path("token").asText()).isNotBlank();
             assertThat(cuerpo(alta).path("refreshToken").isNull()).isTrue();
             assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("HttpOnly");
             // 12 horas, las del navegador (ADR 019), y no los 30 días de la app.

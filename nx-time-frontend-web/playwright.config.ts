@@ -74,5 +74,16 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !enCi,
     timeout: 120_000,
+    // Unas claves de Firebase de mentira, para que Ajustes ofrezca encender el
+    // push: `push.spec` simula las APIs de Google en la red. La clave VAPID
+    // tiene que ser una clave pública válida (65 bytes en base64url); es la de
+    // ejemplo de la documentación de web-push.
+    env: {
+      VITE_FIREBASE_API_KEY: 'clave-e2e',
+      VITE_FIREBASE_PROJECT_ID: 'nx-time-e2e',
+      VITE_FIREBASE_SENDER_ID: '1234567890',
+      VITE_FIREBASE_APP_ID: '1:1234567890:web:e2e',
+      VITE_FIREBASE_VAPID_KEY: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+    },
   },
 });

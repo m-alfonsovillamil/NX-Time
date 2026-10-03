@@ -15,7 +15,14 @@ public enum AccessCodeType {
     ALTA(Duration.ofHours(24)),
 
     /** "He olvidado mi contraseña". Corto: quien lo pide está esperándolo. */
-    RECUPERACION(Duration.ofMinutes(15));
+    RECUPERACION(Duration.ofMinutes(15)),
+
+    /**
+     * Al registrar una empresa: quien la registra demuestra que el correo es
+     * suyo antes de entrar (V37, ADR 034). Una hora: está esperándolo, pero
+     * a veces el correo tarda o cae en spam.
+     */
+    CONFIRMACION(Duration.ofHours(1));
 
     private final Duration validez;
 

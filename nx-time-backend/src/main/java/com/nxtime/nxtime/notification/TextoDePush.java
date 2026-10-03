@@ -46,6 +46,8 @@ public final class TextoDePush {
             case RESUMEN_INCIDENCIAS -> "Hay incidencias de cuadrante del equipo por revisar.";
             case RECORDATORIO_FIRMA -> "Ya puedes firmar tu registro horario del mes.";
             case FIRMA_INVALIDADA -> "Una corrección ha invalidado tu firma mensual.";
+            case PIN_KIOSCO_ANULADO -> "Tu PIN del kiosco se ha anulado. Elige otro.";
+            case PIN_KIOSCO_ANULADO_EQUIPO -> "Se ha anulado un PIN del kiosco por demasiados intentos.";
         };
     }
 }

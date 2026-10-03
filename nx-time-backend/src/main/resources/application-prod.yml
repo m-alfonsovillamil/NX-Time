@@ -76,6 +76,18 @@ spring:
   thymeleaf:
     cache: true
 
+# La documentación interactiva (Swagger UI y /v3/api-docs), APAGADA en
+# producción por defecto (revisión de seguridad del 1/10/2026). No esconde
+# nada que no esté ya en el repositorio (docs/openapi.json es el mismo
+# contrato), pero un mapa navegable de la API pública, con el botón de
+# «Try it out», es una comodidad para quien la ataca y no para quien la usa.
+# Para enseñarla en una demo: SWAGGER_PUBLICO=true en el panel de Render.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_PUBLICO:false}
+  swagger-ui:
+    enabled: ${SWAGGER_PUBLICO:false}
+
 # Actuator: en producción, /actuator/health lo consulta el health check
 # de Render, así que tiene que responder antes de que la base de datos
 # esté lista. Con "readiness" incluido, Render puede distinguir

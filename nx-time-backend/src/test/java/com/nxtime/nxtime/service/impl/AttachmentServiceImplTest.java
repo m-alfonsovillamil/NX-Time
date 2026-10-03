@@ -169,6 +169,60 @@ class AttachmentServiceImplTest {
                 .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    /**
+     * Un PNG de unos pocos bytes cuya cabecera dice medir {@code lado × lado}:
+     * la bomba de memoria de la revisión del 1/10/2026. El cuerpo está
+     * incompleto a propósito; lo que importa es que nadie llegue a leerlo.
+     */
+    private static byte[] pngQueDiceMedir(int lado) throws IOException {
+        ByteArrayOutputStream png = new ByteArrayOutputStream();
+        png.write(new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
+        java.nio.ByteBuffer ihdr = java.nio.ByteBuffer.allocate(13)
+                .putInt(lado).putInt(lado).put((byte) 8).put((byte) 0).put((byte) 0).put((byte) 0).put((byte) 0);
+        trozoPng(png, "IHDR", ihdr.array());
+        trozoPng(png, "IDAT", new byte[] {0x78, (byte) 0x9C, 0x63, 0x00, 0x00});
+        trozoPng(png, "IEND", new byte[0]);
+        return png.toByteArray();
+    }
+
+    private static void trozoPng(ByteArrayOutputStream png, String tipo, byte[] datos) throws IOException {
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        crc.update(tipo.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        crc.update(datos);
+        png.write(java.nio.ByteBuffer.allocate(4).putInt(datos.length).array());
+        png.write(tipo.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        png.write(datos);
+        png.write(java.nio.ByteBuffer.allocate(4).putInt((int) crc.getValue()).array());
+    }
+
+    @Test
+    @DisplayName("Una foto que dice medir 50.000 × 50.000 se rechaza sin decodificarla")
+    void subir_imagenGigante_lanza400SinAgotarLaMemoria() throws IOException {
+        byte[] bomba = pngQueDiceMedir(50_000);
+        assertThat(bomba.length).isLessThan(100);
+
+        assertThatThrownBy(() -> service.subir(
+                fichero("foto.png", "image/png", bomba), AttachmentType.FOTO, empleado))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("demasiado grande");
+        verify(attachmentRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Una foto grande de verdad (más que un móvil de 12 MP) se reduce sin problema")
+    void subir_fotoGrande_seReduceA256() throws IOException {
+        sinAdjuntoPrevio();
+        byte[] grande = pngApaisado(4000, 3000);
+
+        service.subir(fichero("foto.png", "image/png", grande), AttachmentType.FOTO, empleado);
+
+        ArgumentCaptor<AttachmentData> datos = ArgumentCaptor.forClass(AttachmentData.class);
+        verify(attachmentDataRepository).save(datos.capture());
+        BufferedImage guardada = ImageIO.read(new java.io.ByteArrayInputStream(datos.getValue().getContenido()));
+        assertThat(guardada.getWidth()).isEqualTo(256);
+        assertThat(guardada.getHeight()).isEqualTo(256);
+    }
+
     @Test
     @DisplayName("Una cabecera de PNG con el cuerpo roto da 400, no un 500")
     void subir_imagenCorrupta_lanza400() {

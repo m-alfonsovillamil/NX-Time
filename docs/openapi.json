@@ -834,11 +834,61 @@
         }
       }
     },
+    "/auth/registro/confirmar" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Confirmar el correo del registro y entrar",
+        "description" : "Con el código que llegó al registrar la empresa. Si vale, abre la sesión como el login, con las mismas reglas según 'origen' (desde WEB, el refresh va en la cookie). Cada código admite 5 intentos.",
+        "operationId" : "confirmarRegistro",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmRegistrationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Correo confirmado, sesión abierta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Datos inválidos, o un código incorrecto, caducado, usado o anulado. El mensaje es el mismo en todos los casos.",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos desde esta IP",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register-manager" : {
       "post" : {
         "tags" : [ "Autenticación" ],
         "summary" : "Registrar una empresa nueva",
-        "description" : "Crea la empresa y a quien la registra como ADMIN de ese tenant. Es quien luego puede crear GESTOR/RRHH/otros ADMIN.",
+        "description" : "Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en ese caso no crea ni manda nada): si no, serviría para averiguar quién usa NX Time. Registrarse otra vez con un correo a medio confirmar rehace el registro y manda otro código.",
         "operationId" : "registerManager",
         "requestBody" : {
           "content" : {
@@ -851,28 +901,18 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
-            "description" : "Empresa creada, tokens emitidos",
+          "202" : {
+            "description" : "Registro pendiente de confirmar el correo",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                  "$ref" : "#/components/schemas/RegistrationPendingResponse"
                 }
               }
             }
           },
           "400" : {
-            "description" : "Datos inválidos (email, nombre o contraseña)",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          },
-          "409" : {
-            "description" : "Ya existe una empresa con ese nombre",
+            "description" : "Datos inválidos (email, nombre o contraseña), o ya existe una empresa con ese nombre",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1120,6 +1160,16 @@
           },
           "401" : {
             "description" : "Credenciales incorrectas, o usuario dado de baja",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "La contraseña es buena pero quien registró la empresa no ha confirmado su correo: se le acaba de mandar otro código (/auth/registro/confirmar)",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -2823,6 +2873,32 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/kioscos/tarjetas" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Las tarjetas de la plantilla, para imprimirlas",
+        "description" : "De toda la gente de alta. A quien no tenía, se le crea. Queda registrado quién las saca.",
+        "operationId" : "tarjetasDeLaEmpresa",
+        "responses" : {
+          "200" : {
+            "description" : "Tarjetas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KioskCard"
+                  }
                 }
               }
             }
@@ -6645,32 +6721,6 @@
         } ]
       }
     },
-    "/api/v1/gestor/kiosco/tarjetas" : {
-      "get" : {
-        "tags" : [ "Kiosco" ],
-        "summary" : "Las tarjetas de la plantilla, para imprimirlas",
-        "description" : "De toda la gente de alta. A quien no tenía, se le crea.",
-        "operationId" : "tarjetasDeLaEmpresa",
-        "responses" : {
-          "200" : {
-            "description" : "Tarjetas",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/KioskCard"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
     "/api/v1/gestor/ausencias-historial" : {
       "get" : {
         "tags" : [ "Gestión" ],
@@ -9602,6 +9652,52 @@
           }
         }
       },
+      "ConfirmRegistrationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "codigo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "\\s*\\d{6}\\s*"
+          },
+          "origen" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "codigo", "email" ]
+      },
+      "AuthenticationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "rol" : {
+            "type" : "string",
+            "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
+          },
+          "authorities" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "zonaHoraria" : {
+            "type" : "string"
+          }
+        }
+      },
       "RegisterManagerRequest" : {
         "type" : "object",
         "properties" : {
@@ -9635,29 +9731,13 @@
         },
         "required" : [ "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]
       },
-      "AuthenticationResponse" : {
+      "RegistrationPendingResponse" : {
         "type" : "object",
         "properties" : {
-          "token" : {
+          "email" : {
             "type" : "string"
           },
-          "refreshToken" : {
-            "type" : "string"
-          },
-          "nombre" : {
-            "type" : "string"
-          },
-          "rol" : {
-            "type" : "string",
-            "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
-          },
-          "authorities" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "zonaHoraria" : {
+          "mensaje" : {
             "type" : "string"
           }
         }
@@ -12565,7 +12645,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
           },
           "titulo" : {
             "type" : "string"

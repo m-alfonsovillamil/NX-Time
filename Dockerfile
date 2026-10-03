@@ -63,4 +63,10 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=45s --retries=3 \
     CMD wget -qO- http://localhost:8080/actuator/health | grep -q '"status":"UP"' || exit 1
 
-ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+# Memoria (revisión de seguridad del 1/10/2026). Sin MaxRAMPercentage, la JVM
+# en un contenedor se queda con el 25 % de la memoria para el heap: en los
+# 512 MB del plan gratuito de Render, 128 MB, poco para un PDF y una foto a la
+# vez. Con 75 % queda margen para el resto del proceso (metaspace, hilos,
+# buffers de Tomcat). ExitOnOutOfMemoryError: si aun así se agota, el proceso
+# muere y Render lo arranca de nuevo, en vez de quedarse vivo y medio roto.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+ExitOnOutOfMemoryError", "org.springframework.boot.loader.launch.JarLauncher"]

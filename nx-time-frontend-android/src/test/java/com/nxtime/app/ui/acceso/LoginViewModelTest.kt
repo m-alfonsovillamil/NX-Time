@@ -96,6 +96,52 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `un 403 es el correo sin confirmar se pide el codigo y al canjearlo se entra`() = runTest {
+        whenever(repositorio.login(any())).thenReturn(
+            Response.error(
+                403,
+                """{"status":403,"detail":"Falta confirmar tu correo."}"""
+                    .toResponseBody("application/problem+json".toMediaType())
+            )
+        )
+        whenever(repositorio.confirmarRegistro("ana@nxtime.com", "123456"))
+            .thenReturn(Response.success(respuestaValida))
+
+        viewModel.onEmailCambia("ana@nxtime.com")
+        viewModel.onContrasenaCambia("secreta123")
+        viewModel.entrar()
+        advanceUntilIdle()
+        assertEquals("ana@nxtime.com", viewModel.uiState.value.sinConfirmar)
+        assertFalse(viewModel.uiState.value.accesoConcedido)
+
+        // Pegado desde el correo, con un espacio en medio: vale igual.
+        viewModel.onCodigoCambia("123 456")
+        viewModel.confirmar()
+        advanceUntilIdle()
+
+        verify(repositorio).procesarLoginExitoso(respuestaValida)
+        assertTrue(viewModel.uiState.value.accesoConcedido)
+    }
+
+    @Test
+    fun `un codigo que no son 6 cifras no sale a la red`() = runTest {
+        whenever(repositorio.login(any())).thenReturn(
+            Response.error(403, "{}".toResponseBody("application/problem+json".toMediaType()))
+        )
+        viewModel.onEmailCambia("ana@nxtime.com")
+        viewModel.onContrasenaCambia("secreta123")
+        viewModel.entrar()
+        advanceUntilIdle()
+
+        viewModel.onCodigoCambia("12ab")
+        viewModel.confirmar()
+        advanceUntilIdle()
+
+        assertEquals(MensajeUi.Recurso(R.string.recuperar_codigo_incompleto), viewModel.uiState.value.error)
+        verify(repositorio, never()).confirmarRegistro(any(), any())
+    }
+
+    @Test
     fun `con el correo puesto pero sin contrasena se avisa de la contrasena`() = runTest {
         viewModel.onEmailCambia("ana@nxtime.com")
         viewModel.entrar()

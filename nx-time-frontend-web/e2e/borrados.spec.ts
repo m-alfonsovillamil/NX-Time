@@ -7,6 +7,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('borrados de datos para RRHH', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('elena.rios@techcorp.demo');
@@ -14,7 +16,7 @@ test('borrados de datos para RRHH', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Borrados de datos' }).click();
+  await irASeccion(page, 'Borrados de datos');
   await expect(page.getByRole('heading', { name: 'Borrados de datos' })).toBeVisible();
   // Registrar abre el formulario con las personas a quien se le puede registrar.
   await page.getByRole('button', { name: 'Registrar solicitud' }).click();
