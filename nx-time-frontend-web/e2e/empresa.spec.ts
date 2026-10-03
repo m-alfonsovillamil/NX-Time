@@ -18,7 +18,11 @@ test('panel de empresa, informes e integridad para RRHH', async ({ page }) => {
 
   await irASeccion(page, 'Panel de empresa');
   await expect(page.getByRole('heading', { name: 'Horas por empleado' })).toBeVisible();
-  await expect(page.getByText(/^La raya es la media del equipo/)).toBeVisible();
+  // Al empezar el mes puede no haber ninguna jornada terminada todavía (los
+  // datos de demo son de días pasados, y el CI va en UTC y la empresa en
+  // Madrid), y sin ellas no hay media que pintar. Falló así el 1/10/2026. Las
+  // cifras del gráfico las prueba PanelEmpresa en Vitest.
+  await expect(page.getByText(/^(La raya es la media del equipo|Nadie ha fichado todavía este mes\.)/)).toBeVisible();
 
   await irASeccion(page, 'Informes');
   const excel = page.waitForEvent('download');
