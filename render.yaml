@@ -224,9 +224,17 @@ services:
       #    Google: el service worker pinta el push sin cargar su SDK.
       #  - worker-src y manifest-src caen en default-src 'self': el service
       #    worker (/sw.js) y el manifest son de este origen.
+      #  - img-src lleva blob: porque la foto de perfil se pide con la sesión
+      #    (no es una URL pública) y se pinta con URL.createObjectURL. Sin
+      #    blob:, en la web no se veía la foto, aunque en la app sí (1/10/2026).
+      #
+      # 🚨 vite.config.ts lee estas cabeceras (las de path /*) y las pone en
+      # `vite preview`, que es donde corren los E2E del CI: así un cambio aquí
+      # que rompa algo lo pilla un test, y no se descubre en producción. Si se
+      # cambia el formato de este bloque, comprobar que las sigue leyendo.
       - path: /*
         name: Content-Security-Policy
-        value: "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.nxtime-web.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        value: "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://api.nxtime-web.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
