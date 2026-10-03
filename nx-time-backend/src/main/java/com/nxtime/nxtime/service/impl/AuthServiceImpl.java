@@ -24,6 +24,7 @@ import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -134,8 +135,15 @@ public class AuthServiceImpl implements AuthService {
         // frena probar contraseñas de alguien desde muchos sitios a la vez.
         limitadorPorCuenta.comprobar(request.email());
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            // Cada fallo alarga la espera hasta el siguiente intento (ADR 034).
+            limitadorPorCuenta.fallo(request.email());
+            throw e;
+        }
+        limitadorPorCuenta.acierto(request.email());
 
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + request.email()));
@@ -217,7 +225,7 @@ public class AuthServiceImpl implements AuthService {
         stored.setSustituidoPor(sucesor.fila());
         refreshTokenRepository.save(stored);
 
-        String newAccessToken = jwtService.generateToken(new SecurityUser(user));
+        String newAccessToken = jwtService.generateToken(new SecurityUser(user), stored.getFamilia());
         log.info("Access token renovado para {}", user.getEmail());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
                 RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
@@ -295,7 +303,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void changePassword(ChangePasswordRequest request, User user) {
+    public void changePassword(ChangePasswordRequest request, User user, Optional<UUID> sesionActual) {
         if (!passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())) {
             log.warn("Intento de cambio de contraseña con contraseña antigua incorrecta: {}", user.getEmail());
             throw new BusinessException("La contraseña antigua no es correcta.", HttpStatus.BAD_REQUEST);
@@ -303,7 +311,17 @@ public class AuthServiceImpl implements AuthService {
 
         user.setContrasena(passwordEncoder.encode(request.contrasenaNueva()));
         userRepository.save(user);
-        log.info("Contraseña cambiada: {}", user.getEmail());
+
+        // Las demás sesiones se cierran, como al elegir contraseña con un
+        // código (revisión de seguridad del 1/10/2026, ADR 034): quien cambia
+        // la contraseña porque sospecha que se la han robado tiene que poder
+        // echar al que entró con ella. La suya sigue abierta. Un access token
+        // de antes del ADR 034 no dice su sesión: entonces se cierran todas.
+        Instant ahora = Instant.now();
+        int cerradas = sesionActual
+                .map(familia -> refreshTokenRepository.revocarTodasLasDeMenos(user, familia, ahora))
+                .orElseGet(() -> refreshTokenRepository.revocarTodasLasDe(user, ahora));
+        log.info("Contraseña cambiada: {} ({} sesiones cerradas)", user.getEmail(), cerradas);
     }
 
     @Override
@@ -351,10 +369,13 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private AuthenticationResponse buildAuthResponse(User user, RefreshToken.Origen origen) {
-        String accessToken = jwtService.generateToken(new SecurityUser(user));
         // Familia nueva en cada login: así cerrar una sesión comprometida no
-        // arrastra a las demás de esa persona.
-        TokenEmitido refreshToken = issueRefreshToken(user, origen, UUID.randomUUID());
+        // arrastra a las demás de esa persona. El access token la lleva
+        // (claim sid, ADR 034) para saber, al cambiar la contraseña, cuál es
+        // la sesión que NO hay que cerrar.
+        UUID familia = UUID.randomUUID();
+        String accessToken = jwtService.generateToken(new SecurityUser(user), familia);
+        TokenEmitido refreshToken = issueRefreshToken(user, origen, familia);
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
                 RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
     }

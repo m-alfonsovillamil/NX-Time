@@ -28,6 +28,10 @@ class UserControllerTest {
     @MockitoBean
     private AuthService authService;
 
+    // Lee la sesión del access token para no cerrarla al cambiar la contraseña (ADR 034).
+    @MockitoBean
+    private com.nxtime.nxtime.security.JwtService jwtService;
+
     @Test
     @WithMockSecurityUser
     @DisplayName("POST /usuario/cambiar-contrasena autenticado y con cuerpo válido devuelve 200")
@@ -36,7 +40,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"contrasenaAntigua\":\"viejo123\",\"contrasenaNueva\":\"nuevo123\"}"))
                 .andExpect(status().isOk());
-        verify(authService).changePassword(any(), any());
+        verify(authService).changePassword(any(), any(), any());
     }
 
     @Test

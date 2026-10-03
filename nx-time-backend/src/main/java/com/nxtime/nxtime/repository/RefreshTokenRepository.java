@@ -33,6 +33,18 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     int revocarTodasLasDe(@Param("usuario") User usuario, @Param("cuando") Instant cuando);
 
     /**
+     * Todas las sesiones de una persona menos una: la de quien acaba de
+     * cambiar la contraseña (ADR 034).
+     *
+     * @return cuántas sesiones se han cerrado
+     */
+    @Modifying
+    @Query("UPDATE refresh_tokens r SET r.revocado = true, r.revocadoEn = :cuando "
+            + "WHERE r.usuario = :usuario AND r.familia <> :familia AND r.revocado = false")
+    int revocarTodasLasDeMenos(@Param("usuario") User usuario, @Param("familia") UUID familia,
+            @Param("cuando") Instant cuando);
+
+    /**
      * Cierra una familia entera: la cadena de tokens que arranca en un login.
      *
      * Se llama cuando alguien presenta un token ya rotado, que significa que

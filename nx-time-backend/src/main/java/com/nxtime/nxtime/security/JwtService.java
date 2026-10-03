@@ -11,5 +11,15 @@ public interface JwtService {
 
     String generateToken(UserDetails userDetails);
 
+    /**
+     * Con la sesión a la que pertenece (la familia de su refresh, claim
+     * {@code sid}): es lo que permite cerrar las demás sesiones y no esta al
+     * cambiar la contraseña (ADR 034).
+     */
+    String generateToken(UserDetails userDetails, java.util.UUID sesion);
+
+    /** La sesión del token, si la lleva. Los emitidos antes del ADR 034 no la llevan. */
+    java.util.Optional<java.util.UUID> extractSesion(String token);
+
     boolean isTokenValid(String token, UserDetails userDetails);
 }
