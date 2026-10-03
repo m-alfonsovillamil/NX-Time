@@ -89,7 +89,7 @@ public class IdentificacionEnKiosco {
     @Transactional(noRollbackFor = BusinessException.class)
     public User identificar(Kiosk kiosco, KioskCredential credencial) {
         Bucket cubo = porKiosco.get(kiosco.getId(), id -> Bucket.builder()
-                .addLimit(Bandwidth.simple(IDENTIFICACIONES_POR_MINUTO, Duration.ofMinutes(1)))
+                .addLimit(Bandwidth.builder().capacity(IDENTIFICACIONES_POR_MINUTO).refillGreedy(IDENTIFICACIONES_POR_MINUTO, Duration.ofMinutes(1)).build())
                 .build());
         if (!cubo.tryConsume(1)) {
             throw new BusinessException("Demasiados intentos en este kiosco. Espera un minuto.",
