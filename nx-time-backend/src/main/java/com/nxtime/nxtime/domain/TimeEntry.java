@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.domain;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -90,7 +91,9 @@ public class TimeEntry {
     @Builder.Default
     private boolean jornadaIncompleta = false;
 
-    @ManyToOne
+    // LAZY (ADR 034): EAGER cargaba la cadena entera de originales con cada
+    // fichaje corregido, y casi nadie la lee.
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registro_original_id")
     private TimeEntry registroOriginal;
 
@@ -99,6 +102,11 @@ public class TimeEntry {
      * sesión (ADR 033). Cada movimiento hecho en un kiosco lo dice además en el
      * motivo de su fila de auditoría.
      */
+    // EAGER, y no LAZY como las otras dos de ADR 034: varios endpoints
+    // devuelven el fichaje al controlador, que lo convierte en respuesta (con
+    // el nombre del kiosco) ya fuera de la transacción, y con LAZY eso falla.
+    // Lo caro de cargarlo era lo que el kiosco arrastraba (creadoPor), y eso
+    // sí es LAZY.
     @ManyToOne
     @JoinColumn(name = "kiosco_id")
     private Kiosk kiosco;

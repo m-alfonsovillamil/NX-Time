@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.domain;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -45,7 +46,9 @@ public class Kiosk {
 
     private String tokenHash;
 
-    @ManyToOne
+    // LAZY (ADR 034): no lo lee nadie al fichar, y EAGER traía con cada
+    // kiosco a quien lo dio de alta, con su empresa y su departamento.
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creado_por")
     private User creadoPor;
 
