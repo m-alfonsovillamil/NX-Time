@@ -94,8 +94,13 @@ test('entrar, saltar el menú, fichar y usar un diálogo solo con el teclado', a
   });
 
   await test.step('y se termina la jornada sin ratón', async () => {
-    await page.keyboard.press('Enter');
-    await expect(dialogo).toBeVisible();
+    // Con el diálogo recién cerrado, en el runner de Linux el primer Enter a
+    // veces se pierde (pasó varias veces en octubre de 2026). El foco sí está
+    // en el botón; se vuelve a pulsar, con el teclado, mientras no se abra.
+    await expect(async () => {
+      if (!(await dialogo.isVisible())) await page.keyboard.press('Enter');
+      await expect(dialogo).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 8000 });
     await tabularHasta(page, dialogo.getByRole('button', { name: 'Terminar' }));
     await page.keyboard.press('Enter');
     await expect(entrada).toBeVisible();

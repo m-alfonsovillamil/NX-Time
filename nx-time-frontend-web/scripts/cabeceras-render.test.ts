@@ -16,6 +16,7 @@ describe('las cabeceras de render.yaml que copia vite preview', () => {
       'Content-Security-Policy',
       'Permissions-Policy',
       'Referrer-Policy',
+      'Strict-Transport-Security',
       'X-Content-Type-Options',
       'X-Frame-Options',
     ]);
