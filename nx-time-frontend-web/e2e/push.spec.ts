@@ -34,6 +34,30 @@ async function registroDelServiceWorker(page: Page) {
   return { cdp, registrationId: await registro };
 }
 
+/**
+ * Entrega un push por el protocolo de depuración hasta que se pinta, como
+ * mucho tres veces. En el runner de Linux del CI, a veces uno no llega a
+ * pintarse (en Windows, siempre): pasaba con el segundo de dos seguidos y,
+ * desde octubre de 2026, también con el primero de algunos tests. Lo que
+ * prueban estos tests es lo que hace el service worker con el push, no la
+ * entrega, así que reintentarla no tapa nada.
+ */
+async function entregarPush(page: Page, data: unknown) {
+  const { cdp, registrationId } = await registroDelServiceWorker(page);
+  for (let intento = 0; intento < 3; intento++) {
+    await cdp.send('ServiceWorker.deliverPushMessage', {
+      origin: 'http://localhost:5173',
+      registrationId,
+      data: JSON.stringify(data),
+    });
+    const limite = Date.now() + 3000;
+    while (Date.now() < limite) {
+      if ((await notificaciones(page)).length > 0) return;
+      await page.waitForTimeout(100);
+    }
+  }
+}
+
 async function notificaciones(page: Page) {
   return page.evaluate(async () => {
     const registro = await navigator.serviceWorker.ready;
@@ -49,16 +73,10 @@ async function notificaciones(page: Page) {
 test('un push de FCM se pinta con su texto y apunta a la página del aviso', async ({ page, context }) => {
   await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
   await page.goto('/');
-  const { cdp, registrationId } = await registroDelServiceWorker(page);
-
-  await cdp.send('ServiceWorker.deliverPushMessage', {
-    origin: 'http://localhost:5173',
-    registrationId,
-    data: JSON.stringify({
-      data: { tipo: 'AUSENCIA_RESUELTA', titulo: 'NX Time', cuerpo: 'Hay novedades en tus ausencias', ruta: 'ausencias' },
-      from: '123',
-      priority: 'high',
-    }),
+  await entregarPush(page, {
+    data: { tipo: 'AUSENCIA_RESUELTA', titulo: 'NX Time', cuerpo: 'Hay novedades en tus ausencias', ruta: 'ausencias' },
+    from: '123',
+    priority: 'high',
   });
 
   await expect.poll(() => notificaciones(page)).toEqual([
@@ -75,13 +93,7 @@ for (const ruta of ['//otra-web.example/robo', 'https://otra-web.example/robo'])
   test(`una ruta que apunta a otra web no saca de esta: ${ruta}`, async ({ page, context }) => {
     await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' });
     await page.goto('/');
-    const { cdp, registrationId } = await registroDelServiceWorker(page);
-
-    await cdp.send('ServiceWorker.deliverPushMessage', {
-      origin: 'http://localhost:5173',
-      registrationId,
-      data: JSON.stringify({ data: { tipo: 'X', titulo: 'NX Time', cuerpo: 'Algo', ruta } }),
-    });
+    await entregarPush(page, { data: { tipo: 'X', titulo: 'NX Time', cuerpo: 'Algo', ruta } });
 
     // Se queda en una ruta de esta web (que no existe, y enseña su 404), nunca en otra.
     await expect
