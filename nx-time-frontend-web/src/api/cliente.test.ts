@@ -22,7 +22,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { cliente, reiniciarEstadoDeRed, restaurarSesion, salir, tokenParaReintentar } from './cliente';
+import { cliente, reiniciarEstadoDeRed, restaurarSesion, salir, servidorDespertando, tokenParaReintentar } from './cliente';
 import { abrirSesion, cerrarSesion, haySesion, sesionActual } from './sesion';
 
 const VIEJO = 'access-viejo';
@@ -249,5 +249,43 @@ describe('cerrar la sesión', () => {
     await vi.waitFor(() =>
       expect(llamadas.deSesion).toEqual([{ ruta: '/auth/logout', csrf: CSRF, credenciales: 'include', cuerpo: '' }]),
     );
+  });
+});
+
+describe('el aviso de «el servidor está despertando»', () => {
+  beforeEach(() => {
+    reiniciarEstadoDeRed();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  /*
+   * 4/10/2026: la limpieza del aviso se guardaba por URL, y dos peticiones
+   * iguales a la vez se la pisaban. Si la primera tardaba más de tres segundos,
+   * el aviso no se iba nunca. Lo vio la captura del kiosco, que pregunta una y
+   * otra vez por la misma URL.
+   */
+  it('con dos peticiones iguales a la vez, se apaga cuando acaban las dos', async () => {
+    const respuestas: ((r: Response) => void)[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolver) => respuestas.push(resolver))),
+    );
+
+    // Recién abierta la web, el servidor puede estar dormido.
+    const primera = cliente.GET('/api/v1/avisos/no-leidos', {});
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(servidorDespertando()).toBe(true);
+    const segunda = cliente.GET('/api/v1/avisos/no-leidos', {});
+    await vi.advanceTimersByTimeAsync(10);
+
+    for (const responder of respuestas) responder(json({ noLeidos: 0 }));
+    await Promise.all([primera, segunda]);
+
+    expect(servidorDespertando()).toBe(false);
   });
 });

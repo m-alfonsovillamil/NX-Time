@@ -75,6 +75,59 @@ confirmar: es más estricto y más fácil de explicar.
 | Dispositivos push por persona | 10, se quedan los usados más recientemente | Más navegadores de los que nadie usa; un token viejo no recibe |
 | Foto de perfil | 40 megapíxeles, leídos de la cabecera | Más que cualquier móvil; el fichero ya tenía 5 MB, la imagen no |
 | Heap de la JVM | 75 % de la memoria del contenedor | Por defecto era el 25 %: 128 MB en Render |
+| PIN del kiosco | 5 fallos bloquean 15 min; al 3.er bloqueo se anula (V38) | Contra un PIN se prueban 15 como mucho, no ~480 al día |
+| Login, por cuenta | Desde el 5.º fallo seguido, la espera se dobla hasta 15 min | ~100 intentos al día como mucho, sin bloqueo duro |
+
+### El PIN del kiosco y las tarjetas
+
+- Los bloqueos del PIN se cuentan (`usuarios.kiosco_pin_bloqueos`) y **no
+  vuelven a cero al acertar**: si lo hicieran, quien prueba tendría 14
+  intentos cada vez que el dueño ficha bien. Vuelven a cero al elegir otro
+  PIN. Al anularlo se avisa a su dueño (al perfil) y a quien tiene
+  `empresa:configurar` (a los ajustes de la empresa). El PIN sigue siendo de
+  4 a 6 cifras: con el tope, 4 bastan, y exigir 6 invalidaba los que ya hay.
+- Las tarjetas de toda la plantilla (con una se ficha por su dueño) pasan a
+  `POST /api/v1/empresa/kioscos/tarjetas`, solo con `empresa:configurar`, y
+  queda en el log quién las saca. Antes era un GET que escribía en la base y
+  lo podía hacer cualquiera con `empleado:gestionar`.
+
+### Las sesiones
+
+- El login espera más tras cada fallo seguido contra una cuenta, en vez de un
+  bloqueo duro de un día que cualquiera podría usar para dejar a otro sin
+  entrar. Va en memoria, como el límite que ya había.
+- **Cambiar la contraseña cierra las demás sesiones**, como ya hacía elegirla
+  con un código. Para no cerrar la propia, el access token lleva su sesión
+  (claim `sid`, la familia del refresh, ADR 019) y se revocan todas menos esa.
+
+### Lo que sale de la aplicación
+
+- Los logs escriben el **id** de quien hace algo, no su correo, y
+  `LimpiezaDeSentry` tapa cualquier correo que se cuele (una excepción de la
+  base, del servidor de correo) en las migas, el mensaje o las excepciones.
+- El código de seguimiento de una denuncia va en el **cuerpo**, no en la URL:
+  es la credencial de una denuncia anónima, y una URL acaba en los logs de
+  acceso, el historial del navegador y Sentry. Las rutas viejas quedan,
+  obsoletas, para las apps de antes de la 1.10.
+
+### Rendimiento y la cuota de Neon
+
+- `TimeEntry.registroOriginal` y `Kiosk.creadoPor` pasan a `LAZY`: el
+  historial del equipo baja de 9 a 5 consultas por página
+  (`ConsultasDelHistorialIT` lo fija). `TimeEntry.kiosco` sigue `EAGER`
+  porque los controladores convierten el fichaje en respuesta fuera de la
+  transacción (`open-in-view` apagado); lo caro era lo que el kiosco
+  arrastraba.
+- **No** se cachea el usuario en `JwtAuthenticationFilter`, aunque estaba en
+  el plan. Hay servicios que guardan la entidad del principal (cambiar la
+  contraseña, editar el perfil); con un `User` cacheado y desfasado, la
+  siguiente escritura daría un error de `@Version`. Una consulta por petición
+  no compensa ese riesgo.
+- La campana de la web pregunta cada cinco minutos y no cada minuto: con una
+  pestaña a la vista, Neon no llegaba a suspender nunca la base. Un push y
+  volver a la pestaña la refrescan al momento.
+- Dependencias al día dentro de sus versiones mayores (Spring Boot 3.5.16,
+  Retrofit 2.12, bucket4j 8.21 con su artefacto nuevo, etc.).
 
 ### Lo que se apaga o se escapa
 

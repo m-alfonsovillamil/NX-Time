@@ -122,6 +122,32 @@ departamento y RRHH la empresa, y lo decide el servicio, no la authority. El CSV
 sale con punto y coma, coma decimal, BOM y protección contra fórmulas
 ([ADR](docs/adr/026-analitica-en-dias-y-por-alcance.md)).
 
+**Un kiosco que solo sabe fichar.** Una tablet en la entrada de un almacén o una
+obra, para quien no tiene el móvil a mano. El kiosco es un dispositivo, no una
+persona: su token solo abre `/kiosco/**` y un JWT de persona no abre el kiosco.
+Se empareja tecleando en la web el código que enseña, sin escribir nada en la
+tablet. Cada uno se identifica con una tarjeta QR **firmada por el servidor**
+(que no guarda ningún secreto: regenerarla invalida la anterior) o con su nombre
+y un PIN que él elige. El PIN se bloquea tras cinco fallos, y al tercer bloqueo
+se anula y se avisa a quien gestiona los kioscos. Los fichajes entran en la
+misma cadena de auditoría, diciendo en qué kiosco se hicieron
+([ADR](docs/adr/033-fichaje-en-kiosco.md)).
+
+**La zona horaria es de la empresa, no del servidor.** Los fichajes son
+instantes (`Instant`), pero «qué día es» depende de dónde está la empresa: una
+de Canarias no cierra el día a la misma hora que una de Madrid. Cada empresa
+tiene su zona, los días se cuentan al leer, y las tareas nocturnas corren zona
+por zona ([ADR](docs/adr/032-zona-horaria-por-empresa.md)).
+
+**Una revisión de seguridad con lo que se hace desde fuera.** Usar la API como
+está pensada, pero a escala: el registro público servía para mandar altas por
+correo a cualquiera (ahora se confirma el correo antes de entrar), un PNG de
+pocos bytes que dice medir 50.000 × 50.000 agotaba la memoria (ahora se leen las
+dimensiones antes de decodificar), el PIN del kiosco se acababa adivinando con
+el tiempo, y el tiempo de respuesta decía qué correos tienen cuenta. Cada punto
+lleva su test y los topes nuevos, su porqué
+([ADR](docs/adr/034-endurecimiento-de-octubre.md)).
+
 **Canal de denuncias con anonimato estructural.** El canal interno que obliga la
 Ley 2/2023, con sus plazos (acuse en 7 días, respuesta en 3 meses) calculados al
 leer. Lo interesante no es el formulario: si la denuncia es anónima, **el sistema
@@ -201,7 +227,12 @@ solo tiene sentido con pantalla grande y teclado:
 | ![Mi jornada en la web](docs/capturas/web/web-01-mi-jornada.png) | ![Analítica](docs/capturas/web/web-04-analitica.png) | ![Editor de cuadrantes](docs/capturas/web/web-05-editor-cuadrantes.png) |
 | Lo mismo que en la app, con las horas de la semana contra la jornada esperada | Absentismo y puntualidad por mes, trimestre o año: solo en la web | Plantillas semanales con tramos, turno partido o de noche: solo en la web |
 
-Las **28 capturas de la app y las 7 de la web**, con la explicación de qué
+| Kiosco de fichaje | Menú por apartados |
+|---|---|
+| ![Kiosco en una tablet](docs/capturas/web/web-09-kiosco.png) | ![Menú por apartados](docs/capturas/web/web-08-menu-por-apartados.png) |
+| Una tablet en la entrada: tarjeta QR por la cámara, o nombre y PIN | Siete apartados plegables en vez de 28 entradas seguidas |
+
+Las **28 capturas de la app y las 9 de la web**, con la explicación de qué
 demuestra cada una, están en [`docs/capturas/`](docs/capturas/). Son reales,
 contra la API, con los datos que siembra `DemoDataSeeder`; las de la web se
 repiten con `npm run capturas`.
@@ -556,6 +587,9 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 29. [La web alcanza a la app: un armazón común y la URL como destino del aviso](docs/adr/029-la-web-alcanza-a-la-app.md)
 30. [La sesión de la web va en una cookie, con dominio propio y CSRF de doble envío](docs/adr/030-la-sesion-web-en-cookie.md)
 31. [Push en la web: service worker propio, SDK solo para el token y web instalable](docs/adr/031-push-en-la-web.md)
+32. [La zona horaria es de cada empresa, y los días se cuentan al leer](docs/adr/032-zona-horaria-por-empresa.md)
+33. [Fichaje en kiosco: un dispositivo que solo ficha, tarjeta QR firmada y PIN por persona](docs/adr/033-fichaje-en-kiosco.md)
+34. [Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había](docs/adr/034-endurecimiento-de-octubre.md)
 
 ---
 

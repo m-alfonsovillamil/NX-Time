@@ -8,15 +8,23 @@
  * con el backend levantado con `dev,demo`, mejor sobre una base recién creada.
  */
 
-import { devices, expect, test, type Page } from '@playwright/test';
+import { chromium, devices, expect, test, type Page } from '@playwright/test';
 
-import { entrar, paginaLista } from './ayudas';
+import { entrar, irASeccion, paginaLista } from './ayudas';
 
 const DESTINO = '../docs/capturas/web';
 
 async function ir(page: Page, ruta: string): Promise<void> {
-  await page.locator(`nav.nx-lateral a[href="${ruta}"]`).click();
+  // Desde octubre de 2026 el menú va por apartados plegables: se abre el de
+  // la página, como haría una persona, y el lateral se deja arriba del todo.
+  const lateral = page.locator('nav.nx-lateral');
+  const enlace = lateral.locator(`a[href="${ruta}"]`);
+  if (!(await enlace.isVisible())) {
+    await lateral.locator('.nx-subgrupo').filter({ has: page.locator(`a[href="${ruta}"]`) }).locator(':scope > button').click();
+  }
+  await enlace.click();
   await paginaLista(page, ruta);
+  await lateral.evaluate((nav) => nav.scrollTo(0, 0));
 }
 
 async function capturar(page: Page, nombre: string): Promise<void> {
@@ -47,22 +55,6 @@ test.describe('móvil', () => {
 
 test.describe('escritorio', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
-
-  test('empleado: la jornada en marcha', async ({ page }) => {
-    await entrar(page, 'javier.lopez@techcorp.demo');
-    const entrada = page.getByRole('button', { name: 'Fichar entrada' });
-    const salida = page.getByRole('button', { name: 'Fichar salida' });
-    await expect(entrada.or(salida)).toBeVisible();
-    if (await entrada.isVisible()) await entrada.click();
-    await expect(page.getByText('Trabajando')).toBeVisible();
-    await page.waitForTimeout(1500);
-    await capturar(page, 'web-01-mi-jornada');
-
-    // Se deja como estaba: sin jornada abierta.
-    await salida.click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
-    await expect(entrada).toBeVisible();
-  });
 
   test('RRHH: historial del equipo, plantilla y analítica', async ({ page }) => {
     await entrar(page, 'elena.rios@techcorp.demo');
@@ -100,5 +92,83 @@ test.describe('escritorio', () => {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await dialogo.locator('.nx-dialogo__contenido').evaluate((el) => el.scrollTo(0, 0));
     await capturar(page, 'web-05-editor-cuadrantes');
+  });
+
+  // La última del escritorio: deja una jornada de segundos en el historial,
+  // que no tiene que salir en la captura del historial del equipo.
+  test('empleado: la jornada en marcha', async ({ page }) => {
+    await entrar(page, 'javier.lopez@techcorp.demo');
+    const entrada = page.getByRole('button', { name: 'Fichar entrada' });
+    const salida = page.getByRole('button', { name: 'Fichar salida' });
+    await expect(entrada.or(salida)).toBeVisible();
+    if (await entrada.isVisible()) await entrada.click();
+    await expect(page.getByText('Trabajando')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await capturar(page, 'web-01-mi-jornada');
+
+    // Se deja como estaba: sin jornada abierta.
+    await salida.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
+    await expect(entrada).toBeVisible();
+  });
+
+  test('ADMIN: el menú por apartados plegables', async ({ page }) => {
+    await entrar(page, 'raul.ortega@techcorp.demo');
+    // La página abierta despliega su apartado; se abre otro para que se vea
+    // cómo queda con dos abiertos y el resto plegado.
+    await irASeccion(page, 'Plantilla');
+    await paginaLista(page, '/plantilla');
+    const lateral = page.locator('nav.nx-lateral');
+    await lateral.getByRole('button', { name: 'Informes y control' }).click();
+    // «Jornada y fichajes» se abrió al entrar (en /fichar): se pliega, que es
+    // como lo dejaría quien ya no está en esa página.
+    await lateral.getByRole('button', { name: 'Jornada y fichajes' }).click();
+    await lateral.evaluate((nav) => nav.scrollTo(0, 0));
+    await page.mouse.move(1400, 880);
+    await capturar(page, 'web-08-menu-por-apartados');
+  });
+});
+
+test.describe('tablet', () => {
+  test('el kiosco de fichaje en una tablet', async ({ browser }) => {
+    // Un Chromium aparte con una cámara de prueba (el patrón que se mueve), que
+    // es lo que ve una tablet de verdad mientras espera una tarjeta.
+    const conCamara = await chromium.launch({
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    });
+    const tablet = await (
+      await conCamara.newContext({
+        baseURL: 'http://localhost:5173',
+        viewport: { width: 1180, height: 820 },
+        hasTouch: true,
+        permissions: ['camera'],
+      })
+    ).newPage();
+    await tablet.goto('/kiosco');
+    const codigo = (await tablet.locator('.nx-kiosco__codigo').textContent())?.replace(/\s/g, '') ?? '';
+    const admin = await (await browser.newContext()).newPage();
+    await entrar(admin, 'raul.ortega@techcorp.demo');
+    await irASeccion(admin, 'Ajustes de la empresa');
+    await admin.getByLabel('Código de la tablet').fill(codigo);
+    await admin.getByLabel('Nombre del kiosco').fill('Entrada del almacén');
+    await admin.getByRole('button', { name: 'Dar de alta' }).click();
+    await expect(tablet.getByText('Entrada del almacén')).toBeVisible({ timeout: 15_000 });
+    await expect(tablet.getByText('El servidor está despertando')).toBeHidden({ timeout: 15_000 });
+    await tablet.waitForTimeout(1500);
+    await capturar(tablet, 'web-09-kiosco');
+
+    // Se deja como estaba: el kiosco, revocado.
+    await admin.reload();
+    // Todos los que se llamen así: una captura que falló a medias deja el suyo.
+    const activos = admin
+      .getByRole('listitem')
+      .filter({ hasText: 'Entrada del almacén' })
+      .getByRole('button', { name: 'Revocar' });
+    while ((await activos.count()) > 0) {
+      await activos.first().click();
+      await admin.getByRole('dialog').getByRole('button', { name: 'Revocar' }).click();
+      await expect(admin.getByRole('dialog')).toBeHidden();
+    }
+    await conCamara.close();
   });
 });
