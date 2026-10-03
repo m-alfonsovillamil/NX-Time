@@ -134,7 +134,32 @@ export const cuenta = {
           'Este navegador te avisa cuando hay novedades. Se deja de avisar al cerrar la sesión, y vuelve al entrar.',
       },
       sinPermiso: 'No has dado permiso para las notificaciones.',
+      sinContestar: 'El navegador no ha recibido respuesta a su pregunta. Vuelve a intentarlo y pulsa «Permitir».',
       error: 'No se han podido activar. Inténtalo de nuevo en un rato.',
+      reintentar: 'Volver a intentarlo',
+      apagando: 'Apagando…',
+      /** Lo que dice el botón mientras va por cada paso. */
+      pasos: {
+        permiso: 'Esperando tu permiso…',
+        sdk: 'Activando…',
+        'service-worker': 'Activando…',
+        token: 'Activando…',
+        servidor: 'Guardando este navegador…',
+      },
+      // Chrome a veces no enseña la pregunta: la deja en un icono de la barra
+      // de direcciones (la «interfaz silenciosa»), y la página no lo puede saber.
+      permisoSinVer:
+        '¿No ves la pregunta? Puede que el navegador la haya dejado en un icono de la barra de direcciones (una campana o el candado): púlsalo y permite las notificaciones.',
+      /** Qué falló, según el paso. */
+      fallos: {
+        permiso: 'No has dado permiso para las notificaciones.',
+        sdk: 'No se ha podido cargar el servicio de avisos. Comprueba la conexión y vuelve a intentarlo.',
+        'service-worker': 'El navegador no ha podido preparar los avisos. Recarga la página y vuelve a intentarlo.',
+        token:
+          'El servicio de avisos no ha respondido. Si usas Brave u otro navegador que bloquea los servicios de Google, permítelos para las notificaciones o prueba con Chrome, Edge o Firefox.',
+        servidor: 'NX Time no ha podido guardar este navegador. Vuelve a intentarlo en un rato.',
+      },
+      detalleTecnico: (texto: string) => `Detalle: ${texto}`,
     },
 
     enLaApp: 'Solo en la app',

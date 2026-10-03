@@ -14,7 +14,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { entrar, paginaLista } from './ayudas';
+import { desplegarMenu, entrar, irASeccion, paginaLista } from './ayudas';
 
 const GESTION =
   /\/(PanelGestion|AusenciasEquipo|HistorialEquipo|Plantilla|Departamentos|Proyectos|CalendarioLaboral|PanelEmpresa|Informes|Integridad|Borrados|GestionOfertas|CanalDenuncias|VisadoFirmas|Analitica|Cuadrantes)[-.]/;
@@ -38,6 +38,7 @@ test('un empleado recorre todo lo suyo sin descargar nada de gestión', async ({
   await entrar(page, 'javier.lopez@techcorp.demo');
 
   const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
+  await desplegarMenu(menu);
   const rutas = await menu.getByRole('link').evaluateAll((enlaces) => enlaces.map((a) => a.getAttribute('href') ?? ''));
   for (const ruta of rutas) {
     await menu.locator(`a[href="${ruta}"]`).click();
@@ -55,7 +56,7 @@ test('el trozo de una página de gestión solo llega al abrirla', async ({ page 
   await entrar(page, 'marta.sanchez@techcorp.demo');
   expect(deCuadrantes()).toEqual([]);
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Cuadrantes' }).click();
+  await irASeccion(page, 'Cuadrantes');
   await paginaLista(page, '/cuadrantes');
   expect(deCuadrantes()).not.toEqual([]);
 });

@@ -132,6 +132,18 @@ class KioscoIT {
     }
 
     @Test
+    @DisplayName("Probar códigos de kiosco tiene tope: al undécimo intento en una hora, 429")
+    void probarCodigosTieneTope() {
+        // Diez: KioskServiceImpl.CONFIRMACIONES_POR_HORA.
+        for (int i = 0; i < 10; i++) {
+            assertThat(post("/api/v1/empresa/kioscos", "{\"codigo\":\"ZZZZZZZZ\",\"nombre\":\"Prueba\"}",
+                    bearer(tokenAdmin)).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+        assertThat(post("/api/v1/empresa/kioscos", "{\"codigo\":\"ZZZZZZZZ\",\"nombre\":\"Prueba\"}",
+                bearer(tokenAdmin)).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
     @DisplayName("Un token de kiosco solo abre /kiosco; un JWT de persona no abre el kiosco")
     void loQueAbreCadaToken() {
         String kiosco = kioscoEmparejado();

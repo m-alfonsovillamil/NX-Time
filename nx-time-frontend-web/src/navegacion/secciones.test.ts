@@ -21,7 +21,16 @@ import { describe, expect, it } from 'vitest';
 import noticeTypeJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/NoticeType.java?raw';
 import roleAuthoritiesJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java?raw';
 import { AUTHORITIES } from '../pruebas/api';
-import { SECCIONES, barraInferior, destinoDeAviso, disponibles, menuPara } from './secciones';
+import {
+  SECCIONES,
+  SUBGRUPOS,
+  barraInferior,
+  destinoDeAviso,
+  disponibles,
+  menuAgrupado,
+  menuPara,
+  seccionDeRuta,
+} from './secciones';
 
 /** Los destinos de `NoticeType.java`: `AUSENCIA_SOLICITADA("ausencias-equipo/pendientes"),`. */
 function destinosDelBackend(): string[] {
@@ -105,6 +114,60 @@ describe('el menú de cada rol', () => {
     const menu = menuPara(AUTHORITIES.ADMIN);
     expect(menu.every((s) => s.pagina !== undefined)).toBe(true);
     expect(menu.map((s) => s.ruta)).toEqual(disponibles().filter((s) => s.enMenu).map((s) => s.ruta));
+  });
+});
+
+describe('los apartados del menú', () => {
+  const apartadosDe = (rol: keyof typeof AUTHORITIES) =>
+    menuAgrupado(menuPara(AUTHORITIES[rol])).map(({ grupo, apartados }) => ({
+      grupo,
+      apartados: apartados.map((a) => `${a.subgrupo}: ${a.secciones.map((s) => s.ruta).join(', ')}`),
+    }));
+
+  it('cada sección está en un apartado de su grupo', () => {
+    expect(SECCIONES.filter((s) => !SUBGRUPOS[s.grupo].includes(s.subgrupo)).map((s) => s.ruta)).toEqual([]);
+  });
+
+  it('agrupar no quita ni repite ninguna entrada del menú', () => {
+    for (const rol of ['EMPLEADO', 'GESTOR', 'RRHH', 'ADMIN'] as const) {
+      const menu = menuPara(AUTHORITIES[rol]);
+      const agrupadas = menuAgrupado(menu).flatMap((g) => g.apartados.flatMap((a) => a.secciones));
+      expect(agrupadas.map((s) => s.ruta).sort(), rol).toEqual(menu.map((s) => s.ruta).sort());
+    }
+  });
+
+  it('un ADMIN ve siete apartados en vez de 28 entradas seguidas', () => {
+    expect(menuPara(AUTHORITIES.ADMIN)).toHaveLength(28);
+    expect(apartadosDe('ADMIN')).toEqual([
+      {
+        grupo: 'personal',
+        apartados: [
+          'jornada: fichar, historial, cuadrante, incidencias, firmas, horas-extra, correcciones/pendientes',
+          'ausencias: ausencias, calendario',
+          'en-la-empresa: ofertas, denuncias',
+        ],
+      },
+      {
+        grupo: 'gestion',
+        apartados: [
+          'equipo: gestion, equipo, ausencias-equipo/pendientes',
+          'organizacion: plantilla, departamentos, proyectos, calendario-laboral, cuadrantes',
+          'control: empresa, informes, borrados, integridad, analitica, visado-firmas',
+          'administracion: gestion-ofertas, canal-denuncias, ajustes-empresa',
+        ],
+      },
+    ]);
+  });
+
+  it('un EMPLEADO solo ve los apartados de lo suyo', () => {
+    expect(apartadosDe('EMPLEADO').map((g) => g.grupo)).toEqual(['personal']);
+  });
+
+  it('la sección de una ruta, también con más tramos detrás', () => {
+    expect(seccionDeRuta('/correcciones/pendientes')?.subgrupo).toBe('jornada');
+    expect(seccionDeRuta('/cuadrantes/3')?.ruta).toBe('cuadrantes');
+    expect(seccionDeRuta('/ausencias-equipo/resueltas')?.subgrupo).toBe('equipo');
+    expect(seccionDeRuta('/no-existe')).toBeUndefined();
   });
 });
 

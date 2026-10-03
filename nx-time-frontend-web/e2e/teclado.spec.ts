@@ -94,10 +94,47 @@ test('entrar, saltar el menú, fichar y usar un diálogo solo con el teclado', a
   });
 
   await test.step('y se termina la jornada sin ratón', async () => {
-    await page.keyboard.press('Enter');
-    await expect(dialogo).toBeVisible();
+    // Con el diálogo recién cerrado, en el runner de Linux el primer Enter a
+    // veces se pierde (pasó varias veces en octubre de 2026). El foco sí está
+    // en el botón; se vuelve a pulsar, con el teclado, mientras no se abra.
+    await expect(async () => {
+      if (!(await dialogo.isVisible())) await page.keyboard.press('Enter');
+      await expect(dialogo).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 8000 });
     await tabularHasta(page, dialogo.getByRole('button', { name: 'Terminar' }));
     await page.keyboard.press('Enter');
     await expect(entrada).toBeVisible();
   });
+});
+
+test('los apartados del menú se abren y se cierran con el teclado', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Correo electrónico').fill('raul.ortega@techcorp.demo');
+  await page.getByLabel('Contraseña').fill('demo1234');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+
+  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
+  const organizacion = menu.getByRole('button', { name: 'Organización' });
+  const plantilla = menu.getByRole('link', { name: 'Plantilla', exact: true });
+  await expect(organizacion).toHaveAttribute('aria-expanded', 'false');
+  // Cerrado, lo de dentro no está en el orden del tabulador. Por CSS y no por
+  // rol: oculto, getByRole ni lo encuentra.
+  await tabularHasta(page, organizacion);
+  await page.keyboard.press('Tab');
+  await expect(menu.locator('a[href="/plantilla"]')).not.toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  await expect(organizacion).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(organizacion).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Tab');
+  await expect(plantilla).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/plantilla$/);
+
+  // Al llegar a Plantilla su apartado sigue abierto, y se cierra con la barra espaciadora.
+  await organizacion.focus();
+  await page.keyboard.press('Space');
+  await expect(organizacion).toHaveAttribute('aria-expanded', 'false');
 });

@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.dto.AttachmentResponse;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AttachmentService;
+import com.nxtime.nxtime.web.CabeceraDeDescarga;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -131,8 +132,9 @@ public class AttachmentController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(adjunto.mime()))
                 .contentLength(adjunto.contenido().length)
+                // El nombre lo eligió quien subió el fichero: escapado (ver la clase).
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        disposicion + "; filename=\"" + adjunto.nombreOriginal() + "\"")
+                        CabeceraDeDescarga.de(disposicion, adjunto.nombreOriginal()))
                 .body(new ByteArrayResource(adjunto.contenido()));
     }
 

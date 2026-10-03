@@ -7,6 +7,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('plantilla entera y departamentos para RRHH', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('elena.rios@techcorp.demo');
@@ -14,14 +16,13 @@ test('plantilla entera y departamentos para RRHH', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
-  await menu.getByRole('link', { name: 'Plantilla' }).click();
+  await irASeccion(page, 'Plantilla');
   const tabla = page.getByRole('table', { name: 'Personas de la empresa' });
   // Marta es GESTOR: en «mis empleados» no salía.
   await expect(tabla.getByRole('cell', { name: 'Marta', exact: true })).toBeVisible();
   await expect(tabla.getByRole('cell', { name: 'Gestor' }).first()).toBeVisible();
 
-  await menu.getByRole('link', { name: 'Departamentos' }).click();
+  await irASeccion(page, 'Departamentos');
   await expect(page.getByRole('heading', { name: 'Departamentos' })).toBeVisible();
   await expect(page.getByLabel('Nombre del departamento')).toBeVisible();
 });
