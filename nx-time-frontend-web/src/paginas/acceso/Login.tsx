@@ -23,6 +23,7 @@ import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
 import type { EstadoDeVuelta } from '../../rutas/rutas';
 import { mensajeDeError, mensajeDeRed } from '../../util/errores';
+import { ConfirmarCorreo } from './ConfirmarCorreo';
 
 export function Login() {
   const navegar = useNavigate();
@@ -33,6 +34,8 @@ export function Login() {
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [entrando, setEntrando] = useState(false);
+  /** Contraseña buena, correo sin confirmar (403, ADR 034): se pide el código que acaba de salir. */
+  const [sinConfirmar, setSinConfirmar] = useState<string | null>(null);
 
   async function entrar(evento: FormEvent) {
     evento.preventDefault();
@@ -48,6 +51,10 @@ export function Login() {
         body: { email: email.trim(), contrasena, origen: 'WEB' },
       });
 
+      if (!data && response.status === 403) {
+        setSinConfirmar(email.trim());
+        return;
+      }
       if (!data) {
         // Un 401 aquí son credenciales malas, no una sesión caducada: decir
         // "vuelve a entrar" a quien está entrando no ayuda a nadie.
@@ -70,6 +77,8 @@ export function Login() {
       setEntrando(false);
     }
   }
+
+  if (sinConfirmar !== null) return <ConfirmarCorreo email={sinConfirmar} destino={desde} />;
 
   return (
     <main className="nx-centrado">

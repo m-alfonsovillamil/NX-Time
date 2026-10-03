@@ -256,10 +256,25 @@ Comprobación, en <https://nxtime-web.com> → Ajustes → **Notificaciones**:
 - Provocar **dos avisos de tipos distintos seguidos** y ver que salen las dos
   notificaciones. En el CI no se ha podido probar: entregando dos push por el
   protocolo de depuración de Chromium, en Linux el segundo no se pintaba.
-- Si al encender sale «No se han podido activar», mirar la consola del
-  navegador: un error de CSP con un dominio de Google que no sea
-  `firebaseinstallations` ni `fcmregistrations` quiere decir que el SDK ha
-  cambiado de servicio, y hay que añadirlo a `connect-src` en `render.yaml`.
+- Si al encender algo falla, la tarjeta dice **en qué paso** y enseña debajo el
+  detalle técnico («Detalle: …»). Ningún paso del navegador o de Google espera
+  más de 15 s; el botón dice por cuál va mientras tanto:
+  - **Permiso**: si no sale la pregunta, Chrome puede haberla dejado en un
+    icono de la barra de direcciones (la «interfaz silenciosa»). A los 6 s la
+    tarjeta lo sugiere.
+  - **Servicio de avisos** (paso del token): mirar la consola del navegador. Un
+    error de CSP con un dominio de Google que no sea `firebaseinstallations`
+    ni `fcmregistrations` quiere decir que el SDK ha cambiado de servicio, y
+    hay que añadirlo a `connect-src` en `render.yaml`. Brave bloquea el push de
+    Google si no se activa en sus ajustes.
+  - **Guardar este navegador**: es el backend. Si está dormido, tarda lo que
+    tarde en despertar; si Neon se ha quedado sin cuota, falla.
+- Las dos APIs de Google se pueden probar sin navegador con la clave de la web
+  (`apiKey`): un `POST` a
+  `https://firebaseinstallations.googleapis.com/v1/projects/<projectId>/installations`
+  con la cabecera `x-goog-api-key` tiene que devolver un `authToken`. Si
+  devuelve 403, la API está desactivada o la clave restringida en Google Cloud.
+  El 1/10/2026 respondían bien las dos, incluso sin cabecera `Referer`.
 
 **En el iPhone**: primero Safari → Compartir → **Añadir a pantalla de inicio**,
 abrir NX Time desde ese icono y encenderlas en Ajustes desde ahí. Desde Safari
@@ -684,7 +699,7 @@ Comprobado de extremo a extremo, no solo el *health check*:
 | Prueba | Resultado |
 |---|---|
 | `GET /actuator/health` | `{"status":"UP","groups":["liveness","readiness"]}` |
-| `GET /v3/api-docs` | OpenAPI completo, con `servers` apuntando a la URL pública |
+| `GET /v3/api-docs` | OpenAPI completo, con `servers` apuntando a la URL pública. Desde el 1/10/2026 da 404 salvo con `SWAGGER_PUBLICO=true` |
 | `POST /auth/register-manager` | `200` — empresa y ADMIN creados |
 | `POST /auth/login` | `200` — token firmado, rol `ADMIN` |
 | Endpoint protegido sin token | `401` |

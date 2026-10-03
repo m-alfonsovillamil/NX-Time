@@ -498,6 +498,45 @@ h1 {
   gap: 2px;
 }
 
+/* `display: flex` de arriba gana al `display: none` que el navegador da a
+   [hidden]: sin esto, un apartado cerrado se seguiría viendo. */
+.nx-menu-grupo ul[hidden] {
+  display: none;
+}
+
+/* Los apartados plegables: el botón con su icono y la flecha al final, y lo de
+   dentro sin icono, sangrado a la altura del texto del botón (12 + 24 + 12). */
+.nx-subgrupo__boton > span {
+  flex: 1;
+  text-align: left;
+}
+
+.nx-subgrupo__boton > svg:last-child {
+  transition: transform 150ms ease;
+}
+
+.nx-subgrupo__boton[aria-expanded='true'] > svg:last-child {
+  transform: rotate(180deg);
+}
+
+.nx-subgrupo > ul {
+  margin-top: 2px;
+}
+
+.nx-subgrupo > ul .nx-enlace-menu {
+  padding-left: 48px;
+}
+
+.nx-subgrupo > ul .nx-enlace-menu > svg {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-subgrupo__boton > svg:last-child {
+    transition: none;
+  }
+}
+
 .nx-menu-grupo__titulo {
   font-family: var(--nx-font-cuerpo);
   font-size: 12px;

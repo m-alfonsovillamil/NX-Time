@@ -53,7 +53,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private static final Set<String> RUTAS_LIMITADAS = Set.of(
-            "/auth/login", "/auth/register-manager", "/auth/recuperar", "/auth/recuperar/confirmar",
+            "/auth/login", "/auth/register-manager", "/auth/registro/confirmar", "/auth/recuperar",
+            "/auth/recuperar/confirmar",
             // Pedir un código para emparejar un kiosco es público (ADR 033). Preguntar
             // por su estado no se limita: la tablet lo hace cada pocos segundos, y va
             // con un secreto de 256 bits que no se puede adivinar a base de probar.

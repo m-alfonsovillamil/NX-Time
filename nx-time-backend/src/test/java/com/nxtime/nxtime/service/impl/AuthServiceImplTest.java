@@ -22,7 +22,9 @@ import com.nxtime.nxtime.dto.ChangePasswordRequest;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
+import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
@@ -41,6 +43,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -99,7 +102,7 @@ class AuthServiceImplTest {
     // ---- registerManager ----
 
     @Test
-    @DisplayName("registerManager con empresa nueva crea la empresa y un ADMIN (no un GESTOR)")
+    @DisplayName("registerManager con empresa nueva crea la empresa y un ADMIN pendiente de confirmar, sin sesión")
     void registerManager_empresaNueva_creaEmpresaYAdmin() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace",
@@ -110,12 +113,83 @@ class AuthServiceImplTest {
         when(passwordEncoder.encode(request.contrasena())).thenReturn("hash");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        AuthenticationResponse response = service.registerManager(request);
+        RegistrationPendingResponse response = service.registerManager(request);
+
+        assertThat(response.email()).isEqualTo("ada@nxtime.test");
+        verify(userRepository).save(argThat(u -> u.getRol() == Role.ADMIN && u.correoPendienteDeConfirmar()));
+        verify(accessCodeService).emitirCodigoDeConfirmacion(any(User.class));
+        // Sin sesión hasta confirmar el correo.
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("registerManager con un correo que ya tiene cuenta responde lo mismo y no crea ni manda nada")
+    void registerManager_correoYaRegistrado_respondeIgualSinHacerNada() {
+        RegisterManagerRequest request =
+                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+        User existente = User.builder().id(7L).email("ada@nxtime.test").rol(Role.EMPLEADO).build();
+        when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(existente));
+        when(passwordEncoder.encode(any())).thenReturn("hash");
+
+        RegistrationPendingResponse response = service.registerManager(request);
+
+        assertThat(response.email()).isEqualTo("ada@nxtime.test");
+        assertThat(response.mensaje()).contains("Te hemos mandado un código");
+        verify(companyRepository, never()).save(any());
+        verify(userRepository, never()).save(any());
+        verify(accessCodeService, never()).emitirCodigoDeConfirmacion(any());
+    }
+
+    @Test
+    @DisplayName("registerManager con un registro a medias del mismo correo lo rehace y manda otro código")
+    void registerManager_registroAMedias_seRehace() {
+        Company suya = Company.builder().id(3L).nombre("Vieja SL").build();
+        User pendiente = User.builder().id(8L).email("ada@nxtime.test").nombre("A").rol(Role.ADMIN)
+                .empresa(suya).correoSinConfirmarDesde(java.time.Instant.parse("2026-10-01T10:00:00Z")).build();
+        RegisterManagerRequest request =
+                new RegisterManagerRequest("Nueva SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+        when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(pendiente));
+        when(companyRepository.findByNombre("Nueva SL")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password123")).thenReturn("hash-nuevo");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registerManager(request);
+
+        assertThat(suya.getNombre()).isEqualTo("Nueva SL");
+        assertThat(pendiente.getNombre()).isEqualTo("Ada");
+        assertThat(pendiente.getContrasena()).isEqualTo("hash-nuevo");
+        assertThat(pendiente.correoPendienteDeConfirmar()).isTrue();
+        verify(accessCodeService).emitirCodigoDeConfirmacion(pendiente);
+    }
+
+    @Test
+    @DisplayName("confirmarRegistro canjea el código y abre la sesión")
+    void confirmarRegistro_abreLaSesion() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa").build();
+        User ada = User.builder().id(9L).email("ada@nxtime.test").rol(Role.ADMIN).empresa(empresa).build();
+        when(accessCodeService.confirmarCorreo("ada@nxtime.test", "123456")).thenReturn(ada);
+
+        AuthenticationResponse response =
+                service.confirmarRegistro(new ConfirmRegistrationRequest("ada@nxtime.test", "123456", null));
 
         assertThat(response.token()).isEqualTo("access-token");
         assertThat(response.rol()).isEqualTo(Role.ADMIN);
-        assertThat(response.refreshToken()).isNotBlank();
-        verify(userRepository).save(argThat(u -> u.getRol() == Role.ADMIN));
+    }
+
+    @Test
+    @DisplayName("login con la contraseña buena pero el correo sin confirmar: 403 y otro código")
+    void login_correoSinConfirmar_403YOtroCodigo() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa").build();
+        User ada = User.builder().id(1L).email("ada@nxtime.test").rol(Role.ADMIN).empresa(empresa)
+                .correoSinConfirmarDesde(java.time.Instant.now()).build();
+        when(userRepository.findByEmail(ada.getEmail())).thenReturn(Optional.of(ada));
+
+        assertThatThrownBy(() -> service.login(new LoginRequest(ada.getEmail(), "password123")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("confirmar tu correo")
+                .satisfies(e -> assertThat(((BusinessException) e).getStatus()).isEqualTo(HttpStatus.FORBIDDEN));
+        verify(accessCodeService).emitirCodigoDeConfirmacion(ada);
+        verify(refreshTokenRepository, never()).save(any());
     }
 
     @Test

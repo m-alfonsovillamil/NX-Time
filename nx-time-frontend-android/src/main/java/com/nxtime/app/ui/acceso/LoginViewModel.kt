@@ -18,6 +18,12 @@ data class LoginUiState(
     val contrasena: String = "",
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
+    /**
+     * Contraseña buena, correo sin confirmar (403, ADR 034): el servidor acaba
+     * de mandar otro código a este correo, y se pide aquí.
+     */
+    val sinConfirmar: String? = null,
+    val codigo: String = "",
     val accesoConcedido: Boolean = false
 )
 
@@ -30,6 +36,7 @@ class LoginViewModel(
 
     fun onEmailCambia(valor: String) = _uiState.update { it.copy(email = valor, error = null) }
     fun onContrasenaCambia(valor: String) = _uiState.update { it.copy(contrasena = valor, error = null) }
+    fun onCodigoCambia(valor: String) = _uiState.update { it.copy(codigo = valor, error = null) }
 
     fun entrar() {
         val estado = _uiState.value
@@ -57,6 +64,9 @@ class LoginViewModel(
                 if (respuesta.isSuccessful && cuerpo != null) {
                     authRepository.procesarLoginExitoso(cuerpo)
                     _uiState.update { it.copy(cargando = false, accesoConcedido = true) }
+                } else if (respuesta.code() == 403) {
+                    // El login no da 403 por nada más (ver AuthController).
+                    _uiState.update { it.copy(cargando = false, sinConfirmar = estado.email.trim()) }
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
@@ -71,4 +81,28 @@ class LoginViewModel(
     }
 
 
+    /** Canjea el código del correo; si vale, entra. */
+    fun confirmar() {
+        val estado = _uiState.value
+        val correo = estado.sinConfirmar ?: return
+        val codigo = codigoLimpio(estado.codigo) ?: run {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.recuperar_codigo_incompleto)) }
+            return
+        }
+        _uiState.update { it.copy(cargando = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.confirmarRegistro(correo, codigo)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    authRepository.procesarLoginExitoso(cuerpo)
+                    _uiState.update { it.copy(cargando = false, accesoConcedido = true) }
+                } else {
+                    _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
 }

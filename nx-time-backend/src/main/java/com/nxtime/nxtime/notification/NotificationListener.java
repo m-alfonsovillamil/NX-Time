@@ -954,11 +954,7 @@ public class NotificationListener {
     @Async(AsyncConfig.EMAIL_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAccessCodeRequested(NotificationEvents.AccessCodeRequested evento) {
-        emailSender.enviar(
-                evento.email(),
-                "Tu código para entrar en NX Time",
-                "access-code-recovery",
-                evento.variables());
+        emailSender.enviar(evento.email(), evento.asunto(), evento.plantilla(), evento.variables());
     }
 
     /**

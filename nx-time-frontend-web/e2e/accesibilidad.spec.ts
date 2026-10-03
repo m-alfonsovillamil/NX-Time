@@ -18,7 +18,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-import { CUENTAS, entrar, paginaLista } from './ayudas';
+import { CUENTAS, desplegarMenu, entrar, irASeccion, paginaLista } from './ayudas';
 
 const REGLAS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -54,7 +54,7 @@ for (const tema of ['light', 'dark'] as const) {
     // dos son los formularios en diálogo más cargados (horas, proyectos).
     test('los formularios en diálogo de una jornada', async ({ page }) => {
       await entrar(page, 'javier.lopez@techcorp.demo');
-      await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Historial' }).click();
+      await irASeccion(page, 'Historial');
       await paginaLista(page, '/historial');
       const jornada = page.getByRole('group', { name: /^Acciones de la jornada del / }).first();
 
@@ -76,6 +76,8 @@ for (const tema of ['light', 'dark'] as const) {
       test(`todas las páginas del menú de ${rol}`, async ({ page }) => {
         await entrar(page, email);
         const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
+        // Con todos los apartados abiertos: así axe revisa también el menú desplegado.
+        await desplegarMenu(menu);
         const rutas = await menu
           .getByRole('link')
           .evaluateAll((enlaces) => enlaces.map((a) => a.getAttribute('href') ?? ''));

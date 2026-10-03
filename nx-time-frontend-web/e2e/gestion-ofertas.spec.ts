@@ -7,6 +7,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 async function entrar(page: import('@playwright/test').Page, email: string) {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill(email);
@@ -17,7 +19,7 @@ async function entrar(page: import('@playwright/test').Page, email: string) {
 
 test('gestión de ofertas con sus candidaturas', async ({ page }) => {
   await entrar(page, 'marta.sanchez@techcorp.demo');
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Gestión de ofertas' }).click();
+  await irASeccion(page, 'Gestión de ofertas');
   // La vacante de la demo que ya tiene candidaturas.
   await page.getByRole('group', { name: /Acciones de «Desarrollador/ }).getByRole('button', { name: 'Candidaturas' }).click();
   await expect(page).toHaveURL(/oferta=\d+/);
@@ -26,7 +28,7 @@ test('gestión de ofertas con sus candidaturas', async ({ page }) => {
 
 test('bandeja del canal de denuncias para quien instruye', async ({ page }) => {
   await entrar(page, 'raul.ortega@techcorp.demo');
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Denuncias recibidas' }).click();
+  await irASeccion(page, 'Denuncias recibidas');
   await expect(page.getByRole('heading', { name: 'Canal interno' })).toBeVisible();
   await page.getByRole('button', { name: /^Abrir/ }).first().click();
   await expect(page.getByRole('dialog').getByText(/^(Denuncia anónima|La presentó)/)).toBeVisible();

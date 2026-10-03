@@ -245,7 +245,7 @@ class ApiContractTest {
 
     @Test
     @Order(1)
-    void registrarGestor_datosValidos_devuelve200ConTokenNombreYRol() throws Exception {
+    void registrarGestor_datosValidos_devuelve202YAlConfirmarTokenNombreYRol() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA,
                 "nombre", "Gestor",
@@ -260,8 +260,16 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        JsonNode body = bodyOf(response);
+        // CAMBIADO EN LA V37 (ADR 034): el registro ya no abre sesión. Responde
+        // 202 sin token, manda un código al correo, y la sesión se abre al
+        // canjearlo en /auth/registro/confirmar.
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(bodyOf(response).has("token")).isFalse();
+        assertThat(bodyOf(response).get("email").asText()).isEqualTo(EMAIL_GESTOR);
+
+        ResponseEntity<String> confirmado = confirmarRegistro(EMAIL_GESTOR);
+        assertThat(confirmado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode body = bodyOf(confirmado);
         assertThat(body.get("token").asText()).isNotBlank();
         // CORREGIDO EN FASE 4: quien registra la empresa es ADMIN, no
         // GESTOR -- es quien administra el tenant, y es el único rol con
@@ -419,8 +427,10 @@ class ApiContractTest {
                 String.class
         );
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        gestorOtraEmpresaToken = bodyOf(response).get("token").asText();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        ResponseEntity<String> confirmado = confirmarRegistro(EMAIL_GESTOR_OTRA_EMPRESA);
+        assertThat(confirmado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        gestorOtraEmpresaToken = bodyOf(confirmado).get("token").asText();
     }
 
     // ------------------------------------------------------------------
@@ -479,6 +489,22 @@ class ApiContractTest {
      * login del Order 28: /auth/recuperar/confirmar comparte el límite por IP
      * con /auth/login, y no debe gastar el cupo del resto del flujo.
      */
+    /** Canjea el último código mandado a ese correo, como haría quien acaba de registrar la empresa. */
+    private ResponseEntity<String> confirmarRegistro(String email) throws Exception {
+        // Su propia IP: /auth/registro/confirmar cuenta para el límite de 10
+        // por minuto y por IP del login, y el resto de la clase ya lo gasta.
+        HttpHeaders headers = jsonHeaders();
+        headers.set("X-Forwarded-For", "203.0.113." + (80 + IP_DE_CONFIRMAR.getAndIncrement()));
+        return rest.postForEntity(
+                url("/auth/registro/confirmar"),
+                new HttpEntity<>(toJson(mapOf("email", email, "codigo", codigoDeRecuperacionA(email))), headers),
+                String.class
+        );
+    }
+
+    private static final java.util.concurrent.atomic.AtomicInteger IP_DE_CONFIRMAR =
+            new java.util.concurrent.atomic.AtomicInteger();
+
     private ResponseEntity<String> elegirContrasena(String email, String codigo, String contrasena, String ip)
             throws Exception {
         HttpHeaders headers = jsonHeaders();
@@ -3285,7 +3311,9 @@ class ApiContractTest {
                         "contrasena", "olvidada12345")), registroHeaders),
                 String.class
         );
-        assertThat(registro.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // Sin confirmar el correo: recuperar la contraseña también lo confirma,
+        // porque el código ha llegado a ese buzón igual.
+        assertThat(registro.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
         HttpHeaders solicitudHeaders = jsonHeaders();
         solicitudHeaders.set("X-Forwarded-For", "203.0.113.64");

@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,15 @@ public class AccessCodeServiceImpl implements AccessCodeService {
      * por hora contra una cuenta (3 códigos por 5 intentos cada uno).
      */
     static final int MAXIMO_CODIGOS_POR_HORA = 3;
+
+    /**
+     * Altas al día por empresa (revisión de seguridad del 1/10/2026, ADR 034).
+     * Cada alta manda un correo a la dirección que se teclea, así que una
+     * cuenta de ADMIN robada o malintencionada era un cañón de correo con el
+     * nombre de NX Time. Cincuenta da para incorporar a una plantilla entera
+     * en un día; una empresa más grande lo hace en dos.
+     */
+    static final int ALTAS_POR_EMPRESA_Y_DIA = 50;
 
     /** El mismo para todo lo que no vale: ver {@link AccessCodeService#confirmar}. */
     static final String CODIGO_NO_VALIDO = "El código no es válido o ha caducado. Pide uno nuevo.";
@@ -129,6 +139,16 @@ public class AccessCodeServiceImpl implements AccessCodeService {
     @Override
     @Transactional
     public void emitirCodigoDeAlta(User usuario, String nombreEmpresa) {
+        Instant haceUnDia = clock.instant().minus(Duration.ofDays(1));
+        long altasHoy = accessCodeRepository.countByUsuario_Empresa_IdAndTipoAndCreadoEnAfter(
+                usuario.getEmpresa().getId(), AccessCodeType.ALTA, haceUnDia);
+        if (altasHoy >= ALTAS_POR_EMPRESA_Y_DIA) {
+            log.warn("Empresa {}: alta rechazada, ya van {} en las últimas 24 horas.",
+                    usuario.getEmpresa().getId(), altasHoy);
+            // Al lanzar, el alta entera se deshace: ni cuenta ni correo.
+            throw new BusinessException("Has llegado al máximo de " + ALTAS_POR_EMPRESA_Y_DIA
+                    + " altas en un día. Sigue mañana.", HttpStatus.TOO_MANY_REQUESTS);
+        }
         String codigo = generarCodigo();
         guardar(usuario, AccessCodeType.ALTA, codigo);
 
@@ -157,6 +177,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             // Sin el correo en el log: sería un registro de qué direcciones
             // se están probando.
             log.info("Recuperación pedida para un correo sin cuenta activa.");
+            gastarLoMismoQueUnCodigo();
             return;
         }
         User usuario = cuenta.get();
@@ -165,6 +186,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         if (accessCodeRepository.countByUsuarioAndCreadoEnAfter(usuario, haceUnaHora) >= MAXIMO_CODIGOS_POR_HORA) {
             log.warn("Recuperación denegada para {}: ya tiene {} códigos en la última hora.",
                     usuario.getEmail(), MAXIMO_CODIGOS_POR_HORA);
+            gastarLoMismoQueUnCodigo();
             return;
         }
 
@@ -206,11 +228,65 @@ public class AccessCodeServiceImpl implements AccessCodeService {
     @Override
     @Transactional(noRollbackFor = BusinessException.class)
     public void confirmar(String email, String codigo, String contrasenaNueva) {
+        AccessCode codigoAcceso = canjear(email, codigo, usuario -> true);
+        User usuario = codigoAcceso.getUsuario();
+        usuario.setContrasena(passwordEncoder.encode(contrasenaNueva));
+        // El código ha llegado a su buzón: el correo queda confirmado también
+        // para quien registró una empresa y eligió recuperar en vez de confirmar.
+        usuario.setCorreoSinConfirmarDesde(null);
+        userRepository.save(usuario);
+
+        // Quien tuviera la sesión abierta con la contraseña anterior -- que
+        // puede ser justo quien la robó -- deja de tenerla.
+        int cerradas = refreshTokenRepository.revocarTodasLasDe(usuario, clock.instant());
+        log.info("Contraseña fijada con un código de {} para {} ({} sesiones cerradas).",
+                codigoAcceso.getTipo(), usuario.getEmail(), cerradas);
+    }
+
+    @Override
+    @Transactional
+    public void emitirCodigoDeConfirmacion(User usuario) {
+        Instant haceUnaHora = clock.instant().minus(Duration.ofHours(1));
+        if (accessCodeRepository.countByUsuarioAndCreadoEnAfter(usuario, haceUnaHora) >= MAXIMO_CODIGOS_POR_HORA) {
+            // Registrarse una y otra vez con el mismo correo no sirve para
+            // llenarle el buzón a nadie.
+            log.warn("Confirmación denegada para el usuario {}: ya tiene {} códigos en la última hora.",
+                    usuario.getId(), MAXIMO_CODIGOS_POR_HORA);
+            return;
+        }
+        String codigo = generarCodigo();
+        guardar(usuario, AccessCodeType.CONFIRMACION, codigo);
+        Map<String, Object> variables = variables(usuario, codigo, AccessCodeType.CONFIRMACION);
+        variables.put("nombreEmpresa", usuario.getEmpresa().getNombre());
+        eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
+                usuario.getEmail(), variables, "access-code-confirm", "Confirma tu correo en NX Time"));
+        log.info("Código de confirmación emitido para el usuario {}", usuario.getId());
+    }
+
+    @Override
+    @Transactional(noRollbackFor = BusinessException.class)
+    public User confirmarCorreo(String email, String codigo) {
+        User usuario = canjear(email, codigo, User::correoPendienteDeConfirmar).getUsuario();
+        usuario.setCorreoSinConfirmarDesde(null);
+        userRepository.save(usuario);
+        log.info("Correo confirmado: el usuario {} ya puede entrar.", usuario.getId());
+        return usuario;
+    }
+
+    /**
+     * Comprueba el código vigente de esa cuenta y lo marca como usado. Lo que
+     * no vale -- correo sin cuenta, cuenta que no cumple {@code admitida},
+     * código incorrecto, caducado, usado o agotado -- da el mismo 400 y
+     * cuesta lo mismo (ver hashDeRelleno). Un fallo suma un intento, y quien
+     * llama tiene que ir con {@code noRollbackFor}.
+     */
+    private AccessCode canjear(String email, String codigo, Predicate<User> admitida) {
         Instant ahora = clock.instant();
         String limpio = codigo.strip();
 
         Optional<AccessCode> vigente = userRepository.findByEmail(Emails.normalizar(email))
                 .filter(User::isActivo)
+                .filter(admitida)
                 .flatMap(accessCodeRepository::findFirstByUsuarioAndUsadoEnIsNullAndAnuladoEnIsNullOrderByCreadoEnDesc)
                 .filter(candidato -> candidato.estaVigente(ahora));
 
@@ -231,17 +307,9 @@ public class AccessCodeServiceImpl implements AccessCodeService {
             throw new BusinessException(CODIGO_NO_VALIDO, HttpStatus.BAD_REQUEST);
         }
 
-        User usuario = codigoAcceso.getUsuario();
         codigoAcceso.setUsadoEn(ahora);
         accessCodeRepository.save(codigoAcceso);
-        usuario.setContrasena(passwordEncoder.encode(contrasenaNueva));
-        userRepository.save(usuario);
-
-        // Quien tuviera la sesión abierta con la contraseña anterior -- que
-        // puede ser justo quien la robó -- deja de tenerla.
-        int cerradas = refreshTokenRepository.revocarTodasLasDe(usuario, ahora);
-        log.info("Contraseña fijada con un código de {} para {} ({} sesiones cerradas).",
-                codigoAcceso.getTipo(), usuario.getEmail(), cerradas);
+        return codigoAcceso;
     }
 
     private void guardar(User usuario, AccessCodeType tipo, String codigo) {
@@ -256,6 +324,17 @@ public class AccessCodeServiceImpl implements AccessCodeService {
                 .creadoEn(ahora)
                 .expiraEn(ahora.plus(tipo.getValidez()))
                 .build());
+    }
+
+    /**
+     * El BCrypt que cuesta emitir un código, sin emitirlo (revisión de
+     * seguridad del 1/10/2026). La respuesta de /auth/recuperar ya era la
+     * misma exista o no la cuenta, pero el tiempo no: con cuenta se hacía un
+     * BCrypt (decenas de milisegundos) y sin ella nada, y cronometrando se
+     * sabía qué correos tienen cuenta.
+     */
+    private void gastarLoMismoQueUnCodigo() {
+        passwordEncoder.encode(generarCodigo());
     }
 
     /** Seis dígitos, ceros a la izquierda incluidos. {@link SecureRandom}: que no se pueda predecir el siguiente. */

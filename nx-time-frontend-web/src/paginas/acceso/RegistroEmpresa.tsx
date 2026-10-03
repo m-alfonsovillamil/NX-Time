@@ -2,20 +2,21 @@
  * Registrar una empresa: la empresa y, dentro, la cuenta de quien la registra
  * como ADMIN.
  *
- * Manda **`origen: 'WEB'`**, como el login: el servidor pone entonces el
- * refresh en la cookie `HttpOnly` y le da las 12 horas del navegador (ADR 019
- * y 030). Sin ello, el registro devolvía un refresh de 30 días en el cuerpo, al
- * alcance del JavaScript; es lo que el ADR 030 dejó apuntado para esta fase.
+ * Desde la V37 (ADR 034) registrar **no abre sesión**: el servidor manda un
+ * código al correo y aquí se pasa a pedirlo (`ConfirmarCorreo`). Es lo que
+ * impide registrar una empresa con el correo de otro y usarla para mandar
+ * altas a cualquiera. La sesión se abre al confirmar, con `origen: 'WEB'`:
+ * refresh en la cookie `HttpOnly` y las 12 horas del navegador (ADR 019 y 030).
  */
 
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
-import { abrirSesion } from '../../api/sesion';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
+import { ConfirmarCorreo } from './ConfirmarCorreo';
 
 const G = T.registro;
 
@@ -28,7 +29,6 @@ interface DatosDelRegistro {
 }
 
 export function RegistroEmpresa() {
-  const navegar = useNavigate();
   const [datos, setDatos] = useState<DatosDelRegistro>({
     nombreEmpresa: '',
     nombre: '',
@@ -37,20 +37,12 @@ export function RegistroEmpresa() {
     contrasena: '',
   });
   const [error, setError] = useState<string | null>(null);
+  /** El correo al que ha salido el código: con él, se pasa a pedirlo. */
+  const [pendiente, setPendiente] = useState<string | null>(null);
 
   const registrar = useMutacion(
     (cuerpo: DatosDelRegistro) => pedir(cliente.POST('/auth/register-manager', { body: { ...cuerpo, origen: 'WEB' } })),
-    {
-      alTerminar: (sesion) => {
-        abrirSesion({
-          accessToken: sesion.token ?? '',
-          nombre: sesion.nombre ?? '',
-          authorities: sesion.authorities ?? [],
-          zonaHoraria: sesion.zonaHoraria,
-        });
-        navegar('/fichar', { replace: true });
-      },
-    },
+    { alTerminar: (respuesta) => setPendiente(respuesta.email ?? datos.email.trim()) },
   );
 
   function cambiar(campo: keyof DatosDelRegistro, valor: string) {
@@ -74,6 +66,8 @@ export function RegistroEmpresa() {
   }
 
   const mensaje = error ?? registrar.error?.message ?? null;
+
+  if (pendiente !== null) return <ConfirmarCorreo email={pendiente} />;
 
   return (
     <main className="nx-centrado">
