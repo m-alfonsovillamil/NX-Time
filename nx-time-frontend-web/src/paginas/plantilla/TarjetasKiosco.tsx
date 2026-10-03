@@ -1,7 +1,8 @@
 /**
  * Las tarjetas del kiosco de toda la plantilla, para imprimirlas y recortarlas
- * (ADR 033). Solo RRHH (`empleado:gestionar`): con una tarjeta se ficha en
- * nombre de su dueño en un kiosco de la empresa.
+ * (ADR 033). Solo quien gestiona los kioscos (`empresa:configurar`, el ADMIN):
+ * con una tarjeta se ficha en nombre de su dueño, y el servidor anota quién las
+ * saca (ADR 034). Es un POST porque crea las que faltan.
  *
  * Al imprimir solo salen las tarjetas: el menú, la cabecera y los botones se
  * esconden por CSS (`@media print` en `base.css`).
@@ -21,7 +22,10 @@ const TT = kiosco.tarjetas;
 export function TarjetasKiosco() {
   const tarjetas = useQuery({
     queryKey: ['plantilla', 'tarjetas-kiosco'],
-    queryFn: () => pedir(cliente.GET('/api/v1/gestor/kiosco/tarjetas', {})),
+    queryFn: () => pedir(cliente.POST('/api/v1/empresa/kioscos/tarjetas', {})),
+    // Una vez por visita: cada petición queda anotada en el servidor.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
 
   return (

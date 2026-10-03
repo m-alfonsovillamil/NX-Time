@@ -6,15 +6,19 @@ import com.nxtime.nxtime.domain.Kiosk;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.KioskDtos.KioskCredential;
 import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.notification.Destinatarios;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.UserRepository;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -46,11 +50,14 @@ public class IdentificacionEnKiosco {
 
     static final int FALLOS_HASTA_BLOQUEAR = 5;
     static final Duration BLOQUEO = Duration.ofMinutes(15);
+    /** Al tercer bloqueo, el PIN se anula (V38, ADR 034). */
+    static final int BLOQUEOS_HASTA_ANULAR = 3;
     static final int IDENTIFICACIONES_POR_MINUTO = 40;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TarjetaDeKiosco tarjeta;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final Cache<Long, Bucket> porKiosco = Caffeine.newBuilder()
             .maximumSize(10_000)
@@ -59,15 +66,16 @@ public class IdentificacionEnKiosco {
 
     @Autowired
     public IdentificacionEnKiosco(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            TarjetaDeKiosco tarjeta) {
-        this(userRepository, passwordEncoder, tarjeta, Clock.systemUTC());
+            TarjetaDeKiosco tarjeta, ApplicationEventPublisher eventPublisher) {
+        this(userRepository, passwordEncoder, tarjeta, eventPublisher, Clock.systemUTC());
     }
 
     IdentificacionEnKiosco(UserRepository userRepository, PasswordEncoder passwordEncoder,
-            TarjetaDeKiosco tarjeta, Clock clock) {
+            TarjetaDeKiosco tarjeta, ApplicationEventPublisher eventPublisher, Clock clock) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tarjeta = tarjeta;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
     }
 
@@ -121,14 +129,26 @@ public class IdentificacionEnKiosco {
 
         if (!passwordEncoder.matches(pin, persona.getKioscoPinHash())) {
             int fallos = persona.getKioscoPinFallos() + 1;
-            if (fallos >= FALLOS_HASTA_BLOQUEAR) {
-                persona.setKioscoPinFallos(0);
-                persona.setKioscoPinBloqueadoHasta(ahora.plus(BLOQUEO));
-                log.warn("PIN de kiosco de {} bloqueado tras {} fallos (kiosco {}).",
-                        persona.getId(), FALLOS_HASTA_BLOQUEAR, kiosco.getId());
-            } else {
+            if (fallos < FALLOS_HASTA_BLOQUEAR) {
                 persona.setKioscoPinFallos(fallos);
+                userRepository.save(persona);
+                throw new BusinessException("PIN incorrecto.", HttpStatus.FORBIDDEN);
             }
+            // Un bloqueo más. Los bloqueos no vuelven a cero al acertar (V38):
+            // al tercero el PIN se anula, y contra un PIN se prueban 15 como
+            // mucho en vez de unos 480 al día.
+            int bloqueos = persona.getKioscoPinBloqueos() + 1;
+            persona.setKioscoPinFallos(0);
+            if (bloqueos >= BLOQUEOS_HASTA_ANULAR) {
+                anular(persona, kiosco);
+                userRepository.save(persona);
+                throw new BusinessException("Tu PIN se ha anulado por demasiados intentos. Elige otro en la app "
+                        + "o ficha con tu tarjeta.", HttpStatus.FORBIDDEN);
+            }
+            persona.setKioscoPinBloqueos(bloqueos);
+            persona.setKioscoPinBloqueadoHasta(ahora.plus(BLOQUEO));
+            log.warn("PIN de kiosco de {} bloqueado ({} de {}) tras {} fallos (kiosco {}).",
+                    persona.getId(), bloqueos, BLOQUEOS_HASTA_ANULAR, FALLOS_HASTA_BLOQUEAR, kiosco.getId());
             userRepository.save(persona);
             throw new BusinessException("PIN incorrecto.", HttpStatus.FORBIDDEN);
         }
@@ -139,6 +159,24 @@ public class IdentificacionEnKiosco {
             userRepository.save(persona);
         }
         return persona;
+    }
+
+    /**
+     * Quita el PIN y avisa a su dueño y a quien gestiona los kioscos. La
+     * tarjeta sigue valiendo: lo que se ha estado probando es el PIN.
+     */
+    private void anular(User persona, Kiosk kiosco) {
+        persona.setKioscoPinHash(null);
+        persona.setKioscoPinBloqueos(0);
+        persona.setKioscoPinBloqueadoHasta(null);
+        log.warn("PIN de kiosco de {} ANULADO tras {} bloqueos (kiosco {}).",
+                persona.getId(), BLOQUEOS_HASTA_ANULAR, kiosco.getId());
+        List<Long> gestores = Destinatarios.conAuthority(
+                        userRepository, kiosco.getEmpresa(), "empresa:configurar", persona).stream()
+                .map(User::getId)
+                .toList();
+        eventPublisher.publishEvent(new NotificationEvents.KioskPinAnnulled(
+                kiosco.getEmpresa().getId(), persona.getId(), persona.getNombre(), kiosco.getNombre(), gestores));
     }
 
     /** De la empresa del kiosco y de alta. Una tarjeta de otra empresa no vale aquí. */

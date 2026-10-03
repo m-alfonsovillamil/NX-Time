@@ -86,6 +86,15 @@ class DestinoDeAvisoTest {
     }
 
     @Test
+    fun `el aviso de un PIN de kiosco anulado lleva al perfil, donde se elige otro`() {
+        // El símbolo es el de NoticeType.PIN_KIOSCO_ANULADO en el backend.
+        assertEquals("perfil", DESTINO_PERFIL)
+        assertEquals(Pantalla.PERFIL.ruta, rutaDeAviso(DESTINO_PERFIL))
+        // El del ADMIN lleva a los ajustes de la empresa, que no están en la app.
+        assertNull(rutaDeAviso("ajustes-empresa"))
+    }
+
+    @Test
     fun `un aviso sin destino no navega`() {
         assertNull(rutaDeAviso(null))
         assertNull(rutaDeAviso(""))

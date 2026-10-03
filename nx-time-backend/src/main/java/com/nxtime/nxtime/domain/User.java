@@ -111,6 +111,13 @@ public class User {
 
     private Instant kioscoPinBloqueadoHasta;
 
+    /**
+     * Bloqueos del PIN desde que se eligió (V38, ADR 034): al tercero se
+     * anula. No vuelve a cero al acertar, solo al elegir un PIN nuevo.
+     */
+    @Builder.Default
+    private int kioscoPinBloqueos = 0;
+
     private Integer kioscoTarjetaVersion;
 
     @Version

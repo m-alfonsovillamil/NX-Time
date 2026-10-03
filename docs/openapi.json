@@ -2833,6 +2833,32 @@
         } ]
       }
     },
+    "/api/v1/empresa/kioscos/tarjetas" : {
+      "post" : {
+        "tags" : [ "Kiosco" ],
+        "summary" : "Las tarjetas de la plantilla, para imprimirlas",
+        "description" : "De toda la gente de alta. A quien no tenía, se le crea. Queda registrado quién las saca.",
+        "operationId" : "tarjetasDeLaEmpresa",
+        "responses" : {
+          "200" : {
+            "description" : "Tarjetas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/KioskCard"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/dispositivos-push" : {
       "post" : {
         "tags" : [ "Push" ],
@@ -6635,32 +6661,6 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
-                }
-              }
-            }
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
-    "/api/v1/gestor/kiosco/tarjetas" : {
-      "get" : {
-        "tags" : [ "Kiosco" ],
-        "summary" : "Las tarjetas de la plantilla, para imprimirlas",
-        "description" : "De toda la gente de alta. A quien no tenía, se le crea.",
-        "operationId" : "tarjetasDeLaEmpresa",
-        "responses" : {
-          "200" : {
-            "description" : "Tarjetas",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/KioskCard"
-                  }
                 }
               }
             }
@@ -12565,7 +12565,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
           },
           "titulo" : {
             "type" : "string"
