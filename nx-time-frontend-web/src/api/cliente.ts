@@ -290,7 +290,7 @@ const autenticacion: Middleware = {
  * respuesta**, igual que en `ArranqueEnFrio.kt`.
  */
 const arranqueEnFrio: Middleware = {
-  async onRequest({ request }) {
+  async onRequest({ request, id }) {
     if (!puedeEstarDormido()) {
       return new Request(request, { signal: AbortSignal.timeout(ESPERA_CORTA_MS) });
     }
@@ -313,24 +313,32 @@ const arranqueEnFrio: Middleware = {
     // limpieza cuelga de la propia señal y de un microtask por si la petición
     // termina antes.
     senal.addEventListener('abort', limpiar, { once: true });
-    pendientesDeLimpiar.set(request.url, limpiar);
+    pendientesDeLimpiar.set(id, limpiar);
 
     return new Request(request, { signal: senal });
   },
 
-  async onResponse({ request, response }) {
-    pendientesDeLimpiar.get(request.url)?.();
-    pendientesDeLimpiar.delete(request.url);
+  async onResponse({ id, response }) {
+    pendientesDeLimpiar.get(id)?.();
+    pendientesDeLimpiar.delete(id);
     return response;
   },
 
-  async onError({ request }) {
-    pendientesDeLimpiar.get(request.url)?.();
-    pendientesDeLimpiar.delete(request.url);
+  async onError({ id }) {
+    pendientesDeLimpiar.get(id)?.();
+    pendientesDeLimpiar.delete(id);
     return undefined;
   },
 };
 
+/*
+ * Por el id de cada petición, que openapi-fetch da a los tres ganchos, y no
+ * por su URL (4/10/2026). Con la URL, dos peticiones iguales a la vez -- el
+ * kiosco preguntando por el emparejamiento, o una consulta repetida al volver
+ * a la pestaña -- compartían entrada: la segunda pisaba la limpieza de la
+ * primera, y si la primera había tardado más de tres segundos (el arranque en
+ * frío), el aviso de «el servidor está despertando» no se iba nunca.
+ */
 const pendientesDeLimpiar = new Map<string, () => void>();
 
 /**
