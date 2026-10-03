@@ -40,8 +40,8 @@ import org.springframework.test.context.DynamicPropertySource;
  * departamento; y cada corrección, la cadena entera de fichajes originales.
  * Este test fija el número de consultas para que no vuelva a crecer sin que
  * se note. Medido al escribirlo (20 jornadas, la mitad de kiosco y una cadena
- * de correcciones): 9 consultas con todo EAGER, 5 con esas tres
- * relaciones LAZY.
+ * de correcciones): 9 consultas con todo EAGER, 5 con registroOriginal y
+ * Kiosk.creadoPor LAZY (el kiosco del fichaje sigue EAGER: ver TimeEntry).
  *
  * <p>Requisito: {@code docker compose up -d postgres}.
  */

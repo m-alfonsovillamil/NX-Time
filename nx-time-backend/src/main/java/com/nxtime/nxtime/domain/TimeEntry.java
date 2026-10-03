@@ -102,9 +102,12 @@ public class TimeEntry {
      * sesión (ADR 033). Cada movimiento hecho en un kiosco lo dice además en el
      * motivo de su fila de auditoría.
      */
-    // LAZY (ADR 034): los historiales solo enseñan su nombre, y los fichajes
-    // que no son de kiosco no cuestan nada.
-    @ManyToOne(fetch = FetchType.LAZY)
+    // EAGER, y no LAZY como las otras dos de ADR 034: varios endpoints
+    // devuelven el fichaje al controlador, que lo convierte en respuesta (con
+    // el nombre del kiosco) ya fuera de la transacción, y con LAZY eso falla.
+    // Lo caro de cargarlo era lo que el kiosco arrastraba (creadoPor), y eso
+    // sí es LAZY.
+    @ManyToOne
     @JoinColumn(name = "kiosco_id")
     private Kiosk kiosco;
 
