@@ -6,6 +6,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('visado de firmas para RRHH', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('elena.rios@techcorp.demo');
@@ -13,7 +15,7 @@ test('visado de firmas para RRHH', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Visado de firmas' }).click();
+  await irASeccion(page, 'Visado de firmas');
   await expect(page.getByText(/personas? han? firmado/)).toBeVisible();
   await expect(page.getByRole('table', { name: 'Firmas del mes por persona' })).toBeVisible();
 });

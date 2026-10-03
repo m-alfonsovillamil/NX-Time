@@ -10,6 +10,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 const EMPLEADO = { email: 'javier.lopez@techcorp.demo', contrasena: 'demo1234' };
 
 test('el historial: periodos, total y los diálogos de una jornada', async ({ page }) => {
@@ -21,7 +23,7 @@ test('el historial: periodos, total y los diálogos de una jornada', async ({ pa
   // mientras prepara las dependencias, y el menú aún no está.
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Historial' }).click();
+  await irASeccion(page, 'Historial');
   await expect(page).toHaveURL(/\/historial$/);
   await expect(page.getByRole('heading', { name: 'Mi historial' })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Mis jornadas' })).toBeVisible();

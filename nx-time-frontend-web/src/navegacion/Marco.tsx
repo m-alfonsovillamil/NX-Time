@@ -9,24 +9,33 @@
  *
  * El menú se construye con las authorities de la sesión (ver `secciones.ts`):
  * un EMPLEADO no ve el grupo de gestión porque no tiene ninguna de sus
- * authorities, no porque aquí se mire el rol.
+ * authorities, no porque aquí se mire el rol. Dentro de cada grupo va por
+ * apartados plegables (`MenuAgrupado`), en el lateral y en «Más» del móvil; la
+ * barra inferior no cambia.
  */
 
-import { Suspense, useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Suspense, useId, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 
 import { salir } from '../api/cliente';
 import { useSesion } from '../api/useSesion';
 import { Dialogo } from '../componentes/Dialogo';
 import { Esqueleto } from '../componentes/Estados';
-import { Icono } from '../componentes/Icono';
+import { Icono, type NombreIcono } from '../componentes/Icono';
 import { Notificaciones } from '../componentes/Notificaciones';
 import { T } from '../i18n/es';
 import { Campana } from './Campana';
-import { barraInferior, disponibles, menuPara, type Grupo, type Seccion } from './secciones';
+import {
+  barraInferior,
+  disponibles,
+  menuAgrupado,
+  menuPara,
+  seccionDeRuta,
+  type Seccion,
+  type Subgrupo,
+} from './secciones';
 
 const N = T.navegacion;
-const GRUPOS: readonly Grupo[] = ['personal', 'gestion'];
 
 function Enlace({ seccion, alPulsar }: { seccion: Seccion; alPulsar?: () => void }) {
   return (
@@ -37,25 +46,118 @@ function Enlace({ seccion, alPulsar }: { seccion: Seccion; alPulsar?: () => void
   );
 }
 
+/*
+ * Qué apartados del menú están abiertos. Es una preferencia de este navegador,
+ * como el tema: todo acceso va en try/catch, y sin almacenamiento el menú
+ * funciona igual, solo que no se acuerda.
+ */
+const CLAVE_ABIERTOS = 'nx-menu-abiertos';
+type Abiertos = Partial<Record<Subgrupo, boolean>>;
+
+function abiertosGuardados(): Abiertos {
+  try {
+    const valor: unknown = JSON.parse(globalThis.localStorage?.getItem(CLAVE_ABIERTOS) ?? '{}');
+    return typeof valor === 'object' && valor !== null ? (valor as Abiertos) : {};
+  } catch {
+    return {};
+  }
+}
+
+function guardarAbiertos(abiertos: Abiertos): void {
+  try {
+    globalThis.localStorage?.setItem(CLAVE_ABIERTOS, JSON.stringify(abiertos));
+  } catch {
+    // Sin almacenamiento, el menú no se acuerda: nada más.
+  }
+}
+
+/**
+ * Hasta cuántas entradas el menú sale entero, con todo abierto, mientras la
+ * persona no cierre nada. El de un EMPLEADO (once) cabe de un vistazo; el de
+ * un GESTOR o un ADMIN no, y sale con solo el apartado de la página abierta.
+ */
+const MENU_CORTO = 12;
+
+const ICONOS_DE_SUBGRUPO: Readonly<Record<Subgrupo, NombreIcono>> = {
+  jornada: 'reloj',
+  ausencias: 'calendario',
+  'en-la-empresa': 'documento',
+  cuenta: 'persona',
+  equipo: 'grupo',
+  organizacion: 'panel',
+  control: 'grafico',
+  administracion: 'escudo',
+};
+
+/**
+ * El menú por grupos y apartados plegables. Un apartado con una sola entrada
+ * no se pliega: es un enlace más. El de la página abierta se abre solo al
+ * llegar a ella (también desde un aviso o un enlace), y lo que la persona abre
+ * o cierra se recuerda. Cada apartado es un botón con `aria-expanded`, y lo
+ * cerrado va con `hidden`: fuera de la vista, del tabulador y del lector.
+ */
 function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; alPulsar?: () => void }) {
+  const prefijo = useId();
+  const actual = seccionDeRuta(useLocation().pathname)?.subgrupo;
+  const [abiertos, setAbiertos] = useState<Abiertos>(() =>
+    actual !== undefined ? { ...abiertosGuardados(), [actual]: true } : abiertosGuardados(),
+  );
+  const porDefecto = secciones.length <= MENU_CORTO;
+  const abierto = (subgrupo: Subgrupo) => abiertos[subgrupo] ?? porDefecto;
+
+  // Al cambiar de página, se abre su apartado. Durante el render y no en un
+  // efecto, para que no se pinte un instante cerrado.
+  const [vista, setVista] = useState(actual);
+  if (actual !== vista) {
+    setVista(actual);
+    if (actual !== undefined && !abierto(actual)) setAbiertos({ ...abiertos, [actual]: true });
+  }
+
+  function cambiar(subgrupo: Subgrupo) {
+    const nuevos = { ...abiertos, [subgrupo]: !abierto(subgrupo) };
+    setAbiertos(nuevos);
+    guardarAbiertos(nuevos);
+  }
+
+  const enlace = (s: Seccion) => (
+    <li key={s.ruta}>
+      <Enlace seccion={s} {...(alPulsar !== undefined ? { alPulsar } : {})} />
+    </li>
+  );
+
   return (
     <>
-      {GRUPOS.map((grupo) => {
-        const delGrupo = secciones.filter((s) => s.grupo === grupo);
-        if (delGrupo.length === 0) return null;
-        return (
-          <div key={grupo} className="nx-menu-grupo">
-            <h2 className="nx-menu-grupo__titulo">{N.grupos[grupo]}</h2>
-            <ul>
-              {delGrupo.map((s) => (
-                <li key={s.ruta}>
-                  <Enlace seccion={s} {...(alPulsar !== undefined ? { alPulsar } : {})} />
+      {menuAgrupado(secciones).map(({ grupo, apartados }) => (
+        <div key={grupo} className="nx-menu-grupo">
+          <h2 className="nx-menu-grupo__titulo">{N.grupos[grupo]}</h2>
+          <ul>
+            {apartados.map(({ subgrupo, secciones: delApartado }) => {
+              const [unica] = delApartado;
+              if (delApartado.length === 1 && unica !== undefined) return enlace(unica);
+              const id = `${prefijo}-${subgrupo}`;
+              const estaVez = abierto(subgrupo);
+              return (
+                <li key={subgrupo} className="nx-subgrupo">
+                  <button
+                    type="button"
+                    className="nx-enlace-menu nx-subgrupo__boton"
+                    aria-expanded={estaVez}
+                    aria-controls={id}
+                    onClick={() => cambiar(subgrupo)}
+                  >
+                    <Icono nombre={ICONOS_DE_SUBGRUPO[subgrupo]} />
+                    <span>{N.subgrupos[subgrupo]}</span>
+                    <Icono nombre="desplegar" />
+                  </button>
+                  <ul id={id} hidden={!estaVez}>
+                    {delApartado.map(enlace)}
+                  </ul>
                 </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </>
   );
 }

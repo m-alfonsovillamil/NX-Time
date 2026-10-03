@@ -10,6 +10,8 @@
 
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 async function entrarEn(browser: Browser, email: string): Promise<Page> {
   const pagina = await (await browser.newContext()).newPage();
   await pagina.goto('/');
@@ -42,8 +44,7 @@ test('emparejar una tablet y fichar en ella con el PIN', async ({ page: tablet, 
 
   // 2. El ADMIN lo teclea en los ajustes de la empresa.
   const admin = await entrarEn(browser, 'raul.ortega@techcorp.demo');
-  await admin.getByRole('navigation', { name: 'Menú principal' }).first()
-    .getByRole('link', { name: 'Ajustes de la empresa' }).click();
+  await irASeccion(admin, 'Ajustes de la empresa');
   await admin.getByLabel('Código de la tablet').fill(codigo);
   await admin.getByLabel('Nombre del kiosco').fill(nombre);
   await admin.getByRole('button', { name: 'Dar de alta' }).click();

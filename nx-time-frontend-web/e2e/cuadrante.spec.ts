@@ -11,6 +11,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('cuadrante, incidencias y firma mensual', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('carlos.ruiz@techcorp.demo');
@@ -18,15 +20,14 @@ test('cuadrante, incidencias y firma mensual', async ({ page }) => {
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
-  await menu.getByRole('link', { name: 'Mi cuadrante' }).click();
+  await irASeccion(page, 'Mi cuadrante');
   await expect(page.getByRole('heading', { name: 'Mi cuadrante' })).toBeVisible();
   await expect(page.getByText(/No tienes cuadrante asignado|Total de la semana/)).toBeVisible();
 
-  await menu.getByRole('link', { name: 'Incidencias' }).click();
+  await irASeccion(page, 'Incidencias');
   await expect(page.getByRole('heading', { name: 'Incidencias de cuadrante' })).toBeVisible();
 
-  await menu.getByRole('link', { name: 'Firma mensual' }).click();
+  await irASeccion(page, 'Firma mensual');
   await expect(page.getByRole('heading', { name: 'Firma mensual' })).toBeVisible();
   // Algún mes terminado con su estado: la demo trae meses de jornadas.
   await expect(page.getByText(/^(Firmado|Sin firmar|Hay que volver a firmar)$/).first()).toBeVisible();
