@@ -26,7 +26,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { CUENTAS, entrar, paginaLista } from './ayudas';
+import { CUENTAS, desplegarMenu, entrar, paginaLista } from './ayudas';
 
 /** Lo que se sale por la derecha: la página, o algo que se desplaza de lado. */
 async function desbordes(page: Page): Promise<string[]> {
@@ -56,6 +56,8 @@ test('el menú del móvil: barra inferior y «Más» con todas las secciones', a
   await barra.getByRole('button', { name: 'Más' }).click();
   const todas = page.getByRole('dialog', { name: 'Todas las secciones' });
   await expect(todas).toBeVisible();
+  // En «Más», el mismo menú por apartados: Plantilla está en Organización, cerrado.
+  await todas.getByRole('button', { name: 'Organización' }).click();
   await todas.getByRole('link', { name: 'Plantilla' }).click();
   await expect(todas).toBeHidden();
   await expect(page).toHaveURL(/\/plantilla$/);
@@ -98,6 +100,7 @@ for (const { rol, email } of CUENTAS) {
     // Las rutas salen del menú completo de «Más», que tiene todas.
     await barra.getByRole('button', { name: 'Más' }).click();
     const todas = page.getByRole('dialog', { name: 'Todas las secciones' });
+    await desplegarMenu(todas);
     const rutas = await todas
       .getByRole('link')
       .evaluateAll((enlaces) => enlaces.map((a) => a.getAttribute('href') ?? ''));

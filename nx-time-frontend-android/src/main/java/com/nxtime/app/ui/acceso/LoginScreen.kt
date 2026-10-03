@@ -84,6 +84,21 @@ fun LoginScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
             )
 
+            // Contraseña buena, correo sin confirmar (ADR 034): el código.
+            val sinConfirmar = estado.sinConfirmar
+            if (sinConfirmar != null) {
+                ConfirmarCorreoFormulario(
+                    email = sinConfirmar,
+                    codigo = estado.codigo,
+                    onCodigoCambia = viewModel::onCodigoCambia,
+                    onConfirmar = viewModel::confirmar,
+                    cargando = estado.cargando,
+                    error = estado.error
+                )
+                Spacer(Modifier.height(48.dp))
+                return@Column
+            }
+
             estado.error?.let { BannerError(mensaje = it.resolver()) }
 
             OutlinedTextField(

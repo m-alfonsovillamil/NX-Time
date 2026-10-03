@@ -121,40 +121,120 @@ export function estadoPush(): EstadoPush {
 }
 
 /* ------------------------------------------------------------------ */
+/* Los pasos de encender, y qué falló                                   */
+/* ------------------------------------------------------------------ */
+
+/** Los pasos de encender, en orden. La página va diciendo por cuál va. */
+export type PasoPush = 'permiso' | 'sdk' | 'service-worker' | 'token' | 'servidor';
+
+/**
+ * Un fallo al encender, con el paso en que ocurrió. Antes todo acababa en un
+ * «No se han podido activar» genérico, y un paso que no contestaba no acababa
+ * en nada: el botón se quedaba pensando para siempre y parecía que no hacía
+ * nada (1/10/2026).
+ */
+export class FalloDePush extends Error {
+  readonly paso: PasoPush;
+  /** Lo que dijo el navegador o Firebase, para enseñarlo como detalle. */
+  readonly detalle: string;
+
+  constructor(paso: PasoPush, causa: unknown) {
+    const detalle = causa instanceof Error ? causa.message : String(causa);
+    super(`${paso}: ${detalle}`);
+    this.name = 'FalloDePush';
+    this.paso = paso;
+    this.detalle = detalle;
+  }
+}
+
+/** No se dio el permiso: se denegó (`denied`) o se cerró la pregunta (`default`). */
+export class PermisoDenegado extends FalloDePush {
+  readonly respuesta: NotificationPermission;
+
+  constructor(respuesta: NotificationPermission) {
+    super('permiso', respuesta);
+    this.name = 'PermisoDenegado';
+    this.respuesta = respuesta;
+  }
+}
+
+/**
+ * Lo que se espera a cada paso que depende del navegador o de Google. Ninguno
+ * tarda más de un par de segundos cuando funciona; si uno no contesta, mejor
+ * decirlo que dejar el botón pensando. El permiso no tiene límite (lo contesta
+ * una persona) y el registro en el servidor tampoco: el cliente ya espera al
+ * arranque en frío de Render.
+ */
+export const ESPERA_MAXIMA_MS = 15_000;
+
+function conTiempo<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  let reloj: ReturnType<typeof setTimeout> | undefined;
+  const plazo = new Promise<never>((_, rechazar) => {
+    reloj = setTimeout(() => rechazar(new Error(`Sin respuesta en ${ms / 1000} s.`)), ms);
+  });
+  return Promise.race([promesa, plazo]).finally(() => clearTimeout(reloj));
+}
+
+/** Hace un paso y, si falla o no contesta a tiempo, lo dice con su nombre. */
+async function enPaso<T>(paso: PasoPush, trabajo: () => Promise<T>, ms: number | null = ESPERA_MAXIMA_MS): Promise<T> {
+  try {
+    return await (ms === null ? trabajo() : conTiempo(trabajo(), ms));
+  } catch (e) {
+    throw e instanceof FalloDePush ? e : new FalloDePush(paso, e);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* El service worker y el token                                         */
 /* ------------------------------------------------------------------ */
 
 /**
  * Registra `public/sw.js`. Se hace al arrancar y no solo al encender el push:
  * es también lo que pinta la notificación y abre su página al pulsarla, y
- * Chrome lo usa para ofrecer instalar la web. Si falla, la web sigue igual.
+ * Chrome lo usa para ofrecer instalar la web. Si falla, la web sigue igual,
+ * pero queda en la consola: encender lo vuelve a intentar y dirá qué pasó.
  */
 export async function registrarServiceWorker(): Promise<void> {
   if (!('serviceWorker' in (globalThis.navigator ?? {}))) return;
   try {
     await navigator.serviceWorker.register('/sw.js');
-  } catch {
-    // Sin service worker no hay push, y Ajustes lo dirá al intentarlo.
+  } catch (e) {
+    console.warn('[NX Time] No se ha podido registrar el service worker de las notificaciones.', e);
   }
+}
+
+/**
+ * El service worker, registrado y activo. Se registra otra vez aunque ya lo
+ * esté (devuelve el mismo registro) porque `serviceWorker.ready` a secas no
+ * acaba nunca si el registro del arranque falló.
+ */
+async function serviceWorkerActivo(): Promise<ServiceWorkerRegistration> {
+  return enPaso('service-worker', async () => {
+    await navigator.serviceWorker.register('/sw.js');
+    return navigator.serviceWorker.ready;
+  });
 }
 
 async function firebase() {
   const config = configuracion();
-  if (config === null) throw new Error('Sin configuración de Firebase.');
+  if (config === null) throw new FalloDePush('sdk', 'Sin configuración de Firebase.');
   const [{ getApps, initializeApp }, mensajeria] = await Promise.all([
     import('firebase/app'),
     import('firebase/messaging'),
   ]);
-  if (!(await mensajeria.isSupported())) throw new Error('Este navegador no admite notificaciones push.');
+  if (!(await mensajeria.isSupported())) throw new FalloDePush('sdk', 'Este navegador no admite notificaciones push.');
   const { vapidKey, ...opciones } = config;
   const app = getApps()[0] ?? initializeApp(opciones);
   return { messaging: mensajeria.getMessaging(app), mensajeria, vapidKey };
 }
 
-async function pedirToken(): Promise<string> {
-  const { messaging, mensajeria, vapidKey } = await firebase();
-  const registro = await navigator.serviceWorker.ready;
-  return mensajeria.getToken(messaging, { vapidKey, serviceWorkerRegistration: registro });
+async function pedirToken(alAvanzar: (paso: PasoPush) => void = () => undefined): Promise<string> {
+  alAvanzar('sdk');
+  const { messaging, mensajeria, vapidKey } = await enPaso('sdk', firebase);
+  alAvanzar('service-worker');
+  const registro = await serviceWorkerActivo();
+  alAvanzar('token');
+  return enPaso('token', () => mensajeria.getToken(messaging, { vapidKey, serviceWorkerRegistration: registro }));
 }
 
 async function registrarEnServidor(token: string): Promise<void> {
@@ -175,17 +255,23 @@ async function borrarEnGoogle(): Promise<void> {
 /* Encender y apagar (Ajustes)                                          */
 /* ------------------------------------------------------------------ */
 
-export class PermisoDenegado extends Error {}
-
 /**
  * Pide permiso, pide el token y lo registra. Tiene que llamarse desde un clic:
- * Safari no deja pedir el permiso de otro modo.
+ * Safari no deja pedir el permiso de otro modo. `alAvanzar` dice por qué paso
+ * va, y si algo falla se lanza un {@link FalloDePush} con el paso.
  */
-export async function encenderPush(): Promise<void> {
-  const permiso = await Notification.requestPermission();
+export async function encenderPush(alAvanzar: (paso: PasoPush) => void = () => undefined): Promise<void> {
+  alAvanzar('permiso');
+  // Si ya estaba concedido (se encendieron y luego se perdió el token), no se
+  // vuelve a preguntar: requestPermission contestaría lo mismo, pero no hace falta.
+  const permiso =
+    Notification.permission === 'granted'
+      ? 'granted'
+      : await enPaso('permiso', () => Notification.requestPermission(), null);
   if (permiso !== 'granted') throw new PermisoDenegado(permiso);
-  const token = await pedirToken();
-  await registrarEnServidor(token);
+  const token = await pedirToken(alAvanzar);
+  alAvanzar('servidor');
+  await enPaso('servidor', () => registrarEnServidor(token), null);
   guardarToken(token);
 }
 

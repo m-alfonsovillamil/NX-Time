@@ -3,7 +3,30 @@
  * móvil y carga por áreas, fase W8).
  */
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+
+/**
+ * Va a una sección por el menú lateral. Desde el 1/10/2026 el menú va por
+ * apartados plegables: si el de la sección está cerrado, lo abre antes, como
+ * haría una persona. `exact`, porque «Historial» no es «Historial del equipo».
+ */
+export async function irASeccion(page: Page, nombre: string): Promise<void> {
+  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
+  const enlace = menu.getByRole('link', { name: nombre, exact: true });
+  if (!(await enlace.isVisible())) {
+    const apartado = menu
+      .locator('.nx-subgrupo')
+      .filter({ has: page.getByRole('link', { name: nombre, exact: true, includeHidden: true }) });
+    await apartado.locator(':scope > button[aria-expanded="false"]').click();
+  }
+  await enlace.click();
+}
+
+/** Abre todos los apartados de un menú, para las specs que recorren todos sus enlaces. */
+export async function desplegarMenu(menu: Locator): Promise<void> {
+  const cerrados = menu.locator('button[aria-expanded="false"]');
+  while ((await cerrados.count()) > 0) await cerrados.first().click();
+}
 
 export const CUENTAS = [
   { rol: 'EMPLEADO', email: 'javier.lopez@techcorp.demo' },

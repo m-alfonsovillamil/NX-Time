@@ -111,7 +111,26 @@ public class User {
 
     private Instant kioscoPinBloqueadoHasta;
 
+    /**
+     * Bloqueos del PIN desde que se eligió (V38, ADR 034): al tercero se
+     * anula. No vuelve a cero al acertar, solo al elegir un PIN nuevo.
+     */
+    @Builder.Default
+    private int kioscoPinBloqueos = 0;
+
     private Integer kioscoTarjetaVersion;
+
+    /**
+     * Quien registró la empresa y aún no ha confirmado su correo (V37, ADR
+     * 034): no puede entrar hasta canjear el código que le llegó. Null para
+     * todos los demás.
+     */
+    private Instant correoSinConfirmarDesde;
+
+    /** Ha registrado una empresa y todavía no ha demostrado que el correo es suyo. */
+    public boolean correoPendienteDeConfirmar() {
+        return correoSinConfirmarDesde != null;
+    }
 
     @Version
     private long version;

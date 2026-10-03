@@ -38,4 +38,23 @@ public interface AccessCodeService {
      *         incorrecto, caducado, usado o agotado
      */
     void confirmar(String email, String codigo, String contrasenaNueva);
+
+    /**
+     * Emite el código con el que quien registra una empresa confirma su
+     * correo (V37, ADR 034), y lo manda DESPUÉS del commit, como el de
+     * recuperación: el registro es público y no puede retener una conexión
+     * esperando al servidor de correo. Si se pasa del límite de códigos por
+     * hora no lanza: no manda nada y queda en el log.
+     */
+    void emitirCodigoDeConfirmacion(User usuario);
+
+    /**
+     * Canjea el código de confirmación: la cuenta deja de estar pendiente.
+     *
+     * @return la cuenta confirmada, para abrirle la sesión
+     * @throws com.nxtime.nxtime.exception.BusinessException 400, con el
+     *         mismo mensaje que {@link #confirmar} para todo lo que no vale
+     *         (también si la cuenta no está pendiente de confirmar)
+     */
+    User confirmarCorreo(String email, String codigo);
 }

@@ -6,11 +6,21 @@ import com.nxtime.nxtime.dto.ChangePasswordRequest;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
+import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 
 public interface AuthService {
 
-    AuthenticationResponse registerManager(RegisterManagerRequest request);
+    /**
+     * Registra la empresa y deja a su ADMIN pendiente de confirmar el correo
+     * (V37, ADR 034): no abre sesión. Responde lo mismo aunque el correo ya
+     * tenga cuenta.
+     */
+    RegistrationPendingResponse registerManager(RegisterManagerRequest request);
+
+    /** Canjea el código del registro y abre la sesión, como el login. */
+    AuthenticationResponse confirmarRegistro(ConfirmRegistrationRequest request);
 
     AuthenticationResponse login(LoginRequest request);
 

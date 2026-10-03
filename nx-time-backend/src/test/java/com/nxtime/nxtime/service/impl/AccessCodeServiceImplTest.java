@@ -78,7 +78,8 @@ class AccessCodeServiceImplTest {
     void setUp() {
         service = new AccessCodeServiceImpl(accessCodeRepository, userRepository, refreshTokenRepository,
                 passwordEncoder, emailSender, eventPublisher, Clock.fixed(AHORA, ZoneOffset.UTC), URL_APP);
-        ana = User.builder().id(10L).email(EMAIL).nombre("Ana").activo(true).build();
+        ana = User.builder().id(10L).email(EMAIL).nombre("Ana").activo(true)
+                .empresa(com.nxtime.nxtime.domain.Company.builder().id(1L).nombre("Acme").build()).build();
     }
 
     /** Las variables del evento de recuperación: es donde viaja ahora el código (Fase A9). */
@@ -113,6 +114,35 @@ class AccessCodeServiceImplTest {
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(ana));
         when(accessCodeRepository.findFirstByUsuarioAndUsadoEnIsNullAndAnuladoEnIsNullOrderByCreadoEnDesc(ana))
                 .thenReturn(Optional.of(codigo));
+    }
+
+    // ---- revisión de seguridad del 1/10/2026 (ADR 034) ----
+
+    @Test
+    @DisplayName("Sin cuenta, /auth/recuperar gasta el mismo BCrypt que con ella: el tiempo no dice qué correos existen")
+    void solicitar_sinCuenta_gastaElMismoBcrypt() {
+        PasswordEncoder espia = org.mockito.Mockito.spy(new BCryptPasswordEncoder(4));
+        AccessCodeServiceImpl conEspia = new AccessCodeServiceImpl(accessCodeRepository, userRepository,
+                refreshTokenRepository, espia, emailSender, eventPublisher, Clock.fixed(AHORA, ZoneOffset.UTC), URL_APP);
+        org.mockito.Mockito.clearInvocations(espia);
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.empty());
+
+        conEspia.solicitarRecuperacion(EMAIL);
+
+        org.mockito.Mockito.verify(espia, org.mockito.Mockito.times(1)).encode(any());
+    }
+
+    @Test
+    @DisplayName("Al pasar de 50 altas en un día, la siguiente da 429 y no manda el correo")
+    void alta_porEncimaDelTopeDiario_429() {
+        when(accessCodeRepository.countByUsuario_Empresa_IdAndTipoAndCreadoEnAfter(
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(AccessCodeType.ALTA), any()))
+                .thenReturn((long) AccessCodeServiceImpl.ALTAS_POR_EMPRESA_Y_DIA);
+
+        assertThatThrownBy(() -> service.emitirCodigoDeAlta(ana, "Acme"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
+        org.mockito.Mockito.verifyNoInteractions(emailSender);
     }
 
     // ---- solicitarRecuperacion ----

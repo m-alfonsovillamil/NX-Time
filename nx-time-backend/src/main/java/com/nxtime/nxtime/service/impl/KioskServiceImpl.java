@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nxtime.nxtime.audit.Canonico;
 import com.nxtime.nxtime.domain.Kiosk;
 import com.nxtime.nxtime.domain.KioskPairing;
@@ -19,6 +21,7 @@ import com.nxtime.nxtime.dto.KioskDtos.PairingStarted;
 import com.nxtime.nxtime.dto.KioskDtos.PairingState;
 import com.nxtime.nxtime.dto.KioskDtos.PairingStatus;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.kiosco.IdentificacionEnKiosco;
@@ -28,6 +31,8 @@ import com.nxtime.nxtime.repository.KioskRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.KioskService;
 import com.nxtime.nxtime.service.TimeEntryService;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
@@ -38,6 +43,7 @@ import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,6 +83,20 @@ public class KioskServiceImpl implements KioskService {
     private final TimeEntryService timeEntryService;
     private final Clock clock;
     private final SecureRandom azar = new SecureRandom();
+
+    /**
+     * Intentos de confirmar un código por ADMIN (revisión de seguridad del
+     * 1/10/2026). El registro de empresas es público, así que cualquiera
+     * puede ser ADMIN de una y probar códigos para quedarse con la tablet
+     * de otra que esté a medio emparejar. Con 31^8 códigos y diez minutos
+     * de vida no es un ataque práctico, pero sin tope solo lo frenaba la
+     * paciencia. Cuenta intentos y no fallos, como LimitadorDeIntentosPorCuenta.
+     */
+    static final int CONFIRMACIONES_POR_HORA = 10;
+    private final Cache<Long, Bucket> confirmacionesPorActor = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterAccess(Duration.ofHours(1))
+            .build();
 
     @Autowired
     public KioskServiceImpl(
@@ -161,6 +181,18 @@ public class KioskServiceImpl implements KioskService {
     @Override
     @Transactional
     public KioskResponse confirmar(ConfirmKioskRequest request, User actor) {
+        Bucket cubo = confirmacionesPorActor.get(actor.getId(), id -> Bucket.builder()
+                .addLimit(Bandwidth.builder()
+                        .capacity(CONFIRMACIONES_POR_HORA)
+                        .refillGreedy(CONFIRMACIONES_POR_HORA, Duration.ofHours(1))
+                        .build())
+                .build());
+        if (!cubo.tryConsume(1)) {
+            log.warn("{} ha agotado los intentos de confirmar códigos de kiosco.", actor.getId());
+            throw new BusinessException(
+                    "Demasiados intentos de dar de alta un kiosco. Inténtalo de nuevo dentro de un rato.",
+                    HttpStatus.TOO_MANY_REQUESTS);
+        }
         String codigo = normalizar(request.codigo());
         KioskPairing emparejamiento = pairingRepository.findPendientes(Canonico.sha256(codigo), clock.instant())
                 .stream()
