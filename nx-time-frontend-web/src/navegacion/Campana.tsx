@@ -1,12 +1,18 @@
 /**
  * La campana de avisos: el contador y los últimos avisos.
  *
- * **El contador se pide cada minuto y solo con la pestaña visible.** Es la
- * petición más repetida de la web; con la pestaña en segundo plano no la ve
- * nadie, y mantener despierto el servidor de Render por una pestaña olvidada
- * sería gastar sus horas gratis en nada. TanStack Query ya hace eso por
- * defecto (`refetchIntervalInBackground: false`), y al volver a la pestaña
+ * **El contador se pide cada cinco minutos y solo con la pestaña visible.**
+ * Es la petición más repetida de la web; con la pestaña en segundo plano no la
+ * ve nadie, y mantener despierto el servidor de Render por una pestaña
+ * olvidada sería gastar sus horas gratis en nada. TanStack Query ya hace eso
+ * por defecto (`refetchIntervalInBackground: false`), y al volver a la pestaña
  * pide en el acto.
+ *
+ * Cinco minutos y no uno desde el 1/10/2026 (ADR 034): con una pestaña a la
+ * vista, una consulta por minuto no dejaba nunca que Neon suspendiera la base,
+ * que es lo que agota su cuota gratuita (se agotó a finales de septiembre). Lo
+ * que importa llega antes por otros caminos: un push refresca la campana al
+ * momento (`PuenteDelServiceWorker`), y volver a la pestaña también.
  *
  * Al abrirla enseña los últimos avisos; la lista completa, con paginación,
  * es la página `/avisos`. Un aviso cuyo destino aún no tiene página se marca
@@ -35,7 +41,7 @@ export const CLAVES_AVISOS = {
   recientes: ['avisos', 'recientes'] as const,
 };
 
-const CADA_MINUTO = 60_000;
+const CADA_CINCO_MINUTOS = 5 * 60_000;
 const RECIENTES = 10;
 
 export function Campana() {
@@ -45,7 +51,7 @@ export function Campana() {
   const noLeidos = useQuery({
     queryKey: CLAVES_AVISOS.noLeidos,
     queryFn: () => pedir(cliente.GET('/api/v1/avisos/no-leidos', {})),
-    refetchInterval: CADA_MINUTO,
+    refetchInterval: CADA_CINCO_MINUTOS,
     select: (r) => r.noLeidos ?? 0,
   });
 

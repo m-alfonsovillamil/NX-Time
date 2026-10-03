@@ -2,7 +2,7 @@
  * Lo que el service worker (`public/sw.js`) le dice a la página abierta:
  *
  * - `push`: ha llegado una notificación. La campana se actualiza ya, sin
- *   esperar a su consulta de cada minuto.
+ *   esperar a su consulta de cada cinco minutos.
  * - `abrir`: se ha pulsado una notificación y esta es la pestaña que la
  *   atiende. Se navega dentro de la aplicación, sin recargar.
  *
