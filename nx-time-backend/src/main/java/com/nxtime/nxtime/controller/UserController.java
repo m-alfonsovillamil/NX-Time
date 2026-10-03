@@ -54,6 +54,7 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
             @Valid @RequestBody ChangePasswordRequest request, @AuthenticationPrincipal SecurityUser user,
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String autorizacion) {
         // La sesión desde la que se cambia sigue abierta; las demás se cierran (ADR 034).
         java.util.Optional<java.util.UUID> sesion = autorizacion != null && autorizacion.startsWith("Bearer ")

@@ -1173,14 +1173,6 @@
         "summary" : "Cambiar la contraseña propia",
         "description" : "Exige la contraseña antigua. Cierra las demás sesiones abiertas de la cuenta; la desde la que se cambia sigue abierta (ADR 034).",
         "operationId" : "changePassword",
-        "parameters" : [ {
-          "name" : "Authorization",
-          "in" : "header",
-          "required" : false,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
