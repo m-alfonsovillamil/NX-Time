@@ -113,6 +113,18 @@ public class User {
 
     private Integer kioscoTarjetaVersion;
 
+    /**
+     * Quien registró la empresa y aún no ha confirmado su correo (V37, ADR
+     * 034): no puede entrar hasta canjear el código que le llegó. Null para
+     * todos los demás.
+     */
+    private Instant correoSinConfirmarDesde;
+
+    /** Ha registrado una empresa y todavía no ha demostrado que el correo es suyo. */
+    public boolean correoPendienteDeConfirmar() {
+        return correoSinConfirmarDesde != null;
+    }
+
     @Version
     private long version;
 

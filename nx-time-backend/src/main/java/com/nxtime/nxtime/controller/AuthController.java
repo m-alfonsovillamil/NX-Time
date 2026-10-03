@@ -5,7 +5,9 @@ import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.PasswordRecoveryRequest;
 import com.nxtime.nxtime.dto.PasswordResetRequest;
 import com.nxtime.nxtime.dto.RefreshTokenRequest;
+import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
+import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SesionWeb;
 import com.nxtime.nxtime.service.AccessCodeService;
@@ -68,22 +70,43 @@ public class AuthController {
     }
 
     @Operation(summary = "Registrar una empresa nueva",
-            description = "Crea la empresa y a quien la registra como ADMIN de ese tenant. "
-                    + "Es quien luego puede crear GESTOR/RRHH/otros ADMIN.")
+            description = "Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al "
+                    + "resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se "
+                    + "canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en "
+                    + "ese caso no crea ni manda nada): si no, serviría para averiguar quién usa NX Time. Registrarse "
+                    + "otra vez con un correo a medio confirmar rehace el registro y manda otro código.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Empresa creada, tokens emitidos",
-                    content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Datos inválidos (email, nombre o contraseña)",
-                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "Ya existe una empresa con ese nombre",
+            @ApiResponse(responseCode = "202", description = "Registro pendiente de confirmar el correo",
+                    content = @Content(schema = @Schema(implementation = RegistrationPendingResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos (email, nombre o contraseña), o ya "
+                    + "existe una empresa con ese nombre",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/register-manager")
-    public ResponseEntity<AuthenticationResponse> registerManager(
-            @Valid @RequestBody RegisterManagerRequest request, HttpServletResponse respuesta) {
-        AuthenticationResponse sesion = authService.registerManager(request);
+    public ResponseEntity<RegistrationPendingResponse> registerManager(
+            @Valid @RequestBody RegisterManagerRequest request) {
+        return ResponseEntity.accepted().body(authService.registerManager(request));
+    }
+
+    @Operation(summary = "Confirmar el correo del registro y entrar",
+            description = "Con el código que llegó al registrar la empresa. Si vale, abre la sesión como el login, "
+                    + "con las mismas reglas según 'origen' (desde WEB, el refresh va en la cookie). Cada código "
+                    + "admite 5 intentos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Correo confirmado, sesión abierta",
+                    content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Datos inválidos, o un código incorrecto, caducado, "
+                    + "usado o anulado. El mensaje es el mismo en todos los casos.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/registro/confirmar")
+    public ResponseEntity<AuthenticationResponse> confirmarRegistro(
+            @Valid @RequestBody ConfirmRegistrationRequest request, HttpServletResponse respuesta) {
+        AuthenticationResponse sesion = authService.confirmarRegistro(request);
         // Como el login: desde el navegador, el refresh a la cookie (ADR 030).
         if (!esNavegador(request.origen())) {
             return ResponseEntity.ok(sesion);
@@ -106,6 +129,9 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Email o contraseña en blanco / email mal formado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Credenciales incorrectas, o usuario dado de baja",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "La contraseña es buena pero quien registró la empresa no "
+                    + "ha confirmado su correo: se le acaba de mandar otro código (/auth/registro/confirmar)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))

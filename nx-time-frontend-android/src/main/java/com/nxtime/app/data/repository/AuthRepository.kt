@@ -13,7 +13,10 @@ interface AuthRepository {
 
     /* Funciones de Autenticación */
     suspend fun login(peticion: PeticionLogin): Response<RespuestaAutenticacion>
-    suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RespuestaAutenticacion>
+    suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RegistroPendienteDTO>
+
+    /** Canjea el código del registro (ADR 034). Si vale, la respuesta es la sesión, como la del login. */
+    suspend fun confirmarRegistro(email: String, codigo: String): Response<RespuestaAutenticacion>
     fun procesarLoginExitoso(authResponse: RespuestaAutenticacion)
 
     /* Códigos de acceso (ADR 014): recuperar la contraseña o elegirla la primera vez */

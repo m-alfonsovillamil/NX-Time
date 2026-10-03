@@ -11,6 +11,8 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion, sesionActual } from '../../api/sesion';
 import { T } from '../../i18n/es';
 import { json, pintar, problema, simularApi, sinContenido } from '../../pruebas/api';
+import { ConfirmarCorreo } from './ConfirmarCorreo';
+import { Login } from './Login';
 import { RecuperarAcceso } from './RecuperarAcceso';
 import { RegistroEmpresa } from './RegistroEmpresa';
 
@@ -93,14 +95,46 @@ describe('recuperar el acceso', () => {
   });
 });
 
+const C = T.confirmarCorreo;
+
+describe('entrar sin haber confirmado el correo', () => {
+  it('con la contraseña buena y un 403, pide el código que acaba de salir', async () => {
+    simularApi({
+      'POST /auth/login': () => problema(403, 'Falta confirmar tu correo.'),
+    });
+    pintar(<Login />);
+
+    await userEvent.type(screen.getByLabelText(T.login.email), 'eva@talleres.test');
+    await userEvent.type(screen.getByLabelText(T.login.contrasena), 'unaBuena123');
+    await userEvent.click(screen.getByRole('button', { name: T.login.entrar }));
+
+    expect(await screen.findByRole('heading', { name: C.titulo })).toBeTruthy();
+    expect(screen.getByText(C.explicacion('eva@talleres.test'))).toBeTruthy();
+  });
+
+  it('un código que no son 6 cifras no se manda', async () => {
+    const llamadas = simularApi({});
+    pintar(<ConfirmarCorreo email="eva@talleres.test" />);
+
+    await userEvent.type(screen.getByLabelText(C.codigo), '12ab');
+    await userEvent.click(screen.getByRole('button', { name: C.entrar }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(C.faltaCodigo);
+    expect(llamadas.llamadas).toEqual([]);
+  });
+});
+
 describe('registrar una empresa', () => {
   /*
    * `origen: 'WEB'` es lo que hace que el refresh vaya a la cookie y dure 12
    * horas; sin él, el registro daba un refresh de 30 días en el cuerpo.
    */
-  it('manda origen WEB, abre la sesión y lleva a la jornada', async () => {
+  it('registra, pide el código del correo, y al confirmarlo abre la sesión (origen WEB) y lleva a la jornada', async () => {
     const llamadas = simularApi({
+      // Desde la V37 (ADR 034) el registro no abre sesión: 202 y un código al correo.
       'POST /auth/register-manager': () =>
+        json({ email: 'eva@talleres.test', mensaje: 'Te hemos mandado un código' }, 202),
+      'POST /auth/registro/confirmar': () =>
         json({ token: 'access', refreshToken: null, nombre: 'Eva', rol: 'ADMIN', authorities: ['gestor:crear'] }),
     });
     pintar(
@@ -117,7 +151,15 @@ describe('registrar una empresa', () => {
     await userEvent.type(screen.getByLabelText(G.contrasena), 'unaBuena123');
     await userEvent.click(screen.getByRole('button', { name: G.crear }));
 
+    expect(await screen.findByRole('heading', { name: C.titulo })).toBeTruthy();
+    expect(sesionActual()).toBeNull();
+    await userEvent.type(screen.getByLabelText(C.codigo), '123 456');
+    await userEvent.click(screen.getByRole('button', { name: C.entrar }));
+
     expect(await screen.findByRole('heading', { name: 'Mi jornada' })).toBeTruthy();
+    expect(llamadas.a('POST', '/auth/registro/confirmar').map((l) => l.cuerpo)).toEqual([
+      { email: 'eva@talleres.test', codigo: '123456', origen: 'WEB' },
+    ]);
     expect(llamadas.a('POST', '/auth/register-manager').map((l) => l.cuerpo)).toEqual([
       {
         nombreEmpresa: 'Talleres Eva SL',
