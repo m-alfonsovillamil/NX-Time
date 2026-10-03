@@ -90,3 +90,5 @@ repiten con un comando**: `npm run capturas` en `nx-time-frontend-web/`
 | `web-05-editor-cuadrantes.png` | El editor de plantillas de cuadrante, también solo de la web: un turno partido con dos tramos por día (sin guardar: la demo no siembra cuadrantes) |
 | `web-06-movil.png` | La misma jornada en un móvil: barra inferior con «Más» en vez del menú lateral |
 | `web-07-movil-oscuro.png` | En tema oscuro, que sigue al del sistema |
+| `web-08-menu-por-apartados.png` | El menú lateral de un ADMIN por apartados plegables (octubre de 2026): siete apartados en vez de 28 entradas seguidas, con el de la página abierta desplegado |
+| `web-09-kiosco.png` | El kiosco de fichaje en una tablet (ADR 033): espera una tarjeta QR por la cámara, o que alguien busque su nombre y teclee su PIN. La imagen es la cámara de prueba de Chromium |
