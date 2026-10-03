@@ -79,7 +79,7 @@ self.addEventListener('push', (evento) => {
         data: { url: urlDe(datos.ruta) },
       });
       // Y a las pestañas abiertas, para que la campana se actualice sin
-      // esperar a su consulta de cada minuto.
+      // esperar a su consulta de cada cinco minutos.
       for (const ventana of await ventanas()) {
         ventana.postMessage({ nxTime: 'push', tipo: datos.tipo || null });
       }
