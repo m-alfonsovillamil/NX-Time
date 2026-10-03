@@ -699,7 +699,7 @@ Comprobado de extremo a extremo, no solo el *health check*:
 | Prueba | Resultado |
 |---|---|
 | `GET /actuator/health` | `{"status":"UP","groups":["liveness","readiness"]}` |
-| `GET /v3/api-docs` | OpenAPI completo, con `servers` apuntando a la URL pública |
+| `GET /v3/api-docs` | OpenAPI completo, con `servers` apuntando a la URL pública. Desde el 1/10/2026 da 404 salvo con `SWAGGER_PUBLICO=true` |
 | `POST /auth/register-manager` | `200` — empresa y ADMIN creados |
 | `POST /auth/login` | `200` — token firmado, rol `ADMIN` |
 | Endpoint protegido sin token | `401` |

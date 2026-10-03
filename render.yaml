@@ -252,6 +252,14 @@ services:
       - path: /*
         name: X-Frame-Options
         value: DENY
+      # HSTS (revisión de seguridad del 1/10/2026): que el navegador no vuelva
+      # a pedir la web por http:// nunca, ni la primera petición de quien
+      # escribe «nxtime-web.com» a secas, que es la que se puede interceptar en
+      # una wifi ajena. Un año, y también los subdominios (api. ya es solo
+      # HTTPS). Sin `preload`: entrar en esa lista es difícil de deshacer.
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
       # Vite pone un hash del contenido en el nombre de cada fichero de
       # /assets, así que uno de ellos no cambia nunca: si cambia el
       # contenido, cambia el nombre. Se puede guardar para siempre.
