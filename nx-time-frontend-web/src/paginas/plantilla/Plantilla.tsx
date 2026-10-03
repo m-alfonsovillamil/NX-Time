@@ -287,7 +287,7 @@ export function Plantilla() {
               {P.nuevoGestor}
             </Boton>
           )}
-          {puede('empleado:gestionar') && (
+          {puede('empresa:configurar') && (
             <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/tarjetas-kiosco">
               {kiosco.tarjetas.titulo}
             </Link>

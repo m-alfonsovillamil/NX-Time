@@ -9,6 +9,7 @@ import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
+import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
@@ -66,6 +67,7 @@ class KioscoIT {
     }
 
     @Autowired private TestRestTemplate rest;
+    @Autowired private com.nxtime.nxtime.repository.NoticeRepository noticeRepository;
     @Autowired private CodigosEnviados codigos;
     @Autowired private UserRepository userRepository;
     @Autowired private CompanyRepository companyRepository;
@@ -247,6 +249,59 @@ class KioscoIT {
     }
 
     @Test
+    @DisplayName("Tres bloqueos y el PIN se anula, aunque el dueño acierte entre medias; y se avisa a ella y al ADMIN")
+    void tresBloqueosAnulanElPin() throws Exception {
+        String kiosco = kioscoEmparejado();
+        perfilDeKiosco.fijarPin(lucia, "4827");
+        String bueno = "{\"usuarioId\":%d,\"pin\":\"4827\"}".formatted(lucia.getId());
+        String malo = "{\"usuarioId\":%d,\"pin\":\"0000\"}".formatted(lucia.getId());
+
+        for (int bloqueo = 1; bloqueo <= 3; bloqueo++) {
+            for (int i = 0; i < 5; i++) {
+                assertThat(post("/kiosco/identificar", malo, kioscoAuth(kiosco)).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN);
+            }
+            if (bloqueo < 3) {
+                // Pasan los quince minutos (a mano: no se espera en un test) y el
+                // dueño acierta. Antes, eso devolvía el contador a cero.
+                User conBloqueo = userRepository.findById(lucia.getId()).orElseThrow();
+                conBloqueo.setKioscoPinBloqueadoHasta(null);
+                userRepository.save(conBloqueo);
+                assertThat(post("/kiosco/identificar", bueno, kioscoAuth(kiosco)).getStatusCode())
+                        .isEqualTo(HttpStatus.OK);
+            }
+        }
+
+        User anulada = userRepository.findById(lucia.getId()).orElseThrow();
+        assertThat(anulada.getKioscoPinHash()).isNull();
+        // Ni con el PIN bueno: ya no hay PIN.
+        assertThat(post("/kiosco/identificar", bueno, kioscoAuth(kiosco)).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        // Los avisos salen después del commit y en otro hilo.
+        long limite = System.currentTimeMillis() + 5000;
+        while (System.currentTimeMillis() < limite
+                && (avisos(lucia, NoticeType.PIN_KIOSCO_ANULADO) == 0
+                        || avisos(admin, NoticeType.PIN_KIOSCO_ANULADO_EQUIPO) == 0)) {
+            Thread.sleep(100);
+        }
+        assertThat(avisos(lucia, NoticeType.PIN_KIOSCO_ANULADO))
+                .isEqualTo(1);
+        assertThat(avisos(admin, NoticeType.PIN_KIOSCO_ANULADO_EQUIPO))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Las tarjetas de toda la plantilla son un POST del ADMIN; con un GET o sin empresa:configurar, no")
+    void tarjetasDeLaPlantilla() throws Exception {
+        assertThat(post("/api/v1/empresa/kioscos/tarjetas", "{}", bearer(tokenAdmin)).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        assertThat(get("/api/v1/empresa/kioscos/tarjetas", bearer(tokenAdmin)).getStatusCode().is2xxSuccessful())
+                .isFalse();
+        assertThat(get("/api/v1/gestor/kiosco/tarjetas", bearer(tokenAdmin)).getStatusCode().is2xxSuccessful())
+                .isFalse();
+    }
+
+    @Test
     @DisplayName("Un kiosco revocado deja de valer en la siguiente petición")
     void revocar() throws Exception {
         String kiosco = kioscoEmparejado();
@@ -262,6 +317,13 @@ class KioscoIT {
     }
 
     // ------------------------------------------------------------------
+
+    /** Cuántos avisos de ese tipo tiene esa persona. */
+    private long avisos(User persona, NoticeType tipo) {
+        return noticeRepository.findByDestinatarioOrderByCreadoEnDesc(persona).stream()
+                .filter(aviso -> aviso.getTipo() == tipo)
+                .count();
+    }
 
     /** Empareja una tablet con la empresa del ADMIN y devuelve su token. */
     private String kioscoEmparejado() {

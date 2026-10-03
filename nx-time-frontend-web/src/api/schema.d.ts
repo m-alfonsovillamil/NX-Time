@@ -825,6 +825,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/kioscos/tarjetas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Las tarjetas de la plantilla, para imprimirlas
+         * @description De toda la gente de alta. A quien no tenía, se le crea. Queda registrado quién las saca.
+         */
+        post: operations["tarjetasDeLaEmpresa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispositivos-push": {
         parameters: {
             query?: never;
@@ -1919,26 +1939,6 @@ export interface paths {
          * @description Los EMPLEADO de la empresa de quien pregunta, con su jornada semanal y sus días de vacaciones efectivos del año en curso.
          */
         get: operations["getMyEmployees"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/gestor/kiosco/tarjetas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Las tarjetas de la plantilla, para imprimirlas
-         * @description De toda la gente de alta. A quien no tenía, se le crea.
-         */
-        get: operations["tarjetasDeLaEmpresa"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4205,7 +4205,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
-            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS" | "RECORDATORIO_FIRMA" | "FIRMA_INVALIDADA";
+            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS" | "RECORDATORIO_FIRMA" | "FIRMA_INVALIDADA" | "PIN_KIOSCO_ANULADO" | "PIN_KIOSCO_ANULADO_EQUIPO";
             titulo?: string;
             cuerpo?: string;
             rutaDestino?: string;
@@ -6686,6 +6686,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    tarjetasDeLaEmpresa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tarjetas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KioskCard"][];
                 };
             };
         };
@@ -9670,26 +9690,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
-                };
-            };
-        };
-    };
-    tarjetasDeLaEmpresa: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Tarjetas */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["KioskCard"][];
                 };
             };
         };

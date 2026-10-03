@@ -395,4 +395,13 @@ public final class NotificationEvents {
      */
     public record NoticePublished(long destinatarioId, NoticeType tipo, String rutaDestino) {
     }
+
+    /**
+     * El PIN de kiosco de alguien se ha anulado tras tres bloqueos (V38, ADR
+     * 034). Lleva los datos copiados y no las entidades: el listener corre
+     * {@code @Async}, con la sesión de JPA ya cerrada.
+     */
+    public record KioskPinAnnulled(long empresaId, long personaId, String nombrePersona, String nombreKiosco,
+            java.util.List<Long> gestoresIds) {
+    }
 }
