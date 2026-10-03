@@ -64,6 +64,7 @@ class KioscoIT {
     }
 
     @Autowired private TestRestTemplate rest;
+    @Autowired private com.nxtime.nxtime.repository.KioskRepository kioskRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private CompanyRepository companyRepository;
     @Autowired private TimeEntryRepository timeEntryRepository;
@@ -155,7 +156,10 @@ class KioscoIT {
 
         TimeEntry abierta = timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(lucia).orElseThrow();
         assertThat(abierta.getKiosco()).isNotNull();
-        assertThat(abierta.getKiosco().getNombre()).isEqualTo("Entrada almacén");
+        // El kiosco es LAZY desde el ADR 034: aquí, sin sesión, se mira por su
+        // id (que el proxy sabe sin consultar) y no por su nombre.
+        assertThat(kioskRepository.findById(abierta.getKiosco().getId()).orElseThrow().getNombre())
+                .isEqualTo("Entrada almacén");
         List<TimeEntryAudit> traza = auditRepository.findByRegistro_IdOrderByFechaHoraAsc(abierta.getId());
         assertThat(traza).singleElement().satisfies(fila -> {
             assertThat(fila.getUsuario().getId()).isEqualTo(lucia.getId());
