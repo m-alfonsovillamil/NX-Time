@@ -36,7 +36,9 @@ function descargarTarjeta(tarjeta: TarjetaDeKiosco) {
   enlace.href = url;
   enlace.download = 'tarjeta-kiosco-nxtime.svg';
   enlace.click();
-  URL.revokeObjectURL(url);
+  // En el siguiente ciclo, como en util/descargar.ts: revocarla al momento
+  // cancela la descarga en algún navegador.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function Pin({ tienePin }: { tienePin: boolean }) {
