@@ -127,7 +127,7 @@ public class CalendarServiceImpl implements CalendarService {
         // hasta seis horas después (ver CacheConfig).
         holidayCalendar.invalidar();
         log.info("{} ha creado el festivo '{}' del {}",
-                actor.getEmail(), festivo.getDescripcion(), festivo.getFecha());
+                actor.getId(), festivo.getDescripcion(), festivo.getFecha());
         return toResponse(festivo);
     }
 
@@ -164,7 +164,7 @@ public class CalendarServiceImpl implements CalendarService {
 
         holidayCalendar.invalidar();
         log.info("{} ha borrado el festivo '{}' del {}",
-                actor.getEmail(), festivo.getDescripcion(), festivo.getFecha());
+                actor.getId(), festivo.getDescripcion(), festivo.getFecha());
     }
 
     /**

@@ -109,7 +109,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         }
 
         log.info("{} ha configurado la ficha de {} (horas={}, dias={}, anio={})",
-                actor.getEmail(), empleado.getEmail(),
+                actor.getId(), empleado.getId(),
                 request.horasSemanales(), request.diasVacaciones(), anio);
 
         return toDto(empleado, saldosDelAnio(List.of(empleado), anio));
@@ -151,7 +151,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         }
 
         userRepository.save(usuario);
-        log.info("{} ha actualizado su perfil", usuario.getEmail());
+        log.info("{} ha actualizado su perfil", usuario.getId());
         return toProfile(usuario);
     }
 
@@ -180,7 +180,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
         userRepository.save(usuario);
         log.info("{} ha puesto a {} en el departamento {}",
-                actor.getEmail(), usuario.getEmail(), departamentoId);
+                actor.getId(), usuario.getId(), departamentoId);
         return toProfile(usuario);
     }
 

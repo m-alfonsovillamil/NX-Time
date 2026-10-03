@@ -113,7 +113,7 @@ public class ProjectServiceImpl implements ProjectService {
                 .activo(true)
                 .build());
 
-        log.info("{} ha creado el proyecto {}", actor.getEmail(), codigo);
+        log.info("{} ha creado el proyecto {}", actor.getId(), codigo);
         return toResponse(proyecto);
     }
 
@@ -149,7 +149,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.save(proyecto);
 
         log.info("{} ha {} el proyecto {}",
-                actor.getEmail(), activo ? "reabierto" : "cerrado", proyecto.getCodigo());
+                actor.getId(), activo ? "reabierto" : "cerrado", proyecto.getCodigo());
         return toResponse(proyecto);
     }
 
@@ -174,7 +174,7 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         projectRepository.delete(proyecto);
-        log.info("{} ha borrado el proyecto {}", actor.getEmail(), proyecto.getCodigo());
+        log.info("{} ha borrado el proyecto {}", actor.getId(), proyecto.getCodigo());
     }
 
     // ------------------------------------------------------------------

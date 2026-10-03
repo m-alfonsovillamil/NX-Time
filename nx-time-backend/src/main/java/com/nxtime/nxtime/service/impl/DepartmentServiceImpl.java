@@ -53,7 +53,7 @@ public class DepartmentServiceImpl implements DepartmentService {
                 .nombre(nombre)
                 .build());
 
-        log.info("{} ha creado el departamento '{}'", actor.getEmail(), nombre);
+        log.info("{} ha creado el departamento '{}'", actor.getId(), nombre);
         return toResponse(departamento);
     }
 
@@ -91,7 +91,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         }
 
         departmentRepository.delete(departamento);
-        log.info("{} ha borrado el departamento '{}'", actor.getEmail(), departamento.getNombre());
+        log.info("{} ha borrado el departamento '{}'", actor.getId(), departamento.getNombre());
     }
 
     private Department deLaMismaEmpresa(long id, User actor) {

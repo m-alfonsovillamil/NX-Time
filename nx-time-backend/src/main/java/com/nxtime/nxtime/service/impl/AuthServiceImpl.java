@@ -224,7 +224,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(CORREO_SIN_CONFIRMAR, HttpStatus.FORBIDDEN);
         }
 
-        log.info("Login correcto: {}", user.getEmail());
+        log.info("Login correcto: {}", user.getId());
         return buildAuthResponse(user, origenDe(request.origen()));
     }
 
@@ -284,7 +284,7 @@ public class AuthServiceImpl implements AuthService {
             // warn y no error: es un escenario previsto, y probablemente el
             // que más interesa ver en Sentry de todo el módulo de sesiones.
             log.warn("Refresh token REUTILIZADO por {}: esa cadena ya se había rotado. "
-                    + "Cerradas {} sesiones de la familia.", stored.getUsuario().getEmail(), cerradas);
+                    + "Cerradas {} sesiones de la familia.", stored.getUsuario().getId(), cerradas);
             throw new BadCredentialsException("Refresh token inválido o caducado.");
         }
 
@@ -302,7 +302,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(stored);
 
         String newAccessToken = jwtService.generateToken(new SecurityUser(user), stored.getFamilia());
-        log.info("Access token renovado para {}", user.getEmail());
+        log.info("Access token renovado para {}", user.getId());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
                 RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
     }
@@ -316,7 +316,7 @@ public class AuthServiceImpl implements AuthService {
             // a mano. Si cayera solo este, un token anterior de la cadena
             // seguiria pudiendo reabrirla.
             refreshTokenRepository.revocarLaFamilia(stored.getFamilia(), Instant.now());
-            log.info("Sesión cerrada para {}", stored.getUsuario().getEmail());
+            log.info("Sesión cerrada para {}", stored.getUsuario().getId());
         });
         // Si el token no existe, no pasa nada -- logout es idempotente y
         // no revela si un token era válido o no.
@@ -351,7 +351,7 @@ public class AuthServiceImpl implements AuthService {
         eventPublisher.publishEvent(
                 new NotificationEvents.EmployeeCreated(savedEmployee, managerCompany.getNombre()));
 
-        log.info("Gestor {} ha creado al empleado {}", manager.getEmail(), newEmployee.getEmail());
+        log.info("Gestor {} ha creado al empleado {}", manager.getId(), newEmployee.getId());
     }
 
     @Override
@@ -374,14 +374,14 @@ public class AuthServiceImpl implements AuthService {
 
         User savedManager = userRepository.save(newManager);
         accessCodeService.emitirCodigoDeAlta(savedManager, company.getNombre());
-        log.info("Administrador {} ha creado al gestor {}", admin.getEmail(), newManager.getEmail());
+        log.info("Administrador {} ha creado al gestor {}", admin.getId(), newManager.getId());
     }
 
     @Override
     @Transactional
     public void changePassword(ChangePasswordRequest request, User user, Optional<UUID> sesionActual) {
         if (!passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())) {
-            log.warn("Intento de cambio de contraseña con contraseña antigua incorrecta: {}", user.getEmail());
+            log.warn("Intento de cambio de contraseña con contraseña antigua incorrecta: {}", user.getId());
             throw new BusinessException("La contraseña antigua no es correcta.", HttpStatus.BAD_REQUEST);
         }
 
@@ -397,7 +397,7 @@ public class AuthServiceImpl implements AuthService {
         int cerradas = sesionActual
                 .map(familia -> refreshTokenRepository.revocarTodasLasDeMenos(user, familia, ahora))
                 .orElseGet(() -> refreshTokenRepository.revocarTodasLasDe(user, ahora));
-        log.info("Contraseña cambiada: {} ({} sesiones cerradas)", user.getEmail(), cerradas);
+        log.info("Contraseña cambiada: {} ({} sesiones cerradas)", user.getId(), cerradas);
     }
 
     @Override
@@ -409,7 +409,7 @@ public class AuthServiceImpl implements AuthService {
         // de RENOVAR el acceso, que es lo que la hace duradera.
         int cerradas = refreshTokenRepository.revocarTodasLasDe(user, Instant.now());
         log.info("{} ha cerrado la sesión en todos sus dispositivos ({} revocadas)",
-                user.getEmail(), cerradas);
+                user.getId(), cerradas);
     }
 
     @Override
@@ -425,7 +425,7 @@ public class AuthServiceImpl implements AuthService {
         employee.setActivo(activo);
         employee.setFechaBaja(activo ? null : Instant.now());
         userRepository.save(employee);
-        log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getEmail(), actingManager.getEmail());
+        log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getId(), actingManager.getId());
     }
 
     /**

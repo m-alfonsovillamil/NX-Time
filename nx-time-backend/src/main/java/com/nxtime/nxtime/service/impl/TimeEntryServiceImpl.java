@@ -226,7 +226,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .build();
         eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
 
-        log.info("Fichaje {} registrado para {} (fichaje id={}{})", request.tipo(), user.getEmail(), result.getId(),
+        log.info("Fichaje {} registrado para {} (fichaje id={}{})", request.tipo(), user.getId(), result.getId(),
                 kiosco == null ? "" : ", kiosco " + kiosco.getId());
         return result;
     }

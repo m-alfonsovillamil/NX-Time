@@ -307,16 +307,18 @@ interface ApiService {
      * interno) pero el servidor NO comprueba quien lo trae: el codigo es
      * la credencial, y comprobar la identidad seria negar el anonimato.
      */
-    @GET("api/v1/denuncias/seguimiento/{codigo}")
+    // El codigo, en el cuerpo y no en la URL desde la 1.10 (ADR 034): una URL
+    // acaba en los logs de acceso, y el codigo es la credencial de una
+    // denuncia anonima.
+    @POST("api/v1/denuncias/seguimiento")
     suspend fun getDenunciaPorCodigo(
-        @Path("codigo") codigo: String
+        @Body peticion: SeguimientoDenunciaRequest
     ): Response<DenunciaDTO>
 
     /** Contestar como denunciante, con el codigo. */
-    @POST("api/v1/denuncias/seguimiento/{codigo}/mensajes")
+    @POST("api/v1/denuncias/seguimiento/mensajes")
     suspend fun responderDenunciaPorCodigo(
-        @Path("codigo") codigo: String,
-        @Body peticion: MensajeDenunciaRequest
+        @Body peticion: SeguimientoDenunciaRequest
     ): Response<DenunciaDTO>
 
     /**

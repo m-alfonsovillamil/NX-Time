@@ -123,7 +123,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .build());
 
         log.info("{} ha subido su {} ({} bytes guardados de {} recibidos)",
-                actor.getEmail(), tipo, aGuardar.length, original.length);
+                actor.getId(), tipo, aGuardar.length, original.length);
         return toResponse(adjunto);
     }
 
@@ -142,7 +142,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         Attachment adjunto = deLaMismaEmpresa(adjuntoId, actor);
         if (!puedeLeer(adjunto, actor)) {
             log.warn("{} ha intentado descargar el adjunto {}, que no es suyo",
-                    actor.getEmail(), adjuntoId);
+                    actor.getId(), adjuntoId);
             throw new TenantAccessException("Ese adjunto no es tuyo.");
         }
 
@@ -169,7 +169,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
 
         retirar(adjunto);
-        log.info("{} ha retirado su {}", actor.getEmail(), adjunto.getTipo());
+        log.info("{} ha retirado su {}", actor.getId(), adjunto.getTipo());
     }
 
     /**

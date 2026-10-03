@@ -190,7 +190,7 @@ public class CorrectionServiceImpl implements CorrectionService {
          */
         if (esMio && RoleAuthorities.tiene(actor, APROBAR)
                 && conAuthority(actor.getEmpresa(), APROBAR, actor).isEmpty()) {
-            log.info("{} se auto-aprueba la corrección del fichaje {}", actor.getEmail(), fichajeId);
+            log.info("{} se auto-aprueba la corrección del fichaje {}", actor.getId(), fichajeId);
             return aplicar(solicitud, actor,
                     "Auto-aprobada: no hay nadie más en la empresa que pueda aprobarla.");
         }
@@ -241,7 +241,7 @@ public class CorrectionServiceImpl implements CorrectionService {
 
         eventPublisher.publishEvent(new NotificationEvents.CorrectionResolved(
                 solicitud, List.of(solicitud.getSolicitante())));
-        log.info("{} ha rechazado la corrección {}", actor.getEmail(), correccionId);
+        log.info("{} ha rechazado la corrección {}", actor.getId(), correccionId);
         return toResponse(solicitud, actor);
     }
 
@@ -277,7 +277,7 @@ public class CorrectionServiceImpl implements CorrectionService {
 
         eventPublisher.publishEvent(new NotificationEvents.CorrectionDisputed(
                 solicitud, quienResuelveDisputas(actor)));
-        log.info("{} ha disputado la corrección {}", actor.getEmail(), correccionId);
+        log.info("{} ha disputado la corrección {}", actor.getId(), correccionId);
         return toResponse(solicitud, actor);
     }
 
@@ -440,7 +440,7 @@ public class CorrectionServiceImpl implements CorrectionService {
                 solicitud, List.of(solicitud.getSolicitante())));
 
         log.info("Corrección {} aplicada por {}: fichaje {} -> {}",
-                solicitud.getId(), actor.getEmail(), original.getId(), corregido.getId());
+                solicitud.getId(), actor.getId(), original.getId(), corregido.getId());
         return toResponse(solicitud, actor);
     }
 

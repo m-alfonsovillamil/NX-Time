@@ -3266,11 +3266,54 @@
         } ]
       }
     },
+    "/api/v1/denuncias/seguimiento" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Seguir una denuncia con su código",
+        "description" : "Autenticado pero SIN comprobar identidad: el código es la credencial, y va en el cuerpo y no en la URL (ADR 034). Un código inexistente y uno de otra empresa dan el mismo 404, para no confirmar cuáles son válidos.",
+        "operationId" : "seguimientoConCodigo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintTrackingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "El expediente y su conversación",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No hay ninguna denuncia con ese código",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/seguimiento/{codigo}/mensajes" : {
       "post" : {
         "tags" : [ "Canal de denuncias" ],
-        "summary" : "Responder en una denuncia con su código",
-        "description" : "El mensaje se guarda SIN autor si la denuncia es anónima, aunque quien escribe esté autenticado.",
+        "summary" : "Responder en una denuncia con su código (OBSOLETA: el código en la URL)",
+        "description" : "Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.",
         "operationId" : "responder",
         "parameters" : [ {
           "name" : "codigo",
@@ -3297,6 +3340,70 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No hay ninguna denuncia con ese código",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "El expediente está cerrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "deprecated" : true,
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/seguimiento/mensajes" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Responder en una denuncia con su código",
+        "description" : "El código y el mensaje, en el cuerpo (ADR 034). El mensaje se guarda SIN autor si la denuncia es anónima, aunque quien escribe esté autenticado.",
+        "operationId" : "responderConCodigo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintTrackingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el mensaje añadido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Falta el mensaje",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -7270,8 +7377,8 @@
     "/api/v1/denuncias/seguimiento/{codigo}" : {
       "get" : {
         "tags" : [ "Canal de denuncias" ],
-        "summary" : "Seguir una denuncia con su código",
-        "description" : "Autenticado pero SIN comprobar identidad: el código es la credencial. Un código inexistente y uno de otra empresa dan el mismo 404, para no confirmar cuáles son válidos.",
+        "summary" : "Seguir una denuncia con su código (OBSOLETA: el código en la URL)",
+        "description" : "Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.",
         "operationId" : "seguimiento",
         "parameters" : [ {
           "name" : "codigo",
@@ -7303,6 +7410,7 @@
             }
           }
         },
+        "deprecated" : true,
         "security" : [ {
           "bearerAuth" : [ ]
         } ]
@@ -10674,6 +10782,22 @@
             }
           }
         }
+      },
+      "ComplaintTrackingRequest" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "maxLength" : 40,
+            "minLength" : 0
+          },
+          "texto" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo" ]
       },
       "ScheduleExceptionRequest" : {
         "type" : "object",

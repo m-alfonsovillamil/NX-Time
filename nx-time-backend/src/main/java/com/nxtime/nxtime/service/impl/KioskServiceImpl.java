@@ -208,7 +208,7 @@ public class KioskServiceImpl implements KioskService {
                 .build());
         emparejamiento.setKiosco(kiosco);
         pairingRepository.save(emparejamiento);
-        log.info("{} ha dado de alta el kiosco {} («{}»).", actor.getEmail(), kiosco.getId(), kiosco.getNombre());
+        log.info("{} ha dado de alta el kiosco {} («{}»).", actor.getId(), kiosco.getId(), kiosco.getNombre());
         return aRespuesta(kiosco);
     }
 
@@ -230,7 +230,7 @@ public class KioskServiceImpl implements KioskService {
         if (kiosco.getRevocadoEn() == null) {
             kiosco.setRevocadoEn(clock.instant());
             kioskRepository.save(kiosco);
-            log.info("{} ha revocado el kiosco {}.", actor.getEmail(), kioscoId);
+            log.info("{} ha revocado el kiosco {}.", actor.getId(), kioscoId);
         }
     }
 

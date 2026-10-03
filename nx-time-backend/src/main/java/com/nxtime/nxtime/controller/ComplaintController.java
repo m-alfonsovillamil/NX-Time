@@ -4,8 +4,10 @@ import com.nxtime.nxtime.dto.ComplaintCreatedResponse;
 import com.nxtime.nxtime.dto.ComplaintMessageRequest;
 import com.nxtime.nxtime.dto.ComplaintResponse;
 import com.nxtime.nxtime.dto.ComplaintSummaryResponse;
+import com.nxtime.nxtime.dto.ComplaintTrackingRequest;
 import com.nxtime.nxtime.dto.CreateComplaintRequest;
 import com.nxtime.nxtime.dto.UpdateComplaintStatusRequest;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.ComplaintService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,8 +95,58 @@ public class ComplaintController {
 
     @Operation(summary = "Seguir una denuncia con su código",
             description = "Autenticado pero SIN comprobar identidad: el código es la "
-                    + "credencial. Un código inexistente y uno de otra empresa dan el mismo "
-                    + "404, para no confirmar cuáles son válidos.")
+                    + "credencial, y va en el cuerpo y no en la URL (ADR 034). Un código "
+                    + "inexistente y uno de otra empresa dan el mismo 404, para no confirmar "
+                    + "cuáles son válidos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "El expediente y su conversación",
+                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
+            @ApiResponse(responseCode = "404", description = "No hay ninguna denuncia con ese código",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/seguimiento")
+    @PreAuthorize("hasAuthority('denuncia:crear')")
+    public ResponseEntity<ComplaintResponse> seguimientoConCodigo(
+            @Valid @RequestBody ComplaintTrackingRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(complaintService.seguimiento(request.codigo(), usuario.getUser()));
+    }
+
+    @Operation(summary = "Responder en una denuncia con su código",
+            description = "El código y el mensaje, en el cuerpo (ADR 034). El mensaje se guarda "
+                    + "SIN autor si la denuncia es anónima, aunque quien escribe esté autenticado.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Expediente con el mensaje añadido",
+                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Falta el mensaje",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No hay ninguna denuncia con ese código",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "El expediente está cerrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/seguimiento/mensajes")
+    @PreAuthorize("hasAuthority('denuncia:crear')")
+    public ResponseEntity<ComplaintResponse> responderConCodigo(
+            @Valid @RequestBody ComplaintTrackingRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        if (request.texto() == null || request.texto().isBlank()) {
+            throw new BusinessException("El mensaje no puede estar vacío.", HttpStatus.BAD_REQUEST);
+        }
+        return ResponseEntity.ok(complaintService.responder(
+                request.codigo(), new ComplaintMessageRequest(request.texto()), usuario.getUser()));
+    }
+
+    /*
+     * Las dos de abajo son las de antes, con el código en la URL. Se quedan un
+     * tiempo para las apps Android anteriores a la 1.10, y se quitan cuando ya
+     * no las use nadie (ADR 034).
+     */
+
+    @Deprecated
+    @Operation(summary = "Seguir una denuncia con su código (OBSOLETA: el código en la URL)",
+            deprecated = true,
+            description = "Usar POST /api/v1/denuncias/seguimiento, con el código en el cuerpo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "El expediente y su conversación",
                     content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
@@ -109,9 +161,10 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintService.seguimiento(codigo, usuario.getUser()));
     }
 
-    @Operation(summary = "Responder en una denuncia con su código",
-            description = "El mensaje se guarda SIN autor si la denuncia es anónima, aunque "
-                    + "quien escribe esté autenticado.")
+    @Deprecated
+    @Operation(summary = "Responder en una denuncia con su código (OBSOLETA: el código en la URL)",
+            deprecated = true,
+            description = "Usar POST /api/v1/denuncias/seguimiento/mensajes, con el código en el cuerpo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Expediente con el mensaje añadido",
                     content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),

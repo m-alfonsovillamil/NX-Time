@@ -124,3 +124,13 @@ data class CambiarEstadoDenunciaRequest(
     val estado: String,
     val conclusion: String? = null
 )
+
+/**
+ * Seguir o contestar una denuncia con su código, que va en el CUERPO y no en
+ * la URL (ADR 034): una URL acaba en los logs de acceso. [texto] solo al
+ * contestar.
+ */
+data class SeguimientoDenunciaRequest(
+    val codigo: String,
+    val texto: String? = null
+)

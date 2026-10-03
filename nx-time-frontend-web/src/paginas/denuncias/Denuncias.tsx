@@ -185,7 +185,9 @@ function DialogoDelCodigo({ creada, alGuardar }: { creada: Creada | null; alGuar
 
 function pedirExpediente(via: Via) {
   return 'codigo' in via
-    ? pedir(cliente.GET('/api/v1/denuncias/seguimiento/{codigo}', { params: { path: { codigo: via.codigo } } }))
+    ? // El código, en el cuerpo y no en la URL: es la credencial de una denuncia
+      // anónima, y una URL acaba en logs e historiales (ADR 034).
+      pedir(cliente.POST('/api/v1/denuncias/seguimiento', { body: { codigo: via.codigo } }))
     : pedir(cliente.GET('/api/v1/denuncias/mias/{id}', { params: { path: { id: via.id } } }));
 }
 
@@ -197,10 +199,7 @@ function FormularioDeMensaje({ via, alResponder }: { via: Via; alResponder: (e: 
     (t: string) =>
       'codigo' in via
         ? pedir(
-            cliente.POST('/api/v1/denuncias/seguimiento/{codigo}/mensajes', {
-              params: { path: { codigo: via.codigo } },
-              body: { texto: t },
-            }),
+            cliente.POST('/api/v1/denuncias/seguimiento/mensajes', { body: { codigo: via.codigo, texto: t } }),
           )
         : pedir(cliente.POST('/api/v1/denuncias/mias/{id}/mensajes', { params: { path: { id: via.id } }, body: { texto: t } })),
     {

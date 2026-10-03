@@ -131,7 +131,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         aplicar(request, oferta, actor);
         oferta = jobPostingRepository.save(oferta);
 
-        log.info("{} ha creado la oferta {} ({})", actor.getEmail(), oferta.getId(),
+        log.info("{} ha creado la oferta {} ({})", actor.getId(), oferta.getId(),
                 oferta.getTitulo());
         return toResponse(oferta, actor);
     }
@@ -143,7 +143,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         aplicar(request, oferta, actor);
         jobPostingRepository.save(oferta);
 
-        log.info("{} ha editado la oferta {}", actor.getEmail(), id);
+        log.info("{} ha editado la oferta {}", actor.getId(), id);
         return toResponse(oferta, actor);
     }
 
@@ -182,7 +182,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                     oferta, laPlantilla(oferta, actor)));
         }
 
-        log.info("{} ha movido la oferta {} a {}", actor.getEmail(), id, destino);
+        log.info("{} ha movido la oferta {} a {}", actor.getId(), id, destino);
         return toResponse(oferta, actor);
     }
 
@@ -268,7 +268,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 candidatura, List.of(oferta.getPublicadaPor())));
 
         log.info("{} se ha presentado a la oferta {} con el adjunto {}",
-                actor.getEmail(), ofertaId, cv.getId());
+                actor.getId(), ofertaId, cv.getId());
         return toResponse(candidatura, actor);
     }
 
@@ -329,7 +329,7 @@ public class JobPostingServiceImpl implements JobPostingService {
         eventPublisher.publishEvent(new NotificationEvents.JobApplicationUpdated(
                 candidatura, List.of(candidatura.getUsuario())));
 
-        log.info("{} ha movido la candidatura {} a {}", actor.getEmail(), candidaturaId, destino);
+        log.info("{} ha movido la candidatura {} a {}", actor.getId(), candidaturaId, destino);
         return toResponse(candidatura, actor);
     }
 

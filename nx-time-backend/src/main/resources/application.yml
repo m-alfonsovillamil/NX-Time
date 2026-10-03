@@ -92,8 +92,9 @@ logging:
 # en ruido. INFO y WARN viajan como migas de pan dentro del evento.
 #
 # send-default-pii en false: ni la IP ni las cabeceras, y en una de ellas
-# viaja el token JWT. Los MENSAJES de log sí pueden llevar un correo
-# electrónico (ver docs/DESPLIEGUE.md).
+# viaja el token JWT. Los mensajes no llevan correos: los logs escriben el id
+# de la persona, y config/LimpiezaDeSentry tapa cualquier correo que se cuele
+# en las migas, el mensaje o las excepciones (ADR 034).
 sentry:
   dsn: "${SENTRY_DSN:}"
   environment: "${SENTRY_ENVIRONMENT:desarrollo}"
