@@ -49,6 +49,21 @@ fun RegistroEmpresaScreen(
         onVolver = onVolver
     ) { modifier ->
         ColumnaFormulario(modifier = modifier) {
+            // Desde la V37 (ADR 034) registrar no abre sesión: se pide el
+            // código que ha salido hacia el correo.
+            val pendienteDe = estado.pendienteDe
+            if (pendienteDe != null) {
+                ConfirmarCorreoFormulario(
+                    email = pendienteDe,
+                    codigo = estado.codigo,
+                    onCodigoCambia = viewModel::onCodigoCambia,
+                    onConfirmar = viewModel::confirmar,
+                    cargando = estado.cargando,
+                    error = estado.error
+                )
+                Spacer(Modifier.height(24.dp))
+                return@ColumnaFormulario
+            }
             Text(
                 text = stringResource(R.string.registro_explicacion),
                 style = MaterialTheme.typography.bodyMedium,

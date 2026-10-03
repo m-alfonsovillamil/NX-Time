@@ -107,7 +107,7 @@ class AttachmentControllerTest {
         mockMvc.perform(get("/api/v1/perfil/adjuntos/5"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"))
-                .andExpect(header().string("Content-Disposition", "attachment; filename=\"mi cv.pdf\""));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"mi cv.pdf\"; filename*=UTF-8''mi%20cv.pdf"));
     }
 
     @Test
@@ -122,7 +122,7 @@ class AttachmentControllerTest {
         mockMvc.perform(get("/api/v1/perfil/adjuntos/7"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("image/jpeg"))
-                .andExpect(header().string("Content-Disposition", "inline; filename=\"foto.jpg\""));
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"foto.jpg\"; filename*=UTF-8''foto.jpg"));
     }
 
     @Test

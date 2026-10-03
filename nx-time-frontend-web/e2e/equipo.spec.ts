@@ -8,6 +8,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('historial del equipo con filtro por persona y la traza de auditoría', async ({ page }) => {
   // Javier ficha primero. Las jornadas que siembra la demo no tienen traza (se
   // insertan sin pasar por el servicio), así que sin esto la primera jornada
@@ -38,7 +40,7 @@ test('historial del equipo con filtro por persona y la traza de auditoría', asy
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Historial del equipo' }).click();
+  await irASeccion(page, 'Historial del equipo');
   await expect(page.getByRole('heading', { name: 'Historial del equipo' })).toBeVisible();
   const tabla = page.getByRole('table', { name: 'Jornadas del equipo' });
   await expect(tabla.getByRole('cell', { name: 'Javier' }).first()).toBeVisible();

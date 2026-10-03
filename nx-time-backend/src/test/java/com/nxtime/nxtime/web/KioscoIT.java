@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.web;
 
+import com.nxtime.nxtime.web.support.CodigosEnviados;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -44,6 +45,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * Requisito: {@code docker compose up -d postgres}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.context.annotation.Import(CodigosEnviados.class)
 class KioscoIT {
 
     private static final String CONTRASENA = "unaContrasena123";
@@ -66,6 +68,7 @@ class KioscoIT {
 
     @Autowired private TestRestTemplate rest;
     @Autowired private com.nxtime.nxtime.repository.NoticeRepository noticeRepository;
+    @Autowired private CodigosEnviados codigos;
     @Autowired private UserRepository userRepository;
     @Autowired private CompanyRepository companyRepository;
     @Autowired private TimeEntryRepository timeEntryRepository;
@@ -89,8 +92,12 @@ class KioscoIT {
         ResponseEntity<String> alta = post("/auth/register-manager", """
                 {"nombreEmpresa":"Almacenes %s","nombre":"Raúl","apellidos":"Admin","email":"%s","contrasena":"%s"}
                 """.formatted(System.nanoTime(), email, CONTRASENA), null);
-        assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.OK);
-        tokenAdmin = json.readTree(alta.getBody()).get("token").asText();
+        assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        // Desde la V37, el correo se confirma antes de entrar.
+        ResponseEntity<String> confirmado = post("/auth/registro/confirmar",
+                "{\"email\":\"%s\",\"codigo\":\"%s\"}".formatted(email, codigos.ultimoPara(email)), null);
+        assertThat(confirmado.getStatusCode()).isEqualTo(HttpStatus.OK);
+        tokenAdmin = json.readTree(confirmado.getBody()).get("token").asText();
         admin = userRepository.findByEmail(email).orElseThrow();
         lucia = empleada(admin.getEmpresa(), "Lucía");
     }
@@ -124,6 +131,18 @@ class KioscoIT {
         assertThat(post("/api/v1/empresa/kioscos",
                 "{\"codigo\":\"%s\",\"nombre\":\"Otra\"}".formatted(codigo), bearer(tokenAdmin)).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("Probar códigos de kiosco tiene tope: al undécimo intento en una hora, 429")
+    void probarCodigosTieneTope() {
+        // Diez: KioskServiceImpl.CONFIRMACIONES_POR_HORA.
+        for (int i = 0; i < 10; i++) {
+            assertThat(post("/api/v1/empresa/kioscos", "{\"codigo\":\"ZZZZZZZZ\",\"nombre\":\"Prueba\"}",
+                    bearer(tokenAdmin)).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+        assertThat(post("/api/v1/empresa/kioscos", "{\"codigo\":\"ZZZZZZZZ\",\"nombre\":\"Prueba\"}",
+                bearer(tokenAdmin)).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 
     @Test

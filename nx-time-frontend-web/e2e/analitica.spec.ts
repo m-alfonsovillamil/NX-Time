@@ -6,6 +6,8 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 async function entrar(page: Page, email: string) {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill(email);
@@ -16,7 +18,7 @@ async function entrar(page: Page, email: string) {
 
 test('analítica de la empresa para RRHH, con el CSV', async ({ page }) => {
   await entrar(page, 'elena.rios@techcorp.demo');
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Analítica' }).click();
+  await irASeccion(page, 'Analítica');
   await expect(page.getByText(/toda la empresa/)).toBeVisible();
   await expect(page.getByRole('table', { name: 'Absentismo por grupo' })).toBeVisible();
   const csv = page.waitForEvent('download');
@@ -31,6 +33,6 @@ test('analítica de la empresa para RRHH, con el CSV', async ({ page }) => {
 
 test('una gestora ve su departamento', async ({ page }) => {
   await entrar(page, 'marta.sanchez@techcorp.demo');
-  await page.getByRole('navigation', { name: 'Menú principal' }).first().getByRole('link', { name: 'Analítica' }).click();
+  await irASeccion(page, 'Analítica');
   await expect(page.getByText(/departamento de /)).toBeVisible();
 });

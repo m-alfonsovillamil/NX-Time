@@ -6,6 +6,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { irASeccion } from './ayudas';
+
 test('panel de gestión y ausencias del equipo de una gestora', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill('marta.sanchez@techcorp.demo');
@@ -13,8 +15,7 @@ test('panel de gestión y ausencias del equipo de una gestora', async ({ page })
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
 
-  const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
-  await menu.getByRole('link', { name: 'Panel de gestión' }).click();
+  await irASeccion(page, 'Panel de gestión');
   await expect(page.getByRole('heading', { name: 'Panel de gestión' })).toBeVisible();
   // La demo trae solicitudes de ausencia pendientes: el contador lleva a su bandeja.
   await page.getByRole('link', { name: /^\d+ Ausencias por aprobar$/ }).click();

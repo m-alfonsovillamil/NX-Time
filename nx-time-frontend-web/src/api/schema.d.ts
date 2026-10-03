@@ -201,6 +201,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/registro/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar el correo del registro y entrar
+         * @description Con el código que llegó al registrar la empresa. Si vale, abre la sesión como el login, con las mismas reglas según 'origen' (desde WEB, el refresh va en la cookie). Cada código admite 5 intentos.
+         */
+        post: operations["confirmarRegistro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register-manager": {
         parameters: {
             query?: never;
@@ -212,7 +232,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar una empresa nueva
-         * @description Crea la empresa y a quien la registra como ADMIN de ese tenant. Es quien luego puede crear GESTOR/RRHH/otros ADMIN.
+         * @description Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en ese caso no crea ni manda nada): si no, serviría para averiguar quién usa NX Time. Registrarse otra vez con un correo a medio confirmar rehace el registro y manda otro código.
          */
         post: operations["registerManager"];
         delete?: never;
@@ -3007,13 +3027,10 @@ export interface components {
             token?: string;
             kiosco?: components["schemas"]["KioskInfo"];
         };
-        RegisterManagerRequest: {
-            nombreEmpresa: string;
-            nombre: string;
-            apellidos: string;
+        ConfirmRegistrationRequest: {
             /** Format: email */
             email: string;
-            contrasena: string;
+            codigo: string;
             origen?: string;
         };
         AuthenticationResponse: {
@@ -3024,6 +3041,19 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
             zonaHoraria?: string;
+        };
+        RegisterManagerRequest: {
+            nombreEmpresa: string;
+            nombre: string;
+            apellidos: string;
+            /** Format: email */
+            email: string;
+            contrasena: string;
+            origen?: string;
+        };
+        RegistrationPendingResponse: {
+            email?: string;
+            mensaje?: string;
         };
         RefreshTokenRequest: {
             /** @description El refresh token. Lo manda la app; el navegador lo lleva en la cookie nx_refresh y no manda cuerpo. */
@@ -4979,6 +5009,48 @@ export interface operations {
             };
         };
     };
+    confirmarRegistro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmRegistrationRequest"];
+            };
+        };
+        responses: {
+            /** @description Correo confirmado, sesión abierta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthenticationResponse"];
+                };
+            };
+            /** @description Datos inválidos, o un código incorrecto, caducado, usado o anulado. El mensaje es el mismo en todos los casos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos desde esta IP */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     registerManager: {
         parameters: {
             query?: never;
@@ -4992,26 +5064,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Empresa creada, tokens emitidos */
-            200: {
+            /** @description Registro pendiente de confirmar el correo */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AuthenticationResponse"];
+                    "*/*": components["schemas"]["RegistrationPendingResponse"];
                 };
             };
-            /** @description Datos inválidos (email, nombre o contraseña) */
+            /** @description Datos inválidos (email, nombre o contraseña), o ya existe una empresa con ese nombre */
             400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description Ya existe una empresa con ese nombre */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5234,6 +5297,15 @@ export interface operations {
             };
             /** @description Credenciales incorrectas, o usuario dado de baja */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description La contraseña es buena pero quien registró la empresa no ha confirmado su correo: se le acaba de mandar otro código (/auth/registro/confirmar) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -32,12 +32,35 @@ import { T } from '../i18n/es';
 export type Grupo = 'personal' | 'gestion';
 export type Fase = 'W2' | 'W3' | 'W4' | 'W5' | 'W6' | 'W7';
 
+/**
+ * Los apartados plegables de cada grupo en el menú lateral (1/10/2026). Un
+ * ADMIN veía 28 entradas seguidas; así ve siete apartados, como los submenús
+ * de la app. `cuenta` no sale en el menú: son las secciones del menú de usuario.
+ */
+export type Subgrupo =
+  | 'jornada'
+  | 'ausencias'
+  | 'en-la-empresa'
+  | 'cuenta'
+  | 'equipo'
+  | 'organizacion'
+  | 'control'
+  | 'administracion';
+
+/** Los subgrupos de cada grupo, en el orden en que salen en el menú. */
+export const SUBGRUPOS: Readonly<Record<Grupo, readonly Subgrupo[]>> = {
+  personal: ['jornada', 'ausencias', 'en-la-empresa', 'cuenta'],
+  gestion: ['equipo', 'organizacion', 'control', 'administracion'],
+};
+
 export interface Seccion {
   /** Sin barra inicial. Si la sección es destino de algún aviso, es ese destino tal cual. */
   ruta: string;
   etiqueta: string;
   icono: NombreIcono;
   grupo: Grupo;
+  /** El apartado plegable del menú lateral. Tiene que ser de los de su `grupo`. */
+  subgrupo: Subgrupo;
   /** La authority que hace falta, resuelta por el servidor. Sin ella, la ve todo el que ha entrado. */
   requiere?: string;
   /** Si sale en el menú. Las que no, se alcanzan desde otra página, la campana o el menú de usuario. */
@@ -98,44 +121,44 @@ const S = T.navegacion.secciones;
 
 export const SECCIONES: readonly Seccion[] = [
   /* ---- Lo mío ---- */
-  { ruta: 'fichar', etiqueta: S.fichar, icono: 'reloj', grupo: 'personal', enMenu: true, principal: true, pagina: Fichar },
-  { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', enMenu: true, principal: true, pagina: Historial },
-  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
-  { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', requiere: 'calendario:leer', enMenu: true, principal: true, pagina: Calendario },
-  { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', enMenu: false, pagina: Avisos },
-  { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Perfil },
-  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', enMenu: false, pagina: Ajustes },
-  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', requiere: 'cuadrante:leer', enMenu: true, pagina: MiCuadrante },
+  { ruta: 'fichar', etiqueta: S.fichar, icono: 'reloj', grupo: 'personal', subgrupo: 'jornada', enMenu: true, principal: true, pagina: Fichar },
+  { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', subgrupo: 'jornada', enMenu: true, principal: true, pagina: Historial },
+  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', subgrupo: 'ausencias', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
+  { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', subgrupo: 'ausencias', requiere: 'calendario:leer', enMenu: true, principal: true, pagina: Calendario },
+  { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Avisos },
+  { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Perfil },
+  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Ajustes },
+  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', subgrupo: 'jornada', requiere: 'cuadrante:leer', enMenu: true, pagina: MiCuadrante },
   // Lo propio y, con `cuadrante:incidencias:revisar`, la bandeja del equipo:
   // la misma página, como en Android. Por eso no pide permiso para entrar.
-  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Incidencias },
-  { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Firmas },
-  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', enMenu: true, pagina: HorasExtra },
-  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', enMenu: true, pagina: Correcciones },
-  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', requiere: 'oferta:leer', enMenu: true, pagina: Ofertas },
-  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', requiere: 'candidatura:crear', enMenu: false, pagina: MisCandidaturas },
-  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
+  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Incidencias },
+  { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Firmas },
+  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: HorasExtra },
+  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Correcciones },
+  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'oferta:leer', enMenu: true, pagina: Ofertas },
+  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'candidatura:crear', enMenu: false, pagina: MisCandidaturas },
+  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
 
   /* ---- Gestión ---- */
-  { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelGestion },
-  { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
-  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
-  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
-  { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelEmpresa },
-  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
-  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
-  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
-  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
-  { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', requiere: 'informe:exportar', enMenu: true, pagina: Informes },
-  { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', requiere: 'empleado:gestionar', enMenu: true, pagina: Borrados },
-  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
-  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
-  { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
-  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
-  { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
-  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
-  { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'panel', grupo: 'gestion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
-  { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'documento', grupo: 'gestion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
+  { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', subgrupo: 'equipo', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelGestion },
+  { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', subgrupo: 'equipo', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
+  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
+  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
+  { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', subgrupo: 'control', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelEmpresa },
+  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
+  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
+  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
+  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
+  { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', subgrupo: 'control', requiere: 'informe:exportar', enMenu: true, pagina: Informes },
+  { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', subgrupo: 'control', requiere: 'empleado:gestionar', enMenu: true, pagina: Borrados },
+  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', subgrupo: 'administracion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
+  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', subgrupo: 'administracion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
+  { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', subgrupo: 'control', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
+  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
+  { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', subgrupo: 'control', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
+  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', subgrupo: 'control', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
+  { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'panel', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
+  { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'documento', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */
@@ -158,6 +181,40 @@ export function menuPara(authorities: readonly string[], { conPendientes = false
   return SECCIONES.filter(
     (s) => s.enMenu && permitida(s, authorities) && (conPendientes || s.pagina !== undefined),
   );
+}
+
+export interface ApartadoDelMenu {
+  subgrupo: Subgrupo;
+  secciones: Seccion[];
+}
+
+/**
+ * El menú, por grupos y, dentro de cada uno, por subgrupos, en el orden de
+ * `SUBGRUPOS` y, dentro de cada subgrupo, en el del catálogo. Los grupos y
+ * subgrupos vacíos no salen. Lo que no pliega (un subgrupo de una sola
+ * entrada) lo decide quien lo pinta.
+ */
+export function menuAgrupado(menu: readonly Seccion[]): { grupo: Grupo; apartados: ApartadoDelMenu[] }[] {
+  return (Object.keys(SUBGRUPOS) as Grupo[])
+    .map((grupo) => ({
+      grupo,
+      apartados: SUBGRUPOS[grupo]
+        .map((subgrupo) => ({ subgrupo, secciones: menu.filter((s) => s.grupo === grupo && s.subgrupo === subgrupo) }))
+        .filter((a) => a.secciones.length > 0),
+    }))
+    .filter((g) => g.apartados.length > 0);
+}
+
+/**
+ * La sección de una ruta de la barra de direcciones (`/correcciones/pendientes`),
+ * para saber qué subgrupo desplegar. Si la ruta va más allá de la sección
+ * (`/cuadrantes/3`), la de la ruta más larga que encaje.
+ */
+export function seccionDeRuta(pathname: string): Seccion | undefined {
+  const ruta = pathname.replace(/^\/+|\/+$/g, '');
+  return SECCIONES.filter((s) => ruta === s.ruta || ruta.startsWith(`${s.ruta}/`)).sort(
+    (a, b) => b.ruta.length - a.ruta.length,
+  )[0];
 }
 
 /** En el móvil caben cinco casillas (el límite de Material 3, como en la app). */

@@ -155,6 +155,25 @@ class PushIT {
     }
 
     @Test
+    @DisplayName("Una persona tiene como mucho diez dispositivos: se quedan los usados más recientemente")
+    void topeDeDispositivosPorPersona() throws Exception {
+        for (int i = 1; i <= 12; i++) {
+            pushDeviceService.registrar(ana, "token-" + i, PushPlatform.WEB);
+            Thread.sleep(2);
+            if (i == 6) {
+                // El primero se vuelve a usar: ya no es de los viejos.
+                pushDeviceService.registrar(ana, "token-1", PushPlatform.WEB);
+                Thread.sleep(2);
+            }
+        }
+
+        assertThat(deviceRepository.findTokensDeUsuarioActivo(ana.getId()))
+                .hasSize(PushDeviceServiceImpl.DISPOSITIVOS_POR_PERSONA)
+                .contains("token-1", "token-12")
+                .doesNotContain("token-2", "token-3");
+    }
+
+    @Test
     @DisplayName("Solo se da de baja un dispositivo propio")
     void bajaSoloDeLoPropio() {
         pushDeviceService.registrar(ana, "token-de-ana", PushPlatform.ANDROID);
