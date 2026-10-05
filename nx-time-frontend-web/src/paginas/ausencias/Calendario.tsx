@@ -148,7 +148,6 @@ export function Calendario() {
                     const propia = ausentes.some((a) => a.propia === true);
                     const clases = [
                       'nx-calendario__dia',
-                      delMes ? '' : 'nx-calendario__dia--fuera',
                       dia === hoy ? 'nx-calendario__dia--hoy' : '',
                       festivo !== undefined ? 'nx-calendario__dia--festivo' : '',
                       propia ? 'nx-calendario__dia--propia' : '',

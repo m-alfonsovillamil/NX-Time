@@ -17,6 +17,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
 import { ConfirmarCorreo } from './ConfirmarCorreo';
+import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 const G = T.registro;
 
@@ -70,7 +71,7 @@ export function RegistroEmpresa() {
   if (pendiente !== null) return <ConfirmarCorreo email={pendiente} />;
 
   return (
-    <main className="nx-centrado">
+    <MarcoDeAcceso>
       <form className="nx-tarjeta nx-formulario" onSubmit={enviar} noValidate>
         <header>
           <h1>{G.titulo}</h1>
@@ -97,6 +98,6 @@ export function RegistroEmpresa() {
           {G.yaTengoCuenta}
         </Link>
       </form>
-    </main>
+    </MarcoDeAcceso>
   );
 }

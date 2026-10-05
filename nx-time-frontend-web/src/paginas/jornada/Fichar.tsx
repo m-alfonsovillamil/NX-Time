@@ -220,7 +220,9 @@ export function Fichar() {
                         {j.enPausa === true ? F.reanudar : F.pausar}
                       </Boton>
                     )}
-                    <Boton ocupado={ocupado} onClick={() => pulsarPrincipal(j)}>
+                    {/* Del color de `ColoresJornada`, como el botón de la app: verde
+                        para entrar, rojo para salir, ámbar si está en pausa. */}
+                    <Boton className={`nx-boton--fichar nx-boton--fichar-${estado}`} ocupado={ocupado} onClick={() => pulsarPrincipal(j)}>
                       {j === null ? F.entrar : F.salir}
                     </Boton>
                   </div>

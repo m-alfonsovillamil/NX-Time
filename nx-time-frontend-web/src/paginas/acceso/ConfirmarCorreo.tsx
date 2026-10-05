@@ -16,6 +16,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { abrirSesion } from '../../api/sesion';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
+import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 const C = T.confirmarCorreo;
 
@@ -51,7 +52,7 @@ export function ConfirmarCorreo({ email, destino = '/fichar' }: { email: string;
   const mensaje = error ?? confirmar.error?.message ?? null;
 
   return (
-    <main className="nx-centrado">
+    <MarcoDeAcceso>
       <form className="nx-tarjeta nx-formulario" onSubmit={enviar} noValidate>
         <header>
           <h1>{C.titulo}</h1>
@@ -75,6 +76,6 @@ export function ConfirmarCorreo({ email, destino = '/fichar' }: { email: string;
           {C.volver}
         </Link>
       </form>
-    </main>
+    </MarcoDeAcceso>
   );
 }

@@ -24,6 +24,7 @@ import { T } from '../../i18n/es';
 import type { EstadoDeVuelta } from '../../rutas/rutas';
 import { mensajeDeError, mensajeDeRed } from '../../util/errores';
 import { ConfirmarCorreo } from './ConfirmarCorreo';
+import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 export function Login() {
   const navegar = useNavigate();
@@ -81,7 +82,7 @@ export function Login() {
   if (sinConfirmar !== null) return <ConfirmarCorreo email={sinConfirmar} destino={desde} />;
 
   return (
-    <main className="nx-centrado">
+    <MarcoDeAcceso>
       <form className="nx-tarjeta nx-formulario" onSubmit={entrar} noValidate>
         <header>
           <h1>{T.app.nombre}</h1>
@@ -118,6 +119,6 @@ export function Login() {
           {T.login.registrarEmpresa}
         </Link>
       </form>
-    </main>
+    </MarcoDeAcceso>
   );
 }

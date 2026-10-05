@@ -1,5 +1,20 @@
 /** Entrar, recuperar el acceso y registrar una empresa. Los textos siguen a los de la app. */
 export const acceso = {
+  /** El panel de marca de las pantallas de acceso, en escritorio. */
+  marca: {
+    etiqueta: 'Qué es NX Time',
+    lema: 'El registro de jornada que se lleva solo.',
+    puntos: [
+      { icono: 'reloj', titulo: 'Fichar en un toque', texto: 'Desde el navegador, el móvil o una tablet en la entrada.' },
+      { icono: 'vacaciones', titulo: 'Ausencias sin papeles', texto: 'Las vacaciones y los permisos se piden y se aprueban aquí.' },
+      {
+        icono: 'verificado',
+        titulo: 'Lo que pide la ley',
+        texto: 'El registro que exige el RD-ley 8/2019, guardado cuatro años y a prueba de cambios.',
+      },
+    ],
+  },
+
   login: {
     titulo: 'Entrar',
     subtitulo: 'Registro horario',
