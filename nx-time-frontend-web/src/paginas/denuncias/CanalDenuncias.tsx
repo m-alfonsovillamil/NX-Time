@@ -15,6 +15,11 @@
  *
  * El expediente se pinta con el mismo cuerpo que ve quien denuncia
  * (`CuerpoDeExpediente`), para que los dos lean lo mismo.
+ *
+ * **En escritorio, la lista y el expediente van lado a lado** (5/10/2026):
+ * quien instruye pasa de una denuncia a otra sin abrir y cerrar un diálogo
+ * cada vez. En una pantalla estrecha no caben los dos, y el expediente sigue
+ * saliendo en su diálogo.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -23,11 +28,13 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
-import { AreaDeTexto, Aviso, Boton, Insignia } from '../../componentes/Basicos';
+import { AreaDeTexto, Aviso, Boton, Insignia, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { denuncias } from '../../i18n/es/denuncias';
+import { useEsAncho } from '../../util/ancho';
 import { fechaHoraCorta } from '../../util/fechas';
 import { CuerpoDeExpediente, Plazo, TONO_DENUNCIA, cerrado } from './Denuncias';
 
@@ -152,23 +159,23 @@ function Expediente({ id }: { id: number }) {
 export function CanalDenuncias() {
   const [abierto, setAbierto] = useState<{ id: number; titulo: string } | null>(null);
   const bandeja = useQuery({ queryKey: [...CLAVE, 'bandeja'], queryFn: () => pedir(cliente.GET('/api/v1/denuncias', {})) });
+  // Con sitio para los dos, el expediente va al lado de la lista y no en un diálogo.
+  const alLado = useEsAncho(1100);
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{C.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{C.explicacion}</p>
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={C.titulo} descripcion={C.explicacion} />
 
+      <div className={alLado ? 'nx-composicion nx-composicion--lista-detalle' : 'nx-composicion'}>
       <section className="nx-tarjeta">
         <EstadoDeConsulta consulta={bandeja} cargando={<Esqueleto lineas={4} />}>
           {(lista) =>
             lista.length === 0 ? (
-              <Vacio titulo={C.vacioTitulo} detalle={C.vacioTexto} />
+              <Vacio icono="mazo" titulo={C.vacioTitulo} detalle={C.vacioTexto} />
             ) : (
               <ul className="nx-lista-incidencias" aria-label={C.titulo}>
                 {lista.map((r) => (
-                  <li key={r.id} className="nx-incidencia">
+                  <li key={r.id} className={`nx-incidencia${alLado && abierto?.id === r.id ? ' nx-incidencia--elegida' : ''}`}>
                     <div className="nx-incidencia__cabecera">
                       <strong>{r.categoriaEtiqueta}</strong>
                       {r.estado && <Insignia tono={TONO_DENUNCIA[r.estado] ?? 'neutro'}>{D.estados[r.estado] ?? r.estado}</Insignia>}
@@ -184,6 +191,7 @@ export function CanalDenuncias() {
                       <Boton
                         variante="texto"
                         aria-label={`${C.abrir}: ${r.categoriaEtiqueta ?? ''}, ${r.creadoEn ? fechaHoraCorta(r.creadoEn) : ''}`}
+                        aria-pressed={alLado ? abierto?.id === r.id : undefined}
                         onClick={() => r.id !== undefined && setAbierto({ id: r.id, titulo: r.categoriaEtiqueta ?? '' })}
                       >
                         {C.abrir}
@@ -197,9 +205,24 @@ export function CanalDenuncias() {
         </EstadoDeConsulta>
       </section>
 
-      <Dialogo abierto={abierto !== null} titulo={abierto?.titulo ?? ''} alCerrar={() => setAbierto(null)}>
-        {abierto !== null && <Expediente id={abierto.id} />}
-      </Dialogo>
+        {alLado &&
+          (abierto !== null ? (
+            // `key`: al pasar a otra denuncia, el borrador de respuesta de la anterior no se queda.
+            <Tarjeta key={abierto.id} titulo={abierto.titulo} icono="mazo" className="nx-pegada">
+              <Expediente id={abierto.id} />
+            </Tarjeta>
+          ) : (
+            <section className="nx-tarjeta nx-pegada">
+              <Vacio icono="mazo" titulo={C.elige} detalle={C.eligeTexto} />
+            </section>
+          ))}
+      </div>
+
+      {!alLado && (
+        <Dialogo abierto={abierto !== null} titulo={abierto?.titulo ?? ''} alCerrar={() => setAbierto(null)}>
+          {abierto !== null && <Expediente id={abierto.id} />}
+        </Dialogo>
+      )}
     </div>
   );
 }

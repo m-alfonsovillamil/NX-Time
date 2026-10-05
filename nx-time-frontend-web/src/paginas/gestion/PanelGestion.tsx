@@ -15,6 +15,7 @@
 import { Link } from 'react-router';
 
 import { useSesion } from '../../api/useSesion';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Cifra, Cifras } from '../../componentes/Cifra';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Icono, type NombreIcono } from '../../componentes/Icono';
@@ -45,9 +46,7 @@ export function PanelGestion() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{P.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={P.titulo} />
 
       <section className="nx-tarjeta" aria-labelledby="panel-pendiente">
         <h2 id="panel-pendiente">{P.pendiente}</h2>

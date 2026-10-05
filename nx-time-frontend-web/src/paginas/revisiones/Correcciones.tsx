@@ -21,6 +21,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useListaPaginada, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Insignia, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -223,9 +224,7 @@ export function Correcciones() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{C.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={C.titulo} />
       <section className="nx-tarjeta">
         <Pestanas
           etiqueta={C.pestanas}

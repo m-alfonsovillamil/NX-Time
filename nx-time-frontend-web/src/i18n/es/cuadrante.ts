@@ -14,6 +14,7 @@ export const cuadrante = {
     plantilla: (nombre: string) => `Plantilla: ${nombre}`,
     total: (texto: string) => `Total de la semana: ${texto}`,
     otroDia: '(+1 d)',
+    explicacion: 'El horario que tienes asignado, semana a semana.',
     verIncidencias: 'Ver mis incidencias',
   },
 

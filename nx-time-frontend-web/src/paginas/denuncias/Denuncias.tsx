@@ -26,6 +26,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { notificar } from '../../componentes/Notificaciones';
@@ -415,27 +416,30 @@ export function Denuncias() {
   }
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{D.titulo}</h1>
-      </header>
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={D.titulo} />
 
-      <section className="nx-tarjeta" aria-labelledby="denuncias-que-es">
-        <h2 id="denuncias-que-es">{D.queEsTitulo}</h2>
-        <p className="nx-sutil">{D.queEsTexto}</p>
-      </section>
+      {/* Presentar una, a la izquierda; qué es el canal y seguir las que ya hay, al lado. */}
+      <div className="nx-composicion nx-composicion--principal-lateral">
+        <section className="nx-tarjeta">
+          <FormularioDeDenuncia alCrear={alCrear} />
+        </section>
 
-      <section className="nx-tarjeta">
-        <FormularioDeDenuncia alCrear={alCrear} />
-      </section>
+        <div className="nx-columna">
+          <section className="nx-tarjeta" aria-labelledby="denuncias-que-es">
+            <h2 id="denuncias-que-es">{D.queEsTitulo}</h2>
+            <p className="nx-sutil">{D.queEsTexto}</p>
+          </section>
 
-      <section className="nx-tarjeta">
-        <BuscarPorCodigo alEncontrar={(via, expediente) => setAbierto({ via, expediente })} />
-      </section>
+          <section className="nx-tarjeta">
+            <BuscarPorCodigo alEncontrar={(via, expediente) => setAbierto({ via, expediente })} />
+          </section>
 
-      <section className="nx-tarjeta">
-        <MisDenuncias alAbrir={(via, expediente) => setAbierto({ via, expediente })} />
-      </section>
+          <section className="nx-tarjeta">
+            <MisDenuncias alAbrir={(via, expediente) => setAbierto({ via, expediente })} />
+          </section>
+        </div>
+      </div>
 
       <DialogoDelCodigo
         creada={creada}

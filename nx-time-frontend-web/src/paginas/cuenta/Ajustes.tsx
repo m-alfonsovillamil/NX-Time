@@ -13,12 +13,15 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
+import { useLocation } from 'react-router';
 
 import { cliente, salir } from '../../api/cliente';
 import { pedir, pedirOpcional, useMutacion } from '../../api/consultas';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { Esqueleto } from '../../componentes/Estados';
+import { Icono, type NombreIcono } from '../../componentes/Icono';
 import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
 import { descargar } from '../../util/descargar';
@@ -41,7 +44,7 @@ const CLAVE_BORRADO = ['perfil', 'borrado'] as const;
 function Apariencia() {
   const [tema, setTema] = useState<Tema>(temaGuardado());
   return (
-    <Tarjeta titulo={J.apariencia}>
+    <Tarjeta id="ajustes-apariencia" icono="tema" titulo={J.apariencia}>
       <Selector
         id="tema"
         etiqueta={J.tema}
@@ -108,7 +111,7 @@ function Notificaciones() {
   };
 
   return (
-    <Tarjeta titulo={N.titulo}>
+    <Tarjeta id="ajustes-notificaciones" icono="campana" titulo={N.titulo}>
       <div className="nx-columna">
         {estado === 'encendido' && (
           <div>
@@ -202,7 +205,7 @@ function Cuenta() {
   });
 
   return (
-    <Tarjeta titulo={J.cuenta}>
+    <Tarjeta id="ajustes-cuenta" icono="persona" titulo={J.cuenta}>
       <div className="nx-columna">
         <div>
           <Boton variante="secundario" onClick={() => setCambiando(true)}>
@@ -362,24 +365,57 @@ function Borrado() {
   );
 }
 
+/** Las secciones de la página, en su orden: de aquí sale el índice. */
+const INDICE: readonly { id: string; icono: NombreIcono; texto: string }[] = [
+  { id: 'ajustes-apariencia', icono: 'tema', texto: J.apariencia },
+  { id: 'ajustes-notificaciones', icono: 'campana', texto: J.notificaciones.titulo },
+  { id: 'ajustes-cuenta', icono: 'persona', texto: J.cuenta },
+  { id: 'ajustes-privacidad', icono: 'candado', texto: J.privacidad },
+  { id: 'ajustes-app', icono: 'movil', texto: J.enLaApp },
+];
+
 export function Ajustes() {
+  // Llegar con una sección en la URL («/ajustes#ajustes-notificaciones», desde
+  // la página de avisos) baja hasta ella: el router no lo hace solo.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash !== '') document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
+
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{J.titulo}</h1>
-      </header>
-      <Apariencia />
-      <Notificaciones />
-      <Cuenta />
-      <Tarjeta titulo={J.privacidad}>
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={J.titulo} />
+      <div className="nx-composicion nx-composicion--indice">
+        {/* En escritorio, un índice que se queda a la vista; en el móvil no hace falta: se baja con el dedo. */}
+        <nav className="nx-indice nx-pegada" aria-label={J.indice}>
+          <ul>
+            {INDICE.map((s) => (
+              <li key={s.id}>
+                <a className="nx-enlace-menu" href={`#${s.id}`}>
+                  <span className="nx-enlace-menu__icono">
+                    <Icono nombre={s.icono} tamano={20} />
+                  </span>
+                  <span className="nx-enlace-menu__texto">{s.texto}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="nx-columna">
-          <MisDatos />
-          <Borrado />
+          <Apariencia />
+          <Notificaciones />
+          <Cuenta />
+          <Tarjeta id="ajustes-privacidad" icono="candado" titulo={J.privacidad}>
+            <div className="nx-columna">
+              <MisDatos />
+              <Borrado />
+            </div>
+          </Tarjeta>
+          <Tarjeta id="ajustes-app" icono="movil" titulo={J.enLaApp}>
+            <p className="nx-sutil">{J.enLaAppDetalle}</p>
+          </Tarjeta>
         </div>
-      </Tarjeta>
-      <Tarjeta titulo={J.enLaApp}>
-        <p className="nx-sutil">{J.enLaAppDetalle}</p>
-      </Tarjeta>
+      </div>
     </div>
   );
 }

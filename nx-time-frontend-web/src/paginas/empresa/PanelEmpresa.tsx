@@ -16,6 +16,7 @@ import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import { useSesion } from '../../api/useSesion';
 import { Barras } from '../../componentes/Barras';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Cifra, Cifras } from '../../componentes/Cifra';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { empresa } from '../../i18n/es/empresa';
@@ -69,11 +70,11 @@ export function PanelEmpresa() {
     enabled: puede('proyecto:gestionar'),
   });
 
+  const hayProyectos = puede('proyecto:gestionar') && (proyectos.data?.proyectos ?? []).length > 0;
+
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{E.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={E.titulo} />
 
       <EstadoDeConsulta consulta={panel} cargando={<Esqueleto lineas={6} />}>
         {(p) => {
@@ -107,6 +108,8 @@ export function PanelEmpresa() {
                 </Cifras>
               </section>
 
+              {/* Con sitio para los dos, las horas por persona y por proyecto se comparan lado a lado. */}
+              <div className={hayProyectos ? 'nx-composicion nx-composicion--mitades' : 'nx-composicion'}>
               <section className="nx-tarjeta" aria-labelledby="empresa-horas">
                 <h2 id="empresa-horas">{E.horasPorEmpleado}</h2>
                 {horas.length === 0 ? (
@@ -123,19 +126,20 @@ export function PanelEmpresa() {
                   </>
                 )}
               </section>
+
+              {hayProyectos && (
+                <section className="nx-tarjeta" aria-labelledby="empresa-proyectos">
+                  <h2 id="empresa-proyectos">{E.horasPorProyecto}</h2>
+                  <Barras
+                    filas={(proyectos.data?.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, valor: x.minutos ?? 0 }))}
+                  />
+                </section>
+              )}
+              </div>
             </>
           );
         }}
       </EstadoDeConsulta>
-
-      {puede('proyecto:gestionar') && (proyectos.data?.proyectos ?? []).length > 0 && (
-        <section className="nx-tarjeta" aria-labelledby="empresa-proyectos">
-          <h2 id="empresa-proyectos">{E.horasPorProyecto}</h2>
-          <Barras
-            filas={(proyectos.data?.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, valor: x.minutos ?? 0 }))}
-          />
-        </section>
-      )}
 
       {puede('analitica:leer') && <TarjetaDeAnalitica />}
     </div>

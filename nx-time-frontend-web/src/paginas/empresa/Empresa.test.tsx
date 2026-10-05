@@ -157,7 +157,11 @@ describe('integridad', () => {
     });
     pintar(<Integridad />, { sesion: sesionDe('RRHH') });
 
-    expect(await screen.findByText(G.pendientes(4))).toBeTruthy();
+    // Lo comprobado anoche y lo posterior que aún no se ha mirado, cada cosa con su cifra.
+    const pendientes = (await screen.findByText(G.cifras.pendientes)).closest('.nx-cifra');
+    expect(pendientes?.textContent).toContain('4');
+    expect(pendientes?.textContent).toContain(G.cifras.pendientesDetalle);
+    expect(screen.getByText(G.cifras.movimientos).closest('.nx-cifra')?.textContent).toContain('900');
     await userEvent.click(screen.getByRole('button', { name: G.comprobar }));
     const resultado = await screen.findByRole('status');
     expect(within(resultado).getByText(G.intacta)).toBeTruthy();

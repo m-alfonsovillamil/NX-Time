@@ -8,6 +8,12 @@ export const cuenta = {
     sinLeer: 'Sin leer',
     irAlDestino: 'Ver',
     todosLeidos: 'Todos los avisos marcados como leídos.',
+    explicacion: 'Lo que ha pasado con tus ausencias, tus fichajes y tu cuenta. Abrir uno te lleva a su sitio.',
+    resumen: 'Sin leer',
+    alDia: 'Estás al día',
+    ajustesTitulo: 'Que no se te pase ninguno',
+    ajustesTexto: 'Puedes recibirlos en este navegador aunque tengas la web cerrada.',
+    ajustesEnlace: 'Ajustes de notificaciones',
   },
 
   perfil: {
@@ -61,6 +67,7 @@ export const cuenta = {
   },
 
   ajustes: {
+    indice: 'Secciones de los ajustes',
     titulo: 'Ajustes',
 
     apariencia: 'Apariencia',

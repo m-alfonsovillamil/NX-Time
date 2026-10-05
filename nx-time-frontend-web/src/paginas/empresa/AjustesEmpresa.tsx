@@ -17,7 +17,8 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import { abrirSesion, sesionActual } from '../../api/sesion';
 import type { components } from '../../api/schema';
-import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Selector, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
@@ -88,7 +89,8 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
 
   return (
     <>
-      <form className="nx-tarjeta nx-formulario" onSubmit={enviar} noValidate>
+      <Tarjeta titulo={A.datos} icono="empresa" descripcion={A.datosTexto}>
+        <form className="nx-formulario nx-formulario--libre" onSubmit={enviar} noValidate>
         <Campo
           id="empresa-nombre"
           etiqueta={A.nombre}
@@ -111,7 +113,8 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
           </Boton>
         </div>
         {guardar.error !== null && !confirmando && <Aviso>{guardar.error.message}</Aviso>}
-      </form>
+        </form>
+      </Tarjeta>
 
       <Dialogo
         abierto={confirmando}
@@ -149,14 +152,17 @@ export function AjustesEmpresa() {
   });
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{A.titulo}</h1>
-      </header>
-      <EstadoDeConsulta consulta={ajustes} cargando={<Esqueleto lineas={3} />}>
-        {(datos) => <Formulario key={`${datos.nombre}|${datos.zonaHoraria}`} ajustes={datos} />}
-      </EstadoDeConsulta>
-      <Kioscos />
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={A.titulo} descripcion={A.explicacion} />
+      {/* Dos mitades: los datos de la empresa y, al lado, sus kioscos. Cada una a su altura. */}
+      <div className="nx-composicion nx-composicion--mitades nx-composicion--arriba">
+        <div className="nx-columna">
+          <EstadoDeConsulta consulta={ajustes} cargando={<Esqueleto lineas={3} />}>
+            {(datos) => <Formulario key={`${datos.nombre}|${datos.zonaHoraria}`} ajustes={datos} />}
+          </EstadoDeConsulta>
+        </div>
+        <Kioscos />
+      </div>
     </div>
   );
 }

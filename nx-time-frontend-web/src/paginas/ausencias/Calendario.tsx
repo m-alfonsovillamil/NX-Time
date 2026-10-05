@@ -19,6 +19,7 @@ import { useState } from 'react';
 
 import { useSesion } from '../../api/useSesion';
 import { Boton, Insignia } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ErrorConReintento, Esqueleto, Vacio } from '../../componentes/Estados';
 import { ausencias as A } from '../../i18n/es/ausencias';
 import type { components } from '../../api/schema';
@@ -94,9 +95,7 @@ export function Calendario() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{C.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={C.titulo} />
 
       <section className="nx-tarjeta">
         <div className="nx-calendario__barra">

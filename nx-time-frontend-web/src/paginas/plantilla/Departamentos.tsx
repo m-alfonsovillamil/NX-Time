@@ -19,6 +19,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
@@ -118,9 +119,7 @@ export function Departamentos() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{D.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={D.titulo} />
 
       <section className="nx-tarjeta">
         <Nuevo />

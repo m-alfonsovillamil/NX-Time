@@ -24,6 +24,7 @@ import { ErrorDeApi, pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
 import { Barras } from '../../componentes/Barras';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Cifra, Cifras } from '../../componentes/Cifra';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -211,10 +212,10 @@ export function Analitica() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{A.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{A.explicacion}</p>
+      <CabeceraDePagina
+        titulo={A.titulo}
+        descripcion={A.explicacion}
+      />
 
       <section className="nx-tarjeta">
         <div className="nx-filtros">

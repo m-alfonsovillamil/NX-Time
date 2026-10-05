@@ -23,8 +23,10 @@ import { pedir, useListaPaginada } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Boton, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
 import { ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
+import { Iniciales } from '../../componentes/Iniciales';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { equipo } from '../../i18n/es/equipo';
 import { duracion, fechaCorta, hora, horaDeSalida, minutos, segundosTrabajados } from '../../util/fechas';
@@ -46,7 +48,18 @@ interface Acciones {
 function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Columna<Fila>[] {
   const todas: (Columna<Fila> | null)[] = [
     { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha) },
-    conPersona ? { clave: 'persona', cabecera: E.persona, celda: (f) => f.usuario?.nombre ?? '' } : null,
+    conPersona
+      ? {
+          clave: 'persona',
+          cabecera: E.persona,
+          celda: (f) => (
+            <span className="nx-con-iniciales">
+              <Iniciales nombre={f.usuario?.nombre ?? ''} tamano="s" />
+              {f.usuario?.nombre ?? ''}
+            </span>
+          ),
+        }
+      : null,
     {
       clave: 'entrada',
       cabecera: E.entrada,
@@ -164,9 +177,7 @@ export function HistorialEquipo() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{E.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={E.titulo} />
       <section className="nx-tarjeta">
         {personas.length > 0 && (
           <div className="nx-filtros">

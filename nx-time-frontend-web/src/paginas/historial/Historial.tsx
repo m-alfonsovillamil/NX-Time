@@ -21,6 +21,7 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, todasLasPaginas, useListaPaginada } from '../../api/consultas';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -240,9 +241,7 @@ export function Historial() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{H.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={H.titulo} />
 
       <section className="nx-tarjeta">
         <Pestanas

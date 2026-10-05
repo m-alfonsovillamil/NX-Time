@@ -24,6 +24,7 @@ import { ErrorDeApi, pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
@@ -284,16 +285,20 @@ export function GestionOfertas() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera nx-cabecera--con-acciones">
-        <h1>{abierta ? abierta.titulo : G.titulo}</h1>
-        {abierta ? (
-          <Boton variante="secundario" onClick={() => setBusqueda({})}>
-            ‹ {G.volver}
-          </Boton>
-        ) : (
-          <Boton onClick={() => setEditando('nueva')}>{G.nueva}</Boton>
-        )}
-      </header>
+      <CabeceraDePagina
+        titulo={abierta?.titulo ?? G.titulo}
+        acciones={
+          <>
+            {abierta ? (
+              <Boton variante="secundario" onClick={() => setBusqueda({})}>
+                ‹ {G.volver}
+              </Boton>
+            ) : (
+              <Boton onClick={() => setEditando('nueva')}>{G.nueva}</Boton>
+            )}
+          </>
+        }
+      />
 
       {estado.error !== null && cerrando === null && <Aviso>{estado.error.message}</Aviso>}
 

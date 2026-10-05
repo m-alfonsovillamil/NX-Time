@@ -30,6 +30,11 @@ test('bandeja del canal de denuncias para quien instruye', async ({ page }) => {
   await entrar(page, 'raul.ortega@techcorp.demo');
   await irASeccion(page, 'Denuncias recibidas');
   await expect(page.getByRole('heading', { name: 'Canal interno' })).toBeVisible();
-  await page.getByRole('button', { name: /^Abrir/ }).first().click();
-  await expect(page.getByRole('dialog').getByText(/^(Denuncia anónima|La presentó)/)).toBeVisible();
+  // En escritorio el expediente se abre al lado de la bandeja, no en un diálogo
+  // (5/10/2026); el botón de la elegida queda marcado.
+  const abrir = page.getByRole('button', { name: /^Abrir/ }).first();
+  await abrir.click();
+  await expect(abrir).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.nx-pegada').getByText(/^(Denuncia anónima|La presentó)/)).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

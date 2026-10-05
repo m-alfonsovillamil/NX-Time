@@ -23,6 +23,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
 import { Barras } from '../../componentes/Barras';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -378,16 +379,20 @@ export function Proyectos() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera nx-cabecera--con-acciones">
-        <h1>{P.titulo}</h1>
-        {abierto === null ? (
-          <Boton onClick={() => setCreando(true)}>{P.nuevo}</Boton>
-        ) : (
-          <Boton variante="secundario" onClick={() => setBusqueda({})}>
-            ‹ {P.titulo}
-          </Boton>
-        )}
-      </header>
+      <CabeceraDePagina
+        titulo={P.titulo}
+        acciones={
+          <>
+            {abierto === null ? (
+              <Boton onClick={() => setCreando(true)}>{P.nuevo}</Boton>
+            ) : (
+              <Boton variante="secundario" onClick={() => setBusqueda({})}>
+                ‹ {P.titulo}
+              </Boton>
+            )}
+          </>
+        }
+      />
 
       {abierto !== null ? (
         <Detalle key={abierto} id={abierto} alVolver={() => setBusqueda({})} />

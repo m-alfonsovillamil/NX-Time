@@ -10,6 +10,10 @@
  * el servidor lo dice en `bloqueos` y el botón ni siquiera se ofrece.
  *
  * Rechazar pide comentario: le llega a la persona para que sepa qué resolver.
+ *
+ * En tabla y a lo ancho (5/10/2026): quién, cuándo lo pidió, por qué, si se
+ * puede ejecutar ya y qué hacer, de un vistazo. En el móvil la tabla se pinta
+ * como tarjetas, igual que todas.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -18,10 +22,13 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
-import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
+import { Iniciales } from '../../componentes/Iniciales';
+import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { borrados } from '../../i18n/es/borrados';
 import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
@@ -137,58 +144,89 @@ export function Borrados() {
     { invalida: TRAS_RESOLVER, exito: B.rechazada, alTerminar: () => setRechazando(null) },
   );
 
+  const columnas: Columna<Solicitud>[] = [
+    {
+      clave: 'persona',
+      cabecera: B.columnas.persona,
+      celda: (s) => (
+        <span className="nx-con-iniciales">
+          <Iniciales nombre={s.nombre ?? ''} />
+          <span className="nx-celda-apilada">
+            <strong>{s.nombre}</strong>
+            <span className="nx-sutil">{s.email}</span>
+          </span>
+        </span>
+      ),
+    },
+    {
+      clave: 'pedida',
+      cabecera: B.columnas.pedida,
+      celda: (s) => (
+        <span className="nx-celda-apilada">
+          {s.creadaEn && <span>{B.pedidaEl(fechaCorta(diaEnEmpresa(s.creadaEn)))}</span>}
+          {s.registradaPor && <span className="nx-sutil">{B.registradaPor(s.registradaPor)}</span>}
+        </span>
+      ),
+    },
+    { clave: 'motivo', cabecera: B.columnas.motivo, celda: (s) => (s.motivo ? B.motivo(s.motivo) : null) },
+    {
+      clave: 'estado',
+      cabecera: B.columnas.estado,
+      celda: (s) => {
+        const bloqueos = s.bloqueos ?? [];
+        if (bloqueos.length === 0) return <Insignia tono="exito">{B.lista}</Insignia>;
+        return (
+          <div className="nx-celda-apilada">
+            <Insignia tono="error">{B.bloqueada}</Insignia>
+            <div className="nx-bloqueos">
+              <span>{B.bloqueos}</span>
+              <ul>
+                {bloqueos.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      clave: 'acciones',
+      cabecera: B.columnas.acciones,
+      celda: (s) => (
+        <div className="nx-acciones-fila">
+          {(s.bloqueos ?? []).length === 0 && (
+            <Boton variante="texto" onClick={() => setEjecutando(s)}>
+              {B.ejecutar}
+            </Boton>
+          )}
+          <Boton variante="texto" onClick={() => setRechazando(s)}>
+            {B.rechazar}
+          </Boton>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera nx-cabecera--con-acciones">
-        <h1>{B.titulo}</h1>
-        <Boton variante="secundario" onClick={() => setRegistrando(true)}>
-          {B.registrar}
-        </Boton>
-      </header>
-      <p className="nx-sutil">{B.explicacion}</p>
+    <div className="nx-pagina">
+      <CabeceraDePagina
+        titulo={B.titulo}
+        descripcion={B.explicacion}
+        acciones={
+          <Boton variante="secundario" onClick={() => setRegistrando(true)}>
+            {B.registrar}
+          </Boton>
+        }
+      />
 
       <section className="nx-tarjeta">
-        <EstadoDeConsulta consulta={pendientes} cargando={<Esqueleto lineas={3} />}>
+        <EstadoDeConsulta consulta={pendientes} cargando={<Esqueleto forma="tabla" lineas={3} />}>
           {(lista) =>
             lista.length === 0 ? (
-              <Vacio titulo={B.vacioTitulo} detalle={B.vacioTexto} />
+              <Vacio icono="hecho" titulo={B.vacioTitulo} detalle={B.vacioTexto} />
             ) : (
-              <ul className="nx-lista-incidencias" aria-label={B.titulo}>
-                {lista.map((s) => {
-                  const bloqueos = s.bloqueos ?? [];
-                  return (
-                    <li key={s.id} className="nx-incidencia">
-                      <div className="nx-incidencia__cabecera">
-                        <strong>{s.nombre}</strong>
-                        <span className="nx-sutil">{s.email}</span>
-                      </div>
-                      {s.creadaEn && <span className="nx-sutil">{B.pedidaEl(fechaCorta(diaEnEmpresa(s.creadaEn)))}</span>}
-                      {s.registradaPor && <span className="nx-sutil">{B.registradaPor(s.registradaPor)}</span>}
-                      {s.motivo && <span>{B.motivo(s.motivo)}</span>}
-                      {bloqueos.length > 0 && (
-                        <div className="nx-bloqueos">
-                          <span>{B.bloqueos}</span>
-                          <ul>
-                            {bloqueos.map((b) => (
-                              <li key={b}>{b}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <div className="nx-acciones-fila">
-                        {bloqueos.length === 0 && (
-                          <Boton variante="texto" onClick={() => setEjecutando(s)}>
-                            {B.ejecutar}
-                          </Boton>
-                        )}
-                        <Boton variante="texto" onClick={() => setRechazando(s)}>
-                          {B.rechazar}
-                        </Boton>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Tabla titulo={B.tabla} columnas={columnas} filas={lista} claveDeFila={(s) => s.id ?? 0} />
             )
           }
         </EstadoDeConsulta>

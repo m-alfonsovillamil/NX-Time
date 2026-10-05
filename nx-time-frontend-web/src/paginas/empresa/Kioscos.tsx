@@ -12,7 +12,7 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
-import { Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Tarjeta } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
@@ -90,14 +90,12 @@ export function Kioscos() {
   );
 
   return (
-    <section className="nx-tarjeta" aria-labelledby="kioscos-titulo">
-      <h2 id="kioscos-titulo">{G.titulo}</h2>
-      <p className="nx-sutil">{G.explicacion}</p>
+    <Tarjeta titulo={G.titulo} icono="qr" descripcion={G.explicacion} className="nx-expediente">
       <Alta />
       <EstadoDeConsulta consulta={kioscos} cargando={<Esqueleto lineas={2} />}>
         {(lista) =>
           lista.length === 0 ? (
-            <Vacio titulo={G.ninguno} />
+            <Vacio icono="qr" titulo={G.ninguno} />
           ) : (
             <ul className="nx-lista-incidencias">
               {lista.map((k) => (
@@ -147,6 +145,6 @@ export function Kioscos() {
         <p>{G.revocarTexto}</p>
         {revocar.error !== null && <Aviso>{revocar.error.message}</Aviso>}
       </Dialogo>
-    </section>
+    </Tarjeta>
   );
 }
