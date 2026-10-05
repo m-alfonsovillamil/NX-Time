@@ -21,7 +21,7 @@
  * (`ChipDeJornada`).
  */
 
-import { Suspense, useId, useState } from 'react';
+import { Suspense, useEffect, useId, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 
 import { salir } from '../api/cliente';
@@ -256,6 +256,38 @@ function MenuDeUsuario({ nombre }: { nombre: string }) {
   );
 }
 
+/**
+ * Pide en un rato libre el JS de las secciones de la barra inferior.
+ *
+ * En escritorio, pasar el ratón por el menú ya adelanta la descarga (ver
+ * `Enlace`). **En el móvil no hay ratón**: el dedo llega y pulsa a la vez, y
+ * en una red lenta cada cambio de pestaña esperaba a su trozo de JS (unos
+ * 330 ms medidos con `scripts/medir.mjs`). Las de la barra inferior son las
+ * cuatro que más se usan y pesan poco: se piden solas cuando el navegador no
+ * tiene otra cosa que hacer, una vez, tras la primera pantalla.
+ *
+ * Con «ahorro de datos» activado no se pide nada por adelantado.
+ */
+function usePrecargaEnReposo(secciones: readonly Seccion[]) {
+  const rutas = secciones.map((s) => s.ruta).join(' ');
+  useEffect(() => {
+    const conexion = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (conexion?.saveData === true) return;
+    const precargar = () => {
+      for (const seccion of secciones) seccion.pagina?.precargar();
+    };
+    // Safari no tiene `requestIdleCallback`: un par de segundos después de pintar hace el mismo papel.
+    if (typeof globalThis.requestIdleCallback === 'function') {
+      const id = globalThis.requestIdleCallback(precargar, { timeout: 4000 });
+      return () => globalThis.cancelIdleCallback(id);
+    }
+    const id = setTimeout(precargar, 2000);
+    return () => clearTimeout(id);
+    // Depende de las rutas y no de `secciones`, que es una lista nueva en cada
+    // render: las secciones salen del catálogo, y con las mismas rutas son las mismas.
+  }, [rutas]);
+}
+
 export function Marco() {
   const { sesion } = useSesion();
   const [todasAbiertas, setTodasAbiertas] = useState(false);
@@ -265,6 +297,7 @@ export function Marco() {
   // El acento de la página (teal o índigo) sale de su grupo, como en la app.
   const zona = seccionDeRuta(useLocation().pathname)?.grupo;
   const pendientes = usePendientesPorRuta();
+  usePrecargaEnReposo(enBarra);
 
   return (
     <div className="nx-marco">

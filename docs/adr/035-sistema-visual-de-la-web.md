@@ -197,10 +197,56 @@ Con «reducir movimiento» no hay ninguna. Los apartados del menú se abren sin
 animación: se ocultan con `hidden`, que es lo que los saca del tabulador y del
 lector de pantalla, y eso no se anima sin renunciar a ello.
 
+### Lo que se midió, y lo que se descartó por medirlo
+
+Las medidas son de `scripts/medir.mjs` (`npm run medir`): Playwright sobre
+`vite preview`, con una red lenta simulada (1,6 Mbit/s y 150 ms de latencia) y
+la mediana de cinco pasadas. No se usó Lighthouse porque lo que importa está
+detrás del login, y el script entra con una cuenta de la demo.
+
+| Medida | `main` | Con este plan |
+|---|---|---|
+| Primera carga: JS | 113,2 kB | 119,7 kB |
+| Primera carga: CSS | 7,7 kB | 10,1 kB |
+| LCP de la pantalla de entrar | 1036 ms | 1056 ms |
+| CLS, al entrar y al llegar los datos de una tabla | 0,000 | 0,000 |
+| Menú → otra página, hasta ver su título | ~330 ms | ~50 ms |
+| Lo mismo sin pasar antes el ratón (el móvil) | 343 ms | 51 ms |
+
+Lo que sí mejora es el cambio de página. Tiene dos partes:
+
+- **En escritorio**, la precarga al pasar el ratón por el menú.
+- **En el móvil**, donde no hay ratón que pase antes por encima, el JS de las
+  secciones de la barra inferior se pide solo en un rato libre
+  (`usePrecargaEnReposo`). Con «ahorro de datos» activado no se pide.
+
+Tres cosas del plan no se hicieron, porque medirlas dijo que no:
+
+- **Precargar las fuentes de los titulares.**
+  - Se probó con `<link rel="preload">` de Sora 600 y 700. La fuente pasaba
+    de estar lista a los 1320 ms a estarlo a los 830, y el título dejaba de
+    cambiar de fuente.
+  - A cambio, **el primer pintado se retrasaba unos 190 ms** (de 1036 a
+    1228), porque las fuentes compiten con el JS por la misma red. Con
+    `fetchpriority="low"` salía igual.
+  - El cambio de fuente es cosmético y no mueve nada de sitio (CLS 0).
+    Retrasar el primer pintado sí se nota. Se quitó.
+- **Importar solo el subconjunto latino de Sora.**
+  - No ahorra nada al usuario: el navegador ya descarga cada subconjunto solo
+    si la página tiene un carácter suyo (`unicode-range`).
+  - Rompería los títulos con nombres en otros alfabetos latinos.
+- **Arreglar los saltos de diseño.** No había: el CLS ya era 0. Un esqueleto
+  sustituido por su tabla no desplaza nada. Los esqueletos con forma se
+  quedan porque se ven mejor, no porque mejoren una métrica.
+
+Además, la caché de `/assets/*` (un año, inmutable) ya estaba en
+`render.yaml`.
+
 ## Consecuencias
 
-- El JS inicial pasa de 106 a 113 kB comprimidos, casi todo por los trazados
-  de los iconos. El límite sigue en 150 kB.
+- El JS inicial pasa de 106 a 116 kB comprimidos según el presupuesto de la
+  CI, sobre todo por los trazados de los iconos y las piezas nuevas. El límite
+  sigue en 150 kB.
 - Un color, un radio o una sombra nuevos se añaden en el tema de la app, no en
   `base.css`.
 - Las páginas estrechas conservan su columna con `.nx-pagina--estrecha`

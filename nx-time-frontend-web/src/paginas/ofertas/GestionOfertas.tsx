@@ -306,7 +306,7 @@ export function GestionOfertas() {
         <Candidaturas oferta={abierta} />
       ) : (
         <section className="nx-tarjeta">
-          <EstadoDeConsulta consulta={lista} cargando={<Esqueleto lineas={4} />}>
+          <EstadoDeConsulta consulta={lista} cargando={<Esqueleto forma="tabla" lineas={4} />}>
             {(os) =>
               os.length === 0 ? <Vacio titulo={G.vacio} /> : <Tabla titulo={G.tablaTitulo} columnas={columnas} filas={os} claveDeFila={(o) => o.id ?? 0} />
             }

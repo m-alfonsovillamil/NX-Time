@@ -317,7 +317,7 @@ export function Plantilla() {
           </label>
         </div>
         {cambiarEstado.error !== null && baja === null && <Aviso>{cambiarEstado.error.message}</Aviso>}
-        <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto lineas={6} />}>
+        <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto forma="tabla" lineas={6} />}>
           {(personas) => {
             if (personas.length === 0) return <Vacio titulo={P.vacio} />;
             const vistas = ordenar(filtrar(personas, texto, conBajas));

@@ -128,7 +128,7 @@ function Jornadas({ personaId, nombre, acciones }: { personaId: number | null; n
     ),
   );
 
-  if (lista.isPending) return <Esqueleto lineas={6} />;
+  if (lista.isPending) return <Esqueleto forma="tabla" lineas={6} />;
   if (lista.isError && lista.elementos.length === 0) {
     return <ErrorConReintento mensaje={lista.error.message} alReintentar={() => void lista.refetch()} />;
   }

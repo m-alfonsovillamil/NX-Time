@@ -137,7 +137,7 @@ function Recientes({ acciones }: { acciones: Acciones }) {
     pedir(cliente.GET('/api/v1/fichaje/historial', { params: { query: { pagina, tamano: TAMANO_RECIENTES } } })),
   );
 
-  if (lista.isPending) return <Esqueleto lineas={5} />;
+  if (lista.isPending) return <Esqueleto forma="tabla" lineas={5} />;
   if (lista.isError && lista.elementos.length === 0) {
     return <ErrorConReintento mensaje={lista.error.message} alReintentar={() => void lista.refetch()} />;
   }
@@ -170,7 +170,7 @@ function DelPeriodo({ desde, hasta, acciones }: { desde: string; hasta: string; 
   });
 
   return (
-    <EstadoDeConsulta consulta={periodo} cargando={<Esqueleto lineas={5} />}>
+    <EstadoDeConsulta consulta={periodo} cargando={<Esqueleto forma="tabla" lineas={5} />}>
       {(jornadas) => (
         <>
           <p className="nx-grafico__total">{H.total(fechaCorta(desde), fechaCorta(hasta), minutos(minutosCerrados(jornadas)))}</p>

@@ -220,3 +220,46 @@ describe('la precarga de una página', () => {
     precargar.mockRestore();
   });
 });
+
+describe('la precarga en reposo de las secciones principales', () => {
+  const principales = () =>
+    SECCIONES.filter((s) => s.principal === true).map((s) => {
+      if (s.pagina === undefined) throw new Error(`${s.ruta} no tiene página.`);
+      return vi.spyOn(s.pagina, 'precargar').mockImplementation(() => undefined);
+    });
+
+  /** Un navegador que tiene un rato libre en cuanto se le pide. */
+  function conRatoLibre() {
+    vi.stubGlobal('requestIdleCallback', (tarea: () => void) => {
+      tarea();
+      return 1;
+    });
+    vi.stubGlobal('cancelIdleCallback', () => undefined);
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    // El rato libre y el ahorro de datos simulados no pasan al test siguiente.
+    vi.unstubAllGlobals();
+  });
+
+  it('en el móvil no hay ratón que pase por encima: se piden solas cuando hay un rato libre', () => {
+    conRatoLibre();
+    const espias = principales();
+
+    pintarMarco('EMPLEADO', '/fichar');
+
+    expect(espias.length).toBe(4);
+    for (const espia of espias) expect(espia).toHaveBeenCalledTimes(1);
+  });
+
+  it('con el ahorro de datos activado no se pide nada por adelantado', () => {
+    conRatoLibre();
+    vi.stubGlobal('navigator', Object.assign(Object.create(navigator), { connection: { saveData: true } }));
+    const espias = principales();
+
+    pintarMarco('EMPLEADO', '/fichar');
+
+    for (const espia of espias) expect(espia).not.toHaveBeenCalled();
+  });
+});

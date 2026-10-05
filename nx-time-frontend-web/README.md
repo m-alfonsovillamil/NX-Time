@@ -39,7 +39,7 @@ src/
 e2e/              Playwright contra el backend real: un recorrido por área, más
                   accesibilidad, teclado, móvil, carga por áreas y las capturas
 public/           sw.js (el service worker) · manifest.webmanifest · iconos/
-scripts/          tokens.mjs · presupuesto.mjs · iconos.mjs
+scripts/          tokens.mjs · presupuesto.mjs · iconos.mjs · medir.mjs
 ```
 
 **Una sección nueva son dos pasos**: su línea en `navegacion/secciones.ts` y su
@@ -89,6 +89,7 @@ npm test            # Vitest
 npm run typecheck   # tsc del proyecto + el contrato generado
 npm run build       # bundle de produccion en dist/
 npm run presupuesto # tras el build: el JS inicial no pasa de 150 kB comprimido
+npm run medir -- http://localhost:4173   # con `vite preview` y el backend de demo: peso, LCP, CLS y lo que tarda el menú
 npm run e2e         # Playwright, y necesita backend (ver abajo)
 npm run capturas    # las capturas de docs/capturas/web/, también contra el backend
 npm run iconos      # los PNG de la web instalable, desde public/iconos/*.svg

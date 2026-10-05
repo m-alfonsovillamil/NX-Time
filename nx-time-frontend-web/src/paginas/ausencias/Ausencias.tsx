@@ -257,7 +257,7 @@ export function Ausencias() {
       <Saldo />
 
       <section className="nx-tarjeta">
-        <EstadoDeConsulta consulta={mias} cargando={<Esqueleto lineas={5} />}>
+        <EstadoDeConsulta consulta={mias} cargando={<Esqueleto forma="tabla" lineas={5} />}>
           {(lista) => <Lista lista={lista} />}
         </EstadoDeConsulta>
       </section>
