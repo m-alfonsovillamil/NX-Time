@@ -158,7 +158,7 @@ export function Fichar() {
   const error = aviso ?? fichar.error?.message ?? cambiarProyecto.error?.message ?? null;
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <div>
           <h1>{F.titulo}</h1>

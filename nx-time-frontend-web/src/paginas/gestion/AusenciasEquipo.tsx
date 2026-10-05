@@ -173,7 +173,7 @@ type Pestana = 'pendientes' | 'resueltas';
 export function AusenciasEquipo({ pestanaInicial = 'pendientes' }: { pestanaInicial?: Pestana }) {
   const [pestana, setPestana] = useState<Pestana>(pestanaInicial);
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{G.titulo}</h1>
       </header>

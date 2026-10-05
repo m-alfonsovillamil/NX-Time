@@ -239,7 +239,7 @@ export function Historial() {
   }
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{H.titulo}</h1>
       </header>

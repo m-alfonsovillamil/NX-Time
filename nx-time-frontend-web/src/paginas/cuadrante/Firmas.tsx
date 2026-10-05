@@ -101,7 +101,7 @@ export function Firmas() {
   );
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera">
         <h1>{F.titulo}</h1>
       </header>

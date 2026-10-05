@@ -67,9 +67,13 @@ h1 {
   padding: 24px 16px;
 }
 
+/* La página ocupa el ancho que hay, hasta 1280 px: en una pantalla de
+   escritorio, una columna estrecha centrada dejaba dos tercios en blanco
+   (5/10/2026). Lo que necesita poco ancho lo resuelve la composición de
+   dentro (dos columnas, rejilla de tarjetas), no un `max-width` de la página. */
 .nx-pagina {
   width: 100%;
-  max-width: 560px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 24px 16px 48px;
   display: flex;
@@ -77,16 +81,81 @@ h1 {
   gap: 20px;
 }
 
-.nx-pagina--ancha {
-  max-width: 1120px;
+@media (min-width: 960px) {
+  .nx-pagina {
+    padding: 16px 32px 48px;
+  }
+}
+
+/* Solo para texto largo que se lee de corrido (un aviso legal, una ayuda). */
+.nx-pagina--lectura {
+  max-width: 760px;
+}
+
+/* TEMPORAL (plan del 5/10, E0 -> E2): las páginas que aún no tienen su
+   composición a lo ancho conservan la columna de antes. Cada una lo pierde al
+   rediseñarse en E2, y al terminar E2 esta clase desaparece. */
+.nx-pagina--estrecha {
+  max-width: 592px;
+}
+
+/* ---- Composiciones: cómo se reparte una página ancha ---- */
+
+/* Lo principal a la izquierda y una columna de apoyo a la derecha. */
+.nx-composicion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .nx-composicion--principal-lateral {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  }
+
+  /* Una lista a la izquierda y el detalle de lo elegido a la derecha. */
+  .nx-composicion--lista-detalle {
+    grid-template-columns: minmax(300px, 2fr) minmax(0, 3fr);
+  }
+
+  .nx-composicion--mitades {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- El acento de cada zona ----
+ *
+ * Teal en «Lo mío» e índigo en «Gestión», la regla de la app (Color.kt:
+ * `tertiary` reservado a la gestión). Lo que va con el color de la zona
+ * (el icono de la cabecera, el elemento activo del menú, una cifra
+ * destacada) usa `--nx-acento*` y no `--nx-primary` directamente.
+ *
+ * Sobre el contenedor, el texto SIEMPRE es `on-acento-contenedor`: el
+ * `tertiary` sobre su contenedor da 4,1:1 y el `primary` sobre el suyo
+ * 3,9:1, por debajo de AA para texto normal.
+ */
+:root,
+[data-zona='personal'] {
+  --nx-acento: var(--nx-primary);
+  --nx-on-acento: var(--nx-on-primary);
+  --nx-acento-contenedor: var(--nx-primary-container);
+  --nx-on-acento-contenedor: var(--nx-on-primary-container);
+}
+
+[data-zona='gestion'] {
+  --nx-acento: var(--nx-tertiary);
+  --nx-on-acento: var(--nx-on-tertiary);
+  --nx-acento-contenedor: var(--nx-tertiary-container);
+  --nx-on-acento-contenedor: var(--nx-on-tertiary-container);
 }
 
 .nx-tarjeta {
   background: var(--nx-surface);
   color: var(--nx-on-surface);
-  border-radius: 20px;
+  border-radius: var(--nx-radio-tarjeta);
   padding: 24px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  box-shadow: var(--nx-sombra-tarjeta);
   width: 100%;
 }
 
@@ -110,6 +179,75 @@ h1 {
   align-items: center;
 }
 
+/* La cabecera de página (CabeceraDePagina.tsx): icono en su recuadro, miga,
+   título, descripción y botones. */
+.nx-cabecera-pagina {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.nx-cabecera-pagina__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+.nx-cabecera-pagina__textos {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nx-cabecera-pagina__miga {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-cabecera-pagina__descripcion {
+  margin: 4px 0 0;
+  max-width: 80ch;
+  color: var(--nx-on-surface-variant);
+  font-size: var(--nx-fs-label-large);
+  line-height: 22px;
+}
+
+.nx-cabecera-pagina__acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-self: center;
+}
+
+@media (max-width: 639px) {
+  .nx-cabecera-pagina__icono {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nx-cabecera-pagina__acciones {
+    flex-basis: 100%;
+  }
+}
+
 /* ---- Campos ---- */
 
 .nx-campo {
@@ -128,7 +266,7 @@ h1 {
 .nx-campo textarea {
   font: inherit;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--nx-radio-xs);
   border: 1px solid var(--nx-outline);
   background: var(--nx-surface);
   color: var(--nx-on-surface);
@@ -259,7 +397,7 @@ h1 {
 .nx-aviso {
   background: var(--nx-error-container);
   color: var(--nx-on-error-container);
-  border-radius: 12px;
+  border-radius: var(--nx-radio-s);
   padding: 12px 16px;
   margin: 0;
   font-size: var(--nx-fs-label-large);
@@ -636,7 +774,7 @@ h1 {
   z-index: 20;
   min-width: 200px;
   padding: 8px;
-  border-radius: 16px;
+  border-radius: var(--nx-radio-s);
   background: var(--nx-surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
 }
@@ -657,7 +795,7 @@ h1 {
   width: 100%;
   padding: 10px 12px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--nx-radio-s);
   background: transparent;
   color: var(--nx-on-surface);
   font: inherit;
@@ -697,29 +835,43 @@ h2 {
   line-height: var(--nx-lh-title-large);
 }
 
+/* Un título de tarjeta seguido directamente del contenido (una lista, unas
+   barras, una tabla) no se pega a él. Si lo sigue un subtítulo (.nx-sutil),
+   ese sí va pegado, y el margen lo pone lo que venga después. */
+.nx-tarjeta > h2 + :is(ul, ol, div, form, .nx-tabla-contenedor) {
+  margin-top: 16px;
+}
+
+/* Rellena de un tinte de su propio color: el texto es el color de estado
+   (pensado para leerse sobre la superficie) y el fondo, un 14 % de él sobre
+   esa misma superficie. Así no hace falta un par de colores nuevo por tono. */
 .nx-insignia {
+  --nx-insignia-color: var(--nx-on-surface-variant);
   display: inline-block;
-  padding: 2px 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  border: 1px solid currentColor;
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   white-space: nowrap;
-  color: var(--nx-on-surface-variant);
+  color: var(--nx-insignia-color);
+  background: color-mix(in srgb, var(--nx-insignia-color) 14%, var(--nx-surface));
 }
 
 .nx-insignia--exito {
-  color: var(--nx-jornada-trabajando);
+  --nx-insignia-color: var(--nx-jornada-trabajando);
 }
 .nx-insignia--aviso {
-  color: var(--nx-jornada-en-pausa);
+  --nx-insignia-color: var(--nx-jornada-en-pausa);
 }
 .nx-insignia--error {
-  color: var(--nx-error);
+  --nx-insignia-color: var(--nx-error);
 }
+/* El teal y el índigo, con el tinte, se quedan en 4,1-4,3:1 (no llegan a
+   AA): la informativa va en el contenedor del acento con su texto. */
 .nx-insignia--info {
-  color: var(--nx-primary);
+  color: var(--nx-on-acento-contenedor);
+  background: var(--nx-acento-contenedor);
 }
 
 /* ---- Tabla (tarjetas por debajo de 640px) ---- */
@@ -815,7 +967,7 @@ h2 {
   max-height: calc(100vh - 64px);
   padding: 0;
   border: none;
-  border-radius: 24px;
+  border-radius: var(--nx-radio-xl);
   background: var(--nx-surface);
   color: var(--nx-on-surface);
   box-shadow: 0 8px 32px rgb(0 0 0 / 24%);
@@ -891,30 +1043,73 @@ h2 {
 
 /* ---- Estados: esqueleto, vacío, fin de lista y notificaciones ---- */
 
+/* Al ancho de lo que lo contiene, con la forma de lo que viene (Estados.tsx). */
 .nx-esqueleto {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 24px 16px;
-  max-width: 560px;
-  margin: 0 auto;
+  padding: 8px 0;
+  width: 100%;
 }
 
-.nx-esqueleto__linea {
+.nx-esqueleto__linea,
+.nx-esqueleto__bloque {
   display: block;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--nx-radio-xs);
   background: var(--nx-surface-container-highest);
   animation: nx-latido 1.4s ease-in-out infinite;
 }
 
-.nx-esqueleto__linea:first-of-type {
+.nx-esqueleto--lineas .nx-esqueleto__linea:first-of-type {
   height: 28px;
   width: 60%;
 }
 
-.nx-esqueleto__linea:last-child {
+.nx-esqueleto--lineas .nx-esqueleto__linea:last-child {
   width: 80%;
+}
+
+/* Las filas de una tabla: la primera, más fina, hace de cabecera. */
+.nx-esqueleto--tabla {
+  gap: 0;
+}
+
+.nx-esqueleto--tabla .nx-esqueleto__linea {
+  height: 44px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--nx-surface);
+}
+
+.nx-esqueleto--tabla .nx-esqueleto__linea:first-of-type {
+  height: 32px;
+  opacity: 0.6;
+}
+
+.nx-esqueleto--recuadros {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.nx-esqueleto--recuadros .nx-esqueleto__linea {
+  height: 96px;
+  border-radius: var(--nx-radio-s);
+}
+
+/* El de una página entera, mientras llega su JS: cabecera y dos tarjetas. */
+.nx-esqueleto--pagina {
+  gap: 20px;
+  padding: 0;
+}
+
+.nx-esqueleto__titulo {
+  height: 48px;
+  width: min(420px, 70%);
+}
+
+.nx-esqueleto__bloque {
+  height: 180px;
+  border-radius: var(--nx-radio-tarjeta);
 }
 
 @keyframes nx-latido {
@@ -928,8 +1123,20 @@ h2 {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 24px 16px;
+  padding: 32px 16px;
   text-align: center;
+}
+
+.nx-vacio__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
 }
 
 .nx-vacio__titulo {
@@ -968,7 +1175,7 @@ h2 {
 .nx-notificacion {
   margin: 0;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: var(--nx-radio-s);
   background: var(--nx-on-surface);
   color: var(--nx-surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
@@ -1012,41 +1219,204 @@ h2 {
   align-self: center;
 }
 
-.nx-cifras {
-  display: grid;
-  /* Dos por fila, o las cuatro en una si caben: nunca tres y una sola debajo. */
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin: 16px 0 8px;
+/* ---- Cifras (Cifra.tsx) ----
+ *
+ * Una sola forma para «43h 05m esta semana», «2 ausencias por aprobar» y
+ * «3,2 % de absentismo». Fondo `surface-container-highest`: el
+ * `surface-container` es blanco en el tema claro, y dentro de una tarjeta
+ * blanca el recuadro desaparecía (le pasaba a la analítica).
+ */
+.nx-cifras-contenedor {
+  container: cifras / inline-size;
 }
 
-@media (min-width: 1280px) {
-  .nx-cifras {
-    grid-template-columns: repeat(4, 1fr);
+/* Debajo de un título o un texto, separada; sola en la tarjeta, sin margen. */
+* + .nx-cifras-contenedor,
+* + .nx-accesos {
+  margin-top: 16px;
+}
+
+.nx-cifras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  /* Lo general: tantas como quepan, de 170 px como poco. */
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+/* Nunca tres y una sola debajo (Cifra.tsx): con 2 y 4, de dos en dos… */
+.nx-cifras[data-cuantas='2'],
+.nx-cifras[data-cuantas='4'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* …con 3 y 6, de tres en tres cuando ya no caben de dos. */
+@container cifras (min-width: 520px) {
+  .nx-cifras[data-cuantas='3'],
+  .nx-cifras[data-cuantas='6'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container cifras (min-width: 720px) {
+  .nx-cifras[data-cuantas='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container cifras (min-width: 1040px) {
+  .nx-cifras[data-cuantas='6'] {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 
 .nx-cifra {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: 16px;
+  gap: 6px;
+  height: 100%;
+  padding: 14px 16px;
+  border-radius: var(--nx-radio-s);
   background: var(--nx-surface-container-highest);
+  color: var(--nx-on-surface);
+  text-decoration: none;
+}
+
+/* El nombre se ve encima aunque en el HTML vaya detrás (ver Cifra.tsx). */
+.nx-cifra__cabeza {
+  order: -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nx-cifra__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--nx-radio-xs);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
 }
 
 .nx-cifra__etiqueta {
   font-size: var(--nx-fs-label-large);
+  line-height: var(--nx-lh-label-large);
   color: var(--nx-on-surface-variant);
 }
 
 .nx-cifra__valor {
   font-family: var(--nx-font-titular);
-  font-size: var(--nx-fs-title-large);
+  font-size: var(--nx-fs-headline-small);
+  line-height: var(--nx-lh-headline-small);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   /* «158h 22m» partido en dos renglones se lee como dos cifras. */
   white-space: nowrap;
+}
+
+.nx-cifra__detalle {
+  font-size: var(--nx-fs-label-large);
+  line-height: var(--nx-lh-label-large);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-cifra__carril {
+  display: block;
+  height: 6px;
+  margin-top: auto;
+  border-radius: 999px;
+  background: var(--nx-surface-variant);
+  overflow: hidden;
+}
+
+.nx-cifra__relleno {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--nx-acento);
+}
+
+/* Por encima de lo esperado (más horas de las de la semana): sigue llena, en índigo. */
+.nx-cifra__relleno--pasado {
+  background: var(--nx-tertiary);
+}
+
+/* Hay algo que hacer: la cifra se pinta en el color de la zona. */
+.nx-cifra--destacada .nx-cifra__valor {
+  color: var(--nx-acento);
+}
+
+/* Lo que no debería pasar desapercibido entre cifras informativas. */
+.nx-cifra--alerta {
+  background: var(--nx-error-container);
+  color: var(--nx-on-error-container);
+}
+
+.nx-cifra--alerta .nx-cifra__etiqueta,
+.nx-cifra--alerta .nx-cifra__detalle {
+  color: var(--nx-on-error-container);
+}
+
+.nx-cifra--alerta .nx-cifra__icono {
+  background: var(--nx-error);
+  color: var(--nx-on-error);
+}
+
+.nx-cifra--enlace {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.nx-cifra--enlace:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--nx-sombra-tarjeta);
+}
+
+.nx-cifra--enlace:focus-visible {
+  outline: 2px solid var(--nx-acento);
+  outline-offset: 2px;
+}
+
+/* ---- Iniciales (Iniciales.tsx) ---- */
+
+.nx-iniciales {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+  font-family: var(--nx-font-titular);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.nx-iniciales--s {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.nx-iniciales--m {
+  width: 36px;
+  height: 36px;
+  font-size: 13px;
+}
+
+/* Un nombre con sus iniciales delante (en una celda, en el menú). */
+.nx-con-iniciales {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ---- Gráfico de horas ---- */
@@ -1212,7 +1582,7 @@ h2 {
 .nx-reparto__minutos {
   font: inherit;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: var(--nx-radio-xs);
   border: 1px solid var(--nx-outline);
   background: var(--nx-surface);
   color: var(--nx-on-surface);
@@ -1328,7 +1698,7 @@ h2 {
   min-height: 64px;
   padding: 6px;
   border: 1px solid var(--nx-outline-variant);
-  border-radius: 12px;
+  border-radius: var(--nx-radio-xs);
   background: var(--nx-surface);
   color: var(--nx-on-surface);
   font: inherit;
@@ -1537,7 +1907,7 @@ h2 {
 .nx-dia-cuadrante--hoy {
   background: var(--nx-primary-container);
   color: var(--nx-on-primary-container);
-  border-radius: 12px;
+  border-radius: var(--nx-radio-s);
   padding-inline: 12px;
 }
 
@@ -1613,8 +1983,8 @@ h2 {
   margin: 0;
   padding: 8px 12px;
   border-left: 3px solid var(--nx-tertiary);
-  background: var(--nx-surface-container);
-  border-radius: 4px;
+  background: var(--nx-surface-container-high);
+  border-radius: var(--nx-radio-xs);
 }
 
 /* El código de seguimiento, grande y fácil de copiar a mano. */
@@ -1631,7 +2001,7 @@ h2 {
   font-weight: 700;
   letter-spacing: 0.08em;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--nx-radio-xs);
   background: var(--nx-surface-container-high);
   user-select: all;
   overflow-wrap: anywhere;
@@ -1659,8 +2029,8 @@ h2 {
 
 .nx-mensaje {
   padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--nx-surface-container);
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-surface-container-high);
   max-width: 90%;
 }
 
@@ -1738,7 +2108,7 @@ h2 {
 /* Lo que impide ejecutar un borrado: en una caja que se ve. */
 .nx-bloqueos {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--nx-radio-xs);
   background: var(--nx-error-container);
   color: var(--nx-on-error-container);
 }
@@ -1849,74 +2219,56 @@ h2 {
   margin: 0;
 }
 
-/* El panel de gestión: cifras grandes que llevan a su bandeja. */
-.nx-contadores,
+/* El panel de gestión: los accesos a cada sección, con su icono en el
+   recuadro del color de la zona. */
 .nx-accesos {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
 
-.nx-contador,
 .nx-acceso {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding: 16px;
+  padding: 12px 14px;
   min-height: 44px;
-  border-radius: 12px;
-  background: var(--nx-surface-container);
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-surface-container-highest);
   color: var(--nx-on-surface);
   text-decoration: none;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
-.nx-contador {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+.nx-acceso > svg {
+  flex: none;
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: var(--nx-radio-xs);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
 }
 
-.nx-contador__cifra {
-  font-family: var(--nx-font-titular);
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--nx-on-surface-variant);
-  white-space: nowrap;
-}
-
-.nx-contador--con .nx-contador__cifra {
-  color: var(--nx-primary);
-}
-
-/* Lo que no debería pasar desapercibido entre cifras informativas. */
-.nx-contador--alerta {
-  background: var(--nx-error-container);
-  color: var(--nx-on-error-container);
-}
-
-.nx-contador--alerta .nx-contador__cifra {
-  color: var(--nx-on-error-container);
-}
-
-.nx-contador:hover,
 .nx-acceso:hover {
-  background: var(--nx-surface-container-high);
+  transform: translateY(-2px);
+  box-shadow: var(--nx-sombra-tarjeta);
 }
 
-.nx-contador:focus-visible,
 .nx-acceso:focus-visible {
-  outline: 2px solid var(--nx-primary);
+  outline: 2px solid var(--nx-acento);
   outline-offset: 2px;
 }
 
 /* La traza de auditoría: una línea temporal con un hilo a la izquierda. */
 .nx-cadena {
   padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--nx-surface-container);
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-surface-container-high);
 }
 
 .nx-cadena p {
@@ -2061,7 +2413,7 @@ h2 {
   align-items: stretch;
   gap: 16px;
   padding: 24px;
-  border-radius: 24px;
+  border-radius: var(--nx-radio-l);
   background: var(--nx-surface-container);
   text-align: center;
   max-width: 720px;
@@ -2087,7 +2439,7 @@ h2 {
   width: 100%;
   max-height: 45vh;
   object-fit: cover;
-  border-radius: 16px;
+  border-radius: var(--nx-radio-s);
   background: var(--nx-surface-container-highest);
   /* La cámara delantera, como un espejo: que la tarjeta se mueva hacia donde se mueve la mano. */
   transform: scaleX(-1);
@@ -2148,7 +2500,7 @@ h2 {
   gap: 8px;
   padding: 16px;
   border: 1px solid var(--nx-outline-variant);
-  border-radius: 16px;
+  border-radius: var(--nx-radio-s);
   background: #fff;
   color: #000;
   break-inside: avoid;

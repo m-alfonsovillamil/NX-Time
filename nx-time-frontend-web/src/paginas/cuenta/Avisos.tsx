@@ -80,7 +80,7 @@ export function Avisos() {
   }
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera">
         <h1>{V.titulo}</h1>
         {hayNoLeidos && (

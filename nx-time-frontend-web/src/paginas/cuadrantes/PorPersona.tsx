@@ -21,7 +21,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuadrantes } from '../../i18n/es/cuadrantes';
 import { fechaCorta, hoyEnEmpresa, sumarDias } from '../../util/fechas';
@@ -224,7 +224,7 @@ export function PorPersona({ usuarioId, nombre }: { usuarioId: number; nombre: s
         <EstadoDeConsulta consulta={asignaciones} cargando={<Esqueleto lineas={2} />}>
           {(lista) =>
             lista.length === 0 ? (
-              <p className="nx-sutil">{C.sinAsignaciones}</p>
+              <Vacio icono="cuadrantes" titulo={C.sinAsignaciones} />
             ) : (
               <ul className="nx-lista-incidencias" aria-label={C.asignaciones}>
                 {lista.map((a) => {
@@ -272,7 +272,7 @@ export function PorPersona({ usuarioId, nombre }: { usuarioId: number; nombre: s
         <EstadoDeConsulta consulta={excepciones} cargando={<Esqueleto lineas={2} />}>
           {(lista) =>
             lista.length === 0 ? (
-              <p className="nx-sutil">{C.sinExcepciones}</p>
+              <Vacio icono="festivo" titulo={C.sinExcepciones} />
             ) : (
               <ul className="nx-lista-incidencias" aria-label={C.excepciones}>
                 {lista.map((e) => (

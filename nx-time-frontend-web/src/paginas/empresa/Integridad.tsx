@@ -29,7 +29,7 @@ export function Integridad() {
 
   const r = comprobar.data;
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera">
         <h1>{I.titulo}</h1>
       </header>

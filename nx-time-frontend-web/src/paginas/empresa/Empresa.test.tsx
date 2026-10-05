@@ -69,7 +69,7 @@ describe('panel de empresa', () => {
     expect(await screen.findByText('500h 00m')).toBeTruthy();
     const ausencias = screen.getByRole('link', { name: `2 ${E.ausencias}` });
     expect(ausencias.getAttribute('href')).toBe('/ausencias-equipo/pendientes');
-    expect(screen.getByText(E.incidencias).closest('.nx-contador--alerta')).not.toBeNull();
+    expect(screen.getByText(E.incidencias).closest('.nx-cifra--alerta')).not.toBeNull();
     // Las denuncias son de quien instruye (ADMIN): un GESTOR no las ve contadas.
     expect(screen.queryByText(E.denuncias)).toBeNull();
     expect(screen.getByText(E.mediaEquipo('125h 00m'))).toBeTruthy();

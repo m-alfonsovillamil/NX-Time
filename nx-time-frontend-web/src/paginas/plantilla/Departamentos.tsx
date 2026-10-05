@@ -117,7 +117,7 @@ export function Departamentos() {
   const activas = ordenar((personas.data ?? []).filter((p) => p.activo !== false));
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{D.titulo}</h1>
       </header>

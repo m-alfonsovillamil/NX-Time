@@ -238,7 +238,7 @@ export function Incidencias() {
   const [pestana, setPestana] = useState<'mias' | 'equipo'>('mias');
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{I.titulo}</h1>
       </header>

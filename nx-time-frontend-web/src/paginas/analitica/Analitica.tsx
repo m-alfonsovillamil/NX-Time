@@ -24,7 +24,8 @@ import { ErrorDeApi, pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
 import { Barras } from '../../componentes/Barras';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
+import { Cifra, Cifras } from '../../componentes/Cifra';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { analitica } from '../../i18n/es/analitica';
@@ -57,17 +58,6 @@ export function textoDeVentana(v: Ventana | undefined): string {
 
 function minutosDeRetraso(valor: number | null | undefined): string {
   return valor === null || valor === undefined ? '—' : A.minutosRetraso(valor);
-}
-
-function Cifra({ etiqueta, valor, ayuda }: { etiqueta: string; valor: string; ayuda?: string }) {
-  return (
-    <li>
-      <div className="nx-contador">
-        <span className="nx-contador__cifra">{valor}</span> <span>{etiqueta}</span>
-        {ayuda !== undefined && <span className="nx-sutil">{ayuda}</span>}
-      </div>
-    </li>
-  );
 }
 
 function Absentismo({ periodo, fecha, agrupar }: { periodo: Periodo; fecha: string; agrupar: Agrupacion }) {
@@ -131,7 +121,7 @@ function Absentismo({ periodo, fecha, agrupar }: { periodo: Periodo; fecha: stri
             <section aria-labelledby="analitica-motivos">
               <h3 id="analitica-motivos">{A.motivos}</h3>
               {motivos.length === 0 ? (
-                <p className="nx-sutil">{A.sinMotivos}</p>
+                <Vacio icono="hecho" titulo={A.sinMotivos} />
               ) : (
                 <Barras
                   filas={motivos.map((m) => ({ clave: m.motivo ?? '', texto: m.etiqueta ?? m.motivo ?? '', valor: m.dias ?? 0 }))}
@@ -176,7 +166,7 @@ function Puntualidad({ periodo, fecha, agrupar }: { periodo: Periodo; fecha: str
       {(r) => {
         const filas = r.filas ?? [];
         const total = r.total;
-        if ((total?.entradasConHorario ?? 0) === 0 && filas.length === 0) return <p className="nx-sutil">{A.sinDatos}</p>;
+        if ((total?.entradasConHorario ?? 0) === 0 && filas.length === 0) return <Vacio icono="tendencia" titulo={A.sinDatos} />;
         return (
           <div className="nx-expediente">
             {agrupar !== 'EMPRESA' && filas.length > 0 && (
@@ -220,7 +210,7 @@ export function Analitica() {
   });
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{A.titulo}</h1>
       </header>
@@ -261,14 +251,14 @@ export function Analitica() {
               <p className="nx-sutil">
                 {textoDeVentana(r.ventana)} · {A.personas(r.personas ?? 0)}
               </p>
-              <ul className="nx-contadores">
-                <Cifra etiqueta={A.absentismo} valor={porcentaje(r.absentismo)} />
-                <Cifra etiqueta={A.sinJustificar} valor={porcentaje(r.absentismoSinJustificar)} />
-                <Cifra etiqueta={A.puntualidad} valor={porcentaje(r.puntualidad)} />
-                <Cifra etiqueta={A.retrasoMedio} valor={minutosDeRetraso(r.retrasoMedioMinutos)} />
-                <Cifra etiqueta={A.jornadasIncompletas} valor={porcentaje(r.jornadasIncompletas)} ayuda={A.jornadasIncompletasAyuda} />
-                <Cifra etiqueta={A.mediaPorDia} valor={r.minutosMediosPorDia != null ? minutos(r.minutosMediosPorDia) : '—'} />
-              </ul>
+              <Cifras>
+                <Cifra icono="ausencia" etiqueta={A.absentismo} valor={porcentaje(r.absentismo)} />
+                <Cifra icono="incidencia" etiqueta={A.sinJustificar} valor={porcentaje(r.absentismoSinJustificar)} />
+                <Cifra icono="hecho" etiqueta={A.puntualidad} valor={porcentaje(r.puntualidad)} />
+                <Cifra icono="horas-extra" etiqueta={A.retrasoMedio} valor={minutosDeRetraso(r.retrasoMedioMinutos)} />
+                <Cifra icono="correccion" etiqueta={A.jornadasIncompletas} valor={porcentaje(r.jornadasIncompletas)} detalle={A.jornadasIncompletasAyuda} />
+                <Cifra icono="reloj" etiqueta={A.mediaPorDia} valor={r.minutosMediosPorDia != null ? minutos(r.minutosMediosPorDia) : '—'} />
+              </Cifras>
             </section>
 
             <section className="nx-tarjeta">

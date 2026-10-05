@@ -415,7 +415,7 @@ export function Denuncias() {
   }
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera">
         <h1>{D.titulo}</h1>
       </header>

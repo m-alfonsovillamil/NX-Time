@@ -29,7 +29,7 @@ export function TarjetasKiosco() {
   });
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera nx-cabecera--con-acciones nx-no-imprimir">
         <h1>{TT.titulo}</h1>
         <Boton onClick={() => window.print()} disabled={tarjetas.data === undefined}>

@@ -19,10 +19,11 @@ import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
-import { Icono } from '../../componentes/Icono';
+import { Cifra, Cifras } from '../../componentes/Cifra';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
+import { Icono, type NombreIcono } from '../../componentes/Icono';
 import { gestion } from '../../i18n/es/gestion';
-import { menuPara } from '../../navegacion/secciones';
+import { menuPara, SECCIONES } from '../../navegacion/secciones';
 import { CLAVE_PENDIENTES } from './claves';
 
 const P = gestion.panel;
@@ -41,6 +42,9 @@ const BANDEJAS: readonly Bandeja[] = [
   { ruta: 'horas-extra', texto: P.horasExtra, cuantos: (p) => p.horasExtra ?? 0 },
   { ruta: 'borrados', texto: P.borrados, cuantos: (p) => p.borrados ?? 0 },
 ];
+
+/** El icono de la sección a la que lleva cada bandeja: el mismo que en el menú. */
+const iconoDe = (ruta: string): NombreIcono => SECCIONES.find((s) => s.ruta === ruta)?.icono ?? 'bandeja';
 
 /** Las bandejas que esta persona puede abrir y que la web ya tiene. */
 export function bandejasPara(authorities: readonly string[]): Bandeja[] {
@@ -62,32 +66,33 @@ export function PanelGestion() {
   const accesos = menuPara(authorities).filter((s) => s.grupo === 'gestion' && s.ruta !== 'gestion');
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{P.titulo}</h1>
       </header>
 
       <section className="nx-tarjeta" aria-labelledby="panel-pendiente">
         <h2 id="panel-pendiente">{P.pendiente}</h2>
-        <EstadoDeConsulta consulta={pendientes} cargando={<Esqueleto lineas={2} />}>
+        <EstadoDeConsulta consulta={pendientes} cargando={<Esqueleto forma="recuadros" lineas={bandejas.length} />}>
           {(p) =>
             bandejas.every((b) => b.cuantos(p) === 0) ? (
-              <p className="nx-sutil">{P.nadaPendiente}</p>
+              <Vacio icono="hecho" titulo={P.nadaPendiente} />
             ) : (
-              <ul className="nx-contadores">
+              <Cifras>
                 {bandejas.map((b) => {
                   const n = b.cuantos(p);
                   return (
-                    <li key={b.ruta}>
-                      <Link className={`nx-contador${n > 0 ? ' nx-contador--con' : ''}`} to={`/${b.ruta}`}>
-                        {/* El espacio no se ve (es flex), pero sin él un lector
-                            de pantalla lee «2Ausencias por aprobar». */}
-                        <span className="nx-contador__cifra">{n}</span> <span>{b.texto}</span>
-                      </Link>
-                    </li>
+                    <Cifra
+                      key={b.ruta}
+                      icono={iconoDe(b.ruta)}
+                      etiqueta={b.texto}
+                      valor={n}
+                      tono={n > 0 ? 'destacada' : 'normal'}
+                      a={`/${b.ruta}`}
+                    />
                   );
                 })}
-              </ul>
+              </Cifras>
             )
           }
         </EstadoDeConsulta>

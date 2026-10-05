@@ -22,6 +22,7 @@ import noticeTypeJava from '../../../nx-time-backend/src/main/java/com/nxtime/nx
 import roleAuthoritiesJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java?raw';
 import { AUTHORITIES } from '../pruebas/api';
 import {
+  ICONOS_DE_SUBGRUPO,
   SECCIONES,
   SUBGRUPOS,
   barraInferior,
@@ -126,6 +127,23 @@ describe('los apartados del menú', () => {
 
   it('cada sección está en un apartado de su grupo', () => {
     expect(SECCIONES.filter((s) => !SUBGRUPOS[s.grupo].includes(s.subgrupo)).map((s) => s.ruta)).toEqual([]);
+  });
+
+  it('no hay dos entradas del menú con el mismo icono', () => {
+    // Con catorce iconos para treinta secciones, «documento» salía nueve veces
+    // y el icono dejaba de servir para encontrar nada de un vistazo.
+    const visibles = SECCIONES.filter((s) => s.enMenu);
+    const repetidos = visibles
+      .filter((s, i) => visibles.findIndex((o) => o.icono === s.icono) !== i)
+      .map((s) => `${s.ruta}: ${s.icono}`);
+    expect(repetidos).toEqual([]);
+  });
+
+  it('ningún apartado comparte icono con una entrada del menú ni con otro apartado', () => {
+    const deSecciones = new Set(SECCIONES.filter((s) => s.enMenu).map((s) => s.icono));
+    const deApartados = Object.values(ICONOS_DE_SUBGRUPO);
+    expect(deApartados.filter((i) => deSecciones.has(i))).toEqual([]);
+    expect(new Set(deApartados).size).toBe(deApartados.length);
   });
 
   it('agrupar no quita ni repite ninguna entrada del menú', () => {

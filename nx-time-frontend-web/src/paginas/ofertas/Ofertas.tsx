@@ -241,7 +241,7 @@ export function Ofertas({ pestanaInicial = 'vacantes' }: { pestanaInicial?: Pest
   const puedeLeer = puede('oferta:leer');
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{O.titulo}</h1>
       </header>

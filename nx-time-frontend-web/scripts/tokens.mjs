@@ -1,7 +1,7 @@
 /**
  * Convierte el tema de la app Android en variables CSS.
  *
- * Fuente: `nx-time-frontend-android/.../ui/theme/Color.kt` y `Type.kt`.
+ * Fuente: `nx-time-frontend-android/.../ui/theme/Color.kt`, `Type.kt` y `Shape.kt`.
  * Salida:  `src/estilos/tokens.css`, que se versiona.
  *
  * ## Por qué se genera y no se copia
@@ -126,6 +126,49 @@ function leerTipografia(fuente) {
   return estilos;
 }
 
+/**
+ * La escala de formas (`NxTimeShapes`), el radio de las tarjetas y su sombra.
+ *
+ * Antes la web escribía los radios a mano (12, 24, 8…) y ninguno coincidía
+ * del todo con la app: el mismo problema que con los colores, solo que menos
+ * visible. Los nombres de Material pasan a la escala corta del CSS
+ * (`extraSmall` -> `xs`, …, `extraLarge` -> `xl`).
+ */
+function leerFormas(fuente) {
+  const CORTOS = { 'extra-small': 'xs', small: 's', medium: 'm', large: 'l', 'extra-large': 'xl' };
+  const bloque = fuente.match(/val NxTimeShapes = Shapes\(([\s\S]*?)\n\)/);
+  if (!bloque) {
+    throw new Error('No se ha encontrado NxTimeShapes en Shape.kt.');
+  }
+  const radios = new Map();
+  for (const [, rol, dp] of bloque[1].matchAll(/(\w+)\s*=\s*RoundedCornerShape\((\d+)\.dp\)/g)) {
+    const corto = CORTOS[aNombreCss(rol)];
+    if (corto === undefined) throw new Error(`Rol de forma desconocido en Shape.kt: ${rol}.`);
+    radios.set(corto, Number(dp));
+  }
+  if (radios.size !== 5) {
+    throw new Error(`NxTimeShapes debería tener 5 formas y se han leído ${radios.size}.`);
+  }
+  const tarjeta = fuente.match(/val RadioTarjeta = (\d+)\.dp/);
+  const elevacion = fuente.match(/defaultElevation = (\d+)\.dp/);
+  if (!tarjeta || !elevacion) {
+    throw new Error('No se han encontrado RadioTarjeta o la elevación de las tarjetas en Shape.kt.');
+  }
+  return { radios, tarjeta: Number(tarjeta[1]), elevacion: Number(elevacion[1]) };
+}
+
+/**
+ * Una elevación de Material en dp, como sombra CSS.
+ *
+ * No es la sombra exacta de Compose (que depende de la luz del sistema),
+ * sino la equivalencia de siempre: desplazamiento un tercio de la elevación
+ * y desenfoque igual a ella. Con los 3 dp de la app sale `0 1px 3px`, la
+ * sombra que la web ya tenía.
+ */
+function aSombra(dp) {
+  return `0 ${Math.max(1, Math.round(dp / 3))}px ${dp}px rgb(0 0 0 / 12%)`;
+}
+
 /** La advertencia de contraste de Color.kt, para que viaje con los colores. */
 function leerAvisoDeContraste(fuente) {
   const parrafo = fuente.match(/\*\s*El par más justo[\s\S]*?primero\./);
@@ -138,11 +181,19 @@ function leerAvisoDeContraste(fuente) {
 function generar() {
   const colorKt = readFileSync(join(TEMA, 'Color.kt'), 'utf8');
   const typeKt = readFileSync(join(TEMA, 'Type.kt'), 'utf8');
+  const shapeKt = readFileSync(join(TEMA, 'Shape.kt'), 'utf8');
 
   const { claros, oscuros } = leerColores(colorKt);
   const jornada = leerColoresDeJornada(colorKt);
   const tipografia = leerTipografia(typeKt);
+  const formas = leerFormas(shapeKt);
   const aviso = leerAvisoDeContraste(colorKt);
+
+  const lineasFormas = [
+    ...[...formas.radios].map(([nombre, dp]) => `  --nx-radio-${nombre}: ${dp}px;`),
+    `  --nx-radio-tarjeta: ${formas.tarjeta}px;`,
+    `  --nx-sombra-tarjeta: ${aSombra(formas.elevacion)};`,
+  ].join('\n');
 
   const linea = ([nombre, valor]) => `  --nx-${nombre}: ${valor};`;
   const lineasJornada = (tema) =>
@@ -161,7 +212,7 @@ function generar() {
 
   const css = `/* GENERADO POR scripts/tokens.mjs. No editar a mano.
  *
- * La fuente es el tema de la app Android (ui/theme/Color.kt y Type.kt): el
+ * La fuente es el tema de la app Android (ui/theme/Color.kt, Type.kt y Shape.kt): el
  * color de un botón no puede tener dos verdades. Para cambiar algo, cámbialo
  * allí y ejecuta \`npm run tokens\`.
  *
@@ -176,6 +227,10 @@ function generar() {
   --nx-font-cuerpo: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
 ${tipos}
+
+  /* Las formas de Shape.kt: 8 / 16 / 20 / 28 / 36. Un radio que no esté en
+     esta escala es un radio que la app no tiene. */
+${lineasFormas}
 
 ${[...claros].map(linea).join('\n')}
 
@@ -217,4 +272,4 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import
   console.log(`tokens.css generado: ${colores} colores y ${estilos} estilos -> ${salida}`);
 }
 
-export { generar, aNombreCss, aHexCss, leerColores, leerColoresDeJornada, leerTipografia };
+export { generar, aNombreCss, aHexCss, aSombra, leerColores, leerColoresDeJornada, leerFormas, leerTipografia };

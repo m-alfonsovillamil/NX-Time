@@ -98,7 +98,7 @@ export function VisadoFirmas() {
   ];
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{V.titulo}</h1>
       </header>

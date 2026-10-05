@@ -11,14 +11,13 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { Link } from 'react-router';
 
 import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import { useSesion } from '../../api/useSesion';
 import { Barras } from '../../componentes/Barras';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
+import { Cifra, Cifras } from '../../componentes/Cifra';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { empresa } from '../../i18n/es/empresa';
 import { fechaCorta, hoyEnEmpresa, mesYAnio, minutos } from '../../util/fechas';
 import { porcentaje } from '../../util/numeros';
@@ -27,17 +26,6 @@ const E = empresa.panel;
 const A = empresa.analitica;
 
 export { porcentaje } from '../../util/numeros';
-
-function Indicador({ etiqueta, valor, alerta = false, ayuda, a }: { etiqueta: string; valor: string; alerta?: boolean; ayuda?: string; a?: string }) {
-  const contenido: ReactNode = (
-    <>
-      <span className="nx-contador__cifra">{valor}</span> <span>{etiqueta}</span>
-      {ayuda !== undefined && <span className="nx-sutil">{ayuda}</span>}
-    </>
-  );
-  const clase = `nx-contador${alerta ? ' nx-contador--alerta' : ''}`;
-  return <li>{a !== undefined ? <Link className={clase} to={a}>{contenido}</Link> : <div className={clase}>{contenido}</div>}</li>;
-}
 
 function TarjetaDeAnalitica() {
   const resumen = useQuery({
@@ -52,10 +40,10 @@ function TarjetaDeAnalitica() {
           const hasta = r.ventana?.evaluadoHasta;
           return (
             <>
-              <ul className="nx-contadores">
-                <Indicador etiqueta={A.absentismo} valor={porcentaje(r.absentismo)} />
-                <Indicador etiqueta={A.puntualidad} valor={porcentaje(r.puntualidad)} />
-              </ul>
+              <Cifras>
+                <Cifra icono="ausencia" etiqueta={A.absentismo} valor={porcentaje(r.absentismo)} />
+                <Cifra icono="reloj" etiqueta={A.puntualidad} valor={porcentaje(r.puntualidad)} />
+              </Cifras>
               <p className="nx-sutil">
                 {hasta ? A.alcance(fechaCorta(hasta), r.ventana?.departamento ?? A.todaLaEmpresa) : A.sinDias}
               </p>
@@ -82,7 +70,7 @@ export function PanelEmpresa() {
   });
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{E.titulo}</h1>
       </header>
@@ -95,29 +83,34 @@ export function PanelEmpresa() {
             <>
               <section className="nx-tarjeta" aria-labelledby="empresa-mes">
                 <h2 id="empresa-mes">{E.delMes(mesYAnio(anio, mes).toLowerCase())}</h2>
-                <ul className="nx-contadores">
-                  <Indicador etiqueta={E.empleadosActivos} valor={String(p.empleadosActivos ?? 0)} />
-                  <Indicador etiqueta={E.horasMes} valor={minutos(p.minutosMesEmpresa ?? 0)} />
-                  <Indicador
+                <Cifras>
+                  <Cifra icono="grupo" etiqueta={E.empleadosActivos} valor={p.empleadosActivos ?? 0} />
+                  <Cifra icono="reloj" etiqueta={E.horasMes} valor={minutos(p.minutosMesEmpresa ?? 0)} />
+                  <Cifra
+                    icono="ausencia-aprobar"
                     etiqueta={E.ausencias}
-                    valor={String(p.ausenciasPendientes ?? 0)}
+                    valor={p.ausenciasPendientes ?? 0}
+                    tono={(p.ausenciasPendientes ?? 0) > 0 ? 'destacada' : 'normal'}
                     {...(puede('ausencia:aprobar') ? { a: '/ausencias-equipo/pendientes' } : {})}
                   />
-                  <Indicador
+                  <Cifra
+                    icono="incidencia"
                     etiqueta={E.incidencias}
-                    valor={String(p.incidenciasAbiertas ?? 0)}
-                    alerta={(p.incidenciasAbiertas ?? 0) > 0}
-                    ayuda={E.incidenciasAyuda}
+                    valor={p.incidenciasAbiertas ?? 0}
+                    tono={(p.incidenciasAbiertas ?? 0) > 0 ? 'alerta' : 'normal'}
+                    detalle={E.incidenciasAyuda}
                   />
-                  {puede('horasextra:revisar') && <Indicador etiqueta={E.horasExtra} valor={String(p.horasExtraAbiertas ?? 0)} a="/horas-extra" />}
-                  {puede('denuncia:instruir') && <Indicador etiqueta={E.denuncias} valor={String(p.denunciasAbiertas ?? 0)} />}
-                </ul>
+                  {puede('horasextra:revisar') && (
+                    <Cifra icono="horas-extra" etiqueta={E.horasExtra} valor={p.horasExtraAbiertas ?? 0} a="/horas-extra" />
+                  )}
+                  {puede('denuncia:instruir') && <Cifra icono="mazo" etiqueta={E.denuncias} valor={p.denunciasAbiertas ?? 0} />}
+                </Cifras>
               </section>
 
               <section className="nx-tarjeta" aria-labelledby="empresa-horas">
                 <h2 id="empresa-horas">{E.horasPorEmpleado}</h2>
                 {horas.length === 0 ? (
-                  <p className="nx-sutil">{E.sinHoras}</p>
+                  <Vacio icono="reloj" titulo={E.sinHoras} />
                 ) : (
                   <>
                     <Barras

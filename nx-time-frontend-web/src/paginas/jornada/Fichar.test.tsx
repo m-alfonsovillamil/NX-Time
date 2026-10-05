@@ -223,7 +223,7 @@ describe('mi tiempo', () => {
     });
     pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
 
-    const hoy = (await screen.findByText(F.resumen.hoy)).parentElement;
+    const hoy = (await screen.findByText(F.resumen.hoy)).closest('.nx-cifra');
     await waitFor(() => expect(hoy?.textContent).toContain('1h 30m'));
   });
 
