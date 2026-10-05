@@ -64,6 +64,19 @@ export const navegacion = {
     tarjetasKiosco: 'Tarjetas del kiosco',
   },
 
+  /** El número al lado de una entrada del menú: lo que espera una decisión. */
+  pendientes: (n: number) => (n === 1 ? '1 pendiente' : `${n} pendientes`),
+
+  /** El estado de la jornada en la barra superior, que lleva a «Mi jornada». */
+  jornada: {
+    trabajando: 'Trabajando',
+    enPausa: 'En pausa',
+    sinFichar: 'Sin fichar',
+    /** Lo que oye un lector de pantalla: el estado, el tiempo y a dónde lleva. */
+    ir: (estado: string, tiempo: string | null) =>
+      tiempo === null ? `${estado}. Ir a Mi jornada` : `${estado}, ${tiempo}. Ir a Mi jornada`,
+  },
+
   usuario: {
     menu: (nombre: string) => `Menú de ${nombre}`,
     salir: 'Cerrar sesión',

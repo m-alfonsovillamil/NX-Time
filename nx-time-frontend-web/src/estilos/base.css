@@ -499,10 +499,93 @@ h1 {
   margin: 0;
 }
 
+.nx-lateral__marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--nx-fs-title-large);
+}
+
+.nx-lateral__marca img {
+  border-radius: var(--nx-radio-xs);
+}
+
 .nx-barra-superior__acciones {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* ---- El estado de la jornada en la barra superior (ChipDeJornada.tsx) ---- */
+
+.nx-chip-jornada {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin-right: 4px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  /* Sin fichar no es una alarma: neutro, flotando como una tarjeta. */
+  background: var(--nx-surface);
+  color: var(--nx-on-surface-variant);
+  box-shadow: var(--nx-sombra-tarjeta);
+  font-size: var(--nx-fs-label-large);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nx-chip-jornada--trabajando {
+  background: var(--nx-jornada-trabajando);
+  color: var(--nx-jornada-on-trabajando);
+}
+
+.nx-chip-jornada--en-pausa {
+  background: var(--nx-jornada-en-pausa);
+  color: var(--nx-jornada-on-en-pausa);
+}
+
+.nx-chip-jornada__punto {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Sin fichar, el punto va hueco. */
+.nx-chip-jornada--parado .nx-chip-jornada__punto {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.nx-chip-jornada__tiempo {
+  font-family: var(--nx-font-titular);
+  font-variant-numeric: tabular-nums;
+  padding-left: 8px;
+  border-left: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.nx-chip-jornada:focus-visible {
+  outline: 2px solid var(--nx-acento);
+  outline-offset: 2px;
+}
+
+/* En el móvil no cabe el texto: queda el color, el punto y el tiempo. */
+@media (max-width: 639px) {
+  .nx-chip-jornada {
+    padding: 0 12px;
+  }
+
+  .nx-chip-jornada__estado {
+    display: none;
+  }
+
+  .nx-chip-jornada__tiempo {
+    padding-left: 0;
+    border-left: none;
+  }
 }
 
 .nx-contenido {
@@ -547,16 +630,32 @@ h1 {
   text-align: center;
 }
 
-.nx-inferior .nx-enlace-menu span {
+.nx-inferior .nx-enlace-menu {
+  position: relative;
+}
+
+.nx-inferior .nx-enlace-menu__texto {
+  flex: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
 }
 
+.nx-inferior .nx-menu-contador {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 4px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
 @media (min-width: 960px) {
   .nx-marco {
-    grid-template-columns: 248px 1fr;
+    grid-template-columns: 288px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       'lateral cabecera'
@@ -577,7 +676,7 @@ h1 {
   }
 
   .nx-lateral__marca {
-    padding: 8px 12px;
+    padding: 4px 4px 8px;
   }
 
   .nx-barra-superior {
@@ -592,7 +691,15 @@ h1 {
   }
 }
 
-/* ---- El menú ---- */
+/* ---- El menú ----
+ *
+ * Un menú se recorre con la vista antes que leyéndolo: cada apartado lleva su
+ * icono en un recuadro del color de su zona (teal en «Lo mío», índigo en
+ * «Gestión»; el grupo lleva `data-zona`), y cada entrada el suyo, más
+ * pequeño, colgando de una línea guía. La entrada de la página abierta va
+ * rellena y con una barra sobre la guía; su apartado, con el recuadro lleno,
+ * para que se sepa dónde se está también con el apartado plegado.
+ */
 
 .nx-enlace-menu {
   display: flex;
@@ -607,8 +714,22 @@ h1 {
   color: var(--nx-on-surface-variant);
   font: inherit;
   font-size: var(--nx-fs-label-large);
+  text-align: left;
   text-decoration: none;
   cursor: pointer;
+}
+
+.nx-enlace-menu__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nx-enlace-menu__texto {
+  flex: 1;
+  min-width: 0;
+  line-height: 18px;
 }
 
 .nx-enlace-menu:hover {
@@ -616,14 +737,14 @@ h1 {
 }
 
 .nx-enlace-menu:focus-visible {
-  outline: 2px solid var(--nx-primary);
+  outline: 2px solid var(--nx-acento);
   outline-offset: -2px;
 }
 
 /* La sección actual: NavLink pone `aria-current="page"`, y se pinta eso. */
 .nx-enlace-menu[aria-current='page'] {
-  background: var(--nx-primary-container);
-  color: var(--nx-on-primary-container);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
   font-weight: 600;
 }
 
@@ -642,14 +763,43 @@ h1 {
   display: none;
 }
 
-/* Los apartados plegables: el botón con su icono y la flecha al final, y lo de
-   dentro sin icono, sangrado a la altura del texto del botón (12 + 24 + 12). */
-.nx-subgrupo__boton > span {
-  flex: 1;
-  text-align: left;
+/* Lo de primer nivel (un apartado, o una sección suelta): el icono en su
+   recuadro, y el texto con el color del contenido, no el atenuado. */
+.nx-menu-grupo > ul > li > .nx-enlace-menu {
+  padding: 4px 10px 4px 4px;
+  color: var(--nx-on-surface);
 }
 
+.nx-menu-grupo > ul > li > .nx-enlace-menu > .nx-enlace-menu__icono {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+.nx-menu-grupo > ul > li > .nx-enlace-menu > .nx-enlace-menu__icono svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* El apartado de la página abierta (o la sección suelta que lo es): recuadro lleno. */
+.nx-subgrupo__boton[data-actual],
+.nx-menu-grupo > ul > li > .nx-enlace-menu[aria-current='page'] {
+  font-weight: 600;
+}
+
+/* Con el mismo camino que la regla del recuadro, para ganarle. */
+.nx-menu-grupo > ul > li > .nx-subgrupo__boton[data-actual] > .nx-enlace-menu__icono,
+.nx-menu-grupo > ul > li > .nx-enlace-menu[aria-current='page'] > .nx-enlace-menu__icono {
+  background: var(--nx-acento);
+  color: var(--nx-on-acento);
+}
+
+/* La flecha del apartado, al final. */
 .nx-subgrupo__boton > svg:last-child {
+  flex: none;
+  color: var(--nx-on-surface-variant);
   transition: transform 150ms ease;
 }
 
@@ -657,22 +807,65 @@ h1 {
   transform: rotate(180deg);
 }
 
+/* Lo de dentro cuelga de una línea guía que baja del centro del recuadro
+   (4 de relleno + 18, medio recuadro). */
 .nx-subgrupo > ul {
-  margin-top: 2px;
+  margin: 2px 0 6px 22px;
+  padding-left: 10px;
+  border-left: 1px solid var(--nx-outline-variant);
 }
 
 .nx-subgrupo > ul .nx-enlace-menu {
-  padding-left: 48px;
+  position: relative;
+  min-height: 40px;
+  padding: 6px 10px 6px 12px;
+  gap: 10px;
 }
 
-.nx-subgrupo > ul .nx-enlace-menu > svg {
-  display: none;
+.nx-subgrupo > ul .nx-enlace-menu__icono svg {
+  width: 20px;
+  height: 20px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .nx-subgrupo__boton > svg:last-child {
-    transition: none;
+/* La barra de la entrada actual, montada sobre la línea guía. */
+.nx-subgrupo > ul .nx-enlace-menu[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--nx-acento);
+}
+
+/* Con el dedo, el objetivo táctil de siempre. */
+@media (pointer: coarse) {
+  .nx-subgrupo > ul .nx-enlace-menu {
+    min-height: 44px;
   }
+}
+
+/* Cuánto espera una decisión (pendientes.ts). */
+.nx-menu-contador {
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--nx-acento);
+  color: var(--nx-on-acento);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sobre el recuadro o la entrada rellenos, el contador no puede ser del mismo color. */
+.nx-enlace-menu[aria-current='page'] > .nx-menu-contador {
+  background: var(--nx-on-acento-contenedor);
+  color: var(--nx-acento-contenedor);
 }
 
 .nx-menu-grupo__titulo {
@@ -682,8 +875,8 @@ h1 {
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--nx-on-surface-variant);
-  margin: 0 0 4px;
-  padding: 0 12px;
+  margin: 0 0 6px;
+  padding: 0 8px;
 }
 
 .nx-menu-completo {

@@ -12,6 +12,13 @@
  * authorities, no porque aquí se mire el rol. Dentro de cada grupo va por
  * apartados plegables (`MenuAgrupado`), en el lateral y en «Más» del móvil; la
  * barra inferior no cambia.
+ *
+ * Desde el 5/10/2026 (ADR 035) el menú **se reconoce de un vistazo**: cada
+ * apartado lleva su icono en un recuadro del color de su zona (teal en «Lo
+ * mío», índigo en «Gestión», como la app), cada entrada el suyo, la que espera
+ * una decisión enseña cuántas (`pendientes.ts`), y el apartado de la página
+ * abierta queda marcado aunque esté plegado. Arriba, el estado de la jornada
+ * (`ChipDeJornada`).
  */
 
 import { Suspense, useId, useState } from 'react';
@@ -22,9 +29,12 @@ import { useSesion } from '../api/useSesion';
 import { Dialogo } from '../componentes/Dialogo';
 import { EsqueletoDePagina } from '../componentes/Estados';
 import { Icono } from '../componentes/Icono';
+import { Iniciales } from '../componentes/Iniciales';
 import { Notificaciones } from '../componentes/Notificaciones';
 import { T } from '../i18n/es';
 import { Campana } from './Campana';
+import { ChipDeJornada } from './ChipDeJornada';
+import { usePendientesPorRuta } from './pendientes';
 import {
   barraInferior,
   disponibles,
@@ -38,12 +48,55 @@ import {
 
 const N = T.navegacion;
 
-function Enlace({ seccion, alPulsar }: { seccion: Seccion; alPulsar?: () => void }) {
+/**
+ * El número de pendientes de una entrada o de un apartado.
+ *
+ * A la vista es una pastilla dentro del enlace; para un lector de pantalla es
+ * la **descripción** del enlace (`aria-describedby`), no parte de su nombre:
+ * se oye «Ausencias del equipo, enlace, 3 pendientes», y el enlace se sigue
+ * llamando como la sección, que es por lo que se busca.
+ *
+ * Por eso son dos piezas: la pastilla (`aria-hidden`) va dentro, y el texto
+ * que se lee va **fuera**, al lado. Dentro pasaría a formar parte del nombre.
+ */
+function Contador({ cuantos }: { cuantos: number }) {
   return (
-    <NavLink to={`/${seccion.ruta}`} className="nx-enlace-menu" onClick={alPulsar}>
-      <Icono nombre={seccion.icono} />
-      <span>{seccion.etiqueta}</span>
-    </NavLink>
+    <span className="nx-menu-contador" aria-hidden="true">
+      {cuantos > 99 ? '99+' : cuantos}
+    </span>
+  );
+}
+
+function TextoDeContador({ id, cuantos }: { id: string; cuantos: number }) {
+  return (
+    <span id={id} className="nx-solo-lector">
+      {N.pendientes(cuantos)}
+    </span>
+  );
+}
+
+function Enlace({ seccion, alPulsar, pendientes = 0 }: { seccion: Seccion; alPulsar?: () => void; pendientes?: number }) {
+  const idContador = useId();
+  // Pedir ya el JS de la página: para cuando se pulse, estará (ver `perezosa`).
+  const precargar = () => seccion.pagina?.precargar();
+  return (
+    <>
+      <NavLink
+        to={`/${seccion.ruta}`}
+        className="nx-enlace-menu"
+        onClick={alPulsar}
+        onPointerEnter={precargar}
+        onFocus={precargar}
+        aria-describedby={pendientes > 0 ? idContador : undefined}
+      >
+        <span className="nx-enlace-menu__icono">
+          <Icono nombre={seccion.icono} />
+        </span>
+        <span className="nx-enlace-menu__texto">{seccion.etiqueta}</span>
+        {pendientes > 0 && <Contador cuantos={pendientes} />}
+      </NavLink>
+      {pendientes > 0 && <TextoDeContador id={idContador} cuantos={pendientes} />}
+    </>
   );
 }
 
@@ -86,7 +139,16 @@ const MENU_CORTO = 12;
  * o cierra se recuerda. Cada apartado es un botón con `aria-expanded`, y lo
  * cerrado va con `hidden`: fuera de la vista, del tabulador y del lector.
  */
-function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; alPulsar?: () => void }) {
+function MenuAgrupado({
+  secciones,
+  alPulsar,
+  pendientes,
+}: {
+  secciones: readonly Seccion[];
+  alPulsar?: () => void;
+  /** Cuánto espera una decisión en cada ruta (solo las que tienen algo). */
+  pendientes: ReadonlyMap<string, number>;
+}) {
   const prefijo = useId();
   const actual = seccionDeRuta(useLocation().pathname)?.subgrupo;
   const [abiertos, setAbiertos] = useState<Abiertos>(() =>
@@ -111,14 +173,14 @@ function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; 
 
   const enlace = (s: Seccion) => (
     <li key={s.ruta}>
-      <Enlace seccion={s} {...(alPulsar !== undefined ? { alPulsar } : {})} />
+      <Enlace seccion={s} pendientes={pendientes.get(s.ruta) ?? 0} {...(alPulsar !== undefined ? { alPulsar } : {})} />
     </li>
   );
 
   return (
     <>
       {menuAgrupado(secciones).map(({ grupo, apartados }) => (
-        <div key={grupo} className="nx-menu-grupo">
+        <div key={grupo} className="nx-menu-grupo" data-zona={grupo}>
           <h2 className="nx-menu-grupo__titulo">{N.grupos[grupo]}</h2>
           <ul>
             {apartados.map(({ subgrupo, secciones: delApartado }) => {
@@ -126,6 +188,10 @@ function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; 
               if (delApartado.length === 1 && unica !== undefined) return enlace(unica);
               const id = `${prefijo}-${subgrupo}`;
               const estaVez = abierto(subgrupo);
+              // Plegado, el apartado dice cuánto hay dentro: si no, un «3» que
+              // espera quedaría escondido hasta abrirlo.
+              const dentro = delApartado.reduce((suma, s) => suma + (pendientes.get(s.ruta) ?? 0), 0);
+              const conContador = !estaVez && dentro > 0;
               return (
                 <li key={subgrupo} className="nx-subgrupo">
                   <button
@@ -133,12 +199,19 @@ function MenuAgrupado({ secciones, alPulsar }: { secciones: readonly Seccion[]; 
                     className="nx-enlace-menu nx-subgrupo__boton"
                     aria-expanded={estaVez}
                     aria-controls={id}
+                    aria-describedby={conContador ? `${id}-pendientes` : undefined}
+                    // El apartado de la página abierta, para marcarlo también plegado.
+                    data-actual={subgrupo === actual ? '' : undefined}
                     onClick={() => cambiar(subgrupo)}
                   >
-                    <Icono nombre={ICONOS_DE_SUBGRUPO[subgrupo]} />
-                    <span>{N.subgrupos[subgrupo]}</span>
+                    <span className="nx-enlace-menu__icono">
+                      <Icono nombre={ICONOS_DE_SUBGRUPO[subgrupo]} />
+                    </span>
+                    <span className="nx-enlace-menu__texto">{N.subgrupos[subgrupo]}</span>
+                    {conContador && <Contador cuantos={dentro} />}
                     <Icono nombre="desplegar" />
                   </button>
+                  {conContador && <TextoDeContador id={`${id}-pendientes`} cuantos={dentro} />}
                   <ul id={id} hidden={!estaVez}>
                     {delApartado.map(enlace)}
                   </ul>
@@ -165,7 +238,7 @@ function MenuDeUsuario({ nombre }: { nombre: string }) {
   return (
     <details className="nx-menu-usuario" open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)}>
       <summary aria-label={N.usuario.menu(nombre)}>
-        <Icono nombre="persona" />
+        {nombre !== '' ? <Iniciales nombre={nombre} tamano="s" /> : <Icono nombre="persona" />}
         <span className="nx-menu-usuario__nombre">{nombre}</span>
       </summary>
       <div className="nx-menu-usuario__opciones">
@@ -173,8 +246,10 @@ function MenuDeUsuario({ nombre }: { nombre: string }) {
           <Enlace key={s.ruta} seccion={s} alPulsar={() => setAbierto(false)} />
         ))}
         <button type="button" className="nx-enlace-menu" onClick={salir}>
-          <Icono nombre="salir" />
-          <span>{N.usuario.salir}</span>
+          <span className="nx-enlace-menu__icono">
+            <Icono nombre="salir" />
+          </span>
+          <span className="nx-enlace-menu__texto">{N.usuario.salir}</span>
         </button>
       </div>
     </details>
@@ -189,6 +264,7 @@ export function Marco() {
   const { enBarra, conMas } = barraInferior(menu);
   // El acento de la página (teal o índigo) sale de su grupo, como en la app.
   const zona = seccionDeRuta(useLocation().pathname)?.grupo;
+  const pendientes = usePendientesPorRuta();
 
   return (
     <div className="nx-marco">
@@ -197,13 +273,17 @@ export function Marco() {
       </a>
 
       <nav className="nx-lateral" aria-label={N.menuPrincipal}>
-        <p className="nx-lateral__marca">{T.app.nombre}</p>
-        <MenuAgrupado secciones={menu} />
+        <p className="nx-lateral__marca">
+          <img src="/iconos/icono.svg" alt="" width={32} height={32} />
+          {T.app.nombre}
+        </p>
+        <MenuAgrupado secciones={menu} pendientes={pendientes} />
       </nav>
 
       <header className="nx-barra-superior">
         <p className="nx-barra-superior__marca">{T.app.nombre}</p>
         <div className="nx-barra-superior__acciones">
+          <ChipDeJornada />
           <Campana />
           <MenuDeUsuario nombre={sesion?.nombre ?? ''} />
         </div>
@@ -221,14 +301,16 @@ export function Marco() {
           <ul>
             {enBarra.map((s) => (
               <li key={s.ruta}>
-                <Enlace seccion={s} />
+                <Enlace seccion={s} pendientes={pendientes.get(s.ruta) ?? 0} />
               </li>
             ))}
             {conMas && (
               <li>
                 <button type="button" className="nx-enlace-menu" onClick={() => setTodasAbiertas(true)}>
-                  <Icono nombre="mas" />
-                  <span>{N.mas}</span>
+                  <span className="nx-enlace-menu__icono">
+                    <Icono nombre="mas" />
+                  </span>
+                  <span className="nx-enlace-menu__texto">{N.mas}</span>
                 </button>
               </li>
             )}
@@ -238,7 +320,7 @@ export function Marco() {
 
       <Dialogo abierto={todasAbiertas} titulo={N.todasLasSecciones} alCerrar={() => setTodasAbiertas(false)}>
         <nav aria-label={N.todasLasSecciones} className="nx-menu-completo">
-          <MenuAgrupado secciones={menu} alPulsar={() => setTodasAbiertas(false)} />
+          <MenuAgrupado secciones={menu} pendientes={pendientes} alPulsar={() => setTodasAbiertas(false)} />
         </nav>
       </Dialogo>
 

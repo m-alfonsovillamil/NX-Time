@@ -11,7 +11,8 @@ import { cerrarSesion } from '../../api/sesion';
 import { gestion } from '../../i18n/es/gestion';
 import { AUTHORITIES, pintar, sesionDe, simularApi } from '../../pruebas/api';
 import { AusenciasEquipo, PaginaAusenciasResueltas } from './AusenciasEquipo';
-import { PanelGestion, bandejasPara } from './PanelGestion';
+import { bandejasPara } from '../../navegacion/pendientes';
+import { PanelGestion } from './PanelGestion';
 
 const P = gestion.panel;
 const G = gestion.ausencias;
@@ -32,7 +33,9 @@ describe('panel de gestión', () => {
     // Los borrados son de quien gestiona la plantilla (RRHH y ADMIN).
     expect(rutas('ADMIN')).toContain('borrados');
     expect(rutas('GESTOR')).not.toContain('borrados');
-    expect(rutas('EMPLEADO')).not.toContain('horas-extra');
+    // Un EMPLEADO no gestiona a nadie: ninguna bandeja, aunque «Correcciones»
+    // y «Horas extra» estén en su menú por lo suyo.
+    expect(rutas('EMPLEADO')).toEqual([]);
   });
 
   it('cada contador lleva a su bandeja, y los accesos salen del catálogo', async () => {

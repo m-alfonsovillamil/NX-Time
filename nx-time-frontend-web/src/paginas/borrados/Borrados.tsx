@@ -42,7 +42,8 @@ function FormularioDeRegistro({ alTerminar }: { alTerminar: () => void }) {
 
   const registrar = useMutacion(
     (cuerpo: { usuarioId: number; motivo: string }) => pedir(cliente.POST('/api/v1/borrados', { body: cuerpo })),
-    { invalida: [CLAVE], exito: B.registrada, alTerminar },
+    // Una solicitud nueva es un pendiente más: el contador del menú y del panel la cuentan.
+    { invalida: [CLAVE, ['dashboard']], exito: B.registrada, alTerminar },
   );
 
   function enviar(evento: FormEvent) {
