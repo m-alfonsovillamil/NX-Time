@@ -76,6 +76,11 @@ test.describe('escritorio', () => {
   test('la pantalla de entrar, con su panel de marca', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+    // Los botones de «Entrar con Google / Microsoft» (ADR 036) llegan del
+    // servidor un instante después, y solo si este tiene el SSO configurado:
+    // para que salgan en la captura, el backend tiene que arrancarse con él
+    // (ver la cabecera de sso.spec.ts). Sin él, la captura sale sin botones.
+    await page.waitForLoadState('networkidle');
     await capturar(page, 'web-12-acceso');
   });
 
