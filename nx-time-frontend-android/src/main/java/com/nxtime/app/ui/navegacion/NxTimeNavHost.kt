@@ -344,9 +344,19 @@ fun NxTimeNavHost(
      * a ninguna parte y la app se quedaba en "Mi jornada" con el nombre
      * cacheado y un banner de error, sin salida salvo cerrar sesión a
      * mano.
+     *
+     * Se mira un estado y no se espera un aviso: la sesión puede haber
+     * caducado ANTES de que esta pantalla existiera (al arrancar, el
+     * registro de push habla con el servidor antes de pintar nada), y un
+     * aviso emitido entonces no lo recogía nadie.
      */
     LaunchedEffect(sessionManager) {
-        sessionManager.sesionCaducada.collect { entrarA(Pantalla.LOGIN) }
+        sessionManager.sesionCaducada.collect { caducada ->
+            if (caducada) {
+                entrarA(Pantalla.LOGIN)
+                sessionManager.caducidadAtendida()
+            }
+        }
     }
 
     /*
