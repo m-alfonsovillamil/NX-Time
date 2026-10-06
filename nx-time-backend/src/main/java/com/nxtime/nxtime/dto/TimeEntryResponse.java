@@ -53,6 +53,13 @@ public record TimeEntryResponse(
          * El nombre del kiosco en que se abrió la jornada, o null si se abrió
          * desde la propia sesión (ADR 033). Para el distintivo del historial.
          */
-        String kiosco
+        String kiosco,
+
+        /**
+         * La cerró el sistema porque nadie fichó la salida (el cierre de las
+         * 3:00): su hora de salida es un tope, no un dato real. Vuelve a false
+         * cuando una corrección aprobada pone la hora de verdad.
+         */
+        boolean cerradaPorElSistema
 ) {
 }

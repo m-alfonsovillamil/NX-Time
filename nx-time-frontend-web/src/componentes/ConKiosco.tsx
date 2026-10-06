@@ -10,7 +10,7 @@ import { Insignia } from './Basicos';
 export function ConKiosco({ hora, kiosco }: { hora: string; kiosco: string | undefined }) {
   if (kiosco === undefined) return <>{hora}</>;
   return (
-    <span className="nx-con-kiosco">
+    <span className="nx-con-distintivo">
       {hora} <Insignia>{K.distintivo(kiosco)}</Insignia>
     </span>
   );

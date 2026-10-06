@@ -25,6 +25,7 @@ import { useSesion } from '../../api/useSesion';
 import { Boton, Selector } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
+import { SalidaDeJornada } from '../../componentes/SalidaDeJornada';
 import { ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Iniciales } from '../../componentes/Iniciales';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -68,7 +69,12 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
     {
       clave: 'salida',
       cabecera: E.salida,
-      celda: (f) => (f.horaSalida === undefined ? E.enCurso : horaDeSalida(f.horaEntrada, f.horaSalida)),
+      celda: (f) =>
+        f.horaSalida === undefined ? (
+          E.enCurso
+        ) : (
+          <SalidaDeJornada salida={horaDeSalida(f.horaEntrada, f.horaSalida)} cerradaPorElSistema={f.cerradaPorElSistema} />
+        ),
     },
     {
       clave: 'pausa',

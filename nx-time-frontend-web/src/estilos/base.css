@@ -2870,8 +2870,9 @@ h2 {
   padding-left: 20px;
 }
 
-/* Una hora fichada en un kiosco: la hora y, al lado, de qué kiosco (ConKiosco.tsx). */
-.nx-con-kiosco {
+/* Una hora con su distintivo al lado: la entrada fichada en un kiosco
+   (ConKiosco.tsx) o la salida que puso el sistema (SalidaDeJornada.tsx). */
+.nx-con-distintivo {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;

@@ -37,6 +37,9 @@ public record TeamTimeEntryDTO(
         long segundosPausaAcumulados,
 
         /** El nombre del kiosco en que se abrió, o null (ADR 033). Ver {@link TimeEntryResponse}. */
-        String kiosco
+        String kiosco,
+
+        /** La cerró el sistema por falta de fichaje de salida. Ver {@link TimeEntryResponse}. */
+        boolean cerradaPorElSistema
 ) {
 }

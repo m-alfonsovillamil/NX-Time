@@ -3297,6 +3297,7 @@ export interface components {
             /** Format: date-time */
             inicioPausaActual?: string;
             kiosco?: string;
+            cerradaPorElSistema?: boolean;
         };
         ChangeProjectRequest: {
             /** Format: int64 */
@@ -4049,6 +4050,7 @@ export interface components {
             /** Format: int64 */
             segundosPausaAcumulados?: number;
             kiosco?: string;
+            cerradaPorElSistema?: boolean;
         };
         ComplaintSummaryResponse: {
             /** Format: int64 */

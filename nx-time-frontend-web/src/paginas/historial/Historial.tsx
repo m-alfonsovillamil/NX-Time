@@ -23,6 +23,7 @@ import { pedir, todasLasPaginas, useListaPaginada } from '../../api/consultas';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
+import { SalidaDeJornada } from '../../componentes/SalidaDeJornada';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -92,7 +93,12 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
     {
       clave: 'salida',
       cabecera: H.salida,
-      celda: (j) => (j.horaSalida === undefined ? H.enCurso : horaDeSalida(j.horaEntrada, j.horaSalida)),
+      celda: (j) =>
+        j.horaSalida === undefined ? (
+          H.enCurso
+        ) : (
+          <SalidaDeJornada salida={horaDeSalida(j.horaEntrada, j.horaSalida)} cerradaPorElSistema={j.cerradaPorElSistema} />
+        ),
     },
     {
       clave: 'pausa',

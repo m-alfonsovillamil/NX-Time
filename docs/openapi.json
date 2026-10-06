@@ -10365,6 +10365,9 @@
           },
           "kiosco" : {
             "type" : "string"
+          },
+          "cerradaPorElSistema" : {
+            "type" : "boolean"
           }
         }
       },
@@ -12298,6 +12301,9 @@
           },
           "kiosco" : {
             "type" : "string"
+          },
+          "cerradaPorElSistema" : {
+            "type" : "boolean"
           }
         }
       },

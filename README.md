@@ -4,12 +4,12 @@
 [![Web](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml)
 [![E2E](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.16-brightgreen)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://www.postgresql.org/)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
 
-Sistema de **registro horario laboral**: una API REST en Spring Boot y una app
-Android nativa que la consume. Los empleados fichan su jornada y solicitan
+Sistema de **registro horario laboral**: una API REST en Spring Boot, y una app
+Android nativa y un cliente web que la consumen. Los empleados fichan su jornada y solicitan
 ausencias; los gestores aprueban, consultan a su equipo y exportan los informes
 que exige la normativa.
 
@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**241 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1171 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**78 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**393 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -620,37 +620,33 @@ recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
 ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Se puede instalar como
 app y avisa con notificaciones push, igual que la app Android; en el iPhone es
 la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene dos workflows:
-`web.yml` (tipos, 288 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+`web.yml` (tipos, 366 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
 
 **Pendiente:**
 
-- **La app no tiene tests de interfaz automatizados**: hay 46 tests de JVM sobre
-  los ViewModel, `ApiErrorParser` y el formateo de fechas, que el CI ejecuta
-  junto con lint. La interfaz no la cubre ninguno. Las 11 pantallas **sí se han
-  ejecutado**, en un emulador y contra la API real —de ahí salen las capturas, y
-  también el único defecto que apareció, el calendario en inglés—, pero esa
-  comprobación es **manual**: nada impide que una regresión pase el CI. Con
-  Robolectric podrían correr en la JVM sin necesidad de dispositivo.
+- **La app no tiene tests de interfaz automatizados**: hay 393 tests de JVM
+  sobre los ViewModel, la red, la sesión y el formateo de fechas, que el CI
+  ejecuta junto con lint. La interfaz no la cubre ninguno. Las pantallas **sí
+  se han ejecutado**, en un emulador y contra la API real —de ahí salen las
+  capturas, y también fallos que solo se ven así, como quedarse en «Mi
+  jornada» con la sesión caducada—, pero esa comprobación es **manual**: nada
+  impide que una regresión pase el CI. La web sí los tiene (Playwright).
+- **No se puede fichar sin conexión**: ni la app ni la web guardan el fichaje
+  para mandarlo después. Sin cobertura (una obra, un sótano) hay que esperar a
+  tenerla o usar el kiosco de la entrada.
+- **Solo está en español**, en la app y en la web.
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que
   se cree desde la propia API.
-- **Hay backend que la app no enseña**: el saldo de vacaciones, el panel de
-  indicadores, los informes descargables y la traza de auditoría existen en la
-  API y no tienen pantalla. La auditoría es justo lo que este README destaca
-  arriba como lo más interesante del proyecto.
-- **El cierre automático no se distingue en el historial**: la app no puede
-  marcarlo porque `TimeEntryResponse` no lo expone; solo consta en la tabla de
-  auditoría, con `modificado_por_id` a null.
-- **El filtro del historial de equipo compara por nombre**: `SimpleUserDTO` solo
-  envía `nombre`, así que dos empleados homónimos mezclarían sus jornadas al
-  filtrar. Se arregla añadiendo el `id` a ese DTO.
 - **El proceso nocturno cierra jornadas olvidadas de más de 16 h**, así que una
   abierta de madrugada puede seguir bloqueando al empleado hasta ~24 h. El fallo
-  grave (quedar bloqueado *indefinidamente*) sí está resuelto y verificado.
+  grave (quedar bloqueado *indefinidamente*) sí está resuelto y verificado. La
+  jornada que cierra el sistema sale marcada en los historiales («Cerrada por el
+  sistema»), porque su hora de salida es un tope y no un dato.
 
 ---
 

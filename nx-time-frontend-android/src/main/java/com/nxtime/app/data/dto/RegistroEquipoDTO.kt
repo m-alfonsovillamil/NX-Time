@@ -10,6 +10,12 @@ data class RegistroEquipoDTO(
     val fecha: String,
     val usuario: UsuarioSimpleDTO,
 
+    /**
+     * De quién es. El nombre de [usuario] puede repetirse en una empresa; esto
+     * no. Null solo contra un servidor anterior a que lo mandara.
+     */
+    val usuarioId: Long? = null,
+
     /** Para pintar. Truncado a minutos enteros. */
     val minutosPausaAcumulados: Long = 0,
 
@@ -17,5 +23,8 @@ data class RegistroEquipoDTO(
     val segundosPausaAcumulados: Long = 0,
 
     /** El kiosco en que se abrió, o null. Ver [Registro.kiosco]. */
-    val kiosco: String? = null
+    val kiosco: String? = null,
+
+    /** La cerró el sistema por falta de fichaje de salida. Ver [Registro.cerradaPorElSistema]. */
+    val cerradaPorElSistema: Boolean = false
 )

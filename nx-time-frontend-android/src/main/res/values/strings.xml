@@ -1181,4 +1181,6 @@
     <string name="kiosco_regenerar_texto">La que tienes ahora, impresa o en el móvil, dejará de valer.</string>
     <string name="kiosco_tarjeta_regenerada">Tarjeta nueva. La anterior ya no vale.</string>
     <string name="kiosco_distintivo">Kiosco · %1$s</string>
+    <!-- En los dos historiales: la salida la puso el cierre automático de las 3:00. -->
+    <string name="historial_cerrada_por_el_sistema">Cerrada por el sistema</string>
 </resources>

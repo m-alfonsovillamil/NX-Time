@@ -27,6 +27,8 @@ export const historial = {
   totalColumna: 'Total',
   acciones: 'Acciones',
   enCurso: 'Jornada sin cerrar',
+  /** También en el historial del equipo: la salida la puso el cierre automático. */
+  cerradaPorElSistema: 'Cerrada por el sistema',
   accionesDe: (dia: string) => `Acciones de la jornada del ${dia}`,
 
   correccion: {

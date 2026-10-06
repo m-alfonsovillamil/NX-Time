@@ -45,12 +45,14 @@ public interface TimeEntryMapper {
 
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     @Mapping(target = "kiosco", source = "kiosco.nombre")
+    @Mapping(target = "cerradaPorElSistema", source = "jornadaIncompleta")
     TimeEntryResponse toResponse(TimeEntry entry);
 
     @Mapping(target = "fecha", expression = "java(entry.dia())")
     @Mapping(target = "minutosPausaAcumulados", source = "segundosPausaAcumulados", qualifiedByName = "segundosAMinutos")
     @Mapping(target = "usuarioId", source = "usuario.id")
     @Mapping(target = "kiosco", source = "kiosco.nombre")
+    @Mapping(target = "cerradaPorElSistema", source = "jornadaIncompleta")
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
