@@ -200,3 +200,31 @@ application:
       # subdominio. Vacío = cookie del propio host, que es lo que hace falta en
       # local, donde la web habla con la API por el proxy de Vite.
       cookie-domain: ""
+
+    # Entrar con Google o con Microsoft (ADR 036). APAGADO mientras falte
+    # algo: un proveedor solo existe con sus dos credenciales y las dos URL.
+    # Los pasos para darlo de alta en cada consola están en docs/DESPLIEGUE.md.
+    sso:
+      # La dirección pública de ESTA API, sin barra final
+      # (https://api.nxtime-web.com). Hay que escribirla: detrás del proxy de
+      # Render el backend no la puede deducir de la petición, y la URL de
+      # vuelta que se registra en el proveedor tiene que coincidir letra a letra.
+      url-publica: "${SSO_URL_PUBLICA:}"
+      # La de la web (https://nxtime-web.com): adonde vuelve el navegador.
+      url-web: "${SSO_URL_WEB:}"
+      google:
+        client-id: "${SSO_GOOGLE_CLIENT_ID:}"
+        client-secret: "${SSO_GOOGLE_CLIENT_SECRET:}"
+        authorization-uri: "https://accounts.google.com/o/oauth2/v2/auth"
+        token-uri: "https://oauth2.googleapis.com/token"
+        jwk-set-uri: "https://www.googleapis.com/oauth2/v3/certs"
+        issuer: "https://accounts.google.com"
+      microsoft:
+        client-id: "${SSO_MICROSOFT_CLIENT_ID:}"
+        client-secret: "${SSO_MICROSOFT_CLIENT_SECRET:}"
+        # «common»: cuentas de cualquier organización y cuentas personales.
+        authorization-uri: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+        token-uri: "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+        jwk-set-uri: "https://login.microsoftonline.com/common/discovery/v2.0/keys"
+        # Uno por organización: {tenantid} se sustituye por el del propio token.
+        issuer: "https://login.microsoftonline.com/{tenantid}/v2.0"

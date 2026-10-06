@@ -58,7 +58,12 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             // Pedir un código para emparejar un kiosco es público (ADR 033). Preguntar
             // por su estado no se limita: la tablet lo hace cada pocos segundos, y va
             // con un secreto de 256 bits que no se puede adivinar a base de probar.
-            "/kiosco/emparejar");
+            "/kiosco/emparejar",
+            // El SSO (ADR 036). La vuelta del proveedor hace que este servidor llame
+            // al suyo para canjear el código: sin límite, cualquiera con una cookie de
+            // estado (que se consigue con solo empezar) podría usarlo para machacarlo.
+            // Empezar no se limita: es una redirección y no cuesta nada.
+            "/auth/sso/google/vuelta", "/auth/sso/microsoft/vuelta", "/auth/sso/canjear");
     static final int PETICIONES_POR_MINUTO = 10;
 
     /**

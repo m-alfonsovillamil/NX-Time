@@ -94,6 +94,9 @@
     "name" : "Ofertas internas",
     "description" : "Vacantes internas y candidaturas de la plantilla."
   }, {
+    "name" : "SSO",
+    "description" : "Entrar con una cuenta de Google o de Microsoft. Solo para quien ya tiene cuenta."
+  }, {
     "name" : "Avisos",
     "description" : "Avisos in-app del usuario autenticado: listado, contador de no leídos y marcado como leído. Se generan desde los mismos eventos que envían los correos."
   } ],
@@ -823,6 +826,46 @@
           },
           "404" : {
             "description" : "Ese secreto no es de ningún emparejamiento",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sso/canjear" : {
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "La app recoge su sesión",
+        "description" : "Canjea el código con el que el navegador volvió a la app. Vale una vez y un minuto, y solo a quien presente el verificador con el que se empezó.",
+        "operationId" : "canjear",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoExchangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "La sesión, como la de un login",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El código no vale, ha caducado o ya se usó",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -5831,6 +5874,116 @@
         }
       }
     },
+    "/auth/sso/{proveedor}/vuelta" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "La vuelta del proveedor",
+        "description" : "Adonde el proveedor devuelve el navegador. Es la URL que hay que registrar en su consola.",
+        "operationId" : "vuelta",
+        "parameters" : [ {
+          "name" : "proveedor",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "code",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "state",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "error",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "302" : {
+            "description" : "A la web o a la app, con la sesión hecha o con el motivo"
+          }
+        }
+      }
+    },
+    "/auth/sso/{proveedor}/iniciar" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Empezar: manda el navegador al proveedor",
+        "description" : "No es para llamarla con fetch: se navega a ella. Responde siempre con una redirección.",
+        "operationId" : "iniciar",
+        "parameters" : [ {
+          "name" : "proveedor",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "cliente",
+          "in" : "query",
+          "description" : "'app' si empieza la app Android; cualquier otra cosa, la web",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "reto",
+          "in" : "query",
+          "description" : "Solo la app: el SHA-256 en base64url de su verificador",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "vincular",
+          "in" : "query",
+          "description" : "'1' para añadir la cuenta a la sesión que ya hay abierta en la web",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "302" : {
+            "description" : "Al proveedor, o de vuelta con el motivo si no se puede empezar"
+          }
+        }
+      }
+    },
+    "/auth/sso/proveedores" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Con qué cuentas de fuera se puede entrar aquí",
+        "description" : "Los proveedores configurados en este servidor. Vacío si no hay ninguno: la web y la app no pintan entonces ningún botón.",
+        "operationId" : "proveedores",
+        "responses" : {
+          "200" : {
+            "description" : "Proveedores",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SsoProviderDTO"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/proyectos/horas" : {
       "get" : {
         "tags" : [ "Proyectos" ],
@@ -6085,6 +6238,32 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/MyKioskStatus"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/identidades" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Mis cuentas vinculadas",
+        "description" : "Las cuentas de fuera con las que entro.",
+        "operationId" : "misIdentidades",
+        "responses" : {
+          "200" : {
+            "description" : "Cuentas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
+                  }
                 }
               }
             }
@@ -8913,6 +9092,40 @@
         } ]
       }
     },
+    "/api/v1/perfil/identidades/{proveedor}" : {
+      "delete" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Desvincular una cuenta",
+        "description" : "Dejo de poder entrar con ella. La contraseña sigue valiendo.",
+        "operationId" : "desvincular",
+        "parameters" : [ {
+          "name" : "proveedor",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Desvinculada"
+          },
+          "404" : {
+            "description" : "No tenía ninguna de ese proveedor",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/fichaje/{id}/pausas/{pausaId}" : {
       "delete" : {
         "tags" : [ "Fichaje" ],
@@ -9656,24 +9869,21 @@
           }
         }
       },
-      "ConfirmRegistrationRequest" : {
+      "SsoExchangeRequest" : {
         "type" : "object",
         "properties" : {
-          "email" : {
-            "type" : "string",
-            "format" : "email",
-            "minLength" : 1
-          },
           "codigo" : {
             "type" : "string",
-            "minLength" : 1,
-            "pattern" : "\\s*\\d{6}\\s*"
+            "maxLength" : 200,
+            "minLength" : 0
           },
-          "origen" : {
-            "type" : "string"
+          "verificador" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
           }
         },
-        "required" : [ "codigo", "email" ]
+        "required" : [ "codigo", "verificador" ]
       },
       "AuthenticationResponse" : {
         "type" : "object",
@@ -9701,6 +9911,25 @@
             "type" : "string"
           }
         }
+      },
+      "ConfirmRegistrationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "minLength" : 1
+          },
+          "codigo" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "\\s*\\d{6}\\s*"
+          },
+          "origen" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "codigo", "email" ]
       },
       "RegisterManagerRequest" : {
         "type" : "object",
@@ -11347,6 +11576,20 @@
           }
         }
       },
+      "SsoProviderDTO" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "inicio" : {
+            "type" : "string"
+          }
+        }
+      },
       "EmployeeHoursItem" : {
         "type" : "object",
         "properties" : {
@@ -11993,6 +12236,28 @@
           "diasTotales" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "LinkedIdentityDTO" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "vinculadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoAcceso" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },

@@ -133,6 +133,24 @@ services:
       - key: COOKIE_DOMAIN
         value: nxtime-web.com
 
+      # Entrar con Google o con Microsoft (ADR 036). Las dos URL no son
+      # secretos: son la dirección pública de la API y la de la web, que el
+      # backend no puede deducir detrás del proxy. Las credenciales sí, y se
+      # ponen en el panel de Render. Mientras falten, no hay botón y todo lo
+      # demás funciona igual. Cómo sacarlas: docs/DESPLIEGUE.md.
+      - key: SSO_URL_PUBLICA
+        value: https://api.nxtime-web.com
+      - key: SSO_URL_WEB
+        value: https://nxtime-web.com
+      - key: SSO_GOOGLE_CLIENT_ID
+        sync: false
+      - key: SSO_GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: SSO_MICROSOFT_CLIENT_ID
+        sync: false
+      - key: SSO_MICROSOFT_CLIENT_SECRET
+        sync: false
+
       # Sentry (paso 5 del piloto): adónde van los errores del backend.
       # Vacía, la aplicación arranca igual y no envía nada. El DSN no da
       # acceso a leer nada -- solo identifica adónde mandar los errores --,
