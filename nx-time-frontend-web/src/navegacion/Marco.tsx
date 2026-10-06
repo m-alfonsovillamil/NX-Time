@@ -279,7 +279,11 @@ function usePrecargaEnReposo(secciones: readonly Seccion[]) {
     // Safari no tiene `requestIdleCallback`: un par de segundos después de pintar hace el mismo papel.
     if (typeof globalThis.requestIdleCallback === 'function') {
       const id = globalThis.requestIdleCallback(precargar, { timeout: 4000 });
-      return () => globalThis.cancelIdleCallback(id);
+      // Se mira otra vez al limpiar: que exista una no garantiza la otra, y un
+      // fallo aquí sería un error al desmontar el marco entero.
+      return () => {
+        if (typeof globalThis.cancelIdleCallback === 'function') globalThis.cancelIdleCallback(id);
+      };
     }
     const id = setTimeout(precargar, 2000);
     return () => clearTimeout(id);

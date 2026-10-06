@@ -4,7 +4,7 @@
  * cada apartado lo prueba `secciones.test.ts`.
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -238,6 +238,10 @@ describe('la precarga en reposo de las secciones principales', () => {
   }
 
   afterEach(() => {
+    // Primero se desmonta, con el rato libre simulado todavía puesto: al
+    // revés, el marco se desmontaba en un navegador al que ya le habían quitado
+    // `cancelIdleCallback` (falló así en el CI y no en local).
+    cleanup();
     vi.restoreAllMocks();
     // El rato libre y el ahorro de datos simulados no pasan al test siguiente.
     vi.unstubAllGlobals();
