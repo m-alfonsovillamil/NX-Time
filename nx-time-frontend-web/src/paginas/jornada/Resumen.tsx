@@ -7,7 +7,7 @@
  *
  * **La jornada abierta se suma aquí.** El servidor solo cuenta jornadas
  * cerradas (`hora_salida IS NOT NULL`); sin esta suma, quien lleva dos horas
- * fichado leería «Hoy: 0m» con el cronómetro corriendo al lado. Lo mismo para
+ * fichado leería «Hoy: 0m» con el cronómetro corriendo encima. Lo mismo para
  * la barra de hoy en el gráfico.
  */
 
@@ -113,7 +113,7 @@ export function Resumen({ minutosEnCurso }: { minutosEnCurso: number }) {
   const jornadaSemanal = resumen.data?.minutosJornadaSemanal ?? 0;
 
   return (
-    <div className="nx-columna">
+    <div className="nx-composicion nx-composicion--jornada">
       {resumen.data !== undefined && (
         <section className="nx-tarjeta" aria-labelledby="titulo-resumen">
           <h2 id="titulo-resumen">{R.titulo}</h2>

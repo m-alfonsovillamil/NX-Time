@@ -3251,22 +3251,28 @@ class ApiContractTest {
         // peticiones por minuto (ver LoginRateLimitFilter): la 11ª
         // debe rechazarse.
         //
-        // Un correo distinto en cada intento: desde el ADR 034, a partir del
-        // quinto fallo contra una misma cuenta hay que esperar, y eso es otro
-        // límite. Y quince intentos y no once: el cupo se rellena a uno cada
-        // seis segundos, y cada intento fallido cuesta un BCrypt.
+        // Con la contraseña VACÍA, a propósito. El límite cuenta peticiones,
+        // no logins fallidos, y va delante de todo: una petición que la
+        // validación rechaza con un 400 gasta cupo igual, y no cuesta un
+        // BCrypt. Con credenciales de verdad cada intento tardaba lo bastante
+        // en un CI lento como para que el cupo (uno cada seis segundos) se
+        // fuera rellenando por el camino, y el rechazo llegaba en un intento
+        // distinto cada vez, o no llegaba: falló en #151, en #156 dos veces y
+        // en main, sin que nada estuviera roto. Así las once van en un
+        // instante y la que se rechaza es siempre la undécima.
         HttpHeaders headers = jsonHeaders();
         headers.set("X-Forwarded-For", "203.0.113.55");
+        String sinContrasena = toJson(mapOf("email", "nadie@nxtime.test", "contrasena", ""));
 
-        ResponseEntity<String> ultima = null;
-        for (int i = 0; i < 15; i++) {
-            Map<String, Object> credencialesFalsas =
-                    mapOf("email", "nadie" + i + "@nxtime.test", "contrasena", "loquesea");
-            ultima = rest.postForEntity(url("/auth/login"),
-                    new HttpEntity<>(toJson(credencialesFalsas), headers), String.class);
+        for (int i = 1; i <= 10; i++) {
+            ResponseEntity<String> respuesta = rest.postForEntity(url("/auth/login"),
+                    new HttpEntity<>(sinContrasena, headers), String.class);
+            assertThat(respuesta.getStatusCode()).as("petición %d", i).isEqualTo(HttpStatus.BAD_REQUEST);
         }
 
-        assertThat(ultima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        ResponseEntity<String> undecima = rest.postForEntity(url("/auth/login"),
+                new HttpEntity<>(sinContrasena, headers), String.class);
+        assertThat(undecima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 
     // ------------------------------------------------------------------

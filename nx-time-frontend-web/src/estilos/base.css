@@ -127,6 +127,19 @@ h1 {
   .nx-composicion--arriba {
     align-items: start;
   }
+
+  /* Debajo de fichar en Mi jornada: las cifras, y más ancho, el gráfico.
+     Las cifras van de dos en dos y por debajo de 360 px «31h 59m» ya no
+     cabe en su recuadro: con el lateral abierto y 1100 px, pasaba. */
+  .nx-composicion--jornada {
+    grid-template-columns: minmax(360px, 2fr) minmax(0, 3fr);
+    align-items: stretch;
+  }
+
+  /* Si el resumen no ha cargado, el gráfico no se queda en media página. */
+  .nx-composicion--jornada > :only-child {
+    grid-column: 1 / -1;
+  }
 }
 
 /* El índice de una página larga: solo donde hay sitio para tenerlo al lado. */
@@ -491,6 +504,9 @@ h1 {
 
 /* ---- La jornada ---- */
 
+/* Fichar es a lo que se viene: la tarjeta ocupa el ancho de la página, con
+   el cronómetro y los botones dentro y centrados (6/10/2026). Antes era una
+   columna de 440 px a un lado y el resumen se llevaba la pantalla. */
 .nx-jornada {
   text-align: center;
   display: flex;
@@ -498,13 +514,56 @@ h1 {
   gap: 4px;
 }
 
+/* Una píldora con su punto, del color de `ColoresJornada`, que existe justo
+   para esto: que se lea de lejos sin leer nada. El fondo es un tinte del
+   mismo color, como en `.nx-insignia`. */
 .nx-jornada__estado {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
   font-family: var(--nx-font-titular);
-  font-size: var(--nx-fs-title-medium);
-  margin: 0;
-  /* El color del estado es de `ColoresJornada`, que existe justo para esto:
-     que se lea de lejos sin leer nada. */
+  font-size: var(--nx-fs-label-large);
+  font-weight: 600;
+  line-height: 22px;
   color: var(--nx-jornada-color, var(--nx-on-surface));
+  background: color-mix(in srgb, var(--nx-jornada-color, var(--nx-on-surface)) 14%, var(--nx-surface));
+}
+
+.nx-jornada__estado::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* El punto late mientras corre el tiempo, y solo entonces. */
+@media (prefers-reduced-motion: no-preference) {
+  .nx-jornada--trabajando .nx-jornada__estado::before {
+    animation: nx-latido 2s ease-in-out infinite;
+  }
+}
+
+@keyframes nx-latido {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Los botones, y el aviso de por qué no se ha podido: centrados y sin
+   estirarse a lo ancho de la tarjeta. */
+.nx-jornada__acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  margin: 20px auto 0;
 }
 
 .nx-jornada--trabajando {
@@ -554,6 +613,26 @@ h1 {
   margin: 0;
   /* Sin esto, el cronómetro se mueve a lo ancho al pasar de 9m a 10m. */
   font-variant-numeric: tabular-nums;
+}
+
+/* En escritorio, más grande y con más aire. El tamaño no sale de los tokens
+   porque la app no tiene uno mayor que `displayMedium`: no tiene pantalla
+   ancha en la que usarlo. */
+@media (min-width: 960px) {
+  .nx-jornada {
+    padding: 32px;
+  }
+
+  .nx-jornada__cronometro {
+    font-size: 56px;
+    line-height: 64px;
+    letter-spacing: -1px;
+  }
+
+  .nx-jornada .nx-boton--fichar,
+  .nx-jornada .nx-acciones:has(> .nx-boton--fichar) > .nx-boton {
+    min-height: 64px;
+  }
 }
 
 /* ---- Avisos ---- */
@@ -1741,19 +1820,6 @@ h2 {
 }
 
 /* ---- Mi jornada (W2) ---- */
-
-.nx-rejilla-jornada {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-@media (min-width: 1100px) {
-  .nx-rejilla-jornada {
-    grid-template-columns: minmax(320px, 440px) 1fr;
-  }
-}
 
 .nx-columna {
   display: flex;
