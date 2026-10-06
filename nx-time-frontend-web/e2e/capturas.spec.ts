@@ -56,7 +56,7 @@ test.describe('móvil', () => {
 test.describe('escritorio', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('RRHH: historial del equipo, plantilla y analítica', async ({ page }) => {
+  test('RRHH: historial del equipo, plantilla, analítica e integridad', async ({ page }) => {
     await entrar(page, 'elena.rios@techcorp.demo');
     await ir(page, '/equipo');
     await capturar(page, 'web-02-historial-equipo');
@@ -64,10 +64,28 @@ test.describe('escritorio', () => {
     await capturar(page, 'web-03-plantilla');
     await ir(page, '/analitica');
     await capturar(page, 'web-04-analitica');
+    // La integridad con la cadena recién comprobada: el estado, en verde, es lo
+    // que cuenta la página.
+    await ir(page, '/integridad');
+    await page.getByRole('button', { name: 'Comprobar la cadena' }).click();
+    await expect(page.getByRole('status').getByText('La traza está intacta.')).toBeVisible({ timeout: 30_000 });
+    await page.mouse.move(1400, 880);
+    await capturar(page, 'web-10-integridad');
   });
 
-  test('gestora: el editor de cuadrantes', async ({ page }) => {
+  test('la pantalla de entrar, con su panel de marca', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+    await capturar(page, 'web-12-acceso');
+  });
+
+  test('gestora: el calendario laboral y el editor de cuadrantes', async ({ page }) => {
     await entrar(page, 'marta.sanchez@techcorp.demo');
+    // El calendario laboral: el mes en rejilla con sus festivos, y la lista al lado.
+    await ir(page, '/calendario-laboral');
+    await expect(page.getByRole('heading', { name: /^Festivos de / })).toBeVisible();
+    await page.mouse.move(1400, 880);
+    await capturar(page, 'web-11-calendario-laboral');
     await ir(page, '/cuadrantes');
     // La demo no siembra cuadrantes, así que la semana del equipo sale vacía:
     // se enseña el editor de una plantilla nueva (sin guardarla), que es lo

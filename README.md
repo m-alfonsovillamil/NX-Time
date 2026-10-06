@@ -230,9 +230,18 @@ solo tiene sentido con pantalla grande y teclado:
 | Kiosco de fichaje | Menú por apartados |
 |---|---|
 | ![Kiosco en una tablet](docs/capturas/web/web-09-kiosco.png) | ![Menú por apartados](docs/capturas/web/web-08-menu-por-apartados.png) |
-| Una tablet en la entrada: tarjeta QR por la cámara, o nombre y PIN | Siete apartados plegables en vez de 28 entradas seguidas |
+| Una tablet en la entrada: tarjeta QR por la cámara, o nombre y PIN | Siete apartados plegables, cada uno con su icono y con lo que espera una decisión |
 
-Las **28 capturas de la app y las 9 de la web**, con la explicación de qué
+| Integridad de la auditoría | Calendario laboral | Acceso |
+|---|---|---|
+| ![Integridad de la auditoría](docs/capturas/web/web-10-integridad.png) | ![Calendario laboral](docs/capturas/web/web-11-calendario-laboral.png) | ![Pantalla de entrar](docs/capturas/web/web-12-acceso.png) |
+| La cadena de la traza, comprobada, y cómo funciona | El mes en rejilla con sus festivos | El panel de marca, en escritorio |
+
+La web comparte el sistema visual con la app (colores, tipografía y formas
+salen del tema de Android) y lo aprovecha a lo ancho: ver el
+[ADR 035](docs/adr/035-sistema-visual-de-la-web.md).
+
+Las **28 capturas de la app y las 12 de la web**, con la explicación de qué
 demuestra cada una, están en [`docs/capturas/`](docs/capturas/). Son reales,
 contra la API, con los datos que siembra `DemoDataSeeder`; las de la web se
 repiten con `npm run capturas`.
@@ -590,6 +599,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 32. [La zona horaria es de cada empresa, y los días se cuentan al leer](docs/adr/032-zona-horaria-por-empresa.md)
 33. [Fichaje en kiosco: un dispositivo que solo ficha, tarjeta QR firmada y PIN por persona](docs/adr/033-fichaje-en-kiosco.md)
 34. [Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había](docs/adr/034-endurecimiento-de-octubre.md)
+35. [El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas](docs/adr/035-sistema-visual-de-la-web.md)
 
 ---
 

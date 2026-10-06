@@ -77,8 +77,9 @@ las 26 restantes son del 04/09/2026.
 
 ## La web
 
-En [`web/`](web/). Sacadas el **28/09/2026** contra el backend local con el
-perfil `demo` y sobre una base recién creada. A diferencia de las de Android, **se
+En [`web/`](web/). Rehechas el **06/10/2026**, tras el plan de estética (ADR
+035), contra el backend local con el perfil `demo` y sobre una base recién
+creada. A diferencia de las de Android, **se
 repiten con un comando**: `npm run capturas` en `nx-time-frontend-web/`
 (`e2e/capturas.spec.ts`), con el build de producción si se lanza con `CI=1`.
 
@@ -91,5 +92,8 @@ repiten con un comando**: `npm run capturas` en `nx-time-frontend-web/`
 | `web-05-editor-cuadrantes.png` | El editor de plantillas de cuadrante, también solo de la web: un turno partido con dos tramos por día (sin guardar: la demo no siembra cuadrantes) |
 | `web-06-movil.png` | La misma jornada en un móvil: barra inferior con «Más» en vez del menú lateral |
 | `web-07-movil-oscuro.png` | En tema oscuro, que sigue al del sistema |
-| `web-08-menu-por-apartados.png` | El menú lateral de un ADMIN por apartados plegables (octubre de 2026): siete apartados en vez de 28 entradas seguidas, con el de la página abierta desplegado |
+| `web-08-menu-por-apartados.png` | El menú lateral de un ADMIN por apartados plegables (octubre de 2026): siete apartados en vez de 28 entradas seguidas, con el de la página abierta desplegado. Cada apartado lleva su icono en un recuadro (teal en «Lo mío», índigo en «Gestión»), cada entrada el suyo, y las que esperan una decisión dicen cuántas |
 | `web-09-kiosco.png` | El kiosco de fichaje en una tablet (ADR 033): espera una tarjeta QR por la cámara, o que alguien busque su nombre y teclee su PIN. La imagen es la cámara de prueba de Chromium |
+| `web-10-integridad.png` | La integridad de la auditoría a lo ancho: lo comprobado anoche en cifras, «comprobar ahora» con su resultado en verde, y al lado el «cómo funciona» en tres puntos. Antes eran dos tarjetas en una columna de 560 px |
+| `web-11-calendario-laboral.png` | El calendario laboral: el mes en rejilla con los festivos pintados y la lista al lado. Pulsar un día libre abre «nuevo festivo» con esa fecha |
+| `web-12-acceso.png` | La pantalla de entrar en escritorio, con el panel de marca |
