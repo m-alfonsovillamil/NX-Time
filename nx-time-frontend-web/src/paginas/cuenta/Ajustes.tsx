@@ -36,6 +36,7 @@ import {
   type PasoPush,
 } from '../../push/push';
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
+import { CuentasVinculadas, useCuentasVinculadas } from './CuentasVinculadas';
 
 const J = cuenta.ajustes;
 
@@ -365,11 +366,15 @@ function Borrado() {
   );
 }
 
-/** Las secciones de la página, en su orden: de aquí sale el índice. */
-const INDICE: readonly { id: string; icono: NombreIcono; texto: string }[] = [
+/**
+ * Las secciones de la página, en su orden: de aquí sale el índice. La de las
+ * cuentas vinculadas solo existe si hay con qué vincular (ADR 036).
+ */
+const INDICE: readonly { id: string; icono: NombreIcono; texto: string; soloConSso?: boolean }[] = [
   { id: 'ajustes-apariencia', icono: 'tema', texto: J.apariencia },
   { id: 'ajustes-notificaciones', icono: 'campana', texto: J.notificaciones.titulo },
   { id: 'ajustes-cuenta', icono: 'persona', texto: J.cuenta },
+  { id: 'ajustes-vinculadas', icono: 'enlace', texto: J.vinculadas.titulo, soloConSso: true },
   { id: 'ajustes-privacidad', icono: 'candado', texto: J.privacidad },
   { id: 'ajustes-app', icono: 'movil', texto: J.enLaApp },
 ];
@@ -381,6 +386,7 @@ export function Ajustes() {
   useEffect(() => {
     if (hash !== '') document.getElementById(hash.slice(1))?.scrollIntoView();
   }, [hash]);
+  const vinculadas = useCuentasVinculadas();
 
   return (
     <div className="nx-pagina">
@@ -389,7 +395,7 @@ export function Ajustes() {
         {/* En escritorio, un índice que se queda a la vista; en el móvil no hace falta: se baja con el dedo. */}
         <nav className="nx-indice nx-pegada" aria-label={J.indice}>
           <ul>
-            {INDICE.map((s) => (
+            {INDICE.filter((s) => s.soloConSso !== true || vinculadas.hay).map((s) => (
               <li key={s.id}>
                 <a className="nx-enlace-menu" href={`#${s.id}`}>
                   <span className="nx-enlace-menu__icono">
@@ -405,6 +411,7 @@ export function Ajustes() {
           <Apariencia />
           <Notificaciones />
           <Cuenta />
+          {vinculadas.hay && <CuentasVinculadas {...vinculadas} />}
           <Tarjeta id="ajustes-privacidad" icono="candado" titulo={J.privacidad}>
             <div className="nx-columna">
               <MisDatos />

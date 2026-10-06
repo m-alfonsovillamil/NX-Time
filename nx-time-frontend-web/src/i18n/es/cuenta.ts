@@ -74,6 +74,31 @@ export const cuenta = {
     tema: 'Tema',
     temas: { sistema: 'El del sistema', claro: 'Claro', oscuro: 'Oscuro' },
 
+    /** Las cuentas de Google o de Microsoft con las que se entra (ADR 036). */
+    vinculadas: {
+      titulo: 'Cuentas vinculadas',
+      explicacion:
+        'Entra con tu cuenta de Google o de Microsoft en vez de con la contraseña. La contraseña sigue valiendo.',
+      vincular: (proveedor: string) => `Vincular ${proveedor}`,
+      desvincular: 'Desvincular',
+      desvincularDe: (proveedor: string) => `Desvincular ${proveedor}`,
+      sinVincular: 'Sin vincular',
+      vinculadaEl: (dia: string) => `Vinculada el ${dia}`,
+      confirmarTitulo: (proveedor: string) => `¿Desvincular ${proveedor}?`,
+      confirmarTexto:
+        'Dejarás de poder entrar con esa cuenta. Tu contraseña sigue valiendo, y puedes volver a vincularla cuando quieras.',
+      hecho: 'Cuenta vinculada: ya puedes entrar con ella.',
+      /** Por qué no se ha vinculado. La clave es lo que manda el servidor en `?sso=…`. */
+      motivos: {
+        cancelado: 'No has terminado de vincular la cuenta.',
+        'ya-vinculada': 'Esa cuenta ya está vinculada a otra persona de NX Time.',
+        'ya-tiene-otra': 'Ya tienes vinculada otra cuenta de ese proveedor. Desvincúlala antes.',
+        'sin-sesion': 'Tu sesión había caducado. Vuelve a intentarlo.',
+        'no-disponible': 'Ese proveedor no está disponible ahora mismo.',
+        fallo: 'No se ha podido vincular la cuenta. Vuelve a intentarlo.',
+      },
+    },
+
     cuenta: 'Cuenta',
     contrasena: {
       boton: 'Cambiar contraseña',

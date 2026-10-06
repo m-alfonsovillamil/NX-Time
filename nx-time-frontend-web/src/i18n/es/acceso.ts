@@ -28,6 +28,29 @@ export const acceso = {
     registrarEmpresa: 'Registrar una empresa',
   },
 
+  /** Entrar con Google o con Microsoft (ADR 036). Solo si el servidor los tiene configurados. */
+  sso: {
+    separador: 'o',
+    etiqueta: 'Entrar con otra cuenta',
+    entrarCon: (proveedor: string) => `Entrar con ${proveedor}`,
+    /**
+     * Por qué no se ha entrado. La clave es lo que el servidor manda en la URL
+     * de vuelta (`?sso=…`); una que esta versión no conozca cae en `fallo`.
+     */
+    motivos: {
+      cancelado: 'No has terminado de entrar. Puedes volver a intentarlo.',
+      'sin-cuenta':
+        'No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.',
+      'correo-sin-verificar':
+        'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.',
+      'cuenta-inactiva': 'Tu cuenta de NX Time está dada de baja. Habla con tu empresa.',
+      'ya-tiene-otra':
+        'Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
+      'no-disponible': 'Ese acceso no está disponible ahora mismo. Entra con tu contraseña.',
+      fallo: 'No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.',
+    },
+  },
+
   recuperar: {
     titulo: 'Elegir contraseña',
     explicacion:

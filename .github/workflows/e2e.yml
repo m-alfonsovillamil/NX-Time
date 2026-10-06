@@ -90,10 +90,26 @@ jobs:
       # mientras el sembrador de demo (un CommandLineRunner) sigue creando
       # usuarios, y un login en esa ventana da "Credenciales incorrectas". La
       # señal buena es la línea con la que el sembrador termina.
+      #
+      # Con el SSO encendido contra un proveedor de mentira (ADR 036), que se
+      # arranca más abajo: el backend no lo llama hasta que una spec entra con
+      # él. La URL pública es la de la web porque Vite hace de proxy de /auth:
+      # para el navegador, la API y la web son el mismo sitio, como en
+      # producción. Ver e2e/sso.spec.ts.
       - name: Arrancar el backend
+        env:
+          SSO: application.security.sso
+          OIDC: http://localhost:9099
         run: |
           java -jar nx-time-backend/build/libs/nx-time-backend-0.0.1-SNAPSHOT.jar \
             --spring.profiles.active=dev,demo --spring.jpa.show-sql=false \
+            --$SSO.url-publica=http://localhost:5173 --$SSO.url-web=http://localhost:5173 \
+            --$SSO.google.client-id=e2e-google --$SSO.google.client-secret=e2e \
+            --$SSO.google.authorization-uri=$OIDC/google/autorizar \
+            --$SSO.google.token-uri=$OIDC/token --$SSO.google.jwk-set-uri=$OIDC/jwks \
+            --$SSO.microsoft.client-id=e2e-microsoft --$SSO.microsoft.client-secret=e2e \
+            --$SSO.microsoft.authorization-uri=$OIDC/microsoft/autorizar \
+            --$SSO.microsoft.token-uri=$OIDC/token --$SSO.microsoft.jwk-set-uri=$OIDC/jwks \
             > backend.log 2>&1 &
           for i in $(seq 1 90); do
             if grep -q "Datos de demo listos" backend.log; then
@@ -121,6 +137,17 @@ jobs:
       - name: Navegadores de Playwright
         working-directory: nx-time-frontend-web
         run: npx playwright install --with-deps chromium webkit
+
+      # El Google y el Microsoft de mentira con los que entra sso.spec.ts.
+      - name: Arrancar el proveedor OIDC de mentira
+        working-directory: nx-time-frontend-web
+        run: |
+          node e2e/proveedor-oidc.mjs > ../oidc.log 2>&1 &
+          for i in $(seq 1 20); do
+            if curl --silent --fail http://localhost:9099/jwks > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "El proveedor de mentira no ha arrancado:"; cat ../oidc.log; exit 1
 
       - name: Tests de extremo a extremo
         working-directory: nx-time-frontend-web
