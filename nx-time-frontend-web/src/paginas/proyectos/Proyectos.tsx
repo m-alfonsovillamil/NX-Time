@@ -400,7 +400,7 @@ export function Proyectos() {
         <>
           <HorasPorProyecto />
           <section className="nx-tarjeta">
-            <EstadoDeConsulta consulta={lista} cargando={<Esqueleto lineas={5} />}>
+            <EstadoDeConsulta consulta={lista} cargando={<Esqueleto forma="tabla" lineas={5} />}>
               {(ps) =>
                 ps.length === 0 ? (
                   <Vacio titulo={P.vacioTitulo} detalle={P.vacioTexto} />

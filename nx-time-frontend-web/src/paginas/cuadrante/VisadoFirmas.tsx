@@ -117,7 +117,7 @@ export function VisadoFirmas() {
       <section className="nx-tarjeta">
         <NavegadorDeMes mes={mes} id="visado-mes" titulo={V.delMes(mesYAnio(mes.anio, mes.mes).toLowerCase())} />
         {visar.error !== null && <Aviso>{visar.error.message}</Aviso>}
-        <EstadoDeConsulta consulta={equipo} cargando={<Esqueleto lineas={6} />}>
+        <EstadoDeConsulta consulta={equipo} cargando={<Esqueleto forma="tabla" lineas={6} />}>
           {(filas) => {
             if (filas.length === 0) return <Vacio titulo={V.vacio} />;
             const r = resumenDe(filas);

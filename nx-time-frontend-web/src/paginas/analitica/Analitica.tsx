@@ -97,7 +97,7 @@ function Absentismo({ periodo, fecha, agrupar }: { periodo: Periodo; fecha: stri
   ];
 
   return (
-    <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto lineas={5} />}>
+    <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto forma="tabla" lineas={4} />}>
       {(r) => {
         const filas = r.filas ?? [];
         const total = r.total;
@@ -163,7 +163,7 @@ function Puntualidad({ periodo, fecha, agrupar }: { periodo: Periodo; fecha: str
   ];
 
   return (
-    <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto lineas={5} />}>
+    <EstadoDeConsulta consulta={consulta} cargando={<Esqueleto forma="tabla" lineas={4} />}>
       {(r) => {
         const filas = r.filas ?? [];
         const total = r.total;
@@ -244,7 +244,7 @@ export function Analitica() {
         </div>
       </section>
 
-      <EstadoDeConsulta consulta={resumen} cargando={<Esqueleto lineas={3} />}>
+      <EstadoDeConsulta consulta={resumen} cargando={<Esqueleto forma="recuadros" lineas={6} />}>
         {(r) => (
           <>
             <section className="nx-tarjeta" aria-labelledby="analitica-cifras">
