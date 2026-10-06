@@ -20,6 +20,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
+import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 const R = T.recuperar;
 
@@ -77,7 +78,7 @@ export function RecuperarAcceso() {
   const mensaje = error ?? pedirCodigo.error?.message ?? confirmar.error?.message ?? null;
 
   return (
-    <main className="nx-centrado">
+    <MarcoDeAcceso>
       <div className="nx-tarjeta nx-formulario">
         <header>
           <h1>{paso === 'hecho' ? R.hechoTitulo : R.titulo}</h1>
@@ -140,6 +141,6 @@ export function RecuperarAcceso() {
           </Link>
         )}
       </div>
-    </main>
+    </MarcoDeAcceso>
   );
 }

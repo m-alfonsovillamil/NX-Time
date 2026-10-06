@@ -162,6 +162,41 @@ Con esto nacieron tres piezas más en `Basicos.tsx`:
   neutro.
 - `Puntos`, una explicación en puntos con icono.
 
+### El botón de fichar dice el estado con su color
+
+Como el de la app (`FicharScreen.kt`), usa los colores de `ColoresJornada`,
+que ya estaban en los tokens:
+
+- Verde para entrar.
+- Rojo cuando la jornada corre, porque lo que hace el botón es pararla.
+- Ámbar en pausa.
+
+Antes era siempre teal y había que leer el texto.
+
+### Las pantallas de acceso se presentan
+
+En escritorio, entrar, recuperar el acceso, registrar una empresa y confirmar
+el correo llevan al lado un panel con la marca y, en tres puntos, qué es la
+aplicación (`MarcoDeAcceso`). Una tarjeta sola en mitad de la pantalla parecía
+una página a medio cargar.
+
+- El panel no lleva encabezados: el `<h1>` sigue siendo el del formulario.
+- En el móvil no sale.
+- En el tema oscuro usa los tonos de contenedor. `primary` es ahí un cian
+  claro, y de panel entero deslumbraba.
+
+### Interacciones
+
+Son cortas y discretas:
+
+- Los botones oscurecen un punto al pasar el ratón. No aclaran, porque el
+  blanco sobre el teal va justo de contraste.
+- Las tarjetas que son un enlace suben dos píxeles.
+
+Con «reducir movimiento» no hay ninguna. Los apartados del menú se abren sin
+animación: se ocultan con `hidden`, que es lo que los saca del tabulador y del
+lector de pantalla, y eso no se anima sin renunciar a ello.
+
 ## Consecuencias
 
 - El JS inicial pasa de 106 a 113 kB comprimidos, casi todo por los trazados

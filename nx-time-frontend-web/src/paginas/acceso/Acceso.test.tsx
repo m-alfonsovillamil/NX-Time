@@ -184,3 +184,16 @@ describe('registrar una empresa', () => {
     expect(llamadas.llamadas).toHaveLength(0);
   });
 });
+
+describe('el panel de marca', () => {
+  it('las pantallas de acceso presentan la aplicación sin quitarle el título al formulario', () => {
+    simularApi({});
+    pintar(<Login />);
+
+    // El panel es contenido (se lee), con su nombre; el único encabezado sigue siendo el del formulario.
+    const panel = screen.getByRole('complementary', { name: T.marca.etiqueta });
+    expect(panel.textContent).toContain(T.marca.lema);
+    for (const punto of T.marca.puntos) expect(panel.textContent).toContain(punto.titulo);
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+  });
+});

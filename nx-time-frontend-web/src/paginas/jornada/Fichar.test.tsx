@@ -45,6 +45,24 @@ afterEach(() => {
 });
 
 describe('fichar', () => {
+  /* El botón dice el estado con su color, como el de la app (ColoresJornada). */
+  it('el botón es verde para entrar, rojo para salir y ámbar en pausa', async () => {
+    let jornada: Record<string, unknown> | null = null;
+    api({ 'GET /api/v1/fichaje/activo': () => (jornada === null ? sinContenido() : jornada) });
+    const { unmount } = pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+    expect((await screen.findByRole('button', { name: F.entrar })).className).toContain('nx-boton--fichar-parado');
+    unmount();
+
+    jornada = abierta();
+    const trabajando = pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+    expect((await screen.findByRole('button', { name: F.salir })).className).toContain('nx-boton--fichar-trabajando');
+    trabajando.unmount();
+
+    jornada = abierta({ enPausa: true, inicioPausaActual: new Date().toISOString() });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+    expect((await screen.findByRole('button', { name: F.salir })).className).toContain('nx-boton--fichar-en-pausa');
+  });
+
   it('sin jornada abierta (204), ofrece fichar la entrada', async () => {
     api();
     pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
