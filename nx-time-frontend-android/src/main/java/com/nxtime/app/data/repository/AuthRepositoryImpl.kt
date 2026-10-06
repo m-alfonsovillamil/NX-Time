@@ -45,6 +45,11 @@ class AuthRepositoryImpl(
         return apiService.confirmarRegistro(ConfirmarRegistroRequest(email, codigo))
     }
 
+    override suspend fun getProveedoresSso(): Response<List<ProveedorSsoDTO>> = apiService.getProveedoresSso()
+
+    override suspend fun canjearSso(codigo: String, verificador: String): Response<RespuestaAutenticacion> =
+        apiService.canjearSso(PeticionCanjeSso(codigo, verificador))
+
     override fun procesarLoginExitoso(authResponse: RespuestaAutenticacion) {
         sessionManager.saveAuthData(
             token = authResponse.token,

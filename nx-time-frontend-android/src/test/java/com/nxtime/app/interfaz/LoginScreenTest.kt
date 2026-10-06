@@ -7,7 +7,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.RespuestaAutenticacion
+import com.nxtime.app.data.dto.ProveedorSsoDTO
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.data.sso.AccesoSso
+import com.nxtime.app.data.sso.GuardaDelVerificador
 import com.nxtime.app.ui.acceso.LoginScreen
 import com.nxtime.app.ui.acceso.LoginViewModel
 import com.nxtime.app.ui.theme.NxTimeTheme
@@ -25,6 +28,7 @@ import org.mockito.kotlin.stub
 import org.mockito.kotlin.verifyBlocking
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import retrofit2.Response
 
 /**
@@ -42,12 +46,15 @@ class LoginScreenTest {
 
     private val repositorio: AuthRepository = mock()
     private var accesos = 0
+    private val guarda = object : GuardaDelVerificador {
+        override var verificador: String? = null
+    }
 
     private fun texto(id: Int): String = RuntimeEnvironment.getApplication().getString(id)
 
     private fun montar() {
         // Fuera de la composición: dentro, cada recomposición crearía otro.
-        val viewModel = LoginViewModel(repositorio)
+        val viewModel = LoginViewModel(repositorio, AccesoSso(guarda))
         pantalla.setContent {
             NxTimeTheme {
                 LoginScreen(
@@ -107,5 +114,36 @@ class LoginScreenTest {
 
         verifyBlocking(repositorio) { procesarLoginExitoso(respuesta) }
         assertEquals(1, accesos)
+    }
+
+    /* Entrar con Google o con Microsoft (ADR 036). */
+
+    @Test
+    fun `sin proveedores configurados no hay botones de SSO`() {
+        repositorio.stub { onBlocking { getProveedoresSso() } doReturn Response.success(emptyList()) }
+        montar()
+        pantalla.waitForIdle()
+
+        pantalla.onNodeWithText(texto(R.string.login_entrar)).assertIsDisplayed()
+        pantalla.onNodeWithText(RuntimeEnvironment.getApplication().getString(R.string.sso_entrar_con, "Google"))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun `el boton de un proveedor abre el navegador en su URL, con el reto del verificador guardado`() {
+        val google = ProveedorSsoDTO("google", "Google", "https://api.nxtime-web.com/auth/sso/google/iniciar")
+        repositorio.stub { onBlocking { getProveedoresSso() } doReturn Response.success(listOf(google)) }
+        montar()
+        pantalla.waitForIdle()
+
+        pantalla.onNodeWithText(RuntimeEnvironment.getApplication().getString(R.string.sso_entrar_con, "Google"))
+            .performClick()
+        pantalla.waitForIdle()
+
+        val abierto = shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity
+        assertEquals(
+            google.inicio + "?cliente=app&reto=" + AccesoSso.retoDe(guarda.verificador!!),
+            abierto.dataString
+        )
     }
 }

@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**411 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**425 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -633,7 +633,7 @@ WebKit, y la carga por áreas).
 
 - **Los tests de interfaz de la app cubren cinco recorridos, no todas las
   pantallas**: entrar, una jornada entera, elegir contraseña con un código, el
-  panel de gestión y la navegación con la sesión caducada (18 tests con
+  panel de gestión y la navegación con la sesión caducada (20 tests con
   Robolectric, en la JVM, que el CI ejecuta con los demás). Del resto de
   pantallas se prueba el ViewModel, no lo que se pinta. Y Robolectric no dibuja:
   no ve si algo se solapa o se sale de la pantalla. Eso sigue siendo cosa de las

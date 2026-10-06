@@ -44,6 +44,19 @@ interface ApiService {
         @Body peticion: ConfirmarRegistroRequest
     ): Response<RespuestaAutenticacion>
 
+    /*
+     * Entrar con Google o con Microsoft (ADR 036). La app solo pregunta qué
+     * hay y canjea el código con el que vuelve del navegador: lo de en medio
+     * pasa entre el navegador y el servidor.
+     */
+    @GET("auth/sso/proveedores")
+    suspend fun getProveedoresSso(): Response<List<ProveedorSsoDTO>>
+
+    @POST("auth/sso/canjear")
+    suspend fun canjearSso(
+        @Body peticion: PeticionCanjeSso
+    ): Response<RespuestaAutenticacion>
+
     @POST("auth/refresh")
     suspend fun refrescarToken(
         @Body peticion: RefreshTokenRequest

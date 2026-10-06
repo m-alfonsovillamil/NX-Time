@@ -55,7 +55,14 @@ function paginaDeCuentas(proveedor, consulta) {
   const enlaces = CUENTAS[proveedor]
     .map((c) => `<li><a href="/${proveedor}/elegir?cuenta=${c.id}&amp;${escapar(consulta)}">${escapar(c.nombre)}</a></li>`)
     .join('');
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Elige una cuenta</title></head>
+  // Con `viewport` y sin oferta de traducción: también se usa desde el navegador
+  // de un emulador de Android, para probar la app, y allí la página salía
+  // diminuta y tapada por los avisos de Chrome. Por eso los enlaces van a media
+  // pantalla y son grandes.
+  return `<!doctype html><html lang="es" translate="no"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="google" content="notranslate">
+<title>Elige una cuenta</title>
+<style>body{font:18px/1.4 sans-serif;margin:0;padding:38vh 24px 24px}li,p{margin:0 0 28px}a{display:block;padding:12px 0}</style></head>
 <body><h1>Elige una cuenta (${proveedor} de mentira)</h1><ul>${enlaces}</ul>
 <p><a href="/${proveedor}/elegir?cuenta=cancelar&amp;${escapar(consulta)}">Cancelar</a></p></body></html>`;
 }
