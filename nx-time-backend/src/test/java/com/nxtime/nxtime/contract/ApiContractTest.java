@@ -3253,20 +3253,32 @@ class ApiContractTest {
         //
         // Un correo distinto en cada intento: desde el ADR 034, a partir del
         // quinto fallo contra una misma cuenta hay que esperar, y eso es otro
-        // límite. Y quince intentos y no once: el cupo se rellena a uno cada
-        // seis segundos, y cada intento fallido cuesta un BCrypt.
+        // límite.
+        //
+        // Se mira si ALGUNO fue rechazado, no si lo fue el último. El cupo se
+        // rellena a uno cada seis segundos y cada intento fallido cuesta un
+        // BCrypt: en un CI lento, el decimoquinto llegaba a veces justo
+        // después de un relleno y entraba, con el undécimo ya rechazado. El
+        // test fallaba una de cada muchas veces sin que nada estuviera roto
+        // (#151 y #156). Treinta intentos de tope: para que ninguno fuera
+        // rechazado, veinte seguidos tendrían que tardar más de seis segundos.
         HttpHeaders headers = jsonHeaders();
         headers.set("X-Forwarded-For", "203.0.113.55");
 
-        ResponseEntity<String> ultima = null;
-        for (int i = 0; i < 15; i++) {
+        boolean rechazado = false;
+        for (int i = 0; i < 30 && !rechazado; i++) {
             Map<String, Object> credencialesFalsas =
                     mapOf("email", "nadie" + i + "@nxtime.test", "contrasena", "loquesea");
-            ultima = rest.postForEntity(url("/auth/login"),
+            ResponseEntity<String> respuesta = rest.postForEntity(url("/auth/login"),
                     new HttpEntity<>(toJson(credencialesFalsas), headers), String.class);
+            rechazado = respuesta.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS;
+            // Hasta el rechazo, lo que hay es un login fallido y nada más.
+            if (!rechazado) {
+                assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            }
         }
 
-        assertThat(ultima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(rechazado).as("ningún intento de treinta fue rechazado con un 429").isTrue();
     }
 
     // ------------------------------------------------------------------
