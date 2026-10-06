@@ -232,7 +232,7 @@ function Detalle({ id, alVolver }: { id: number; alVolver: () => void }) {
                 {p.activo !== false && <Boton onClick={() => setAsignando(true)}>{D.asignar}</Boton>}
               </div>
               {asignaciones.length === 0 ? (
-                <p className="nx-sutil">{D.sinAsignaciones}</p>
+                <Vacio icono="grupo" titulo={D.sinAsignaciones} />
               ) : (
                 <ul className="nx-lista-incidencias" aria-label={D.quienHaEstado}>
                   {asignaciones.map((a) => (
@@ -259,7 +259,7 @@ function Detalle({ id, alVolver }: { id: number; alVolver: () => void }) {
             <section className="nx-tarjeta" aria-labelledby="proyecto-horas">
               <NavegadorDeMes mes={mes} id="proyecto-horas" titulo={D.horasDelMes(mesYAnio(mes.anio, mes.mes).toLowerCase())} />
               {horas.length === 0 ? (
-                <p className="nx-sutil">{D.sinHoras}</p>
+                <Vacio icono="reloj" titulo={D.sinHoras} />
               ) : (
                 <Barras filas={horas.map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', valor: h.minutos ?? 0 }))} />
               )}
@@ -337,7 +337,7 @@ function HorasPorProyecto() {
       <EstadoDeConsulta consulta={horas} cargando={<Esqueleto lineas={3} />}>
         {(h) =>
           (h.proyectos ?? []).length === 0 ? (
-            <p className="nx-sutil">{P.horas.vacio}</p>
+            <Vacio icono="proyecto" titulo={P.horas.vacio} />
           ) : (
             <Barras filas={(h.proyectos ?? []).map((x) => ({ clave: x.proyectoId ?? 0, texto: `${x.codigo ?? ''} · ${x.nombre ?? ''}`, valor: x.minutos ?? 0 }))} />
           )
@@ -377,7 +377,7 @@ export function Proyectos() {
   ];
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera nx-cabecera--con-acciones">
         <h1>{P.titulo}</h1>
         {abierto === null ? (

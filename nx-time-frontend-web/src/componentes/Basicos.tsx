@@ -187,9 +187,11 @@ export type Tono = 'neutro' | 'exito' | 'aviso' | 'error' | 'info';
 /**
  * El estado de algo en una palabra: «Pendiente», «Aprobada», «En disputa».
  *
- * Con borde y sin relleno: los colores de estado de `ColoresJornada` están
- * pensados para leerse sobre la superficie, y así mantienen el contraste en
- * los dos temas sin inventar un par de colores nuevo para cada tono.
+ * Rellena con un tinte suave de su color (desde el 5/10/2026; antes era solo
+ * un borde, y en una tabla se perdía entre las líneas de separación). El
+ * texto sigue siendo el color de estado de `ColoresJornada`, pensado para
+ * leerse sobre la superficie: el tinte es un 14 % de ese mismo color sobre
+ * ella, y el contraste apenas baja (lo vigila axe en los dos temas).
  */
 export function Insignia({ tono = 'neutro', children }: { tono?: Tono; children: ReactNode }) {
   return <span className={`nx-insignia nx-insignia--${tono}`}>{children}</span>;

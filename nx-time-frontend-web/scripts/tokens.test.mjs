@@ -17,12 +17,21 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { aHexCss, aNombreCss, leerColores, leerColoresDeJornada, leerTipografia } from './tokens.mjs';
+import {
+  aHexCss,
+  aNombreCss,
+  aSombra,
+  leerColores,
+  leerColoresDeJornada,
+  leerFormas,
+  leerTipografia,
+} from './tokens.mjs';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const TEMA = resolve(AQUI, '..', '..', 'nx-time-frontend-android', 'src', 'main', 'java', 'com', 'nxtime', 'app', 'ui', 'theme');
 const COLOR_KT = readFileSync(join(TEMA, 'Color.kt'), 'utf8');
 const TYPE_KT = readFileSync(join(TEMA, 'Type.kt'), 'utf8');
+const SHAPE_KT = readFileSync(join(TEMA, 'Shape.kt'), 'utf8');
 
 describe('aNombreCss', () => {
   it('quita el prefijo del tema y separa las mayúsculas', () => {
@@ -109,6 +118,28 @@ describe('leerTipografia', () => {
   });
 });
 
+describe('leerFormas', () => {
+  it('lee la escala entera de Shape.kt con nombres cortos', () => {
+    const { radios, tarjeta, elevacion } = leerFormas(SHAPE_KT);
+
+    expect([...radios.keys()]).toEqual(['xs', 's', 'm', 'l', 'xl']);
+    // Crece de menos a más: si no, alguien ha cambiado un rol por otro.
+    const valores = [...radios.values()];
+    expect([...valores].sort((a, b) => a - b)).toEqual(valores);
+    expect(tarjeta).toBeGreaterThan(0);
+    expect(elevacion).toBeGreaterThan(0);
+  });
+
+  it('falla si la escala cambia de forma, en vez de leer de menos', () => {
+    const mutilado = SHAPE_KT.replace('large = RoundedCornerShape(28.dp),', '');
+    expect(() => leerFormas(mutilado)).toThrow(/debería tener 5 formas/);
+  });
+
+  it('la sombra de 3 dp es la que la web ya tenía', () => {
+    expect(aSombra(3)).toBe('0 1px 3px rgb(0 0 0 / 12%)');
+  });
+});
+
 describe('el tema real entero', () => {
   /**
    * El test que justifica el fichero.
@@ -145,6 +176,14 @@ describe('el tema real entero', () => {
     for (const [nombre, valor] of claros) {
       expect(css, `falta --nx-${nombre} en tokens.css; ejecuta npm run tokens`)
         .toContain(`--nx-${nombre}: ${valor};`);
+    }
+  });
+
+  it('el CSS versionado contiene la escala de formas', () => {
+    const css = readFileSync(resolve(AQUI, '..', 'src', 'estilos', 'tokens.css'), 'utf8');
+    for (const [nombre, dp] of leerFormas(SHAPE_KT).radios) {
+      expect(css, `falta --nx-radio-${nombre} en tokens.css; ejecuta npm run tokens`)
+        .toContain(`--nx-radio-${nombre}: ${dp}px;`);
     }
   });
 

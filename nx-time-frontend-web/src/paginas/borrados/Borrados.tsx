@@ -137,7 +137,7 @@ export function Borrados() {
   );
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera nx-cabecera--con-acciones">
         <h1>{B.titulo}</h1>
         <Boton variante="secundario" onClick={() => setRegistrando(true)}>

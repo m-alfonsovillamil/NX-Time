@@ -24,7 +24,7 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { restaurarSesion } from '../api/cliente';
 import { haySesion, suscribirse } from '../api/sesion';
 import { useSesion, useSesionIniciada } from '../api/useSesion';
-import { Esqueleto } from '../componentes/Estados';
+import { EsqueletoDePagina } from '../componentes/Estados';
 import { ServidorDespertando } from '../componentes/ServidorDespertando';
 import { T } from '../i18n/es';
 import { Marco } from '../navegacion/Marco';
@@ -135,7 +135,7 @@ export function App() {
     return (
       <div className="nx-fondo">
         <ServidorDespertando />
-        <Esqueleto />
+        <EsqueletoDePagina />
       </div>
     );
   }
@@ -144,7 +144,7 @@ export function App() {
     <div className="nx-fondo">
       <ServidorDespertando />
       <PuenteDelServiceWorker />
-      <Suspense fallback={<Esqueleto />}>
+      <Suspense fallback={<EsqueletoDePagina />}>
         <Routes>
           <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />
           <Route path="/recuperar-acceso" element={dentro ? <Navigate to="/fichar" replace /> : <RecuperarAcceso />} />

@@ -13,6 +13,7 @@
 
 import { useState } from 'react';
 
+import { Cifra, Cifras } from '../../componentes/Cifra';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Esqueleto } from '../../componentes/Estados';
 import { fichar } from '../../i18n/es/fichar';
@@ -34,15 +35,6 @@ const H = fichar.horas;
 
 type Periodo = 'semana' | 'mes';
 
-function Cifra({ etiqueta, valor, detalle }: { etiqueta: string; valor: string; detalle?: string }) {
-  return (
-    <div className="nx-cifra">
-      <span className="nx-cifra__etiqueta">{etiqueta}</span>
-      <span className="nx-cifra__valor">{valor}</span>
-      {detalle !== undefined && <span className="nx-sutil">{detalle}</span>}
-    </div>
-  );
-}
 
 /** Los días del periodo, con lo que lleva la jornada abierta sumado a hoy. */
 export function conJornadaEnCurso(dias: readonly HorasDelDia[], hoy: string, minutosEnCurso: number): HorasDelDia[] {
@@ -117,33 +109,44 @@ function MisHoras({ minutosEnCurso }: { minutosEnCurso: number }) {
 
 export function Resumen({ minutosEnCurso }: { minutosEnCurso: number }) {
   const resumen = useResumen();
+  const semana = (resumen.data?.minutosSemana ?? 0) + minutosEnCurso;
+  const jornadaSemanal = resumen.data?.minutosJornadaSemanal ?? 0;
 
   return (
     <div className="nx-columna">
       {resumen.data !== undefined && (
         <section className="nx-tarjeta" aria-labelledby="titulo-resumen">
           <h2 id="titulo-resumen">{R.titulo}</h2>
-          <div className="nx-cifras">
-            <Cifra etiqueta={R.hoy} valor={minutos((resumen.data.minutosHoy ?? 0) + minutosEnCurso)} />
+          <Cifras>
+            <Cifra icono="reloj" etiqueta={R.hoy} valor={minutos((resumen.data.minutosHoy ?? 0) + minutosEnCurso)} />
             <Cifra
+              icono="semana"
               etiqueta={R.semana}
-              valor={minutos((resumen.data.minutosSemana ?? 0) + minutosEnCurso)}
-              {...((resumen.data.minutosJornadaSemanal ?? 0) > 0
-                ? { detalle: R.deJornada(minutos(resumen.data.minutosJornadaSemanal ?? 0)) }
+              valor={minutos(semana)}
+              {...(jornadaSemanal > 0
+                ? { detalle: R.deJornada(minutos(jornadaSemanal)), progreso: semana / jornadaSemanal }
                 : {})}
             />
-            <Cifra etiqueta={R.mes} valor={minutos((resumen.data.minutosMes ?? 0) + minutosEnCurso)} />
+            <Cifra icono="calendario" etiqueta={R.mes} valor={minutos((resumen.data.minutosMes ?? 0) + minutosEnCurso)} />
             {resumen.data.saldoVacaciones !== undefined && (
               <Cifra
+                icono="vacaciones"
                 etiqueta={R.vacaciones}
                 valor={String(resumen.data.saldoVacaciones.diasDisponibles ?? 0)}
                 detalle={R.vacacionesDetalle(
                   resumen.data.saldoVacaciones.diasDisponibles ?? 0,
                   resumen.data.saldoVacaciones.diasTotales ?? 0,
                 )}
+                {...((resumen.data.saldoVacaciones.diasTotales ?? 0) > 0
+                  ? {
+                      progreso:
+                        (resumen.data.saldoVacaciones.diasDisponibles ?? 0) /
+                        (resumen.data.saldoVacaciones.diasTotales ?? 1),
+                    }
+                  : {})}
               />
             )}
-          </div>
+          </Cifras>
           {(resumen.data.ausenciasPendientes ?? 0) > 0 && (
             <p className="nx-sutil">{R.ausenciasPendientes(resumen.data.ausenciasPendientes ?? 0)}</p>
           )}

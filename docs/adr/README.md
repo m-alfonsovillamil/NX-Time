@@ -44,3 +44,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [032](032-zona-horaria-por-empresa.md) | La zona horaria es de cada empresa, y los días se cuentan al leer |
 | [033](033-fichaje-en-kiosco.md) | Fichaje en kiosco: un dispositivo que solo ficha, tarjeta QR firmada y PIN por persona |
 | [034](034-endurecimiento-de-octubre.md) | Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había |
+| [035](035-sistema-visual-de-la-web.md) | El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas |

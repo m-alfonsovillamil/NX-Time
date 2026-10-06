@@ -13,27 +13,77 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { T } from '../i18n/es';
 import { Boton } from './Basicos';
+import { Icono, type NombreIcono } from './Icono';
 
 /**
  * Unas barras grises con la forma aproximada de lo que viene.
  *
+ * **Con la forma de lo que viene, y a su ancho**: unas líneas de texto, una
+ * rejilla de recuadros o las filas de una tabla. Antes era siempre una
+ * columna de 560 px centrada, y en una página ancha la carga terminaba con un
+ * salto: el bloque gris estrecho se convertía de golpe en una tabla de lado a
+ * lado (lo que Lighthouse cuenta como CLS).
+ *
  * El texto «Cargando…» sigue ahí, oculto a la vista: las barras son
  * decoración y un lector de pantalla necesita saber que algo está en marcha.
  */
-export function Esqueleto({ lineas = 3 }: { lineas?: number }) {
+export function Esqueleto({
+  lineas = 3,
+  forma = 'lineas',
+}: {
+  /** Las líneas de texto, las filas de la tabla o los recuadros de la rejilla. */
+  lineas?: number;
+  forma?: 'lineas' | 'tabla' | 'recuadros';
+}) {
   return (
-    <div className="nx-esqueleto" role="status">
+    <div className={`nx-esqueleto nx-esqueleto--${forma}`} role="status">
       <span className="nx-solo-lector">{T.app.cargando}</span>
-      {Array.from({ length: lineas }, (_, i) => (
+      {Array.from({ length: forma === 'tabla' ? lineas + 1 : lineas }, (_, i) => (
         <span key={i} className="nx-esqueleto__linea" aria-hidden="true" />
       ))}
     </div>
   );
 }
 
-export function Vacio({ titulo, detalle, accion }: { titulo: string; detalle?: string; accion?: ReactNode }) {
+/**
+ * Lo que se ve mientras llega el trozo de JS de una página: su cabecera y
+ * dos tarjetas, al ancho de una página de verdad.
+ */
+export function EsqueletoDePagina() {
+  return (
+    <div className="nx-pagina">
+      <div className="nx-esqueleto nx-esqueleto--pagina" role="status">
+        <span className="nx-solo-lector">{T.app.cargando}</span>
+        <span className="nx-esqueleto__linea nx-esqueleto__titulo" aria-hidden="true" />
+        <span className="nx-esqueleto__bloque" aria-hidden="true" />
+        <span className="nx-esqueleto__bloque" aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Una lista o un panel sin nada que enseñar.
+ *
+ * Con su icono en un círculo: un texto suelto en mitad de una tarjeta se leía
+ * como un error de maquetación más que como «aquí no hay nada, y está bien».
+ */
+export function Vacio({
+  titulo,
+  detalle,
+  accion,
+  icono = 'bandeja',
+}: {
+  titulo: string;
+  detalle?: string;
+  accion?: ReactNode;
+  icono?: NombreIcono;
+}) {
   return (
     <div className="nx-vacio">
+      <span className="nx-vacio__icono">
+        <Icono nombre={icono} />
+      </span>
       <p className="nx-vacio__titulo">{titulo}</p>
       {detalle !== undefined && <p className="nx-sutil">{detalle}</p>}
       {accion}

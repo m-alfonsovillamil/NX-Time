@@ -20,7 +20,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { proyectos } from '../../i18n/es/proyectos';
 import { diaLargo, mesYAnio } from '../../util/fechas';
@@ -101,7 +101,7 @@ export function CalendarioLaboral() {
   const primerDia = `${mes.anio}-${String(mes.mes).padStart(2, '0')}-01`;
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera nx-cabecera--con-acciones">
         <h1>{C.titulo}</h1>
         <Boton onClick={() => setEditando('nuevo')}>{C.anadir}</Boton>
@@ -114,7 +114,7 @@ export function CalendarioLaboral() {
           {(c) => {
             const festivos = [...(c.festivos ?? [])].sort((a, b) => (a.fecha ?? '').localeCompare(b.fecha ?? ''));
             return festivos.length === 0 ? (
-              <p className="nx-sutil">{C.vacio}</p>
+              <Vacio icono="festivo" titulo={C.vacio} />
             ) : (
               <ul className="nx-lista-incidencias" aria-labelledby="calendario-laboral-mes">
                 {festivos.map((f) => (

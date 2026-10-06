@@ -91,7 +91,7 @@ describe('mis ausencias', () => {
     api();
     pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
 
-    const disponibles = (await screen.findByText(A.saldo.disponibles)).parentElement;
+    const disponibles = (await screen.findByText(A.saldo.disponibles)).closest('.nx-cifra');
     expect(disponibles?.textContent).toContain(A.saldo.dias(12));
   });
 

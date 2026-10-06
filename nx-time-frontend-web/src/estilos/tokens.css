@@ -1,6 +1,6 @@
 /* GENERADO POR scripts/tokens.mjs. No editar a mano.
  *
- * La fuente es el tema de la app Android (ui/theme/Color.kt y Type.kt): el
+ * La fuente es el tema de la app Android (ui/theme/Color.kt, Type.kt y Shape.kt): el
  * color de un botón no puede tener dos verdades. Para cambiar algo, cámbialo
  * allí y ejecuta `npm run tokens`.
  *
@@ -37,6 +37,16 @@
   --nx-fs-label-large: 14px;
   --nx-lh-label-large: 20px;
   --nx-ff-label-large: var(--nx-font-cuerpo);
+
+  /* Las formas de Shape.kt: 8 / 16 / 20 / 28 / 36. Un radio que no esté en
+     esta escala es un radio que la app no tiene. */
+  --nx-radio-xs: 8px;
+  --nx-radio-s: 16px;
+  --nx-radio-m: 20px;
+  --nx-radio-l: 28px;
+  --nx-radio-xl: 36px;
+  --nx-radio-tarjeta: 20px;
+  --nx-sombra-tarjeta: 0 1px 3px rgb(0 0 0 / 12%);
 
   --nx-primary: #0e7c86;
   --nx-on-primary: #ffffff;

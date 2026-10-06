@@ -305,7 +305,7 @@ export function PaginaPerfil() {
   const lista = adjuntos.data ?? [];
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{P.titulo}</h1>
       </header>

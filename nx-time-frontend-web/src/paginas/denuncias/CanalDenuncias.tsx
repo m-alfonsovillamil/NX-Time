@@ -154,7 +154,7 @@ export function CanalDenuncias() {
   const bandeja = useQuery({ queryKey: [...CLAVE, 'bandeja'], queryFn: () => pedir(cliente.GET('/api/v1/denuncias', {})) });
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--estrecha">
       <header className="nx-cabecera">
         <h1>{C.titulo}</h1>
       </header>

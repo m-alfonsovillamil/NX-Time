@@ -159,7 +159,7 @@ function Candidaturas({ oferta }: { oferta: Oferta }) {
       <EstadoDeConsulta consulta={lista} cargando={<Esqueleto lineas={3} />}>
         {(cs) =>
           cs.length === 0 ? (
-            <p className="nx-sutil">{G.sinCandidaturas}</p>
+            <Vacio icono="maletin" titulo={G.sinCandidaturas} />
           ) : (
             <ul className="nx-lista-incidencias" aria-label={G.candidaturas}>
               {cs.map((c) => (
@@ -283,7 +283,7 @@ export function GestionOfertas() {
   ];
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera nx-cabecera--con-acciones">
         <h1>{abierta ? abierta.titulo : G.titulo}</h1>
         {abierta ? (

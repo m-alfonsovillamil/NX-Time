@@ -12,6 +12,7 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, Tarjeta, type Tono } from '../../componentes/Basicos';
+import { Cifra, Cifras } from '../../componentes/Cifra';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Tabla } from '../../componentes/Tabla';
@@ -63,24 +64,17 @@ function Saldo() {
   const s = saldo.data;
   return (
     <Tarjeta titulo={A.saldo.titulo(anio)}>
-      <div className="nx-cifras">
-        <div className="nx-cifra">
-          <span className="nx-cifra__etiqueta">{A.saldo.disponibles}</span>
-          <span className="nx-cifra__valor">{A.saldo.dias(s.diasDisponibles ?? 0)}</span>
-        </div>
-        <div className="nx-cifra">
-          <span className="nx-cifra__etiqueta">{A.saldo.consumidos}</span>
-          <span className="nx-cifra__valor">{A.saldo.dias(s.diasConsumidos ?? 0)}</span>
-        </div>
-        <div className="nx-cifra">
-          <span className="nx-cifra__etiqueta">{A.saldo.pendientes}</span>
-          <span className="nx-cifra__valor">{A.saldo.dias(s.diasPendientes ?? 0)}</span>
-        </div>
-        <div className="nx-cifra">
-          <span className="nx-cifra__etiqueta">{A.saldo.totales}</span>
-          <span className="nx-cifra__valor">{A.saldo.dias(s.diasTotales ?? 0)}</span>
-        </div>
-      </div>
+      <Cifras>
+        <Cifra
+          icono="vacaciones"
+          etiqueta={A.saldo.disponibles}
+          valor={A.saldo.dias(s.diasDisponibles ?? 0)}
+          {...((s.diasTotales ?? 0) > 0 ? { progreso: (s.diasDisponibles ?? 0) / (s.diasTotales ?? 1) } : {})}
+        />
+        <Cifra icono="hecho" etiqueta={A.saldo.consumidos} valor={A.saldo.dias(s.diasConsumidos ?? 0)} />
+        <Cifra icono="horas-extra" etiqueta={A.saldo.pendientes} valor={A.saldo.dias(s.diasPendientes ?? 0)} />
+        <Cifra icono="calendario" etiqueta={A.saldo.totales} valor={A.saldo.dias(s.diasTotales ?? 0)} />
+      </Cifras>
     </Tarjeta>
   );
 }
@@ -249,7 +243,7 @@ export function Ausencias() {
   const [solicitando, setSolicitando] = useState(false);
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{A.titulo}</h1>
         <Boton onClick={() => setSolicitando(true)}>{A.solicitar}</Boton>

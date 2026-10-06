@@ -20,14 +20,15 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { salir } from '../api/cliente';
 import { useSesion } from '../api/useSesion';
 import { Dialogo } from '../componentes/Dialogo';
-import { Esqueleto } from '../componentes/Estados';
-import { Icono, type NombreIcono } from '../componentes/Icono';
+import { EsqueletoDePagina } from '../componentes/Estados';
+import { Icono } from '../componentes/Icono';
 import { Notificaciones } from '../componentes/Notificaciones';
 import { T } from '../i18n/es';
 import { Campana } from './Campana';
 import {
   barraInferior,
   disponibles,
+  ICONOS_DE_SUBGRUPO,
   menuAgrupado,
   menuPara,
   seccionDeRuta,
@@ -77,17 +78,6 @@ function guardarAbiertos(abiertos: Abiertos): void {
  * un GESTOR o un ADMIN no, y sale con solo el apartado de la página abierta.
  */
 const MENU_CORTO = 12;
-
-const ICONOS_DE_SUBGRUPO: Readonly<Record<Subgrupo, NombreIcono>> = {
-  jornada: 'reloj',
-  ausencias: 'calendario',
-  'en-la-empresa': 'documento',
-  cuenta: 'persona',
-  equipo: 'grupo',
-  organizacion: 'panel',
-  control: 'grafico',
-  administracion: 'escudo',
-};
 
 /**
  * El menú por grupos y apartados plegables. Un apartado con una sola entrada
@@ -197,6 +187,8 @@ export function Marco() {
   const menu = menuPara(sesion?.authorities ?? []);
 
   const { enBarra, conMas } = barraInferior(menu);
+  // El acento de la página (teal o índigo) sale de su grupo, como en la app.
+  const zona = seccionDeRuta(useLocation().pathname)?.grupo;
 
   return (
     <div className="nx-marco">
@@ -217,9 +209,9 @@ export function Marco() {
         </div>
       </header>
 
-      <main id="contenido" className="nx-contenido" tabIndex={-1}>
+      <main id="contenido" className="nx-contenido" tabIndex={-1} data-zona={zona}>
         {/* Cada página es un trozo de JS aparte: mientras llega, su esqueleto. */}
-        <Suspense fallback={<Esqueleto />}>
+        <Suspense fallback={<EsqueletoDePagina />}>
           <Outlet />
         </Suspense>
       </main>

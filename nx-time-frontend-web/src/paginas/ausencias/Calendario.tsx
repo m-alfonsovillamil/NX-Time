@@ -19,7 +19,7 @@ import { useState } from 'react';
 
 import { useSesion } from '../../api/useSesion';
 import { Boton, Insignia } from '../../componentes/Basicos';
-import { ErrorConReintento, Esqueleto } from '../../componentes/Estados';
+import { ErrorConReintento, Esqueleto, Vacio } from '../../componentes/Estados';
 import { ausencias as A } from '../../i18n/es/ausencias';
 import type { components } from '../../api/schema';
 import { diaLargo, diasDelRango, fechaCorta, hoyEnEmpresa, lunesDe, mesYAnio, sumarDias, ultimoDeMes } from '../../util/fechas';
@@ -93,7 +93,7 @@ export function Calendario() {
   const delElegido = ausenciasDelDia(lista, elegido);
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{C.titulo}</h1>
       </header>
@@ -219,7 +219,7 @@ export function Calendario() {
         <section className="nx-tarjeta">
           <h2>{C.festivosDelMes}</h2>
           {festivos.length === 0 ? (
-            <p className="nx-sutil">{C.sinFestivos}</p>
+            <Vacio icono="festivo" titulo={C.sinFestivos} />
           ) : (
             <ul className="nx-lista-simple">
               {festivos.map((f) => (

@@ -53,6 +53,22 @@ export const SUBGRUPOS: Readonly<Record<Grupo, readonly Subgrupo[]>> = {
   gestion: ['equipo', 'organizacion', 'control', 'administracion'],
 };
 
+/**
+ * El icono de cada apartado plegable. Distinto de los de sus secciones: un
+ * apartado y su primera entrada con el mismo dibujo se leen como una entrada
+ * repetida (lo comprueba el test).
+ */
+export const ICONOS_DE_SUBGRUPO: Readonly<Record<Subgrupo, NombreIcono>> = {
+  jornada: 'lapso',
+  ausencias: 'vacaciones',
+  'en-la-empresa': 'edificio',
+  cuenta: 'persona',
+  equipo: 'grupo',
+  organizacion: 'organizar',
+  control: 'control',
+  administracion: 'escudo',
+};
+
 export interface Seccion {
   /** Sin barra inicial. Si la sección es destino de algún aviso, es ese destino tal cual. */
   ruta: string;
@@ -123,42 +139,42 @@ export const SECCIONES: readonly Seccion[] = [
   /* ---- Lo mío ---- */
   { ruta: 'fichar', etiqueta: S.fichar, icono: 'reloj', grupo: 'personal', subgrupo: 'jornada', enMenu: true, principal: true, pagina: Fichar },
   { ruta: 'historial', etiqueta: S.historial, icono: 'historial', grupo: 'personal', subgrupo: 'jornada', enMenu: true, principal: true, pagina: Historial },
-  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'calendario', grupo: 'personal', subgrupo: 'ausencias', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
+  { ruta: 'ausencias', etiqueta: S.ausencias, icono: 'ausencia', grupo: 'personal', subgrupo: 'ausencias', requiere: 'ausencia:leer', enMenu: true, principal: true, pagina: Ausencias },
   { ruta: 'calendario', etiqueta: S.calendario, icono: 'calendario', grupo: 'personal', subgrupo: 'ausencias', requiere: 'calendario:leer', enMenu: true, principal: true, pagina: Calendario },
   { ruta: 'avisos', etiqueta: S.avisos, icono: 'campana', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Avisos },
   { ruta: 'perfil', etiqueta: S.perfil, icono: 'persona', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Perfil },
-  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'persona', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Ajustes },
-  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'calendario', grupo: 'personal', subgrupo: 'jornada', requiere: 'cuadrante:leer', enMenu: true, pagina: MiCuadrante },
+  { ruta: 'ajustes', etiqueta: S.ajustes, icono: 'ajustes', grupo: 'personal', subgrupo: 'cuenta', enMenu: false, pagina: Ajustes },
+  { ruta: 'cuadrante', etiqueta: S.cuadrante, icono: 'semana', grupo: 'personal', subgrupo: 'jornada', requiere: 'cuadrante:leer', enMenu: true, pagina: MiCuadrante },
   // Lo propio y, con `cuadrante:incidencias:revisar`, la bandeja del equipo:
   // la misma página, como en Android. Por eso no pide permiso para entrar.
-  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Incidencias },
-  { ruta: 'firmas', etiqueta: S.firmas, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Firmas },
-  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'reloj', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: HorasExtra },
-  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'documento', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Correcciones },
-  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'documento', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'oferta:leer', enMenu: true, pagina: Ofertas },
-  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'documento', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'candidatura:crear', enMenu: false, pagina: MisCandidaturas },
-  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'escudo', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
+  { ruta: 'incidencias', etiqueta: S.incidencias, icono: 'incidencia', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Incidencias },
+  { ruta: 'firmas', etiqueta: S.firmas, icono: 'firma', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Firmas },
+  { ruta: 'horas-extra', etiqueta: S.horasExtra, icono: 'horas-extra', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: HorasExtra },
+  { ruta: 'correcciones/pendientes', etiqueta: S.correcciones, icono: 'correccion', grupo: 'personal', subgrupo: 'jornada', enMenu: true, pagina: Correcciones },
+  { ruta: 'ofertas', etiqueta: S.ofertas, icono: 'maletin', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'oferta:leer', enMenu: true, pagina: Ofertas },
+  { ruta: 'mis-candidaturas', etiqueta: S.misCandidaturas, icono: 'maletin', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'candidatura:crear', enMenu: false, pagina: MisCandidaturas },
+  { ruta: 'denuncias', etiqueta: S.denuncias, icono: 'denuncia', grupo: 'personal', subgrupo: 'en-la-empresa', requiere: 'denuncia:crear', enMenu: true, pagina: Denuncias },
 
   /* ---- Gestión ---- */
   { ruta: 'gestion', etiqueta: S.gestion, icono: 'panel', grupo: 'gestion', subgrupo: 'equipo', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelGestion },
-  { ruta: 'equipo', etiqueta: S.equipo, icono: 'grupo', grupo: 'gestion', subgrupo: 'equipo', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
-  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'calendario', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
-  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'calendario', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
+  { ruta: 'equipo', etiqueta: S.equipo, icono: 'supervisar', grupo: 'gestion', subgrupo: 'equipo', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: HistorialEquipo },
+  { ruta: 'ausencias-equipo/pendientes', etiqueta: S.ausenciasEquipo, icono: 'ausencia-aprobar', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: true, pagina: AusenciasEquipo },
+  { ruta: 'ausencias-equipo/resueltas', etiqueta: S.ausenciasEquipoResueltas, icono: 'ausencia-aprobar', grupo: 'gestion', subgrupo: 'equipo', requiere: 'ausencia:aprobar', enMenu: false, pagina: AusenciasResueltas },
   { ruta: 'empresa', etiqueta: S.empresa, icono: 'grafico', grupo: 'gestion', subgrupo: 'control', requiere: 'fichaje:leer:equipo', enMenu: true, pagina: PanelEmpresa },
-  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'grupo', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
-  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'grupo', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
-  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'documento', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
-  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'calendario', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
+  { ruta: 'plantilla', etiqueta: S.plantilla, icono: 'plantilla', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empleado:leer', enMenu: true, pagina: Plantilla },
+  { ruta: 'departamentos', etiqueta: S.departamentos, icono: 'departamento', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'departamento:gestionar', enMenu: true, pagina: Departamentos },
+  { ruta: 'proyectos', etiqueta: S.proyectos, icono: 'proyecto', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'proyecto:gestionar', enMenu: true, pagina: Proyectos },
+  { ruta: 'calendario-laboral', etiqueta: S.calendarioLaboral, icono: 'festivo', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'calendario:gestionar', enMenu: true, pagina: CalendarioLaboral },
   { ruta: 'informes', etiqueta: S.informes, icono: 'documento', grupo: 'gestion', subgrupo: 'control', requiere: 'informe:exportar', enMenu: true, pagina: Informes },
-  { ruta: 'borrados', etiqueta: S.borrados, icono: 'escudo', grupo: 'gestion', subgrupo: 'control', requiere: 'empleado:gestionar', enMenu: true, pagina: Borrados },
-  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'documento', grupo: 'gestion', subgrupo: 'administracion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
-  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'escudo', grupo: 'gestion', subgrupo: 'administracion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
-  { ruta: 'integridad', etiqueta: S.integridad, icono: 'escudo', grupo: 'gestion', subgrupo: 'control', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
-  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'calendario', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
-  { ruta: 'analitica', etiqueta: S.analitica, icono: 'grafico', grupo: 'gestion', subgrupo: 'control', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
-  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'documento', grupo: 'gestion', subgrupo: 'control', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
-  { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'panel', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
-  { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'documento', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
+  { ruta: 'borrados', etiqueta: S.borrados, icono: 'papelera', grupo: 'gestion', subgrupo: 'control', requiere: 'empleado:gestionar', enMenu: true, pagina: Borrados },
+  { ruta: 'gestion-ofertas', etiqueta: S.gestionOfertas, icono: 'anuncio', grupo: 'gestion', subgrupo: 'administracion', requiere: 'oferta:publicar', enMenu: true, pagina: GestionOfertas },
+  { ruta: 'canal-denuncias', etiqueta: S.canalDenuncias, icono: 'mazo', grupo: 'gestion', subgrupo: 'administracion', requiere: 'denuncia:instruir', enMenu: true, pagina: CanalDenuncias },
+  { ruta: 'integridad', etiqueta: S.integridad, icono: 'verificado', grupo: 'gestion', subgrupo: 'control', requiere: 'fichaje:auditoria', enMenu: true, pagina: Integridad },
+  { ruta: 'cuadrantes', etiqueta: S.cuadrantes, icono: 'cuadrantes', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'cuadrante:gestionar', enMenu: true, pagina: Cuadrantes },
+  { ruta: 'analitica', etiqueta: S.analitica, icono: 'tendencia', grupo: 'gestion', subgrupo: 'control', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
+  { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'visado', grupo: 'gestion', subgrupo: 'control', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
+  { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'empresa', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
+  { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'qr', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */

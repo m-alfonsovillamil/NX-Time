@@ -277,7 +277,7 @@ export function Plantilla() {
   ];
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera nx-cabecera--con-acciones">
         <h1>{P.titulo}</h1>
         <div className="nx-acciones-fila">

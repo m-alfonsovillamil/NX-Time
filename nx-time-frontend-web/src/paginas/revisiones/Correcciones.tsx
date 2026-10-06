@@ -222,7 +222,7 @@ export function Correcciones() {
   const [pestana, setPestana] = useState<'esperan' | 'pedidas'>('esperan');
 
   return (
-    <div className="nx-pagina nx-pagina--ancha">
+    <div className="nx-pagina">
       <header className="nx-cabecera">
         <h1>{C.titulo}</h1>
       </header>
