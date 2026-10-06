@@ -604,6 +604,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 33. [Fichaje en kiosco: un dispositivo que solo ficha, tarjeta QR firmada y PIN por persona](docs/adr/033-fichaje-en-kiosco.md)
 34. [Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había](docs/adr/034-endurecimiento-de-octubre.md)
 35. [El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas](docs/adr/035-sistema-visual-de-la-web.md)
+36. [Entrar con Google o con Microsoft: solo para quien ya tiene cuenta, y a quién se le cree el correo](docs/adr/036-entrar-con-google-o-microsoft.md)
 
 ---
 
@@ -628,6 +629,18 @@ la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
+
+**Hecho y sin encender: entrar con Google o con Microsoft**
+([ADR 036](docs/adr/036-entrar-con-google-o-microsoft.md)), en la web y en la
+app, para quien ya tiene cuenta: no crea usuarios, y la contraseña sigue
+valiendo. Lo que decide si alguien entra no es el correo sino la cuenta del
+proveedor, una vez vinculada; el correo solo sirve la primera vez, y solo si el
+proveedor lo garantiza (el de Microsoft no siempre). Está apagado hasta poner
+las credenciales de cada proveedor
+([`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md)), y **no se ha probado contra
+Google ni contra Microsoft de verdad**: sí de punta a punta, en un navegador y
+en un emulador de Android, contra un proveedor de mentira que firma sus
+propios ID token.
 
 **Pendiente:**
 

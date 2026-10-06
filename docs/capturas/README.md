@@ -17,7 +17,7 @@ que se ven salen de los usuarios y fichajes que siembra `DemoDataSeeder`.
 
 | Captura | Qué muestra |
 |---|---|
-| `01-login.png` | Pantalla de acceso |
+| `01-login.png` | Pantalla de acceso, con «Entrar con Google» y «Entrar con Microsoft» (ADR 036): solo salen si el servidor tiene configurado el proveedor |
 | `02-login-error-credenciales.png` | El `detail` del ProblemDetail del backend llegando a la pantalla, en vez del código HTTP |
 | `03-registro-empresa.png` | Alta de empresa y de su cuenta de administrador |
 | `04-fichar-sin-jornada.png` | "Mi jornada" sin jornada abierta: el botón es un círculo |
@@ -96,4 +96,4 @@ repiten con un comando**: `npm run capturas` en `nx-time-frontend-web/`
 | `web-09-kiosco.png` | El kiosco de fichaje en una tablet (ADR 033): espera una tarjeta QR por la cámara, o que alguien busque su nombre y teclee su PIN. La imagen es la cámara de prueba de Chromium |
 | `web-10-integridad.png` | La integridad de la auditoría a lo ancho: lo comprobado anoche en cifras, «comprobar ahora» con su resultado en verde, y al lado el «cómo funciona» en tres puntos. Antes eran dos tarjetas en una columna de 560 px |
 | `web-11-calendario-laboral.png` | El calendario laboral: el mes en rejilla con los festivos pintados y la lista al lado. Pulsar un día libre abre «nuevo festivo» con esa fecha |
-| `web-12-acceso.png` | La pantalla de entrar en escritorio, con el panel de marca |
+| `web-12-acceso.png` | La pantalla de entrar en escritorio, con el panel de marca y, debajo del formulario, los enlaces para entrar con Google o con Microsoft (ADR 036) |
