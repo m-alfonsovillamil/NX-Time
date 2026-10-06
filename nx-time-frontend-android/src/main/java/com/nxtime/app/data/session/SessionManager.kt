@@ -3,9 +3,7 @@ package com.nxtime.app.data.session
 import android.content.Context
 import android.content.SharedPreferences
 import com.nxtime.app.ui.util.DateFormats
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Clase auxiliar para guardar datos de sesión en el móvil
@@ -31,22 +29,26 @@ class SessionManager(
     private val prefs: SharedPreferences =
         context.getSharedPreferences("NXTIME_PREFS", Context.MODE_PRIVATE)
 
-    private val _sesionCaducada = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val senalDeCaducidad = SenalDeSesionCaducada()
 
     /**
-     * Avisa de que la sesión murió sola, sin que el usuario la cerrara.
+     * `true` mientras la sesión haya muerto sola (sin que el usuario la
+     * cerrara) y nadie haya llevado todavía al login.
      *
-     * Lo recoge el grafo de navegación para llevar al login. Antes no
-     * existía: el `Authenticator` de `RetrofitClient` borraba el token
-     * cuando el refresco fallaba y devolvía null, pero **ninguna pantalla
-     * se enteraba**, así que la app se quedaba en "Mi jornada" enseñando
-     * el nombre cacheado y un banner de error, sin forma de volver a
-     * entrar salvo cerrando sesión a mano.
+     * Lo mira el grafo de navegación. Antes no existía: el `Authenticator`
+     * de `RetrofitClient` borraba el token cuando el refresco fallaba y
+     * devolvía null, pero **ninguna pantalla se enteraba**, así que la app se
+     * quedaba en "Mi jornada" enseñando el nombre cacheado y un banner de
+     * error, sin forma de volver a entrar salvo cerrando sesión a mano.
      *
-     * `extraBufferCapacity = 1` para que emitir no bloquee ni se pierda
-     * el aviso si llega mientras nadie está recogiendo todavía.
+     * Es un estado y no un aviso de una sola vez (octubre de 2026): el aviso
+     * se perdía si la sesión caducaba antes de que hubiera pantalla, y la app
+     * volvía a quedarse exactamente así. Ver [SenalDeSesionCaducada].
      */
-    val sesionCaducada: SharedFlow<Unit> = _sesionCaducada.asSharedFlow()
+    val sesionCaducada: StateFlow<Boolean> = senalDeCaducidad.pendiente
+
+    /** El grafo de navegación ya ha llevado al login. */
+    fun caducidadAtendida() = senalDeCaducidad.atendida()
 
     companion object {
         private const val KEY_AUTH_TOKEN = "auth_token"
@@ -92,6 +94,8 @@ class SessionManager(
         // petición siguiente ya ve el token-- y escribe en segundo plano.
         editor.apply()
         DateFormats.fijarZona(zonaHoraria)
+        // Una sesión nueva: si quedaba una caducidad sin atender, ya no aplica.
+        senalDeCaducidad.atendida()
     }
 
     /**
@@ -198,7 +202,7 @@ class SessionManager(
     }
 
     /**
-     * Igual que [clearAuthData], pero además avisa por [sesionCaducada].
+     * Igual que [clearAuthData], pero además lo deja dicho en [sesionCaducada].
      *
      * Son dos métodos y no uno porque las dos salidas de la sesión no son
      * la misma cosa: cerrarla a mano ya navega al login desde la propia
@@ -208,6 +212,6 @@ class SessionManager(
      */
     fun expirarSesion() {
         clearAuthData()
-        _sesionCaducada.tryEmit(Unit)
+        senalDeCaducidad.avisar()
     }
 }
