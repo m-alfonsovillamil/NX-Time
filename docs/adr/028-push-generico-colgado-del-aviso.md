@@ -69,6 +69,15 @@ servidor, porque ya no tiene sesión; no hace falta: en el siguiente envío Goog
 responde `UNREGISTERED` y `PushSender` borra la fila. Y mientras tanto la app no
 enseña ningún push sin sesión.
 
+El registro es **una sola sentencia** (`INSERT … ON CONFLICT (token) DO UPDATE`),
+no «buscar y, si no está, insertar» (octubre de 2026). La app registra el token
+dos veces casi a la vez al encender los push —una por encenderlos y otra porque
+Google entrega el token en ese momento—, y con dos pasos las dos peticiones no
+encontraban nada, las dos insertaban y la segunda chocaba con el índice único:
+un 409 y un error en el log en una ruta que se anuncia idempotente. Por lo mismo,
+el tope de diez dispositivos por persona da de baja los viejos con un borrado
+que no cuenta filas: dos registros a la vez pueden querer quitar el mismo.
+
 Solo se borran los tokens con `UNREGISTERED` o `SENDER_ID_MISMATCH`, **no con
 `INVALID_ARGUMENT`**, aunque FCM también lo use para un token malformado: sale
 igual si el mensaje está mal construido. Tratarlo como token muerto borraría los
