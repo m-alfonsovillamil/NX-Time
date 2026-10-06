@@ -23,6 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -173,6 +177,77 @@ class PushIT {
                 .doesNotContain("token-2", "token-3");
     }
 
+    /**
+     * El fallo de octubre de 2026. Al encender los push, la app registra el
+     * token dos veces casi a la vez: una porque se acaba de encender y otra
+     * porque Google entrega el token en ese momento ({@code onNewToken}). El
+     * registro era «buscar y, si no está, insertar», así que las dos peticiones
+     * no encontraban nada, las dos insertaban, y la segunda chocaba con
+     * {@code uq_dispositivos_push_token}: un 409 y un ERROR en el log por algo
+     * que la propia API promete que es idempotente.
+     *
+     * Varias rondas porque es una carrera: una sola puede salir bien de
+     * casualidad.
+     */
+    @Test
+    @DisplayName("Registrar el mismo token dos veces a la vez no falla: queda una sola fila")
+    void registrarElMismoTokenALaVez() throws Exception {
+        for (int ronda = 0; ronda < 20; ronda++) {
+            String token = "token-a-la-vez-" + ronda;
+
+            List<Throwable> fallos = aLaVez(
+                    () -> pushDeviceService.registrar(ana, token, PushPlatform.ANDROID),
+                    () -> pushDeviceService.registrar(ana, token, PushPlatform.ANDROID));
+
+            assertThat(fallos).as("ronda %d", ronda).isEmpty();
+        }
+
+        assertThat(deviceRepository.findTokensDeUsuarioActivo(ana.getId()))
+                .as("una fila por token: el tope de diez solo deja las diez últimas rondas")
+                .hasSize(PushDeviceServiceImpl.DISPOSITIVOS_POR_PERSONA)
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("Dos personas registrando el mismo token a la vez: ninguna falla y el token es de una sola")
+    void dosPersonasElMismoTokenALaVez() throws Exception {
+        for (int ronda = 0; ronda < 20; ronda++) {
+            String token = "token-disputado-" + ronda;
+
+            List<Throwable> fallos = aLaVez(
+                    () -> pushDeviceService.registrar(ana, token, PushPlatform.ANDROID),
+                    () -> pushDeviceService.registrar(luis, token, PushPlatform.ANDROID));
+
+            assertThat(fallos).as("ronda %d", ronda).isEmpty();
+            boolean deAna = deviceRepository.findTokensDeUsuarioActivo(ana.getId()).contains(token);
+            boolean deLuis = deviceRepository.findTokensDeUsuarioActivo(luis.getId()).contains(token);
+            // El tope de diez puede haberse llevado el de alguna ronda anterior,
+            // pero el de esta acaba de registrarse: tiene que ser de una, y solo de una.
+            assertThat(deAna ^ deLuis).as("ronda %d: de Ana %s, de Luis %s", ronda, deAna, deLuis).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("Con el tope alcanzado, dos dispositivos nuevos a la vez no fallan al dar de baja el mismo viejo")
+    void dosNuevosALaVezConElTopeAlcanzado() throws Exception {
+        for (int i = 1; i <= PushDeviceServiceImpl.DISPOSITIVOS_POR_PERSONA; i++) {
+            pushDeviceService.registrar(ana, "token-viejo-" + i, PushPlatform.WEB);
+            Thread.sleep(2);
+        }
+
+        for (int ronda = 0; ronda < 10; ronda++) {
+            String uno = "token-nuevo-" + ronda + "-a";
+            String otro = "token-nuevo-" + ronda + "-b";
+
+            List<Throwable> fallos = aLaVez(
+                    () -> pushDeviceService.registrar(ana, uno, PushPlatform.WEB),
+                    () -> pushDeviceService.registrar(ana, otro, PushPlatform.WEB));
+
+            assertThat(fallos).as("ronda %d", ronda).isEmpty();
+            assertThat(deviceRepository.findTokensDeUsuarioActivo(ana.getId())).contains(uno, otro);
+        }
+    }
+
     @Test
     @DisplayName("Solo se da de baja un dispositivo propio")
     void bajaSoloDeLoPropio() {
@@ -220,6 +295,41 @@ class PushIT {
         return userRepository.save(User.builder()
                 .nombre(nombre).email(nombre.toLowerCase() + System.nanoTime() + "@test").contrasena("x")
                 .rol(Role.EMPLEADO).empresa(empresa).activo(true).build());
+    }
+
+    /**
+     * Lanza las tareas en el mismo instante, cada una en su hilo (y por tanto
+     * en su transacción), y devuelve lo que haya fallado.
+     */
+    private static List<Throwable> aLaVez(Runnable... tareas) throws InterruptedException {
+        List<Throwable> fallos = new CopyOnWriteArrayList<>();
+        CountDownLatch enPosicion = new CountDownLatch(tareas.length);
+        CountDownLatch salida = new CountDownLatch(1);
+        CountDownLatch terminadas = new CountDownLatch(tareas.length);
+        ExecutorService hilos = Executors.newFixedThreadPool(tareas.length);
+        try {
+            for (Runnable tarea : tareas) {
+                hilos.submit(() -> {
+                    try {
+                        enPosicion.countDown();
+                        salida.await();
+                        tarea.run();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } catch (Throwable e) {
+                        fallos.add(e);
+                    } finally {
+                        terminadas.countDown();
+                    }
+                });
+            }
+            assertThat(enPosicion.await(30, TimeUnit.SECONDS)).isTrue();
+            salida.countDown();
+            assertThat(terminadas.await(60, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            hilos.shutdownNow();
+        }
+        return fallos;
     }
 
     /** El push va por un hilo aparte: se espera a que llegue, con tope. */

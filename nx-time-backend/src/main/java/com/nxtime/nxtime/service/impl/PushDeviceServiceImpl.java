@@ -4,7 +4,6 @@ import com.nxtime.nxtime.domain.PushDevice;
 import com.nxtime.nxtime.domain.PushPlatform;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.repository.PushDeviceRepository;
-import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.PushDeviceService;
 import java.time.Instant;
 import java.util.Comparator;
@@ -31,40 +30,34 @@ public class PushDeviceServiceImpl implements PushDeviceService {
     static final int DISPOSITIVOS_POR_PERSONA = 10;
 
     private final PushDeviceRepository deviceRepository;
-    private final UserRepository userRepository;
 
-    public PushDeviceServiceImpl(PushDeviceRepository deviceRepository, UserRepository userRepository) {
+    public PushDeviceServiceImpl(PushDeviceRepository deviceRepository) {
         this.deviceRepository = deviceRepository;
-        this.userRepository = userRepository;
     }
 
     @Override
     public void registrar(User actor, String token, PushPlatform plataforma) {
         String limpio = token.strip();
-        User dueno = userRepository.getReferenceById(actor.getId());
-        deviceRepository.findByToken(limpio).ifPresentOrElse(
-                existente -> {
-                    if (existente.getUsuario().getId() != actor.getId()) {
-                        log.info("Un dispositivo de push cambia de dueño (usuario {} -> {}).",
-                                existente.getUsuario().getId(), actor.getId());
-                    }
-                    existente.setUsuario(dueno);
-                    existente.setPlataforma(plataforma);
-                    existente.setVistoEn(Instant.now());
-                },
-                () -> deviceRepository.save(PushDevice.builder()
-                        .usuario(dueno)
-                        .plataforma(plataforma)
-                        .token(limpio)
-                        .build()));
-        deviceRepository.flush();
+        // Solo para el log: quién lo tenía. Lo que decide de quién es el token
+        // es la sentencia de abajo, no esta lectura.
+        deviceRepository.findByToken(limpio)
+                .map(existente -> existente.getUsuario().getId())
+                .filter(anterior -> anterior != actor.getId())
+                .ifPresent(anterior -> log.info("Un dispositivo de push cambia de dueño (usuario {} -> {}).",
+                        anterior, actor.getId()));
+        deviceRepository.registrar(actor.getId(), plataforma.name(), limpio, Instant.now());
+
         List<PushDevice> suyos = deviceRepository.findByUsuario_IdOrderByRegistradoEnDesc(actor.getId());
         if (suyos.size() > DISPOSITIVOS_POR_PERSONA) {
             List<PushDevice> sobran = suyos.stream()
                     .sorted(Comparator.comparing(PushDevice::getVistoEn).reversed())
                     .skip(DISPOSITIVOS_POR_PERSONA)
                     .toList();
-            deviceRepository.deleteAll(sobran);
+            // En una sola sentencia y sin contar filas: si dos registros a la
+            // vez dan de baja el mismo dispositivo viejo, el segundo no borra
+            // nada y no pasa nada. Con deleteAll, Hibernate esperaba borrar una
+            // fila por entidad y el segundo registro fallaba entero.
+            deviceRepository.deleteAllInBatch(sobran);
             log.info("Usuario {}: {} dispositivos de push viejos dados de baja (tope {}).",
                     actor.getId(), sobran.size(), DISPOSITIVOS_POR_PERSONA);
         }
