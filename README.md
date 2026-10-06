@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**1171 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1213 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -643,6 +643,14 @@ WebKit, y la carga por áreas).
   para mandarlo después. Sin cobertura (una obra, un sótano) hay que esperar a
   tenerla o usar el kiosco de la entrada.
 - **Solo está en español**, en la app y en la web.
+- **Toda petición a la API carga dos veces a quien la hace**, una en el filtro
+  del token y otra en el servicio: cuatro consultas fijas antes de hacer nada.
+  Es deliberado (ADR 034: guardar esa entidad entre peticiones rompía el control
+  de versiones) y no crece con nada, pero es el coste más repetido del backend.
+  Medidos los cincuenta listados con `scripts/medir-consultas.mjs`, el único que
+  empeoraba con el tamaño de la empresa eran las ausencias del equipo, ya
+  arreglado; queda la bandeja de correcciones, que pide el reparto propuesto de
+  cada solicitud por separado y no se nota porque es una bandeja corta.
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que

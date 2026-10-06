@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -67,6 +68,14 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
     // Filtra por AbsenceRequest.empresa directamente (denormalizado
     // desde la Fase 3) en vez de navegar usuario.empresa.id: más
     // simple y aprovecha el índice (empresa_id, estado) del esquema.
+    //
+    // Con la persona y quien la resolvió en la MISMA consulta (plan del
+    // 6/10/2026): la bandeja pinta el nombre de cada una, y sin esto Hibernate
+    // iba a por ellas de una en una -- una consulta por persona, que con cuatro
+    // de demo no se notaba y con cuarenta peticiones eran cuarenta. Las fija
+    // ConsultasDeAusenciasIT. Las relaciones siguen siendo las de siempre: esto
+    // solo cambia CÓMO se traen aquí, no cuándo.
+    @EntityGraph(attributePaths = {"usuario", "aprobadoPor"})
     List<AbsenceRequest> findByEmpresa_IdAndEstado(long empresaId, AbsenceStatus estado);
 
     /**
@@ -74,7 +83,12 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
      * (Fase A7). Era la lista más grande del sistema sin ningún límite: todas
      * las ausencias decididas de la empresa desde siempre, y cada una contando
      * sus días hábiles al convertirse.
+     *
+     * Con la persona y quien la resolvió en la misma consulta, por lo mismo
+     * que arriba. Son relaciones a UNA fila, así que la página se sigue
+     * cortando en la base y no en memoria.
      */
+    @EntityGraph(attributePaths = {"usuario", "aprobadoPor"})
     Page<AbsenceRequest> findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
             long empresaId, AbsenceStatus estado, Pageable pagina);
 
