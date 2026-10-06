@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**393 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**411 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -528,9 +528,13 @@ empuja a escribir tests de *getters*.
 | El cronómetro y el patrón de truncar antes de agregar | `CronometroTest` |
 | Corrección de fichajes: hora española a UTC, en verano y en invierno | `CorregirFichajeViewModelTest` |
 | Leer instantáneas de auditoría viejas o rotas sin tirar la pantalla | `InstantaneaFichajeTest` |
+| **La interfaz**, pintada y tocada con Robolectric: entrar, una jornada entera, elegir contraseña con un código, el panel de gestión según los permisos, y la navegación con la sesión caducada | `interfaz/` |
 
-Se prueba lo que es lógica de la app, no lo que ya prueba el backend. **La
-interfaz no está cubierta**: ver las limitaciones conocidas al final.
+Se prueba lo que es lógica de la app, no lo que ya prueba el backend. Los de
+`interfaz/` montan la pantalla de verdad y la tocan como una persona; el de
+navegación arranca además la aplicación entera, con su sesión real, y solo el
+servidor es un doble. **Cubren cinco recorridos, no todas las pantallas**: ver
+las limitaciones conocidas al final.
 
 ---
 
@@ -627,13 +631,14 @@ WebKit, y la carga por áreas).
 
 **Pendiente:**
 
-- **La app no tiene tests de interfaz automatizados**: hay 393 tests de JVM
-  sobre los ViewModel, la red, la sesión y el formateo de fechas, que el CI
-  ejecuta junto con lint. La interfaz no la cubre ninguno. Las pantallas **sí
-  se han ejecutado**, en un emulador y contra la API real —de ahí salen las
-  capturas, y también fallos que solo se ven así, como quedarse en «Mi
-  jornada» con la sesión caducada—, pero esa comprobación es **manual**: nada
-  impide que una regresión pase el CI. La web sí los tiene (Playwright).
+- **Los tests de interfaz de la app cubren cinco recorridos, no todas las
+  pantallas**: entrar, una jornada entera, elegir contraseña con un código, el
+  panel de gestión y la navegación con la sesión caducada (18 tests con
+  Robolectric, en la JVM, que el CI ejecuta con los demás). Del resto de
+  pantallas se prueba el ViewModel, no lo que se pinta. Y Robolectric no dibuja:
+  no ve si algo se solapa o se sale de la pantalla. Eso sigue siendo cosa de las
+  capturas, que se sacan a mano en un emulador. La web sí lo tiene (Playwright,
+  con axe y la comprobación de que nada se sale por los lados).
 - **No se puede fichar sin conexión**: ni la app ni la web guardan el fichaje
   para mandarlo después. Sin cobertura (una obra, un sótano) hay que esperar a
   tenerla o usar el kiosco de la entrada.

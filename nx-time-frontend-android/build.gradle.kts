@@ -188,6 +188,24 @@ android {
         abortOnError = true
         checkReleaseBuilds = false
     }
+
+    /*
+     * Los tests de interfaz corren en la JVM con Robolectric (ver más abajo)
+     * y necesitan los recursos de verdad: sin esto, `stringResource` no
+     * encuentra ni un texto y la pantalla no se puede buscar por lo que dice.
+     */
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all {
+                // Robolectric toca por dentro los descriptores de fichero del
+                // JDK, y desde Java 17 ese paquete no se deja usar sin pedirlo:
+                // sin esto, en Windows cada test muere antes de empezar con
+                // «Failed to interact with raw FileDescriptor internals».
+                it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+            }
+        }
+    }
 }
 
 /*
@@ -235,6 +253,7 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.11.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
+    testImplementation(composeBom)
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -249,6 +268,9 @@ dependencies {
      */
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // La actividad vacía en la que `createComposeRule` monta la pantalla de
+    // un test. Solo en debug: no llega al APK que se publica.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // Estas tres se quedan deliberadamente por debajo de su última
     // versión: lifecycle 2.10+, activity 1.12+ y navigation 2.10 piden
@@ -349,6 +371,26 @@ dependencies {
     // Turbine: para afirmar sobre lo que va emitiendo un StateFlow.
     testImplementation("app.cash.turbine:turbine:1.2.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    /*
+     * Tests de interfaz sin emulador (octubre de 2026).
+     *
+     * Hasta aquí la interfaz no la cubría ningún test: los de arriba prueban
+     * los ViewModel, y que la pantalla enseñe lo que el ViewModel dice se
+     * comprobaba a mano en el emulador. Así se escapó la 1.11, que se quedaba
+     * en «Mi jornada» con la sesión caducada.
+     *
+     * Robolectric y no `androidTest`: corre en la JVM, dentro del
+     * `testDevDebugUnitTest` que el CI ya ejecuta, sin levantar un emulador
+     * en cada PR. A cambio no pinta de verdad (no vale para ver si algo se
+     * solapa); para eso siguen estando las capturas.
+     */
+    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // En la app, WorkManager lo arranca androidx.startup al crearse el
+    // proceso; en un test de Robolectric no hay tal arranque, y cerrar la
+    // sesión (que cancela el recordatorio de fichar) lo encontraba sin iniciar.
+    testImplementation("androidx.work:work-testing:2.11.2")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
