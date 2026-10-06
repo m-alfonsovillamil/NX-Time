@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +36,8 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.IncidenciaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
@@ -189,7 +190,14 @@ private fun TarjetaIncidencia(
                     modifier = Modifier.weight(1f)
                 )
                 estado?.let {
-                    AssistChip(onClick = {}, label = { Text(stringResource(it.etiqueta)) })
+                    Insignia(
+                        texto = stringResource(it.etiqueta),
+                        tono = when (it) {
+                            EstadoIncidencia.ACEPTADA -> TonoDeInsignia.EXITO
+                            EstadoIncidencia.RECHAZADA -> TonoDeInsignia.ERROR
+                            EstadoIncidencia.PENDIENTE, EstadoIncidencia.JUSTIFICADA -> TonoDeInsignia.AVISO
+                        }
+                    )
                 }
             }
 

@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -42,6 +40,8 @@ import com.nxtime.app.data.dto.CandidaturaDTO
 import com.nxtime.app.data.dto.OfertaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
@@ -201,16 +201,9 @@ private fun TarjetaOfertaGestion(
                     modifier = Modifier.weight(1f)
                 )
                 estado?.let {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(stringResource(it.etiqueta)) },
-                        colors = if (it == EstadoOferta.ABIERTA) {
-                            AssistChipDefaults.assistChipColors(
-                                labelColor = MaterialTheme.colorScheme.tertiary
-                            )
-                        } else {
-                            AssistChipDefaults.assistChipColors()
-                        }
+                    Insignia(
+                        texto = stringResource(it.etiqueta),
+                        tono = if (it == EstadoOferta.ABIERTA) TonoDeInsignia.EXITO else TonoDeInsignia.NEUTRO
                     )
                 }
             }

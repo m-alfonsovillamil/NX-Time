@@ -10,23 +10,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.Rule
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HowToReg
-import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.MoreTime
-import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.WorkOutline
+import androidx.compose.material.icons.filled.SupervisorAccount
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +49,7 @@ import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
+import com.nxtime.app.ui.components.IconoEnRecuadro
 import com.nxtime.app.ui.components.PantallaConBarra
 
 /**
@@ -141,13 +141,13 @@ fun PanelGestionScreen(
             CabeceraDeSeccion(stringResource(R.string.gestion_seccion_pendiente))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
-                icono = Icons.Default.PendingActions,
+                icono = Icons.Default.EventAvailable,
                 onClick = onIrPendientes,
                 contador = pendientes?.ausencias
             )
             OpcionGestion(
                 texto = stringResource(R.string.correcciones_titulo),
-                icono = Icons.Default.EditNote,
+                icono = Icons.AutoMirrored.Filled.Rule,
                 onClick = onIrCorrecciones,
                 contador = pendientes?.correcciones
             )
@@ -160,7 +160,7 @@ fun PanelGestionScreen(
             if (puedeRevisarIncidencias) {
                 OpcionGestion(
                     texto = stringResource(R.string.gestion_incidencias),
-                    icono = Icons.Default.EventBusy,
+                    icono = Icons.Default.Warning,
                     onClick = onIrIncidencias
                 )
             }
@@ -169,7 +169,7 @@ fun PanelGestionScreen(
             if (puedeGestionarBorrados) {
                 OpcionGestion(
                     texto = stringResource(R.string.gestion_borrados),
-                    icono = Icons.Default.DeleteForever,
+                    icono = Icons.Default.Delete,
                     onClick = onIrBorrados,
                     contador = pendientes?.borrados
                 )
@@ -188,12 +188,12 @@ fun PanelGestionScreen(
             CabeceraDeSeccion(stringResource(R.string.gestion_seccion_equipo))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_historial_equipo),
-                icono = Icons.AutoMirrored.Filled.ListAlt,
+                icono = Icons.Default.SupervisorAccount,
                 onClick = onIrHistorialEquipo
             )
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_resueltas),
-                icono = Icons.Default.EventAvailable,
+                icono = Icons.Default.History,
                 onClick = onIrResueltas
             )
             OpcionGestion(
@@ -226,13 +226,13 @@ fun PanelGestionScreen(
             if (puedeVerPanelEmpresa) {
                 OpcionGestion(
                     texto = stringResource(R.string.empresa_titulo),
-                    icono = Icons.Default.Insights,
+                    icono = Icons.Default.BarChart,
                     onClick = onIrPanelEmpresa
                 )
             }
             OpcionGestion(
                 texto = stringResource(R.string.proyectos_titulo),
-                icono = Icons.Default.WorkOutline,
+                icono = Icons.Default.Folder,
                 onClick = onIrProyectos
             )
             if (puedePublicarOfertas) {
@@ -245,7 +245,7 @@ fun PanelGestionScreen(
             if (puedeInstruirDenuncias) {
                 OpcionGestion(
                     texto = stringResource(R.string.gestion_canal_denuncias),
-                    icono = Icons.Default.Shield,
+                    icono = Icons.Default.Gavel,
                     onClick = onIrCanalDenuncias
                 )
             }
@@ -293,18 +293,15 @@ private fun OpcionGestion(
         androidx.compose.foundation.layout.Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icono,
-                contentDescription = null,
-                // Índigo, no el teal de siempre: es la señal de que has
-                // entrado en la zona de gestión. El resto de la app usa el
-                // primario, así que el cambio de familia de color se lee
-                // sin tener que anunciarlo.
-                tint = MaterialTheme.colorScheme.tertiary
-            )
+            // Índigo, no el teal de siempre: es la señal de que has entrado
+            // en la zona de gestión. El resto de la app usa el primario, así
+            // que el cambio de familia de color se lee sin tener que
+            // anunciarlo. En su recuadro, como en el menú de la web (ADR 035):
+            // el icono suelto se perdía en una lista de doce opciones.
+            IconoEnRecuadro(icono = icono, deGestion = true)
             Spacer(Modifier.size(16.dp))
             Text(
                 text = texto,

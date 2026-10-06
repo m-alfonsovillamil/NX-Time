@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -42,6 +40,8 @@ import com.nxtime.app.data.dto.BolsaHorasExtraDTO
 import com.nxtime.app.data.dto.HorasExtraDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.SeccionVacia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -270,15 +270,12 @@ private fun TarjetaHorasExtra(
                     modifier = Modifier.weight(1f)
                 )
                 estado?.let {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(stringResource(it.etiqueta)) },
-                        colors = if (it == EstadoHorasExtra.ACEPTADO) {
-                            AssistChipDefaults.assistChipColors(
-                                labelColor = MaterialTheme.colorScheme.tertiary
-                            )
-                        } else {
-                            AssistChipDefaults.assistChipColors()
+                    Insignia(
+                        texto = stringResource(it.etiqueta),
+                        tono = when (it) {
+                            EstadoHorasExtra.ACEPTADO -> TonoDeInsignia.EXITO
+                            EstadoHorasExtra.ABIERTO -> TonoDeInsignia.AVISO
+                            else -> TonoDeInsignia.NEUTRO
                         }
                     )
                 }

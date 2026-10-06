@@ -37,6 +37,8 @@ import com.nxtime.app.data.dto.CandidaturaDTO
 import com.nxtime.app.data.dto.OfertaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
@@ -214,17 +216,12 @@ private fun TarjetaMiCandidatura(candidatura: CandidaturaDTO) {
                     modifier = Modifier.weight(1f)
                 )
                 estado?.let {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(stringResource(it.etiqueta)) },
-                        colors = when (it) {
-                            EstadoCandidatura.SELECCIONADA -> AssistChipDefaults.assistChipColors(
-                                labelColor = MaterialTheme.colorScheme.tertiary
-                            )
-                            EstadoCandidatura.DESCARTADA -> AssistChipDefaults.assistChipColors(
-                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            else -> AssistChipDefaults.assistChipColors()
+                    Insignia(
+                        texto = stringResource(it.etiqueta),
+                        tono = when (it) {
+                            EstadoCandidatura.SELECCIONADA -> TonoDeInsignia.EXITO
+                            EstadoCandidatura.DESCARTADA -> TonoDeInsignia.NEUTRO
+                            else -> TonoDeInsignia.AVISO
                         }
                     )
                 }
