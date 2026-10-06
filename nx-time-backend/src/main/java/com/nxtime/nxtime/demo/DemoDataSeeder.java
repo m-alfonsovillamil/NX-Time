@@ -369,6 +369,18 @@ public class DemoDataSeeder implements CommandLineRunner {
 
             Instant horaEntrada = ZonedDateTime.of(fecha, LocalTime.of(9, 0).plusMinutes(jitterMinutos), MADRID_ZONE)
                     .toInstant();
+            if (esHoy && horaEntrada.isAfter(Instant.now())) {
+                // Sembrando de madrugada, las nueve de hoy todavía no han
+                // llegado: esa jornada estaría abierta EN EL FUTURO. Se cuela
+                // la primera de cualquier historial (ordenan por la entrada) y
+                // el cronómetro de quien entra cuenta un tiempo que no ha
+                // pasado. Tenía en rojo el e2e de todo PR lanzado entre la
+                // medianoche y las nueve de Madrid (7/10/2026): la spec del
+                // historial del equipo abría la traza de esta jornada, que no
+                // tiene, en vez de la que acababa de fichar. A esa hora, hoy
+                // nadie ha fichado todavía, que además es la verdad.
+                continue;
+            }
 
             TimeEntry.TimeEntryBuilder builder = TimeEntry.builder()
                     .usuario(empleado)
