@@ -30,7 +30,7 @@ src/
 ├── rutas/        rutas.tsx      guarda por authority, 403 y 404
 ├── paginas/      una carpeta por área (jornada, historial, ausencias, cuadrante,
 │                 cuadrantes, analitica, plantilla, empresa...); cada página, su trozo de JS
-├── componentes/  Basicos · Estados · Tabla · Dialogo · Pestanas · Barras · Notificaciones · Icono
+├── componentes/  Basicos · CabeceraDePagina · Cifra · Estados · Iniciales · Tabla · Dialogo · Pestanas · Barras · Notificaciones · Icono
 ├── i18n/es/      un fichero por área; ningún texto literal en los componentes
 ├── estilos/      tokens.css (generado) · base.css
 ├── push/         push.ts (encender, apagar, el token sigue a la sesión) · PuenteDelServiceWorker.tsx
@@ -45,6 +45,18 @@ scripts/          tokens.mjs · presupuesto.mjs · iconos.mjs · medir.mjs
 **Una sección nueva son dos pasos**: su línea en `navegacion/secciones.ts` y su
 página. El menú, la ruta y el destino de aviso salen solos, y un test compara
 el catálogo con `NoticeType.java` y `RoleAuthorities.java` del backend.
+
+Lo que la página nueva tiene que respetar del sistema visual
+([ADR 035](../docs/adr/035-sistema-visual-de-la-web.md)):
+
+- **Su icono es solo suyo**: otro test falla si dos entradas del menú comparten
+  dibujo. Los trazados están en `componentes/Icono.tsx`.
+- **Empieza por `<CabeceraDePagina>`**, que saca el icono y la miga de la URL.
+- **Ocupa el ancho** (`.nx-pagina`, hasta 1280 px) y se reparte con
+  `.nx-composicion--principal-lateral`, `--mitades` o `--lista-detalle`. Nada
+  de una columna estrecha centrada.
+- **Lo que va con el color de la zona usa `--nx-acento*`** (teal en «Lo mío»,
+  índigo en «Gestión»), y sobre un contenedor el texto es su `on-…-contenedor`.
 
 ## Los dos ficheros generados
 
@@ -61,7 +73,7 @@ movió `docs/openapi.json` era un PR de backend.
 | Fichero | Se genera desde | Comando |
 |---|---|---|
 | `src/api/schema.d.ts` | `../docs/openapi.json` | `npm run api:types` |
-| `src/estilos/tokens.css` | `ui/theme/Color.kt` y `Type.kt` de Android | `npm run tokens` |
+| `src/estilos/tokens.css` | `ui/theme/Color.kt`, `Type.kt` y `Shape.kt` de Android | `npm run tokens` |
 
 `npm run generar` hace los dos.
 

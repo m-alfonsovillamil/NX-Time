@@ -1794,6 +1794,11 @@ h2 {
   margin-top: 16px;
 }
 
+/* Y lo que la sigue (una nota al pie de las cifras), separado de ella. */
+.nx-cifras-contenedor + .nx-sutil {
+  margin-top: 12px;
+}
+
 .nx-cifras {
   list-style: none;
   margin: 0;
