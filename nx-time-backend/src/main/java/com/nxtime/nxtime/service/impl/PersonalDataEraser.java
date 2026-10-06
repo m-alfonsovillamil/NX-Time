@@ -61,6 +61,9 @@ class PersonalDataEraser {
         // la persona, y con la cuenta cerrada no hay nada que mandarles.
         int dispositivos = jdbc.update("DELETE FROM dispositivos_push WHERE usuario_id = ?", usuarioId);
         int codigos = jdbc.update("DELETE FROM codigos_acceso WHERE usuario_id = ?", usuarioId);
+        // Sus cuentas de Google o de Microsoft (ADR 036): identifican a la
+        // persona en un tercero, y sin ellas tampoco se entra por ahí.
+        int identidades = jdbc.update("DELETE FROM identidades_externas WHERE usuario_id = ?", usuarioId);
 
         // La cuenta: fuera la fecha de nacimiento, baja, y una contraseña que
         // nadie conoce (el hash de un UUID que no se guarda). Sin sesiones y
@@ -85,7 +88,8 @@ class PersonalDataEraser {
                 "avisos", avisos,
                 "sesiones", sesiones,
                 "dispositivosPush", dispositivos,
-                "codigosDeAcceso", codigos);
+                "codigosDeAcceso", codigos,
+                "identidadesExternas", identidades);
     }
 
     /**

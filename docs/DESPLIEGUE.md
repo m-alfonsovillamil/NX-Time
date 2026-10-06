@@ -280,6 +280,87 @@ Comprobación, en <https://nxtime-web.com> → Ajustes → **Notificaciones**:
 abrir NX Time desde ese icono y encenderlas en Ajustes desde ahí. Desde Safari
 sin instalar, Ajustes lo explica y no ofrece el botón: iOS no deja.
 
+### Entrar con Google o con Microsoft (SSO)
+
+Opcional, y **apagado mientras falte algo** (ADR 036). Un proveedor solo existe
+si están sus dos credenciales y las dos URL; si no, no hay botón ni en la web ni
+en la app, y el resto funciona igual. Se puede encender uno solo.
+
+| Variable | Valor |
+|---|---|
+| `SSO_URL_PUBLICA` | `https://api.nxtime-web.com` (va con su valor en `render.yaml`) |
+| `SSO_URL_WEB` | `https://nxtime-web.com` (va con su valor en `render.yaml`) |
+| `SSO_GOOGLE_CLIENT_ID` | el «ID de cliente» de Google |
+| `SSO_GOOGLE_CLIENT_SECRET` | su «secreto del cliente» |
+| `SSO_MICROSOFT_CLIENT_ID` | el «Id. de aplicación (cliente)» de Microsoft |
+| `SSO_MICROSOFT_CLIENT_SECRET` | el **Valor** del secreto, no su «Id. de secreto» |
+
+Las dos URL van **sin barra final**. Hay que escribirlas porque el backend,
+detrás del proxy de Render, no puede deducir su propia dirección, y la URL de
+vuelta que se registra en cada consola tiene que coincidir letra a letra:
+
+```
+https://api.nxtime-web.com/auth/sso/google/vuelta
+https://api.nxtime-web.com/auth/sso/microsoft/vuelta
+```
+
+> Los nombres de los menús son los de octubre de 2026. Las dos consolas los
+> cambian a menudo: si no aparece alguno, lo que hay que encontrar es lo que
+> dice cada paso, no el rótulo.
+
+**Google** (<https://console.cloud.google.com>, vale el mismo proyecto de
+Firebase):
+
+1. *APIs y servicios* → *Pantalla de consentimiento de OAuth*. Tipo **Externo**.
+   Nombre «NX Time», un correo de asistencia y `nxtime-web.com` como dominio
+   autorizado. Los permisos son los tres básicos (`openid`, `email`,
+   `profile`): no piden verificación de Google.
+2. En esa misma pantalla, **publicar la aplicación** («En producción»). En
+   pruebas solo entran las cuentas que se añadan a mano como usuarios de prueba.
+3. *Credenciales* → *Crear credenciales* → *ID de cliente de OAuth* →
+   **Aplicación web**. En *URI de redireccionamiento autorizados*, la de arriba
+   de Google. No hace falta ningún «origen de JavaScript».
+4. Copiar el ID de cliente y el secreto a las dos variables.
+
+**Microsoft** (<https://entra.microsoft.com>; hace falta una cuenta de Azure,
+que es gratuita):
+
+1. *Aplicaciones* → *Registros de aplicaciones* → *Nuevo registro*. Nombre «NX
+   Time». En tipos de cuenta, **«Cuentas en cualquier directorio organizativo y
+   cuentas personales de Microsoft»**. En *URI de redirección*, plataforma
+   **Web** y la de arriba de Microsoft.
+2. *Certificados y secretos* → *Nuevo secreto de cliente*. Copiar el **Valor**
+   en ese momento: no se vuelve a enseñar. **Caduca** (dos años como mucho):
+   apuntar la fecha, porque el día que caduque el botón de Microsoft deja de
+   funcionar y nada más avisa.
+3. *Configuración de token* → *Agregar notificación opcional* → tipo **ID** →
+   marcar **`email`** y **`xms_edov`**, y aceptar que añada los permisos de
+   Microsoft Graph que pide.
+
+   **Este paso no es opcional.** Microsoft no garantiza el correo de las
+   cuentas de una organización, y `xms_edov` es lo que dice que el dominio de
+   ese correo está verificado. Sin él, por el botón solo entran las cuentas
+   personales (outlook.com, hotmail.com); las del trabajo vuelven con «no hemos
+   podido comprobar que ese correo sea tuyo» y tienen que vincularse desde
+   Ajustes. Si `xms_edov` no sale en la lista, se añade a mano en *Manifiesto*,
+   dentro de `optionalClaims.idToken`.
+4. Copiar el *Id. de aplicación (cliente)* y el valor del secreto.
+
+**Comprobar**, tras desplegar:
+
+```bash
+curl -s https://api.nxtime-web.com/auth/sso/proveedores
+# [{"id":"google","nombre":"Google","inicio":"https://api.nxtime-web.com/auth/sso/google/iniciar"}, …]
+```
+
+Si sale `[]`, falta alguna variable. Si un proveedor responde «redirect_uri
+mismatch» (Google) o `AADSTS50011` (Microsoft), la URL registrada no es
+exactamente la de arriba: una barra final o `http` en vez de `https` bastan.
+
+Después, entrar de verdad: desde el escritorio, desde un iPhone y desde la app.
+Y con una cuenta **que no esté dada de alta** en NX Time: tiene que volver a la
+pantalla de acceso diciendo que no hay cuenta, no entrar.
+
 ## 2. Crear el servicio en Render
 
 1. *New* → *Blueprint*, apuntando a este repositorio: Render lee `render.yaml`.

@@ -157,6 +157,14 @@ dependencies {
      * Dependencias para JSON Web Tokens (JWT). 0.12.x desde la Fase 4
      * (antes 0.11.5, con la API setClaims/parserBuilder ya deprecada).
      */
+    /*
+     * Para validar el ID token de Google y de Microsoft (ADR 036): firma,
+     * claves públicas (JWKS), fechas. Es la pieza de Spring Security que hace
+     * eso y nada más; sin el starter de oauth2-client, que trae además un
+     * flujo de login con sesión de servidor que aquí no se usa.
+     */
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+
     implementation("io.jsonwebtoken:jjwt-api:0.12.7")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.7")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.7")

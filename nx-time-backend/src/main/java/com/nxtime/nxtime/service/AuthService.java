@@ -31,6 +31,26 @@ public interface AuthService {
     void logout(String refreshToken);
 
     /**
+     * Abre una sesión a quien ya se ha identificado por un camino que no es
+     * la contraseña: una cuenta de Google o de Microsoft (ADR 036).
+     *
+     * Es la misma sesión que la de un login --familia nueva, mismo access
+     * token, misma vida según el origen--, y por eso sale de aquí y no de
+     * quien hace el SSO: que haya dos sitios emitiendo sesiones es como acaban
+     * siendo distintas. <b>No comprueba quién es</b>; eso lo ha hecho ya quien
+     * llama. Solo que la cuenta siga de alta.
+     */
+    AuthenticationResponse abrirSesion(long usuarioId, com.nxtime.nxtime.domain.RefreshToken.Origen origen);
+
+    /**
+     * De quién es este refresh token, si sigue vivo. <b>No lo rota ni lo
+     * toca</b>: sirve para saber quién tiene abierta la sesión de la web cuando
+     * llega una navegación del navegador, que trae la cookie pero no el access
+     * token (vincular una cuenta de fuera, ADR 036).
+     */
+    java.util.Optional<Long> usuarioDelRefresh(String refreshToken);
+
+    /**
      * Revoca <b>todos</b> los refresh tokens del usuario: cierra la sesión
      * en todos los dispositivos, incluido aquel desde el que se pide.
      *

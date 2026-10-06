@@ -201,6 +201,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sso/canjear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * La app recoge su sesión
+         * @description Canjea el código con el que el navegador volvió a la app. Vale una vez y un minuto, y solo a quien presente el verificador con el que se empezó.
+         */
+        post: operations["canjear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/registro/confirmar": {
         parameters: {
             query?: never;
@@ -1623,6 +1643,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sso/{proveedor}/vuelta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La vuelta del proveedor
+         * @description Adonde el proveedor devuelve el navegador. Es la URL que hay que registrar en su consola.
+         */
+        get: operations["vuelta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sso/{proveedor}/iniciar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Empezar: manda el navegador al proveedor
+         * @description No es para llamarla con fetch: se navega a ella. Responde siempre con una redirección.
+         */
+        get: operations["iniciar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sso/proveedores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Con qué cuentas de fuera se puede entrar aquí
+         * @description Los proveedores configurados en este servidor. Vacío si no hay ninguno: la web y la app no pintan entonces ningún botón.
+         */
+        get: operations["proveedores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proyectos/horas": {
         parameters: {
             query?: never;
@@ -1735,6 +1815,26 @@ export interface paths {
          * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
          */
         get: operations["estado_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/identidades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis cuentas vinculadas
+         * @description Las cuentas de fuera con las que entro.
+         */
+        get: operations["misIdentidades"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2744,6 +2844,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/identidades/{proveedor}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Desvincular una cuenta
+         * @description Dejo de poder entrar con ella. La contraseña sigue valiendo.
+         */
+        delete: operations["desvincular"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje/{id}/pausas/{pausaId}": {
         parameters: {
             query?: never;
@@ -3027,11 +3147,9 @@ export interface components {
             token?: string;
             kiosco?: components["schemas"]["KioskInfo"];
         };
-        ConfirmRegistrationRequest: {
-            /** Format: email */
-            email: string;
+        SsoExchangeRequest: {
             codigo: string;
-            origen?: string;
+            verificador: string;
         };
         AuthenticationResponse: {
             token?: string;
@@ -3041,6 +3159,12 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
             zonaHoraria?: string;
+        };
+        ConfirmRegistrationRequest: {
+            /** Format: email */
+            email: string;
+            codigo: string;
+            origen?: string;
         };
         RegisterManagerRequest: {
             nombreEmpresa: string;
@@ -3669,6 +3793,11 @@ export interface components {
             /** Format: date-time */
             ultimaCorrecta?: string;
         };
+        SsoProviderDTO: {
+            id?: string;
+            nombre?: string;
+            inicio?: string;
+        };
         EmployeeHoursItem: {
             /** Format: int64 */
             usuarioId?: number;
@@ -3911,6 +4040,15 @@ export interface components {
             anio?: number;
             /** Format: int32 */
             diasTotales?: number;
+        };
+        LinkedIdentityDTO: {
+            proveedor?: string;
+            nombre?: string;
+            correo?: string;
+            /** Format: date-time */
+            vinculadaEn?: string;
+            /** Format: date-time */
+            ultimoAcceso?: string;
         };
         PaginaDTOScheduleIncidentResponse: {
             contenido?: components["schemas"]["ScheduleIncidentResponse"][];
@@ -5006,6 +5144,39 @@ export interface operations {
             };
             /** @description Ese secreto no es de ningún emparejamiento */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    canjear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description La sesión, como la de un login */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthenticationResponse"];
+                };
+            };
+            /** @description El código no vale, ha caducado o ya se usó */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9038,6 +9209,77 @@ export interface operations {
             };
         };
     };
+    vuelta: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                proveedor: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A la web o a la app, con la sesión hecha o con el motivo */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    iniciar: {
+        parameters: {
+            query?: {
+                /** @description 'app' si empieza la app Android; cualquier otra cosa, la web */
+                cliente?: string;
+                /** @description Solo la app: el SHA-256 en base64url de su verificador */
+                reto?: string;
+                /** @description '1' para añadir la cuenta a la sesión que ya hay abierta en la web */
+                vincular?: string;
+            };
+            header?: never;
+            path: {
+                proveedor: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Al proveedor, o de vuelta con el motivo si no se puede empezar */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    proveedores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proveedores */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SsoProviderDTO"][];
+                };
+            };
+        };
+    };
     horas: {
         parameters: {
             query?: {
@@ -9244,6 +9486,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MyKioskStatus"];
+                };
+            };
+        };
+    };
+    misIdentidades: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cuentas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LinkedIdentityDTO"][];
                 };
             };
         };
@@ -11281,6 +11543,35 @@ export interface operations {
             };
             /** @description Sin 'analitica:leer' o sin 'informe:exportar' */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    desvincular: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proveedor: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Desvinculada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No tenía ninguna de ese proveedor */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

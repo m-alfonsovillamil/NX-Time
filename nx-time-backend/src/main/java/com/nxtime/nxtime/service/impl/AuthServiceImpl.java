@@ -324,6 +324,22 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public AuthenticationResponse abrirSesion(long usuarioId, RefreshToken.Origen origen) {
+        User user = userRepository.findById(usuarioId)
+                .filter(User::isActivo)
+                .orElseThrow(() -> new BadCredentialsException("La cuenta no existe o está dada de baja."));
+        return buildAuthResponse(user, origen);
+    }
+
+    @Override
+    public java.util.Optional<Long> usuarioDelRefresh(String refreshToken) {
+        return refreshTokenRepository.findByTokenHash(hashDe(refreshToken))
+                .filter(RefreshToken::estaVivo)
+                .map(token -> token.getUsuario().getId());
+    }
+
+    @Override
+    @Transactional
     public void createEmployee(CreateEmployeeRequest request, User manager) {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException("El email ya está registrado.");
