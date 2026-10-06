@@ -54,6 +54,22 @@ afterEach(() => {
 });
 
 describe('los recientes', () => {
+  /* La salida de una jornada que cerró el sistema es un tope, no un dato: se dice. */
+  it('la jornada que cerró el sistema lleva su distintivo, y las demás no', async () => {
+    api({
+      'GET /api/v1/fichaje/historial': () => ({
+        contenido: [{ ...MARTES, cerradaPorElSistema: true }, { ...LUNES, cerradaPorElSistema: false }],
+        hayMas: false,
+      }),
+    });
+    pintar(<Historial />, { sesion: sesionDe('EMPLEADO') });
+
+    const tabla = await screen.findByRole('table', { name: H.tablaTitulo });
+    const filas = within(tabla).getAllByRole('row').slice(1);
+    expect(within(filas[0] as HTMLElement).getByText(H.cerradaPorElSistema)).toBeTruthy();
+    expect(within(filas[1] as HTMLElement).queryByText(H.cerradaPorElSistema)).toBeNull();
+  });
+
   it('pintan cada jornada, y la abierta sin total ni acciones', async () => {
     api();
     pintar(<Historial />, { sesion: sesionDe('EMPLEADO') });

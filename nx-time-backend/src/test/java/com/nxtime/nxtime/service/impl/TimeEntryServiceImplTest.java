@@ -349,7 +349,7 @@ class TimeEntryServiceImplTest {
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         TimeEntry entry = TimeEntry.builder().id(1L).usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build();
         when(timeEntryRepository.findTeamHistory(eq(empresa), any(Pageable.class))).thenReturn(Paginas.page(List.of(entry)));
-        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, null, 0L, 0L, null);
+        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, null, 0L, 0L, null, false);
         when(timeEntryMapper.toTeamDTO(entry)).thenReturn(dto);
 
         List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail(), null, PageRequest.of(0, 50)).getContent();

@@ -29,5 +29,12 @@ data class Registro(
      * El nombre del kiosco en que se abrió la jornada, o null si se abrió desde
      * la propia sesión (ADR 033). Para el distintivo del historial.
      */
-    val kiosco: String? = null
+    val kiosco: String? = null,
+
+    /**
+     * La cerró el sistema porque nadie fichó la salida: esa hora es un tope,
+     * no un dato. El historial lo dice con un distintivo, para que se pida la
+     * corrección.
+     */
+    val cerradaPorElSistema: Boolean = false
 )

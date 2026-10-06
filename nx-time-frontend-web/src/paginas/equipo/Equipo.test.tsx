@@ -79,6 +79,20 @@ describe('historial del equipo', () => {
     expect(screen.queryByRole('columnheader', { name: E.acciones })).toBeNull();
   });
 
+  it('la jornada que cerró el sistema lleva su distintivo', async () => {
+    simularApi({
+      'GET /api/v1/gestor/mis-empleados': () => EMPLEADOS,
+      'GET /api/v1/fichaje/gestor/historial': () => ({
+        contenido: [fila(10, 2, 'Javier', { cerradaPorElSistema: true }), fila(11, 3, 'Ana')],
+        hayMas: false,
+      }),
+    });
+    pintar(<HistorialEquipo />, { sesion: sesionDe('GESTOR') });
+
+    await screen.findByRole('cell', { name: 'Javier' });
+    expect(screen.getAllByText(historial.cerradaPorElSistema)).toHaveLength(1);
+  });
+
   /* ADR 015: la corrección del fichaje de otra persona la aprueba ella. */
   it('RRHH propone corregir el fichaje de otra persona, y se le explica quién lo aprueba', async () => {
     const llamadas = simularApi({

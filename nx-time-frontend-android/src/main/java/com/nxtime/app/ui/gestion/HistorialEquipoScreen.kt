@@ -46,6 +46,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.horaDeSalida
 import com.nxtime.app.ui.util.DateFormats
@@ -235,6 +237,13 @@ private fun TarjetaJornadaEquipo(
                     text = stringResource(R.string.kiosco_distintivo, kiosco),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (registro.cerradaPorElSistema) {
+                Spacer(Modifier.height(6.dp))
+                Insignia(
+                    texto = stringResource(R.string.historial_cerrada_por_el_sistema),
+                    tono = TonoDeInsignia.AVISO
                 )
             }
 

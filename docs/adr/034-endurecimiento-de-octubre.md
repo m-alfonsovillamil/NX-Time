@@ -148,6 +148,13 @@ confirmar: es más estricto y más fácil de explicar.
   ocupado. No se limpia con una tarea programada (la cuota de Neon, ver el
   plan de la web); si llega a molestar, se borra al registrar otra con ese
   nombre si la pendiente tiene más de unos días.
+
+  **Desde el 6/10/2026 sí se limpia**, a los dos días, y sin tarea nueva: lo
+  hace la de las 3:45 (`DataDeletionScheduler`), que ya corría cada noche, así
+  que la base no se despierta a ninguna hora más. Solo se borra la empresa que
+  no tiene a nadie más, y las claves `RESTRICT` impiden llevarse por delante
+  una cuenta que tuviera cualquier otra cosa
+  (`UnconfirmedRegistrationCleaner`).
 - Los tests de integración que registran una empresa por la API canjean el
   código que recogen del evento (`CodigosEnviados`), como haría una persona.
 

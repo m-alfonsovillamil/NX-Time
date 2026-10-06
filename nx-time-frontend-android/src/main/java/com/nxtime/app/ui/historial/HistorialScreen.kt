@@ -36,6 +36,8 @@ import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -308,6 +310,13 @@ private fun TarjetaJornada(
                     text = stringResource(R.string.kiosco_distintivo, kiosco),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (registro.cerradaPorElSistema) {
+                Spacer(Modifier.height(6.dp))
+                Insignia(
+                    texto = stringResource(R.string.historial_cerrada_por_el_sistema),
+                    tono = TonoDeInsignia.AVISO
                 )
             }
 

@@ -32,17 +32,18 @@ data class HistorialEquipoUiState(
      * es por páginas: si el filtro deja la pantalla corta, el final de la
      * lista sigue a la vista y va pidiendo más.
      *
-     * Se compara por nombre porque es el único dato común: el historial
-     * del equipo trae a cada empleado como `SimpleUserDTO`, que solo
-     * lleva `nombre`, mientras que la lista de empleados sí trae id y
-     * correo. Dos empleados homónimos en la misma empresa mezclarían por
-     * tanto sus jornadas al filtrar; arreglarlo de verdad pide añadir el
-     * id a `SimpleUserDTO` en el backend, que es un cambio de contrato y
-     * no cabe en esta migración.
+     * Se compara por id. Hasta octubre de 2026 se comparaba por nombre,
+     * porque era lo único que traía cada jornada, y dos personas con el
+     * mismo nombre en la empresa mezclaban sus jornadas al filtrar. El nombre
+     * solo queda de respaldo para una jornada que llegue sin `usuarioId`.
      */
     val registrosVisibles: List<RegistroEquipoDTO>
         get() = empleadoFiltrado
-            ?.let { filtro -> registros.filter { it.usuario.nombre == filtro.nombre } }
+            ?.let { filtro ->
+                registros.filter { registro ->
+                    registro.usuarioId?.let { it == filtro.id } ?: (registro.usuario.nombre == filtro.nombre)
+                }
+            }
             ?: registros
 }
 
