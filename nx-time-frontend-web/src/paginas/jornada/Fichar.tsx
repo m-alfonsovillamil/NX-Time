@@ -1,9 +1,10 @@
 /**
- * Mi jornada: el cronómetro, los botones de fichar, el proyecto, y al lado mi tiempo.
+ * Mi jornada: el cronómetro, los botones de fichar, el proyecto, y debajo mi tiempo.
  *
  * Es la `FicharScreen` de la app, con la hoja de detalle de tiempo ya abierta
- * al lado: en una pantalla ancha hay sitio para el cronómetro y el gráfico a
- * la vez, y en el móvil van uno debajo del otro.
+ * debajo. Fichar va arriba y a todo el ancho, que es a lo que se viene; en una
+ * pantalla ancha, las cifras y el gráfico se reparten la fila de debajo, y en
+ * el móvil va todo en una columna.
  *
  * **El estado de la jornada no se deduce, se pregunta.** `GET /fichaje/activo`
  * devuelve la jornada abierta o un 204, y `enPausa` viene del servidor. Llevar
@@ -164,47 +165,46 @@ export function Fichar() {
 
       {hoy.data?.laborable === false && <Aviso>{F.noLaborable(hoy.data.motivo ?? '')}</Aviso>}
 
-      <div className="nx-rejilla-jornada">
-        <div className="nx-columna">
-          <AvisoDeCuadrante />
-          <EstadoDeConsulta consulta={activa}>
-            {(j) => {
-              const estado = j === null ? 'parado' : j.enPausa === true ? 'en-pausa' : 'trabajando';
-              const texto = { parado: F.parado, 'en-pausa': F.enPausa, trabajando: F.trabajando }[estado];
-              const desde =
-                j === null
-                  ? F.sinJornada
-                  : j.enPausa === true && j.inicioPausaActual !== undefined
-                    ? F.enPausaDesde(hora(j.inicioPausaActual))
-                    : F.desde(hora(j.horaEntrada));
-              const puedeCambiar =
-                j !== null && j.enPausa !== true && disponibles.some((p) => p.id !== enCurso?.id);
+      <EstadoDeConsulta consulta={activa}>
+        {(j) => {
+          const estado = j === null ? 'parado' : j.enPausa === true ? 'en-pausa' : 'trabajando';
+          const texto = { parado: F.parado, 'en-pausa': F.enPausa, trabajando: F.trabajando }[estado];
+          const desde =
+            j === null
+              ? F.sinJornada
+              : j.enPausa === true && j.inicioPausaActual !== undefined
+                ? F.enPausaDesde(hora(j.inicioPausaActual))
+                : F.desde(hora(j.horaEntrada));
+          const puedeCambiar = j !== null && j.enPausa !== true && disponibles.some((p) => p.id !== enCurso?.id);
 
-              return (
-                <>
-                  <section className={`nx-tarjeta nx-jornada nx-jornada--${estado}`}>
-                    <p className="nx-jornada__estado">{texto}</p>
-                    <p className="nx-jornada__cronometro">{j === null ? '—' : duracion(segundos)}</p>
-                    <p className="nx-sutil">{desde}</p>
-                    {j !== null && (j.segundosPausaAcumulados ?? 0) > 0 && (
-                      <p className="nx-sutil">{F.pausaAcumulada(duracion(j.segundosPausaAcumulados ?? 0))}</p>
+          return (
+            <>
+              {/* Fichar es lo que se viene a hacer: ocupa el ancho de la página,
+                  con el cronómetro y los botones dentro. El resumen va debajo. */}
+              <section className={`nx-tarjeta nx-jornada nx-jornada--${estado}`}>
+                <p className="nx-jornada__estado">{texto}</p>
+                <p className="nx-jornada__cronometro">{j === null ? '—' : duracion(segundos)}</p>
+                <p className="nx-sutil">{desde}</p>
+                {j !== null && (j.segundosPausaAcumulados ?? 0) > 0 && (
+                  <p className="nx-sutil">{F.pausaAcumulada(duracion(j.segundosPausaAcumulados ?? 0))}</p>
+                )}
+                <AvisoDeCuadrante />
+                {j !== null && (enCurso !== undefined || disponibles.length > 0) && (
+                  <div className="nx-jornada__proyecto">
+                    <span>
+                      {enCurso !== undefined
+                        ? F.proyecto.enCurso(enCurso.codigo ?? '', enCurso.nombre ?? '')
+                        : F.proyecto.sin}
+                    </span>
+                    {puedeCambiar && (
+                      <Boton variante="texto" onClick={() => setEligiendo('cambiar')}>
+                        {F.proyecto.cambiar}
+                      </Boton>
                     )}
-                    {j !== null && (enCurso !== undefined || disponibles.length > 0) && (
-                      <div className="nx-jornada__proyecto">
-                        <span>
-                          {enCurso !== undefined
-                            ? F.proyecto.enCurso(enCurso.codigo ?? '', enCurso.nombre ?? '')
-                            : F.proyecto.sin}
-                        </span>
-                        {puedeCambiar && (
-                          <Boton variante="texto" onClick={() => setEligiendo('cambiar')}>
-                            {F.proyecto.cambiar}
-                          </Boton>
-                        )}
-                      </div>
-                    )}
-                  </section>
+                  </div>
+                )}
 
+                <div className="nx-jornada__acciones">
                   {error !== null && <Aviso>{error}</Aviso>}
 
                   <div className="nx-acciones">
@@ -222,7 +222,11 @@ export function Fichar() {
                     )}
                     {/* Del color de `ColoresJornada`, como el botón de la app: verde
                         para entrar, rojo para salir, ámbar si está en pausa. */}
-                    <Boton className={`nx-boton--fichar nx-boton--fichar-${estado}`} ocupado={ocupado} onClick={() => pulsarPrincipal(j)}>
+                    <Boton
+                      className={`nx-boton--fichar nx-boton--fichar-${estado}`}
+                      ocupado={ocupado}
+                      onClick={() => pulsarPrincipal(j)}
+                    >
                       {j === null ? F.entrar : F.salir}
                     </Boton>
                   </div>
@@ -236,32 +240,32 @@ export function Fichar() {
                       {F.pausa.boton}
                     </Boton>
                   )}
+                </div>
+              </section>
 
-                  <ConfirmarFin
-                    jornada={j}
-                    segundosTrabajados={segundos}
-                    abierto={confirmandoFin && j !== null}
-                    alConfirmar={() => fichar.mutate({ tipo: 'FIN' })}
-                    alCancelar={() => setConfirmandoFin(false)}
-                  />
-                  <ElegirProyecto
-                    modo={eligiendo}
-                    proyectos={proyectos.data}
-                    ocupado={fichar.isPending || cambiarProyecto.isPending}
-                    alElegir={(proyectoId) => {
-                      if (eligiendo === 'empezar') fichar.mutate({ tipo: 'INICIO', proyectoId });
-                      else if (j?.id !== undefined) cambiarProyecto.mutate({ fichajeId: j.id, proyectoId });
-                    }}
-                    alCancelar={() => setEligiendo(null)}
-                  />
-                </>
-              );
-            }}
-          </EstadoDeConsulta>
-        </div>
+              <ConfirmarFin
+                jornada={j}
+                segundosTrabajados={segundos}
+                abierto={confirmandoFin && j !== null}
+                alConfirmar={() => fichar.mutate({ tipo: 'FIN' })}
+                alCancelar={() => setConfirmandoFin(false)}
+              />
+              <ElegirProyecto
+                modo={eligiendo}
+                proyectos={proyectos.data}
+                ocupado={fichar.isPending || cambiarProyecto.isPending}
+                alElegir={(proyectoId) => {
+                  if (eligiendo === 'empezar') fichar.mutate({ tipo: 'INICIO', proyectoId });
+                  else if (j?.id !== undefined) cambiarProyecto.mutate({ fichajeId: j.id, proyectoId });
+                }}
+                alCancelar={() => setEligiendo(null)}
+              />
+            </>
+          );
+        }}
+      </EstadoDeConsulta>
 
-        <Resumen minutosEnCurso={jornada !== null ? Math.floor(segundos / 60) : 0} />
-      </div>
+      <Resumen minutosEnCurso={jornada !== null ? Math.floor(segundos / 60) : 0} />
 
       <ConfirmarNoLaborable
         motivo={noLaborable}

@@ -115,6 +115,9 @@ test.describe('escritorio', () => {
   // La última del escritorio: deja una jornada de segundos en el historial,
   // que no tiene que salir en la captura del historial del equipo.
   test('empleado: la jornada en marcha', async ({ page }) => {
+    // Más alta que las demás: fichar va arriba y el resumen debajo, y a 900 px
+    // la captura cortaba las cifras y el gráfico por la mitad.
+    await page.setViewportSize({ width: 1440, height: 1060 });
     await entrar(page, 'javier.lopez@techcorp.demo');
     const entrada = page.getByRole('button', { name: 'Fichar entrada' });
     const salida = page.getByRole('button', { name: 'Fichar salida' });
