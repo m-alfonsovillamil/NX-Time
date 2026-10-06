@@ -7,6 +7,8 @@ import com.nxtime.app.push.TokensDeFirebase
 import com.nxtime.app.push.RegistroDePush
 import com.nxtime.app.push.PreferenciasEnAjustes
 import android.app.Application
+import com.nxtime.app.data.sso.AccesoSso
+import com.nxtime.app.data.sso.VerificadorEnPreferencias
 import com.nxtime.app.data.network.ApiService
 import com.nxtime.app.data.network.ArranqueEnFrio
 import com.nxtime.app.data.network.RetrofitClient
@@ -43,6 +45,9 @@ class NxTimeApplication : Application() {
     /** Cuándo este móvil recibe push y cuándo deja de recibirlos (Fase B5). */
     lateinit var registroDePush: RegistroDePush
 
+    /** Entrar con Google o con Microsoft (ADR 036): el secreto de la ida y con qué se vuelve. */
+    lateinit var accesoSso: AccesoSso
+
     /**
      * Esta función se ejecuta 1 sola vez cuando la app arranca. Es el lugar perfecto para configurar nuestras herramientas.
      */
@@ -52,6 +57,7 @@ class NxTimeApplication : Application() {
 
         // 0. Los ajustes, lo primero: deciden si Sentry llega a arrancar.
         ajustes = Ajustes(this)
+        accesoSso = AccesoSso(VerificadorEnPreferencias(this))
 
         // 0.1. Sentry antes que el resto: un cierre mientras se monta la
         //      aplicación también tiene que llegar.

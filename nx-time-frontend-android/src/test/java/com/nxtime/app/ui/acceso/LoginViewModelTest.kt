@@ -5,6 +5,8 @@ import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.PeticionLogin
 import com.nxtime.app.data.dto.RespuestaAutenticacion
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.data.sso.AccesoSso
+import com.nxtime.app.data.sso.GuardaDelVerificador
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -30,7 +32,11 @@ class LoginViewModelTest {
     val reglaDispatcher = ReglaDispatcherPrincipal()
 
     private val repositorio: AuthRepository = mock()
-    private val viewModel by lazy { LoginViewModel(repositorio) }
+    // El SSO tiene sus tests (SsoEnElAccesoTest); aquí solo hace falta que exista.
+    private val sso = AccesoSso(object : GuardaDelVerificador {
+        override var verificador: String? = null
+    })
+    private val viewModel by lazy { LoginViewModel(repositorio, sso) }
 
     private val respuestaValida = RespuestaAutenticacion(
         token = "jwt",

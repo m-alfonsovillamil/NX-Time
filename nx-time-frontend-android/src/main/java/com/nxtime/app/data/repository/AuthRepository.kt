@@ -19,6 +19,12 @@ interface AuthRepository {
     suspend fun confirmarRegistro(email: String, codigo: String): Response<RespuestaAutenticacion>
     fun procesarLoginExitoso(authResponse: RespuestaAutenticacion)
 
+    /* Entrar con Google o con Microsoft (ADR 036) */
+    suspend fun getProveedoresSso(): Response<List<ProveedorSsoDTO>>
+
+    /** Canjea el código con el que el navegador volvió a la app. Si vale, la respuesta es la sesión. */
+    suspend fun canjearSso(codigo: String, verificador: String): Response<RespuestaAutenticacion>
+
     /* Códigos de acceso (ADR 014): recuperar la contraseña o elegirla la primera vez */
     suspend fun solicitarCodigoAcceso(email: String): Response<Unit>
     suspend fun restablecerContrasena(

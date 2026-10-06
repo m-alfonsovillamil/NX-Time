@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +41,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import android.content.ActivityNotFoundException
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
@@ -57,6 +63,24 @@ fun LoginScreen(
 
     LaunchedEffect(estado.accesoConcedido) {
         if (estado.accesoConcedido) onAccesoConcedido()
+    }
+
+    /*
+     * Entrar con Google o con Microsoft (ADR 036): se abre el navegador en una
+     * pestaña dentro de la app, y no un WebView. Google no deja entrar desde
+     * un WebView, y además en la pestaña la persona ve la dirección y tiene
+     * ya abiertas sus cuentas. Al terminar, el servidor la devuelve a la app
+     * por nxtime://sso (ver VueltaDeSsoActivity).
+     */
+    val contexto = LocalContext.current
+    LaunchedEffect(estado.abrirEnNavegador) {
+        val url = estado.abrirEnNavegador ?: return@LaunchedEffect
+        try {
+            CustomTabsIntent.Builder().build().launchUrl(contexto, url.toUri())
+            viewModel.navegadorAbierto()
+        } catch (e: ActivityNotFoundException) {
+            viewModel.sinNavegador()
+        }
     }
 
     Scaffold { padding ->
@@ -155,6 +179,21 @@ fun LoginScreen(
                     )
                 } else {
                     Text(stringResource(R.string.login_entrar))
+                }
+            }
+
+            if (estado.proveedoresSso.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
+                estado.proveedoresSso.forEach { proveedor ->
+                    OutlinedButton(
+                        onClick = { viewModel.entrarCon(proveedor) },
+                        enabled = !estado.cargando,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.sso_entrar_con, proveedor.nombre))
+                    }
                 }
             }
 

@@ -71,8 +71,8 @@ android {
          * el texto de asignar proyecto dice la regla de verdad (ADR 017: se
          * puede estar en varios a la vez, no dos veces en el mismo).
          */
-        versionCode = 13
-        versionName = "1.12"
+        versionCode = 14
+        versionName = "1.13"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*
@@ -268,6 +268,13 @@ dependencies {
      */
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    /*
+     * Pestañas del navegador dentro de la app, para entrar con Google o con
+     * Microsoft (ADR 036). No un WebView: Google lo rechaza, y en la pestaña
+     * la persona ve la dirección de la página en la que escribe su contraseña.
+     */
+    implementation("androidx.browser:browser:1.9.0")
     // La actividad vacía en la que `createComposeRule` monta la pantalla de
     // un test. Solo en debug: no llega al APK que se publica.
     debugImplementation("androidx.compose.ui:ui-test-manifest")
