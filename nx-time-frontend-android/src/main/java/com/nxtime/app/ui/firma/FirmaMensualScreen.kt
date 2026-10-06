@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +33,8 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.MesParaFirmarDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
@@ -141,23 +141,18 @@ private fun TarjetaMes(mes: MesParaFirmarDTO, firmando: Boolean, onFirmar: () ->
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                AssistChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            stringResource(
-                                when {
-                                    vigente -> R.string.firma_estado_firmado
-                                    invalidada -> R.string.firma_estado_invalidada
-                                    else -> R.string.firma_estado_pendiente
-                                }
-                            )
-                        )
-                    },
-                    colors = if (vigente) {
-                        AssistChipDefaults.assistChipColors(labelColor = MaterialTheme.colorScheme.tertiary)
-                    } else {
-                        AssistChipDefaults.assistChipColors()
+                Insignia(
+                    texto = stringResource(
+                        when {
+                            vigente -> R.string.firma_estado_firmado
+                            invalidada -> R.string.firma_estado_invalidada
+                            else -> R.string.firma_estado_pendiente
+                        }
+                    ),
+                    tono = when {
+                        vigente -> TonoDeInsignia.EXITO
+                        invalidada -> TonoDeInsignia.ERROR
+                        else -> TonoDeInsignia.AVISO
                     }
                 )
             }

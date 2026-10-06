@@ -41,7 +41,7 @@ que se ven salen de los usuarios y fichajes que siembra `DemoDataSeeder`.
 
 | Captura | Qué muestra |
 |---|---|
-| `15-panel-gestion.png` | Panel de gestión de un GESTOR. **No aparece "Dar de alta a un gestor"**: esa authority (`gestor:crear`) solo la tiene ADMIN |
+| `15-panel-gestion.png` | Panel de gestión de un GESTOR. **No aparece "Dar de alta a un gestor"**: esa authority (`gestor:crear`) solo la tiene ADMIN. Rehecha el 05/10/2026 (app 1.11): cada opción lleva su icono en un recuadro índigo, con los mismos dibujos que el menú de la web |
 | `16-ausencias-pendientes.png` | Peticiones del equipo pendientes de resolver |
 | `17-rechazo-motivo-obligatorio.png` | Rechazar exige motivo: sin él, el botón queda deshabilitado |
 | `18-historial-equipo.png` | Historial de todo el equipo |
@@ -72,7 +72,8 @@ Lo que exige `empleado:gestionar`, `informe:exportar`, `fichaje:corregir` y
 ---
 
 `13-calendario-antes-en-ingles.png` **no se ha rehecho**: documenta un defecto ya
-corregido y no se puede volver a reproducir. Las 27 restantes son del 04/09/2026.
+corregido y no se puede volver a reproducir. La 15 es del 05/10/2026 (ver su fila);
+las 26 restantes son del 04/09/2026.
 
 ## La web
 

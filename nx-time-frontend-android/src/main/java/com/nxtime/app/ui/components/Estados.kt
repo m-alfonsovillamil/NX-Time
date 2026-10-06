@@ -24,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,7 +73,9 @@ fun EstadoCargando(modifier: Modifier = Modifier) {
 fun EstadoVacio(
     titulo: String,
     texto: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icono: ImageVector = Icons.Default.Inbox,
+    deGestion: Boolean = false
 ) {
     Column(
         modifier = modifier
@@ -82,12 +85,10 @@ fun EstadoVacio(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Inbox,
-            contentDescription = null,
-            modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // En su círculo de color, como en la web (ADR 035): un icono gris
+        // suelto se leía como algo que no ha cargado, no como «aquí no hay
+        // nada, y está bien».
+        IconoEnRecuadro(icono = icono, deGestion = deGestion, lado = 64.dp, redondo = true)
         Spacer(Modifier.height(16.dp))
         Text(
             text = titulo,

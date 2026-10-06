@@ -197,6 +197,24 @@ Con «reducir movimiento» no hay ninguna. Los apartados del menú se abren sin
 animación: se ocultan con `hidden`, que es lo que los saca del tabulador y del
 lector de pantalla, y eso no se anima sin renunciar a ello.
 
+### Lo que vuelve a la app
+
+La web salió del tema de la app, y con este plan fue más lejos que ella en tres
+cosas. Para que no se separen, la app 1.11 (versionCode 12) las recoge, y nada
+más:
+
+- **El panel de gestión.** Cada opción lleva su icono en un recuadro índigo
+  (`IconoEnRecuadro`), con los mismos dibujos que el menú de la web. Antes era
+  un icono suelto teñido, que en una lista de doce opciones se perdía.
+- **El estado vacío.** El icono va en su círculo de color.
+- **Las etiquetas de estado.** Van rellenas (`Insignia`), con el mismo tinte
+  del 14 %. Eran un `AssistChip` con `onClick = {}` en seis pantallas: un chip
+  es un botón, así que TalkBack lo anunciaba como tal y al tocarlo hacía la
+  onda de pulsado para no hacer nada.
+
+No se tocan `ColoresJornada`, la navegación ni las tarjetas de tiempo de «Mi
+jornada». Son tres en fila en un móvil, y un icono más las apretaría.
+
 ### Lo que se midió, y lo que se descartó por medirlo
 
 Las medidas son de `scripts/medir.mjs` (`npm run medir`): Playwright sobre

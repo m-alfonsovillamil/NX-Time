@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +37,8 @@ import com.nxtime.app.data.dto.CorreccionDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoVacio
+import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
@@ -188,7 +189,14 @@ private fun TarjetaCorreccion(
                     modifier = Modifier.weight(1f)
                 )
                 EstadoCorreccion.de(correccion.estado)?.let { estado ->
-                    AssistChip(onClick = {}, label = { Text(stringResource(estado.etiqueta)) })
+                    Insignia(
+                        texto = stringResource(estado.etiqueta),
+                        tono = when (estado) {
+                            EstadoCorreccion.APROBADA -> TonoDeInsignia.EXITO
+                            EstadoCorreccion.RECHAZADA -> TonoDeInsignia.ERROR
+                            EstadoCorreccion.PENDIENTE, EstadoCorreccion.EN_DISPUTA -> TonoDeInsignia.AVISO
+                        }
+                    )
                 }
             }
 
