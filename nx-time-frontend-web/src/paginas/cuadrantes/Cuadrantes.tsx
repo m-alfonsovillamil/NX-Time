@@ -18,6 +18,7 @@ import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Boton, Insignia, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ErrorConReintento, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { cuadrantes } from '../../i18n/es/cuadrantes';
@@ -156,9 +157,7 @@ export function Cuadrantes() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{C.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={C.titulo} />
       <section className="nx-tarjeta">
         <Pestanas
           etiqueta={C.pestanas}

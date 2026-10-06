@@ -9,6 +9,10 @@ export const borrados = {
   registradaPor: (quien: string) => `Registrada por ${quien}`,
   motivo: (texto: string) => `Motivo: ${texto}`,
   bloqueos: 'Antes hay que resolver:',
+  tabla: 'Solicitudes de borrado pendientes',
+  columnas: { persona: 'Persona', pedida: 'Pedida', motivo: 'Motivo', estado: 'Estado', acciones: 'Acciones' },
+  lista: 'Lista para ejecutar',
+  bloqueada: 'Bloqueada',
 
   registrar: 'Registrar solicitud',
   registrarTitulo: 'Registrar una solicitud recibida fuera de la app',

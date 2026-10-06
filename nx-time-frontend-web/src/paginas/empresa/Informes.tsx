@@ -6,13 +6,17 @@
  * ya cerrado, y el del mes en curso saldría a medias. Se descargan con
  * `descargar()` (fetch + Blob) porque un enlace directo no llevaría el token
  * de la sesión; y si el servidor dice que no, se lee su mensaje.
+ *
+ * A lo ancho (5/10/2026): el mes, que vale para los dos, va en la cabecera; y
+ * cada informe es una tarjeta con su icono, una al lado de la otra.
  */
 
 import { useState } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { ErrorDeApi } from '../../api/consultas';
-import { Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Selector, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { empresa } from '../../i18n/es/empresa';
 import { descargar } from '../../util/descargar';
 import { hoyEnEmpresa, primeroDeMes, sumarDias } from '../../util/fechas';
@@ -62,45 +66,48 @@ export function Informes() {
   }
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{I.titulo}</h1>
-      </header>
+    <div className="nx-pagina">
+      <CabeceraDePagina
+        titulo={I.titulo}
+        descripcion={I.explicacion}
+        acciones={
+          <Campo
+            id="informe-mes"
+            etiqueta={I.mes}
+            type="month"
+            max={hoyEnEmpresa().slice(0, 7)}
+            value={mes}
+            onChange={(e) => e.target.value !== '' && setMes(e.target.value)}
+          />
+        }
+      />
 
-      <section className="nx-tarjeta">
-        <div className="nx-filtros">
-          <Campo id="informe-mes" etiqueta={I.mes} type="month" max={hoyEnEmpresa().slice(0, 7)} value={mes} onChange={(e) => e.target.value !== '' && setMes(e.target.value)} />
-        </div>
-      </section>
+      <div className="nx-composicion nx-composicion--mitades">
+        <Tarjeta className="nx-tarjeta--accion" icono="hoja" titulo={I.excelTitulo} descripcion={I.excelTexto}>
+          {error?.de === 'excel' && <Aviso>{error.mensaje}</Aviso>}
+          <div className="nx-tarjeta__pie">
+            <Boton icono="descargar" ocupado={bajando === 'excel'} onClick={() => void bajar('excel')}>
+              {I.excel}
+            </Boton>
+          </div>
+        </Tarjeta>
 
-      <section className="nx-tarjeta nx-expediente" aria-labelledby="informe-excel">
-        <h2 id="informe-excel">{I.excelTitulo}</h2>
-        <p className="nx-sutil">{I.excelTexto}</p>
-        {error?.de === 'excel' && <Aviso>{error.mensaje}</Aviso>}
-        <div>
-          <Boton ocupado={bajando === 'excel'} onClick={() => void bajar('excel')}>
-            {I.excel}
-          </Boton>
-        </div>
-      </section>
-
-      <section className="nx-tarjeta nx-expediente" aria-labelledby="informe-pdf">
-        <h2 id="informe-pdf">{I.pdfTitulo}</h2>
-        <p className="nx-sutil">{I.pdfTexto}</p>
-        <Selector
-          id="informe-persona"
-          etiqueta={I.persona}
-          value={persona}
-          onChange={(e) => setPersona(e.target.value)}
-          opciones={[{ valor: '', texto: I.elegir }, ...ordenar(personas.data ?? []).map((p) => ({ valor: String(p.id), texto: p.nombre ?? '' }))]}
-        />
-        {error?.de === 'pdf' && <Aviso>{error.mensaje}</Aviso>}
-        <div>
-          <Boton variante="secundario" ocupado={bajando === 'pdf'} onClick={() => void bajar('pdf')}>
-            {I.pdf}
-          </Boton>
-        </div>
-      </section>
+        <Tarjeta className="nx-tarjeta--accion" icono="pdf" titulo={I.pdfTitulo} descripcion={I.pdfTexto}>
+          <Selector
+            id="informe-persona"
+            etiqueta={I.persona}
+            value={persona}
+            onChange={(e) => setPersona(e.target.value)}
+            opciones={[{ valor: '', texto: I.elegir }, ...ordenar(personas.data ?? []).map((p) => ({ valor: String(p.id), texto: p.nombre ?? '' }))]}
+          />
+          {error?.de === 'pdf' && <Aviso>{error.mensaje}</Aviso>}
+          <div className="nx-tarjeta__pie">
+            <Boton icono="descargar" variante="secundario" ocupado={bajando === 'pdf'} onClick={() => void bajar('pdf')}>
+              {I.pdf}
+            </Boton>
+          </div>
+        </Tarjeta>
+      </div>
     </div>
   );
 }

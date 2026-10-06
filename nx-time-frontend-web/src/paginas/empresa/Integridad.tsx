@@ -7,14 +7,20 @@
  * movimientos son posteriores y aún no se han mirado: «comprobada anoche»
  * sonaría a que está todo comprobado. Comprobar ahora recorre la cadena entera
  * y puede tardar; si algo falla, se dice en qué movimiento y qué le pasa.
+ *
+ * A lo ancho (5/10/2026): lo que se mira y se hace, a la izquierda; el «cómo
+ * funciona», al lado y en puntos. Antes era un párrafo largo encima de dos
+ * tarjetas en una columna de 560 px.
  */
 
 import { useQuery } from '@tanstack/react-query';
 
 import { cliente } from '../../api/cliente';
 import { pedir, pedirOpcional, useMutacion } from '../../api/consultas';
-import { Aviso, Boton } from '../../componentes/Basicos';
-import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
+import { Aviso, Boton, Destacado, Puntos, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
+import { Cifra, Cifras } from '../../componentes/Cifra';
+import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { empresa } from '../../i18n/es/empresa';
 import { fechaHoraCorta } from '../../util/fechas';
 
@@ -29,45 +35,57 @@ export function Integridad() {
 
   const r = comprobar.data;
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{I.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{I.explicacion}</p>
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={I.titulo} descripcion={I.explicacion} />
 
-      <section className="nx-tarjeta nx-expediente" aria-labelledby="integridad-ultima">
-        <h2 id="integridad-ultima">{I.ultima}</h2>
-        <EstadoDeConsulta consulta={ultima} cargando={<Esqueleto lineas={2} />}>
-          {(p) =>
-            p === null ? (
-              <p>{I.nunca}</p>
-            ) : (
-              <>
-                <p>{I.ultimaTexto(fechaHoraCorta(p.verificadoEn), p.movimientos ?? 0)}</p>
-                {(p.pendientes ?? 0) > 0 && <p className="nx-sutil">{I.pendientes(p.pendientes ?? 0)}</p>}
-              </>
-            )
-          }
-        </EstadoDeConsulta>
-      </section>
+      <div className="nx-composicion nx-composicion--principal-lateral">
+        <div className="nx-columna">
+          <Tarjeta titulo={I.ultima} icono="verificado" descripcion={I.cadaNoche}>
+            <EstadoDeConsulta consulta={ultima} cargando={<Esqueleto forma="recuadros" lineas={3} />}>
+              {(p) =>
+                p === null ? (
+                  <Vacio icono="verificado" titulo={I.nunca} detalle={I.nuncaDetalle} />
+                ) : (
+                  <Cifras>
+                    <Cifra icono="hecho" etiqueta={I.cifras.movimientos} valor={p.movimientos ?? 0} />
+                    <Cifra
+                      icono="horas-extra"
+                      etiqueta={I.cifras.pendientes}
+                      valor={p.pendientes ?? 0}
+                      {...((p.pendientes ?? 0) > 0 ? { tono: 'destacada' as const, detalle: I.cifras.pendientesDetalle } : {})}
+                    />
+                    <Cifra icono="calendario" etiqueta={I.cifras.cuando} valor={fechaHoraCorta(p.verificadoEn)} />
+                  </Cifras>
+                )
+              }
+            </EstadoDeConsulta>
+          </Tarjeta>
 
-      <section className="nx-tarjeta nx-expediente" aria-labelledby="integridad-ahora">
-        <h2 id="integridad-ahora">{I.comprobarTitulo}</h2>
-        <p className="nx-sutil">{I.comprobarTexto}</p>
-        <div>
-          <Boton ocupado={comprobar.isPending} onClick={() => comprobar.mutate(undefined)}>
-            {I.comprobar}
-          </Boton>
+          <Tarjeta titulo={I.comprobarTitulo} icono="buscar" descripcion={I.comprobarTexto} className="nx-expediente">
+            <div>
+              <Boton ocupado={comprobar.isPending} onClick={() => comprobar.mutate(undefined)}>
+                {I.comprobar}
+              </Boton>
+            </div>
+            {comprobar.error !== null && <Aviso>{comprobar.error.message}</Aviso>}
+            {r !== undefined && (
+              <Destacado
+                role="status"
+                tono={r.intacta === true ? 'bien' : 'mal'}
+                icono={r.intacta === true ? 'verificado' : 'error'}
+                titulo={r.intacta === true ? I.intacta : I.rota}
+              >
+                <p>{I.detalle(r.movimientos ?? 0, r.comprobados ?? 0, r.soloEnlace ?? 0)}</p>
+                {r.intacta !== true && r.primerFallo !== undefined && <p>{I.primerFallo(r.primerFallo, r.motivo ?? '')}</p>}
+              </Destacado>
+            )}
+          </Tarjeta>
         </div>
-        {comprobar.error !== null && <Aviso>{comprobar.error.message}</Aviso>}
-        {r !== undefined && (
-          <div role="status" className={r.intacta === true ? 'nx-cadena' : 'nx-cadena nx-cadena--rota'}>
-            <strong>{r.intacta === true ? I.intacta : I.rota}</strong>
-            <p>{I.detalle(r.movimientos ?? 0, r.comprobados ?? 0, r.soloEnlace ?? 0)}</p>
-            {r.intacta !== true && r.primerFallo !== undefined && <p>{I.primerFallo(r.primerFallo, r.motivo ?? '')}</p>}
-          </div>
-        )}
-      </section>
+
+        <Tarjeta titulo={I.comoFunciona}>
+          <Puntos puntos={I.puntos} />
+        </Tarjeta>
+      </div>
     </div>
   );
 }

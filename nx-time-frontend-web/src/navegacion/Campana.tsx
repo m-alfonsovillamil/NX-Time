@@ -44,16 +44,21 @@ export const CLAVES_AVISOS = {
 const CADA_CINCO_MINUTOS = 5 * 60_000;
 const RECIENTES = 10;
 
-export function Campana() {
-  const [abierta, setAbierta] = useState(false);
-  const navegar = useNavigate();
-
-  const noLeidos = useQuery({
+/** Cuántos avisos hay sin leer. La campana y la página de avisos comparten la consulta. */
+export function useAvisosSinLeer() {
+  return useQuery({
     queryKey: CLAVES_AVISOS.noLeidos,
     queryFn: () => pedir(cliente.GET('/api/v1/avisos/no-leidos', {})),
     refetchInterval: CADA_CINCO_MINUTOS,
     select: (r) => r.noLeidos ?? 0,
   });
+}
+
+export function Campana() {
+  const [abierta, setAbierta] = useState(false);
+  const navegar = useNavigate();
+
+  const noLeidos = useAvisosSinLeer();
 
   const recientes = useQuery({
     queryKey: CLAVES_AVISOS.recientes,

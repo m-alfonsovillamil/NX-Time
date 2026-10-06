@@ -23,6 +23,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { EstadoDeConsulta } from '../../componentes/Estados';
 import { fichar } from '../../i18n/es/fichar';
 import { duracion, fechaLarga, hora, hoyEnEmpresa } from '../../util/fechas';
@@ -159,12 +160,7 @@ export function Fichar() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <div>
-          <h1>{F.titulo}</h1>
-          <p className="nx-sutil">{sesion !== null ? F.saludo(sesion.nombre) : fechaLarga()}</p>
-        </div>
-      </header>
+      <CabeceraDePagina titulo={F.titulo} descripcion={sesion !== null ? F.saludo(sesion.nombre) : fechaLarga()} />
 
       {hoy.data?.laborable === false && <Aviso>{F.noLaborable(hoy.data.motivo ?? '')}</Aviso>}
 

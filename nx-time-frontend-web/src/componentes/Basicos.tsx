@@ -11,30 +11,39 @@
  * comportarse con el teclado, con un lector de pantalla y en el móvil.
  */
 
-import type {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
+import {
+  useId,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from 'react';
+
+import { Icono, type NombreIcono } from './Icono';
 
 interface BotonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variante?: 'primario' | 'secundario' | 'texto' | 'peligro';
   ocupado?: boolean;
+  /** Un icono delante del texto (descargar, imprimir). Decorativo: el texto dice lo que hace. */
+  icono?: NombreIcono;
 }
 
-export function Boton({ variante = 'primario', ocupado = false, children, className, ...resto }: BotonProps) {
+export function Boton({ variante = 'primario', ocupado = false, icono, children, className, ...resto }: BotonProps) {
+  const clases = ['nx-boton', `nx-boton--${variante}`];
+  if (icono !== undefined) clases.push('nx-boton--con-icono');
+  if (className !== undefined) clases.push(className);
   return (
     <button
       type="button"
       {...resto}
-      className={`nx-boton nx-boton--${variante}${className !== undefined ? ` ${className}` : ''}`}
+      className={clases.join(' ')}
       disabled={resto.disabled === true || ocupado}
       // Un botón deshabilitado deja de anunciar por qué lo está; `aria-busy`
       // es lo que le dice a un lector de pantalla que hay algo en marcha.
       aria-busy={ocupado}
     >
+      {icono !== undefined && <Icono nombre={icono} tamano={20} />}
       {children}
     </button>
   );
@@ -160,25 +169,105 @@ export function Selector({ id, etiqueta, error, ayuda, opciones, ...resto }: Sel
 
 export function Tarjeta({
   titulo,
+  icono,
+  descripcion,
   acciones,
   children,
   className,
+  id,
 }: {
   titulo?: string;
+  /** El icono del título, en su recuadro del color de la zona. */
+  icono?: NombreIcono;
+  /** Una frase bajo el título: qué es lo que hay en la tarjeta. */
+  descripcion?: string;
   acciones?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
+  /** Para enlazarla desde un índice (`#id`). */
+  id?: string;
 }) {
+  const idTitulo = useId();
   return (
-    <section className={`nx-tarjeta${className !== undefined ? ` ${className}` : ''}`}>
+    <section
+      id={id}
+      className={`nx-tarjeta${className !== undefined ? ` ${className}` : ''}`}
+      // Con título, la tarjeta es una región con nombre: un lector de pantalla
+      // puede saltar de una a otra.
+      aria-labelledby={titulo !== undefined ? idTitulo : undefined}
+    >
       {(titulo !== undefined || acciones !== undefined) && (
         <header className="nx-tarjeta__cabecera">
-          {titulo !== undefined && <h2>{titulo}</h2>}
+          {icono !== undefined && (
+            <span className="nx-tarjeta__icono">
+              <Icono nombre={icono} />
+            </span>
+          )}
+          {titulo !== undefined && (
+            <div className="nx-tarjeta__titulo">
+              <h2 id={idTitulo}>{titulo}</h2>
+              {descripcion !== undefined && <p className="nx-sutil">{descripcion}</p>}
+            </div>
+          )}
           {acciones}
         </header>
       )}
       {children}
     </section>
+  );
+}
+
+/**
+ * Un estado que tiene que verse antes que nada: «La traza está intacta», «La
+ * traza NO está intacta». El color lo dice de lejos, como el de la jornada;
+ * el icono y el texto lo dicen sin depender del color.
+ */
+export function Destacado({
+  tono,
+  icono,
+  titulo,
+  children,
+  role,
+}: {
+  tono: 'bien' | 'mal' | 'neutro';
+  icono: NombreIcono;
+  titulo: string;
+  children?: ReactNode;
+  /** `status` si aparece como resultado de algo que se acaba de pedir. */
+  role?: 'status' | 'alert';
+}) {
+  return (
+    <div className={`nx-destacado nx-destacado--${tono}`} role={role}>
+      <span className="nx-destacado__icono">
+        <Icono nombre={icono} />
+      </span>
+      <div className="nx-destacado__texto">
+        <strong>{titulo}</strong>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Una explicación en puntos, cada uno con su icono: el «cómo funciona» que va
+ * al lado de lo que se hace, en vez de un párrafo largo encima que nadie lee.
+ */
+export function Puntos({ puntos }: { puntos: readonly { icono: NombreIcono; titulo: string; texto: string }[] }) {
+  return (
+    <ol className="nx-puntos">
+      {puntos.map((p) => (
+        <li key={p.titulo}>
+          <span className="nx-puntos__icono">
+            <Icono nombre={p.icono} tamano={20} />
+          </span>
+          <div>
+            <strong>{p.titulo}</strong>
+            <p className="nx-sutil">{p.texto}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 

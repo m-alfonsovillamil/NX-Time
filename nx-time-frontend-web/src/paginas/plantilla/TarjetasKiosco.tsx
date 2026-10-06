@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import { Boton } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { kiosco } from '../../i18n/es/kiosco';
 import { srcDeTarjeta } from '../cuenta/FicharEnKiosco';
@@ -30,13 +31,18 @@ export function TarjetasKiosco() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera nx-cabecera--con-acciones nx-no-imprimir">
-        <h1>{TT.titulo}</h1>
-        <Boton onClick={() => window.print()} disabled={tarjetas.data === undefined}>
-          {TT.imprimir}
-        </Boton>
-      </header>
-      <p className="nx-sutil nx-no-imprimir">{TT.explicacion}</p>
+      <CabeceraDePagina
+        className="nx-no-imprimir"
+        titulo={TT.titulo}
+        descripcion={TT.explicacion}
+        acciones={
+          <>
+            <Boton onClick={() => window.print()} disabled={tarjetas.data === undefined}>
+              {TT.imprimir}
+            </Boton>
+          </>
+        }
+      />
       <EstadoDeConsulta consulta={tarjetas} cargando={<Esqueleto lineas={4} />}>
         {(lista) =>
           lista.length === 0 ? (

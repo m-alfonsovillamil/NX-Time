@@ -12,6 +12,7 @@ import { useState, type FormEvent } from 'react';
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, Tarjeta, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Cifra, Cifras } from '../../componentes/Cifra';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
@@ -244,10 +245,14 @@ export function Ausencias() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{A.titulo}</h1>
-        <Boton onClick={() => setSolicitando(true)}>{A.solicitar}</Boton>
-      </header>
+      <CabeceraDePagina
+        titulo={A.titulo}
+        acciones={
+          <>
+            <Boton onClick={() => setSolicitando(true)}>{A.solicitar}</Boton>
+          </>
+        }
+      />
 
       <Saldo />
 

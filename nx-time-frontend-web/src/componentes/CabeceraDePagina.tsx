@@ -27,6 +27,7 @@ export function CabeceraDePagina({
   acciones,
   icono,
   miga = true,
+  className,
 }: {
   titulo: string;
   /** Una o dos frases: qué es esto y para qué sirve. */
@@ -36,12 +37,14 @@ export function CabeceraDePagina({
   icono?: NombreIcono;
   /** Sin miga en las páginas que no son de ningún apartado del menú. */
   miga?: boolean;
+  /** Clases de más para el `<header>` (`nx-no-imprimir` en lo que se imprime sin cabecera). */
+  className?: string;
 }) {
   const seccion = seccionDeRuta(useLocation().pathname);
   const dibujo = icono ?? seccion?.icono;
 
   return (
-    <header className="nx-cabecera-pagina">
+    <header className={`nx-cabecera-pagina${className !== undefined ? ` ${className}` : ''}`}>
       {dibujo !== undefined && (
         <span className="nx-cabecera-pagina__icono">
           <Icono nombre={dibujo} />

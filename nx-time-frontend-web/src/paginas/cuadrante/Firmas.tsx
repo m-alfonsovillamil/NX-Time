@@ -21,6 +21,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Insignia } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
@@ -69,9 +70,9 @@ function FilaDelMes({ m, alFirmar }: { m: Mes; alFirmar: (m: Mes) => void }) {
   const invalidada = firma?.estado === 'INVALIDADA';
 
   return (
-    <li className="nx-incidencia">
+    <li className="nx-tarjeta nx-incidencia nx-incidencia--tarjeta">
       <div className="nx-incidencia__cabecera">
-        <strong>{nombreDelMes(m)}</strong>
+        <strong className="nx-incidencia__titulo">{nombreDelMes(m)}</strong>
         <Insignia tono={vigente ? 'exito' : invalidada ? 'error' : 'aviso'}>
           {vigente ? F.firmado : invalidada ? F.invalidada : F.pendiente}
         </Insignia>
@@ -101,26 +102,24 @@ export function Firmas() {
   );
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{F.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{F.explicacion}</p>
-      <section className="nx-tarjeta">
-        <EstadoDeConsulta consulta={meses} cargando={<Esqueleto lineas={4} />}>
-          {(lista) =>
-            lista.length === 0 ? (
-              <Vacio titulo={F.vacio} />
-            ) : (
-              <ul className="nx-lista-incidencias">
-                {lista.map((m) => (
-                  <FilaDelMes key={`${m.anio}-${m.mes}`} m={m} alFirmar={setFirmando} />
-                ))}
-              </ul>
-            )
-          }
-        </EstadoDeConsulta>
-      </section>
+    <div className="nx-pagina">
+      <CabeceraDePagina titulo={F.titulo} descripcion={F.explicacion} />
+      {/* Una tarjeta por mes, las que quepan por fila: el estado de cada uno se ve de un vistazo. */}
+      <EstadoDeConsulta consulta={meses} cargando={<Esqueleto forma="recuadros" lineas={3} />}>
+        {(lista) =>
+          lista.length === 0 ? (
+            <section className="nx-tarjeta">
+              <Vacio icono="firma" titulo={F.vacio} />
+            </section>
+          ) : (
+            <ul className="nx-rejilla-tarjetas">
+              {lista.map((m) => (
+                <FilaDelMes key={`${m.anio}-${m.mes}`} m={m} alFirmar={setFirmando} />
+              ))}
+            </ul>
+          )
+        }
+      </EstadoDeConsulta>
 
       <Dialogo
         abierto={firmando !== null}

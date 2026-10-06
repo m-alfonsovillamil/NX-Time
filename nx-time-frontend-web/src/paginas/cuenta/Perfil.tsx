@@ -21,6 +21,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { useSesion } from '../../api/useSesion';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Tarjeta } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuenta } from '../../i18n/es/cuenta';
@@ -306,9 +307,7 @@ export function PaginaPerfil() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{P.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={P.titulo} />
       <EstadoDeConsulta consulta={perfil} cargando={<Esqueleto lineas={6} />}>
         {(p) => (
           <>

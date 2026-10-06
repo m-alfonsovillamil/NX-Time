@@ -10,6 +10,11 @@
  *
  * Usa la misma consulta que el calendario de «lo mío»: un festivo nuevo sale
  * también allí sin recargar.
+ *
+ * A lo ancho (5/10/2026): el mes en rejilla, con los festivos pintados, y la
+ * lista al lado. Pulsar un día libre abre «nuevo festivo» con esa fecha ya
+ * puesta; pulsar uno editable lo abre para cambiarlo. Antes era solo la lista,
+ * y un mes sin festivos era una tarjeta vacía.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -19,14 +24,18 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
+import { ausencias } from '../../i18n/es/ausencias';
 import { proyectos } from '../../i18n/es/proyectos';
-import { diaLargo, mesYAnio } from '../../util/fechas';
+import { diaLargo, hoyEnEmpresa, mesYAnio } from '../../util/fechas';
+import { semanasDelMes } from '../ausencias/Calendario';
 import { NavegadorDeMes, useMes } from './mes';
 
 const C = proyectos.calendario;
+const SEMANA = ausencias.calendario;
 
 type Festivo = components['schemas']['HolidayResponse'];
 type Ambito = components['schemas']['HolidayRequest']['ambito'];
@@ -81,9 +90,87 @@ function FormularioDeFestivo({ festivo, diaInicial, alTerminar }: { festivo: Fes
   );
 }
 
+/**
+ * El mes en rejilla. Un día libre o un festivo que se puede cambiar es un
+ * botón; un festivo nacional no lo es, porque no hay nada que hacer con él.
+ */
+function RejillaDelMes({
+  anio,
+  mes,
+  festivos,
+  alElegir,
+}: {
+  anio: number;
+  mes: number;
+  festivos: readonly Festivo[];
+  alElegir: (dia: string, festivo: Festivo | undefined) => void;
+}) {
+  const hoy = hoyEnEmpresa();
+  const prefijo = `${anio}-${String(mes).padStart(2, '0')}-`;
+  const festivoDe = new Map(festivos.map((f) => [f.fecha ?? '', f]));
+
+  return (
+    <table className="nx-calendario">
+      <caption className="nx-solo-lector">{mesYAnio(anio, mes)}</caption>
+      <thead>
+        <tr>
+          {SEMANA.diasDeLaSemana.map((d, i) => (
+            <th key={d} scope="col" abbr={SEMANA.diasDeLaSemanaLargos[i]}>
+              {d}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {semanasDelMes(anio, mes).map((semana) => (
+          <tr key={semana[0]}>
+            {semana.map((dia) => {
+              if (!dia.startsWith(prefijo)) return <td key={dia} />;
+              const festivo = festivoDe.get(dia);
+              const clases = ['nx-calendario__dia'];
+              if (dia === hoy) clases.push('nx-calendario__dia--hoy');
+              if (festivo !== undefined) clases.push('nx-calendario__dia--festivo');
+              const contenido = (
+                <>
+                  <span className="nx-calendario__numero">{Number(dia.slice(8))}</span>
+                  {festivo !== undefined && (
+                    <span className="nx-calendario__festivo" aria-hidden="true">
+                      {festivo.descripcion}
+                    </span>
+                  )}
+                </>
+              );
+              const nombre =
+                festivo !== undefined
+                  ? C.diaFestivo(diaLargo(dia), C.ambitos[festivo.ambito ?? ''] ?? '', festivo.descripcion ?? '')
+                  : C.diaLibre(diaLargo(dia));
+              const fijo = festivo !== undefined && !(festivo.editable === true && festivo.id !== undefined);
+              return (
+                <td key={dia}>
+                  {fijo ? (
+                    <span className={`${clases.join(' ')} nx-calendario__dia--fijo`} role="img" aria-label={nombre}>
+                      {contenido}
+                    </span>
+                  ) : (
+                    <button type="button" className={clases.join(' ')} aria-label={nombre} onClick={() => alElegir(dia, festivo)}>
+                      {contenido}
+                    </button>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export function CalendarioLaboral() {
   const mes = useMes();
   const [editando, setEditando] = useState<Festivo | 'nuevo' | null>(null);
+  /** El día pulsado en la rejilla, para que «nuevo festivo» salga con esa fecha. */
+  const [diaElegido, setDiaElegido] = useState<string | null>(null);
   const [quitando, setQuitando] = useState<Festivo | null>(null);
 
   const calendario = useQuery({
@@ -101,22 +188,50 @@ export function CalendarioLaboral() {
   const primerDia = `${mes.anio}-${String(mes.mes).padStart(2, '0')}-01`;
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera nx-cabecera--con-acciones">
-        <h1>{C.titulo}</h1>
-        <Boton onClick={() => setEditando('nuevo')}>{C.anadir}</Boton>
-      </header>
-      <p className="nx-sutil">{C.nota}</p>
+    <div className="nx-pagina">
+      <CabeceraDePagina
+        titulo={C.titulo}
+        descripcion={C.nota}
+        acciones={
+          <Boton
+            onClick={() => {
+              setDiaElegido(null);
+              setEditando('nuevo');
+            }}
+          >
+            {C.anadir}
+          </Boton>
+        }
+      />
 
-      <section className="nx-tarjeta">
-        <NavegadorDeMes mes={mes} id="calendario-laboral-mes" titulo={C.delMes(mesYAnio(mes.anio, mes.mes).toLowerCase())} />
-        <EstadoDeConsulta consulta={calendario} cargando={<Esqueleto lineas={3} />}>
+      <div className="nx-composicion nx-composicion--principal-lateral">
+        <section className="nx-tarjeta">
+          <NavegadorDeMes mes={mes} id="calendario-laboral-mes" titulo={C.delMes(mesYAnio(mes.anio, mes.mes).toLowerCase())} />
+          <EstadoDeConsulta consulta={calendario} cargando={<Esqueleto lineas={6} />}>
+            {(c) => (
+              <RejillaDelMes
+                anio={mes.anio}
+                mes={mes.mes}
+                festivos={c.festivos ?? []}
+                alElegir={(dia, festivo) => {
+                  setDiaElegido(dia);
+                  setEditando(festivo ?? 'nuevo');
+                }}
+              />
+            )}
+          </EstadoDeConsulta>
+          <p className="nx-sutil nx-calendario__pista">{C.pista}</p>
+        </section>
+
+        <section className="nx-tarjeta" aria-labelledby="calendario-laboral-lista">
+          <h2 id="calendario-laboral-lista">{C.enElMes}</h2>
+          <EstadoDeConsulta consulta={calendario} cargando={<Esqueleto lineas={3} />}>
           {(c) => {
             const festivos = [...(c.festivos ?? [])].sort((a, b) => (a.fecha ?? '').localeCompare(b.fecha ?? ''));
             return festivos.length === 0 ? (
               <Vacio icono="festivo" titulo={C.vacio} />
             ) : (
-              <ul className="nx-lista-incidencias" aria-labelledby="calendario-laboral-mes">
+              <ul className="nx-lista-incidencias" aria-labelledby="calendario-laboral-lista">
                 {festivos.map((f) => (
                   <li key={`${f.fecha}-${f.id ?? f.descripcion}`} className="nx-incidencia">
                     <div className="nx-incidencia__cabecera">
@@ -141,12 +256,17 @@ export function CalendarioLaboral() {
               </ul>
             );
           }}
-        </EstadoDeConsulta>
-      </section>
+          </EstadoDeConsulta>
+        </section>
+      </div>
 
       <Dialogo abierto={editando !== null} titulo={editando === 'nuevo' ? C.anadirTitulo : C.editarTitulo} alCerrar={() => setEditando(null)} acciones={null}>
         {editando !== null && (
-          <FormularioDeFestivo festivo={editando === 'nuevo' ? null : editando} diaInicial={primerDia} alTerminar={() => setEditando(null)} />
+          <FormularioDeFestivo
+            festivo={editando === 'nuevo' ? null : editando}
+            diaInicial={diaElegido ?? primerDia}
+            alTerminar={() => setEditando(null)}
+          />
         )}
       </Dialogo>
 

@@ -85,5 +85,7 @@ export const denuncias = {
     actualizada: 'Expediente actualizado.',
     cerrada: 'Expediente cerrado con su conclusión.',
     abrir: 'Abrir',
+    elige: 'Elige una denuncia',
+    eligeTexto: 'Su expediente se abre aquí, con los mensajes y lo que se puede hacer con ella.',
   },
 } as const;

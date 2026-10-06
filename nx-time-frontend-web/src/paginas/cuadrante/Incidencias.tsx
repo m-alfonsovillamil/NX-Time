@@ -20,6 +20,7 @@ import { pedir, useListaPaginada, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -239,10 +240,10 @@ export function Incidencias() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{I.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{I.explicacion}</p>
+      <CabeceraDePagina
+        titulo={I.titulo}
+        descripcion={I.explicacion}
+      />
       <section className="nx-tarjeta">
         {puedeRevisar ? (
           <Pestanas

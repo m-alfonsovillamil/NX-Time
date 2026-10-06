@@ -127,6 +127,41 @@ composición de dentro, con tres variantes de `.nx-composicion`:
 
 `.nx-pagina--lectura` (760 px) queda solo para texto largo.
 
+Las once páginas que eran una columna estrecha se rehicieron una a una:
+
+| Página | Composición |
+|---|---|
+| Integridad | Estado y «comprobar ahora» a la izquierda; «cómo funciona» en puntos, al lado |
+| Informes | El mes en la cabecera; cada descarga, una tarjeta con su icono |
+| Borrados | Tabla a lo ancho, con el estado en una insignia |
+| Calendario laboral | El mes en rejilla, con los festivos pintados, y la lista al lado |
+| Denuncias recibidas | La bandeja y el expediente lado a lado |
+| Ajustes de la empresa | Los datos y los kioscos en dos mitades |
+| Firma mensual | Una tarjeta por mes |
+| Mi cuadrante | La semana en siete columnas |
+| Canal de denuncias | El formulario a la izquierda; qué es, seguir una y las mías, al lado |
+| Avisos | La lista con el icono de cada sección; al lado, cuántos quedan sin leer |
+| Ajustes | Un índice que se queda a la vista y las secciones al lado |
+
+Detalles de comportamiento que cambiaron con el rediseño:
+
+- **Calendario laboral.** Pulsar un día libre abre «nuevo festivo» con esa
+  fecha ya puesta. Un festivo nacional no es un botón, porque no se puede
+  cambiar.
+- **Denuncias recibidas.** El detalle va al lado solo donde cabe.
+  - Es la única decisión que no resuelve el CSS: lo toma `useEsAncho`
+    (`util/ancho.ts`) con `matchMedia`.
+  - El motivo es que se trata de *qué* se pinta: pintar el expediente dos
+    veces para esconder uno duplicaría sus formularios y sus `id`.
+  - En una pantalla estrecha sigue saliendo en su diálogo.
+
+Con esto nacieron tres piezas más en `Basicos.tsx`:
+
+- `Tarjeta` con `icono`, `descripcion` e `id`.
+- `Destacado`, para un estado que tiene que verse antes que nada: bien, mal o
+  neutro.
+- `Puntos`, una explicación en puntos con icono.
+
 ## Consecuencias
 
 - El JS inicial pasa de 106 a 113 kB comprimidos, casi todo por los trazados

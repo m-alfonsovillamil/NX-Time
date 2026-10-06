@@ -19,7 +19,9 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Insignia, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
+import { Iniciales } from '../../componentes/Iniciales';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { cuadrante } from '../../i18n/es/cuadrante';
 import { diaEnEmpresa, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
@@ -54,7 +56,16 @@ export function VisadoFirmas() {
   });
 
   const columnas: Columna<Fila>[] = [
-    { clave: 'persona', cabecera: V.persona, celda: (f) => <strong>{f.usuario}</strong> },
+    {
+      clave: 'persona',
+      cabecera: V.persona,
+      celda: (f) => (
+        <span className="nx-con-iniciales">
+          <Iniciales nombre={f.usuario ?? ''} tamano="s" />
+          <strong>{f.usuario}</strong>
+        </span>
+      ),
+    },
     {
       clave: 'estado',
       cabecera: V.estado,
@@ -99,10 +110,10 @@ export function VisadoFirmas() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{V.titulo}</h1>
-      </header>
-      <p className="nx-sutil">{V.explicacion}</p>
+      <CabeceraDePagina
+        titulo={V.titulo}
+        descripcion={V.explicacion}
+      />
       <section className="nx-tarjeta">
         <NavegadorDeMes mes={mes} id="visado-mes" titulo={V.delMes(mesYAnio(mes.anio, mes.mes).toLowerCase())} />
         {visar.error !== null && <Aviso>{visar.error.message}</Aviso>}

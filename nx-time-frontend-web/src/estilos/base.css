@@ -92,13 +92,6 @@ h1 {
   max-width: 760px;
 }
 
-/* TEMPORAL (plan del 5/10, E0 -> E2): las páginas que aún no tienen su
-   composición a lo ancho conservan la columna de antes. Cada una lo pierde al
-   rediseñarse en E2, y al terminar E2 esta clase desaparece. */
-.nx-pagina--estrecha {
-  max-width: 592px;
-}
-
 /* ---- Composiciones: cómo se reparte una página ancha ---- */
 
 /* Lo principal a la izquierda y una columna de apoyo a la derecha. */
@@ -121,7 +114,44 @@ h1 {
 
   .nx-composicion--mitades {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Dos tarjetas de la misma fila, igual de altas. */
+    align-items: stretch;
   }
+
+  /* Un índice estrecho y, al lado, lo que indexa (Ajustes). */
+  .nx-composicion--indice {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  /* Salvo que cada mitad tenga su propio largo (un formulario y una lista). */
+  .nx-composicion--arriba {
+    align-items: start;
+  }
+}
+
+/* El índice de una página larga: solo donde hay sitio para tenerlo al lado. */
+.nx-indice {
+  display: none;
+}
+
+.nx-indice ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (min-width: 1100px) {
+  .nx-indice {
+    display: block;
+  }
+}
+
+/* Al saltar a una sección desde el índice, que no quede pegada al borde. */
+.nx-tarjeta[id] {
+  scroll-margin-top: 16px;
 }
 
 /* ---- El acento de cada zona ----
@@ -166,17 +196,9 @@ h1 {
   gap: 16px;
 }
 
-.nx-cabecera {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-/* Con botones al lado del título: en el móvil bajan debajo, no se aprietan. */
-.nx-cabecera--con-acciones {
-  flex-wrap: wrap;
-  align-items: center;
+/* Dentro de una tarjeta que ya tiene su ancho: el formulario la llena. */
+.nx-formulario--libre {
+  max-width: none;
 }
 
 /* La cabecera de página (CabeceraDePagina.tsx): icono en su recuadro, miga,
@@ -241,6 +263,12 @@ h1 {
   .nx-cabecera-pagina__icono {
     width: 40px;
     height: 40px;
+  }
+
+  /* En el móvil, el título al lado del icono y no debajo: con 320 px de base
+     no cabían en la misma fila. */
+  .nx-cabecera-pagina__textos {
+    flex-basis: 0;
   }
 
   .nx-cabecera-pagina__acciones {
@@ -315,6 +343,13 @@ h1 {
 .nx-boton:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.nx-boton--con-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .nx-boton:focus-visible {
@@ -579,6 +614,11 @@ h1 {
   }
 
   .nx-chip-jornada__estado {
+    display: none;
+  }
+
+  /* Sin fichar y sin texto, quedaría un círculo que no dice nada: no sale. */
+  .nx-chip-jornada--parado {
     display: none;
   }
 
@@ -1013,6 +1053,60 @@ h1 {
   font-weight: 600;
 }
 
+/* En la página de avisos (no en la campana): el icono de la sección delante
+   y la fecha al final, en una fila. */
+.nx-lista-avisos__aviso:has(> .nx-lista-avisos__icono) {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.nx-lista-avisos__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nx-radio-xs);
+  background: var(--nx-surface-container-highest);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-lista-avisos__aviso--nuevo .nx-lista-avisos__icono {
+  background: var(--nx-primary);
+  color: var(--nx-on-primary);
+}
+
+.nx-lista-avisos__aviso--nuevo .nx-sutil {
+  color: inherit;
+}
+
+.nx-lista-avisos__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nx-lista-avisos__cuando {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .nx-lista-avisos__aviso:has(> .nx-lista-avisos__icono) {
+    flex-wrap: wrap;
+  }
+
+  /* La fecha, debajo del texto y alineada con él (36 del icono + 12). */
+  .nx-lista-avisos__cuando {
+    flex-basis: 100%;
+    padding-left: 48px;
+  }
+}
+
 /* ---- Tarjetas e insignias ---- */
 
 .nx-tarjeta__cabecera {
@@ -1021,6 +1115,148 @@ h1 {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+/* El icono del título de una tarjeta, en el recuadro del color de la zona. */
+.nx-tarjeta__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+.nx-tarjeta__titulo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Tarjetas de una misma fila, a la misma altura y con el botón abajo. */
+.nx-tarjeta--accion {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.nx-tarjeta--accion > .nx-tarjeta__cabecera {
+  margin-bottom: 0;
+  align-items: flex-start;
+}
+
+.nx-tarjeta--accion > .nx-tarjeta__pie {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ---- Un estado que se ve antes que nada (Destacado) ---- */
+
+.nx-destacado {
+  --nx-destacado-color: var(--nx-acento);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+.nx-destacado__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--nx-acento);
+  color: var(--nx-on-acento);
+}
+
+.nx-destacado__texto {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nx-destacado__texto strong {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-medium);
+  line-height: var(--nx-lh-title-medium);
+}
+
+.nx-destacado__texto p {
+  margin: 0;
+  font-size: var(--nx-fs-label-large);
+  line-height: 22px;
+}
+
+/* Verde de «trabajando»: el mismo que ya significa «todo en orden» en la app. */
+.nx-destacado--bien {
+  background: color-mix(in srgb, var(--nx-jornada-trabajando) 14%, var(--nx-surface));
+  color: var(--nx-on-surface);
+}
+
+.nx-destacado--bien .nx-destacado__icono {
+  background: var(--nx-jornada-trabajando);
+  color: var(--nx-jornada-on-trabajando);
+}
+
+.nx-destacado--mal {
+  background: var(--nx-error-container);
+  color: var(--nx-on-error-container);
+}
+
+.nx-destacado--mal .nx-destacado__icono {
+  background: var(--nx-error);
+  color: var(--nx-on-error);
+}
+
+/* ---- Una explicación en puntos con icono (Puntos) ---- */
+
+.nx-puntos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nx-puntos li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.nx-puntos__icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nx-radio-xs);
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+.nx-puntos strong {
+  display: block;
+  font-size: var(--nx-fs-label-large);
+  line-height: 20px;
+  margin-bottom: 2px;
 }
 
 h2 {
@@ -1459,7 +1695,8 @@ h2 {
   }
 }
 
-@container cifras (min-width: 1040px) {
+/* Seis en fila solo con sitio de sobra: apretadas, una con texto de ayuda descuadra a las demás. */
+@container cifras (min-width: 1140px) {
   .nx-cifras[data-cuantas='6'] {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
@@ -1742,7 +1979,11 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 0 4px;
-  /* Pegadas a su cabecera, «Acciones»; los botones de texto ya traen su margen. */
+}
+
+/* Un botón de texto trae 8 px de relleno: se compensa para que su texto quede
+   alineado con lo de encima. Solo el de texto: uno relleno se saldría. */
+.nx-acciones-fila > .nx-boton--texto:first-child {
   margin-left: -8px;
 }
 
@@ -1923,6 +2164,15 @@ h2 {
 .nx-calendario__dia--festivo {
   background: var(--nx-tertiary-container);
   color: var(--nx-on-tertiary-container);
+}
+
+/* Un festivo que no se puede tocar (nacional): se ve igual, pero no es un botón. */
+.nx-calendario__dia--fijo {
+  cursor: default;
+}
+
+.nx-calendario__pista {
+  margin-top: 12px;
 }
 
 .nx-calendario__dia--propia {
@@ -2131,6 +2381,62 @@ h2 {
   padding-left: 8px;
 }
 
+/* Mi cuadrante en escritorio: la semana de un vistazo, un recuadro por día. */
+@media (min-width: 1100px) {
+  .nx-lista-cuadrante--semana {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 148px;
+    padding: 12px;
+    border: none;
+    border-radius: var(--nx-radio-s);
+    background: var(--nx-surface-container-highest);
+  }
+
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante--hoy {
+    background: var(--nx-acento-contenedor);
+    color: var(--nx-on-acento-contenedor);
+  }
+
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante__fecha {
+    font-weight: 600;
+    font-size: var(--nx-fs-label-large);
+    line-height: 20px;
+  }
+
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante__horario {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  /* Las horas del día, abajo: en todos los recuadros a la misma altura. */
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante__minutos {
+    margin-top: auto;
+    font-family: var(--nx-font-titular);
+    font-weight: 600;
+  }
+
+  .nx-lista-cuadrante--semana .nx-dia-cuadrante--hoy .nx-sutil {
+    color: inherit;
+  }
+
+  /* En un recuadro estrecho, una insignia larga («Cambio para este día: …») parte en dos renglones. */
+  .nx-lista-cuadrante--semana .nx-insignia {
+    white-space: normal;
+    border-radius: var(--nx-radio-xs);
+  }
+}
+
 @media (max-width: 639px) {
   .nx-dia-cuadrante {
     grid-template-columns: 1fr auto;
@@ -2148,6 +2454,48 @@ h2 {
   gap: 4px;
   padding: 12px 0;
   border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+/* Un elemento de lista que es su propia tarjeta (una por mes en «Firma mensual»). */
+.nx-incidencia--tarjeta {
+  padding: 20px;
+  gap: 6px;
+  border-bottom: none;
+}
+
+.nx-incidencia__titulo {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-medium);
+}
+
+.nx-incidencia--tarjeta > .nx-acciones-fila {
+  margin-top: auto;
+  padding-top: 8px;
+  align-items: center;
+}
+
+/* La elegida en una lista con su detalle al lado. */
+.nx-incidencia--elegida {
+  margin-inline: -12px;
+  padding-inline: 12px;
+  border-radius: var(--nx-radio-s);
+  border-bottom-color: transparent;
+  background: var(--nx-acento-contenedor);
+  color: var(--nx-on-acento-contenedor);
+}
+
+/* Sobre el contenedor, el teal de un botón de texto no llega a AA: hereda. */
+.nx-incidencia--elegida .nx-sutil,
+.nx-incidencia--elegida .nx-boton--texto {
+  color: inherit;
+}
+
+/* Una columna de apoyo que no se va al bajar por la lista de al lado. */
+@media (min-width: 1100px) {
+  .nx-pegada {
+    position: sticky;
+    top: 16px;
+  }
 }
 
 .nx-incidencia__cabecera {
@@ -2248,6 +2596,11 @@ h2 {
   grid-template-columns: minmax(120px, 2fr) 3fr auto;
   align-items: center;
   gap: 12px;
+}
+
+/* La nota de debajo (la media del equipo), separada de la última barra. */
+.nx-barras + .nx-sutil {
+  margin-top: 12px;
 }
 
 .nx-barras__texto {
@@ -2392,9 +2745,13 @@ h2 {
 
 /* Tarjetas en rejilla: una columna en el móvil, las que quepan en escritorio. */
 .nx-rejilla-tarjetas {
+  /* También es una lista (<ul>) cuando lo que agrupa son elementos. */
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .nx-departamento {

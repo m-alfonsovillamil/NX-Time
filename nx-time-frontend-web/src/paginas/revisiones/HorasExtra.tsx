@@ -21,6 +21,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -238,9 +239,7 @@ export function HorasExtra() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{H.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={H.titulo} />
       {puedeRevisar ? (
         <section className="nx-tarjeta">
           <Pestanas

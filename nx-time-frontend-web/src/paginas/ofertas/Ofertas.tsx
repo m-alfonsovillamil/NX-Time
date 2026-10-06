@@ -25,6 +25,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { AreaDeTexto, Aviso, Boton, Insignia, type Tono } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
@@ -242,9 +243,7 @@ export function Ofertas({ pestanaInicial = 'vacantes' }: { pestanaInicial?: Pest
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera">
-        <h1>{O.titulo}</h1>
-      </header>
+      <CabeceraDePagina titulo={O.titulo} />
       <section className="nx-tarjeta">
         {puedeOptar && puedeLeer ? (
           <Pestanas

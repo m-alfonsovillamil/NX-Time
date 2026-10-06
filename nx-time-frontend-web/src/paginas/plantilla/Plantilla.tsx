@@ -25,8 +25,10 @@ import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
+import { Iniciales } from '../../componentes/Iniciales';
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { T } from '../../i18n/es';
 import { kiosco } from '../../i18n/es/kiosco';
@@ -232,7 +234,16 @@ export function Plantilla() {
   const puedeGestionar = puede('empleado:gestionar');
 
   const columnas: Columna<Persona>[] = [
-    { clave: 'nombre', cabecera: P.nombre, celda: (p) => <strong>{p.nombre}</strong> },
+    {
+      clave: 'nombre',
+      cabecera: P.nombre,
+      celda: (p) => (
+        <span className="nx-con-iniciales">
+          <Iniciales nombre={p.nombre ?? ''} tamano="s" />
+          <strong>{p.nombre}</strong>
+        </span>
+      ),
+    },
     { clave: 'email', cabecera: P.email, celda: (p) => p.email },
     ...(entera ? [{ clave: 'rol', cabecera: P.rol, celda: (p: Persona) => P.roles[p.rol ?? ''] ?? p.rol }] : []),
     { clave: 'departamento', cabecera: P.departamento, celda: (p) => p.departamentoNombre ?? <span className="nx-sutil">{P.sinDepartamento}</span> },
@@ -278,22 +289,24 @@ export function Plantilla() {
 
   return (
     <div className="nx-pagina">
-      <header className="nx-cabecera nx-cabecera--con-acciones">
-        <h1>{P.titulo}</h1>
-        <div className="nx-acciones-fila">
-          {puede('empleado:crear') && <Boton onClick={() => setAlta('empleado')}>{P.nuevoEmpleado}</Boton>}
-          {puede('gestor:crear') && (
-            <Boton variante="secundario" onClick={() => setAlta('gestor')}>
-              {P.nuevoGestor}
-            </Boton>
-          )}
-          {puede('empresa:configurar') && (
-            <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/tarjetas-kiosco">
-              {kiosco.tarjetas.titulo}
-            </Link>
-          )}
-        </div>
-      </header>
+      <CabeceraDePagina
+        titulo={P.titulo}
+        acciones={
+          <>
+            {puede('empleado:crear') && <Boton onClick={() => setAlta('empleado')}>{P.nuevoEmpleado}</Boton>}
+            {puede('gestor:crear') && (
+              <Boton variante="secundario" onClick={() => setAlta('gestor')}>
+                {P.nuevoGestor}
+              </Boton>
+            )}
+            {puede('empresa:configurar') && (
+              <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/tarjetas-kiosco">
+                {kiosco.tarjetas.titulo}
+              </Link>
+            )}
+          </>
+        }
+      />
 
       <section className="nx-tarjeta">
         <div className="nx-filtros">

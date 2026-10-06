@@ -94,5 +94,10 @@ export const proyectos = {
     guardado: 'Festivo cambiado.',
     quitado: 'Festivo quitado.',
     noEditable: 'Nacional: lo pone el sistema',
+    enElMes: 'En este mes',
+    pista: 'Pulsa un día para marcarlo como festivo, o uno ya marcado para cambiarlo.',
+    /** Lo que dice cada día de la rejilla a un lector de pantalla. */
+    diaLibre: (dia: string) => `${dia}: marcar como festivo`,
+    diaFestivo: (dia: string, ambito: string, descripcion: string) => `${dia}, festivo ${ambito.toLowerCase()}: ${descripcion}`,
   },
 } as const;

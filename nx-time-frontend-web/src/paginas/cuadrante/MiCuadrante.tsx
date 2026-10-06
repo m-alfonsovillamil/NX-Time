@@ -21,6 +21,7 @@ import { cliente } from '../../api/cliente';
 import { pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Boton, Insignia } from '../../componentes/Basicos';
+import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { cuadrante } from '../../i18n/es/cuadrante';
 import { diaLargo, fechaCorta, hoyEnEmpresa, lunesDe, minutos, sumarDias } from '../../util/fechas';
@@ -84,10 +85,16 @@ export function MiCuadrante() {
   });
 
   return (
-    <div className="nx-pagina nx-pagina--estrecha">
-      <header className="nx-cabecera">
-        <h1>{C.titulo}</h1>
-      </header>
+    <div className="nx-pagina">
+      <CabeceraDePagina
+        titulo={C.titulo}
+        descripcion={C.explicacion}
+        acciones={
+          <Link className="nx-boton nx-boton--texto nx-boton--enlace" to="/incidencias">
+            {C.verIncidencias}
+          </Link>
+        }
+      />
 
       <section className="nx-tarjeta">
         <div className="nx-calendario__barra">
@@ -111,12 +118,13 @@ export function MiCuadrante() {
 
         <EstadoDeConsulta consulta={semana} cargando={<Esqueleto lineas={7} />}>
           {(dias) => {
-            if (dias.every((d) => d.origen === 'SIN_CUADRANTE')) return <Vacio titulo={C.vacio} />;
+            if (dias.every((d) => d.origen === 'SIN_CUADRANTE')) return <Vacio icono="semana" titulo={C.vacio} />;
             const total = dias.reduce((s, d) => s + (d.minutos ?? 0), 0);
             const plantilla = dias.find((d) => d.plantilla)?.plantilla;
             return (
               <>
-                <ul className="nx-lista-cuadrante">
+                {/* En escritorio, los siete días en fila (CSS); en el móvil, la lista de siempre. */}
+                <ul className="nx-lista-cuadrante nx-lista-cuadrante--semana">
                   {dias.map((d) => (
                     <Dia key={d.fecha} dia={d} esHoy={d.fecha === hoy} />
                   ))}
@@ -128,10 +136,6 @@ export function MiCuadrante() {
           }}
         </EstadoDeConsulta>
       </section>
-
-      <Link className="nx-enlace" to="/incidencias">
-        {C.verIncidencias}
-      </Link>
     </div>
   );
 }
