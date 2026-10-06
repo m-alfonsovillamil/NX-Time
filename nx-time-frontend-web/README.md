@@ -188,6 +188,16 @@ menos permisos y así se nota si una pantalla necesita alguno que no tiene;
 GESTOR, RRHH o ADMIN para lo de gestión) y recorre sus pantallas contra los
 datos de demo.
 
+**Entrar con Google o con Microsoft** (ADR 036): `sso.spec.ts` hace el
+recorrido entero en el navegador contra un proveedor de mentira,
+`e2e/proveedor-oidc.mjs`, que tiene su página de «elige tu cuenta» y firma los
+ID token. Es lo único que demuestra que las cookies sobreviven a la ida y la
+vuelta y que la web retoma la sesión sola; las reglas (a quién se le cree el
+correo, qué token no vale) las prueba el backend. El CI lo arranca y enciende
+el SSO del backend apuntando a él. En local, sin eso, esas specs se saltan; para
+correrlas, `node e2e/proveedor-oidc.mjs` y los parámetros que lleva la cabecera
+de la spec.
+
 **Accesibilidad** (fase W8): `accesibilidad.spec.ts` pasa axe (WCAG 2.1 A y AA)
 por **todas** las páginas, en tema claro y oscuro. No lleva una lista de
 páginas: cada cuenta de demo recorre su propio menú, así que una página nueva

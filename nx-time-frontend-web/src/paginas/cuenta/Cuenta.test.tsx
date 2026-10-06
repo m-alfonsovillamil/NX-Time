@@ -361,3 +361,96 @@ describe('ajustes', () => {
     await waitFor(() => expect(llamadas.a('POST', '/api/v1/perfil/borrado/cancelar')).toHaveLength(1));
   });
 });
+
+/* Las cuentas de Google o de Microsoft con las que se entra (ADR 036). */
+describe('cuentas vinculadas', () => {
+  const V = cuenta.ajustes.vinculadas;
+  const GOOGLE = { id: 'google', nombre: 'Google', inicio: 'https://api.nxtime-web.com/auth/sso/google/iniciar' };
+  const MICROSOFT = { id: 'microsoft', nombre: 'Microsoft', inicio: 'https://api.nxtime-web.com/auth/sso/microsoft/iniciar' };
+  const DE_GOOGLE = {
+    proveedor: 'google',
+    nombre: 'Google',
+    correo: 'ana@gmail.com',
+    vinculadaEn: '2026-10-06T10:00:00Z',
+    ultimoAcceso: null,
+  };
+
+  function api(extra: Partial<Record<Ruta, Manejador>> = {}) {
+    return simularApi({
+      'GET /api/v1/perfil/borrado': () => sinContenido(),
+      'GET /auth/sso/proveedores': () => [GOOGLE, MICROSOFT],
+      'GET /api/v1/perfil/identidades': () => [DE_GOOGLE],
+      ...extra,
+    });
+  }
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('enseña la vinculada con su correo y, de la que no lo está, el enlace para vincularla', async () => {
+    api();
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    const tarjeta = (await screen.findByRole('heading', { name: V.titulo })).closest('section') as HTMLElement;
+    expect(await within(tarjeta).findByText(/ana@gmail\.com/)).toBeTruthy();
+    expect(within(tarjeta).getByRole('button', { name: V.desvincularDe('Google') })).toBeTruthy();
+    // Vincular es una navegación al servidor, con la marca de que es para vincular.
+    const vincular = await within(tarjeta).findByRole('link', { name: V.vincular('Microsoft') });
+    expect(vincular.getAttribute('href')).toBe(MICROSOFT.inicio + '?vincular=1');
+    // Y sale en el índice de la página.
+    expect(screen.getByRole('link', { name: V.titulo })).toBeTruthy();
+  });
+
+  it('desvincular pide confirmación y borra la de ese proveedor', async () => {
+    let vinculadas = [DE_GOOGLE];
+    const llamadas = api({
+      'GET /api/v1/perfil/identidades': () => vinculadas,
+      'DELETE /api/v1/perfil/identidades/{proveedor}': () => {
+        vinculadas = [];
+        return sinContenido();
+      },
+    });
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: V.desvincularDe('Google') }));
+    expect(llamadas.a('DELETE', '/api/v1/perfil/identidades/google')).toHaveLength(0);
+    const dialogo = await screen.findByRole('dialog', { name: V.confirmarTitulo('Google') });
+    await userEvent.click(within(dialogo).getByRole('button', { name: V.desvincular }));
+
+    await waitFor(() => expect(llamadas.a('DELETE', '/api/v1/perfil/identidades/google')).toHaveLength(1));
+    // Vuelve a pedirse la lista, y Google pasa a poder vincularse.
+    expect(await screen.findByRole('link', { name: V.vincular('Google') })).toBeTruthy();
+  });
+
+  it('sin proveedores y sin ninguna vinculada, la sección no existe', async () => {
+    const llamadas = api({
+      'GET /auth/sso/proveedores': () => [],
+      'GET /api/v1/perfil/identidades': () => [],
+    });
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    await waitFor(() => expect(llamadas.a('GET', '/api/v1/perfil/identidades')).toHaveLength(1));
+    await waitFor(() => expect(llamadas.a('GET', '/auth/sso/proveedores')).toHaveLength(1));
+    expect(screen.queryByRole('heading', { name: V.titulo })).toBeNull();
+    expect(screen.queryByRole('link', { name: V.titulo })).toBeNull();
+  });
+
+  /* Un proveedor que se apaga en el servidor no deja a nadie con una cuenta que no puede quitar. */
+  it('una ya vinculada de un proveedor apagado se sigue viendo, para poder quitarla', async () => {
+    api({ 'GET /auth/sso/proveedores': () => [] });
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    expect(await screen.findByRole('button', { name: V.desvincularDe('Google') })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: V.vincular('Microsoft') })).toBeNull();
+  });
+
+  it('al volver sin haber podido vincular, dice por qué', async () => {
+    window.history.replaceState({}, '', '/ajustes?sso=ya-vinculada');
+    api();
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    expect((await screen.findByText(V.motivos['ya-vinculada'])).getAttribute('role')).toBe('alert');
+    await waitFor(() => expect(window.location.search).toBe(''));
+  });
+});

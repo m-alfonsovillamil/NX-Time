@@ -465,6 +465,71 @@ h1 {
   gap: 8px;
 }
 
+/* Un enlace con forma de botón: lo que hace es navegar (entrar con Google lleva
+   el navegador a otra parte), así que es un `<a>`, pero tiene que verse y
+   pulsarse como los botones que tiene al lado. */
+.nx-boton--enlace {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  text-align: center;
+}
+
+/* ---- Entrar con otra cuenta (ADR 036) ---- */
+
+.nx-sso {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* «o», con una raya a cada lado. */
+.nx-sso__separador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--nx-on-surface-variant);
+  font-size: var(--nx-fs-label-large);
+}
+
+.nx-sso__separador::before,
+.nx-sso__separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--nx-outline-variant, var(--nx-surface-variant));
+}
+
+/* Las cuentas vinculadas, en Ajustes: cada una con su acción a la derecha. */
+.nx-cuentas-vinculadas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nx-cuentas-vinculadas > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.nx-cuentas-vinculadas__cuenta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  /* Un correo largo se parte antes que sacar la fila de la tarjeta. */
+  overflow-wrap: anywhere;
+}
+
 .nx-boton:focus-visible {
   outline: 2px solid var(--nx-primary);
   outline-offset: 2px;

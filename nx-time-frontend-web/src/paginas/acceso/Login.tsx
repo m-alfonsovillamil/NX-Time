@@ -12,6 +12,11 @@
  * - El campo se llama **`contrasena`**, no `password`. Con `password` el
  *   servidor responde 400, y eso ya costó un rato una vez. Ahora no puede
  *   repetirse: lo dicen los tipos generados del contrato.
+ *
+ * Debajo, **entrar con Google o con Microsoft** (ADR 036), si el servidor los
+ * tiene configurados. No son botones: son enlaces, porque lo que hacen es
+ * mandar el navegador al servidor, que lo lleva al proveedor y lo devuelve
+ * aquí con la sesión hecha o con el motivo en la URL (`?sso=…`).
  */
 
 import { useState, type FormEvent } from 'react';
@@ -19,6 +24,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 
 import { cliente } from '../../api/cliente';
 import { abrirSesion } from '../../api/sesion';
+import { mensajeDeSso, useProveedoresSso, useVueltaDeSso } from '../../api/sso';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
 import type { EstadoDeVuelta } from '../../rutas/rutas';
@@ -33,7 +39,9 @@ export function Login() {
   const desde = (useLocation().state as EstadoDeVuelta | null)?.desde ?? '/fichar';
   const [email, setEmail] = useState('');
   const [contrasena, setContrasena] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const proveedores = useProveedoresSso();
+  // Si vuelve del proveedor sin haber entrado, se le dice por qué.
+  const [error, setError] = useState<string | null>(mensajeDeSso(useVueltaDeSso()));
   const [entrando, setEntrando] = useState(false);
   /** Contraseña buena, correo sin confirmar (403, ADR 034): se pide el código que acaba de salir. */
   const [sinConfirmar, setSinConfirmar] = useState<string | null>(null);
@@ -111,6 +119,19 @@ export function Login() {
         <Boton type="submit" ocupado={entrando}>
           {entrando ? T.login.entrando : T.login.entrar}
         </Boton>
+
+        {proveedores.length > 0 && (
+          <div className="nx-sso" role="group" aria-label={T.sso.etiqueta}>
+            <p className="nx-sso__separador" aria-hidden="true">
+              <span>{T.sso.separador}</span>
+            </p>
+            {proveedores.map((p) => (
+              <a key={p.id} className="nx-boton nx-boton--secundario nx-boton--enlace" href={p.inicio}>
+                {T.sso.entrarCon(p.nombre)}
+              </a>
+            ))}
+          </div>
+        )}
 
         <Link className="nx-enlace" to="/recuperar-acceso">
           {T.login.recuperar}

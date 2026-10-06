@@ -127,3 +127,75 @@ describe('entrar', () => {
     expect(cuerposEnviados).toHaveLength(0);
   });
 });
+
+/*
+ * Entrar con Google o con Microsoft (ADR 036). La web no hace el SSO, lo
+ * empieza: lo que hay que comprobar es que los enlaces existen solo cuando el
+ * servidor los ofrece, adónde llevan, y que quien vuelve sin haber entrado se
+ * entera de por qué.
+ */
+describe('entrar con otra cuenta', () => {
+  const GOOGLE = { id: 'google', nombre: 'Google', inicio: 'https://api.nxtime-web.com/auth/sso/google/iniciar' };
+  const MICROSOFT = { id: 'microsoft', nombre: 'Microsoft', inicio: 'https://api.nxtime-web.com/auth/sso/microsoft/iniciar' };
+
+  function conProveedores(respuesta: () => Response) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => respuesta()),
+    );
+  }
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('pinta un enlace por cada proveedor que ofrece el servidor, a la URL que este da', async () => {
+    conProveedores(() => json([GOOGLE, MICROSOFT]));
+    pintar();
+
+    const google = await screen.findByRole('link', { name: T.sso.entrarCon('Google') });
+    expect(google.getAttribute('href')).toBe(GOOGLE.inicio);
+    expect(screen.getByRole('link', { name: T.sso.entrarCon('Microsoft') }).getAttribute('href')).toBe(MICROSOFT.inicio);
+    // El formulario de siempre sigue ahí.
+    expect(screen.getByRole('button', { name: T.login.entrar })).toBeTruthy();
+  });
+
+  it('sin proveedores configurados no hay ni enlaces ni separador', async () => {
+    const pedido = vi.fn(async () => json([]));
+    vi.stubGlobal('fetch', pedido);
+    pintar();
+
+    await waitFor(() => expect(pedido).toHaveBeenCalled());
+    expect(screen.queryByRole('group', { name: T.sso.etiqueta })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Google/ })).toBeNull();
+  });
+
+  /* Entrar con contraseña no puede depender de esto. */
+  it('si la lista de proveedores falla, la pantalla es la de siempre y no enseña ningún error', async () => {
+    const pedido = vi.fn(async () => json({ detail: 'Caído.' }, 500));
+    vi.stubGlobal('fetch', pedido);
+    pintar();
+
+    await waitFor(() => expect(pedido).toHaveBeenCalled());
+    expect(screen.queryByRole('group', { name: T.sso.etiqueta })).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: T.login.entrar })).toBeTruthy();
+  });
+
+  it('quien vuelve del proveedor sin haber entrado lee por qué, y el motivo se va de la URL', async () => {
+    window.history.replaceState({}, '', '/?sso=sin-cuenta');
+    conProveedores(() => json([GOOGLE]));
+    pintar();
+
+    expect((await screen.findByRole('alert')).textContent).toBe(T.sso.motivos['sin-cuenta']);
+    await waitFor(() => expect(window.location.search).toBe(''));
+  });
+
+  it('un motivo que esta versión no conoce se explica como un fallo, no se calla', async () => {
+    window.history.replaceState({}, '', '/?sso=algo-nuevo');
+    conProveedores(() => json([]));
+    pintar();
+
+    expect((await screen.findByRole('alert')).textContent).toBe(T.sso.motivos.fallo);
+  });
+});
