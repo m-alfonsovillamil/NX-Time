@@ -86,6 +86,36 @@ de `secciones.test.ts` impiden que vuelvan a repetirse:
   una columna de 560 px en todas partes, y al llegar los datos la página
   saltaba.
 
+### El menú se reconoce de un vistazo, y dice lo que espera
+
+- **Apartados y entradas.** Cada apartado lleva su icono en un recuadro del
+  acento de su zona. Cada entrada lleva el suyo, más pequeño, y cuelga de una
+  línea guía.
+- **Dónde estás.** La entrada de la página abierta va rellena, con una barra
+  sobre la guía. Su apartado lleva el recuadro lleno, así que se sabe dónde se
+  está aunque el apartado esté plegado.
+- **Contadores de pendientes** (`navegacion/pendientes.ts`).
+  - Usan la misma consulta y la misma clave de caché que el panel de gestión.
+    Resolver algo en una bandeja actualiza los dos a la vez.
+  - Se piden cada cinco minutos y solo con la pestaña a la vista, como la
+    campana (ADR 034). Sin `fichaje:leer:equipo` no se piden.
+  - Un apartado plegado enseña la suma de lo que tiene dentro.
+  - **El número no entra en el nombre del enlace.** La pastilla va con
+    `aria-hidden`. El texto «3 pendientes» es la descripción del enlace
+    (`aria-describedby`) y va *fuera* de él, porque dentro pasaría a formar
+    parte del nombre. Un lector de pantalla dice «Ausencias del equipo,
+    enlace, 3 pendientes», y el enlace se sigue buscando por el nombre de su
+    sección.
+- **Chip de jornada** (`ChipDeJornada`), en la barra superior.
+  - Usa los colores de `ColoresJornada`: verde trabajando, ámbar en pausa.
+    Sin fichar va en neutro, porque no es una alarma.
+  - Comparte la consulta de «Mi jornada», así que no añade peticiones.
+  - Avanza cada medio minuto, no cada segundo.
+  - No sale en «Mi jornada» ni mientras no se sabe el estado.
+- **Precarga.** Pasar el ratón por una entrada, o llegar a ella con el
+  tabulador, pide ya el JS de su página (`perezosa` en `secciones.ts`). Para
+  cuando se pulsa, ya está descargado.
+
 ### El ancho lo decide la composición, no la página
 
 `.nx-pagina` ocupa hasta 1280 px. Lo que necesita poco ancho lo resuelve la

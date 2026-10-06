@@ -69,6 +69,25 @@ export const ICONOS_DE_SUBGRUPO: Readonly<Record<Subgrupo, NombreIcono>> = {
   administracion: 'escudo',
 };
 
+/**
+ * Una página perezosa que además se puede **pedir por adelantado**.
+ *
+ * `React.lazy` solo descarga el trozo de JS al pintar la página, es decir,
+ * después del clic: en una conexión lenta se veía el esqueleto medio segundo
+ * en cada cambio de sección. Con `precargar`, el menú lo pide al pasar el
+ * ratón o al llegar con el tabulador, y para cuando se pulsa ya está. El
+ * navegador no descarga dos veces el mismo módulo, así que precargar y luego
+ * pintar es una sola petición.
+ */
+export type PaginaPerezosa = LazyExoticComponent<ComponentType> & { precargar: () => void };
+
+function perezosa(cargar: () => Promise<{ default: ComponentType }>): PaginaPerezosa {
+  return Object.assign(lazy(cargar), {
+    // Si falla (sin red), no pasa nada: se volverá a intentar al pulsar.
+    precargar: () => void cargar().catch(() => undefined),
+  });
+}
+
 export interface Seccion {
   /** Sin barra inicial. Si la sección es destino de algún aviso, es ese destino tal cual. */
   ruta: string;
@@ -84,7 +103,7 @@ export interface Seccion {
   /** En el móvil, en la barra inferior y no en «Más». Como mucho cuatro: la quinta casilla es «Más». */
   principal?: boolean;
   /** La página, cargada al visitarla (`React.lazy`). Sin ella, la sección todavía no existe en la web. */
-  pagina?: LazyExoticComponent<ComponentType>;
+  pagina?: PaginaPerezosa;
   /** La fase del plan que traerá la página. */
   llegaEn?: Fase;
 }
@@ -94,44 +113,44 @@ export interface Seccion {
  * editor de cuadrantes. El `then` es porque las páginas se exportan con
  * nombre y `lazy` quiere un `default`.
  */
-const Fichar = lazy(() => import('../paginas/jornada/Fichar').then((m) => ({ default: m.Fichar })));
-const Historial = lazy(() => import('../paginas/historial/Historial').then((m) => ({ default: m.Historial })));
-const Ausencias = lazy(() => import('../paginas/ausencias/Ausencias').then((m) => ({ default: m.Ausencias })));
-const Calendario = lazy(() => import('../paginas/ausencias/Calendario').then((m) => ({ default: m.Calendario })));
-const Avisos = lazy(() => import('../paginas/cuenta/Avisos').then((m) => ({ default: m.Avisos })));
-const Perfil = lazy(() => import('../paginas/cuenta/Perfil').then((m) => ({ default: m.PaginaPerfil })));
-const Ajustes = lazy(() => import('../paginas/cuenta/Ajustes').then((m) => ({ default: m.Ajustes })));
-const MiCuadrante = lazy(() => import('../paginas/cuadrante/MiCuadrante').then((m) => ({ default: m.MiCuadrante })));
-const Incidencias = lazy(() => import('../paginas/cuadrante/Incidencias').then((m) => ({ default: m.Incidencias })));
-const Firmas = lazy(() => import('../paginas/cuadrante/Firmas').then((m) => ({ default: m.Firmas })));
-const HorasExtra = lazy(() => import('../paginas/revisiones/HorasExtra').then((m) => ({ default: m.HorasExtra })));
-const Correcciones = lazy(() => import('../paginas/revisiones/Correcciones').then((m) => ({ default: m.Correcciones })));
-const Ofertas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.Ofertas })));
-const MisCandidaturas = lazy(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.PaginaMisCandidaturas })));
-const Denuncias = lazy(() => import('../paginas/denuncias/Denuncias').then((m) => ({ default: m.Denuncias })));
-const HistorialEquipo = lazy(() => import('../paginas/equipo/HistorialEquipo').then((m) => ({ default: m.HistorialEquipo })));
-const PanelGestion = lazy(() => import('../paginas/gestion/PanelGestion').then((m) => ({ default: m.PanelGestion })));
-const AusenciasEquipo = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.AusenciasEquipo })));
-const AusenciasResueltas = lazy(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.PaginaAusenciasResueltas })));
-const Plantilla = lazy(() => import('../paginas/plantilla/Plantilla').then((m) => ({ default: m.Plantilla })));
-const Departamentos = lazy(() => import('../paginas/plantilla/Departamentos').then((m) => ({ default: m.Departamentos })));
-const Proyectos = lazy(() => import('../paginas/proyectos/Proyectos').then((m) => ({ default: m.Proyectos })));
-const CalendarioLaboral = lazy(() => import('../paginas/proyectos/CalendarioLaboral').then((m) => ({ default: m.CalendarioLaboral })));
-const PanelEmpresa = lazy(() => import('../paginas/empresa/PanelEmpresa').then((m) => ({ default: m.PanelEmpresa })));
-const Informes = lazy(() => import('../paginas/empresa/Informes').then((m) => ({ default: m.Informes })));
-const Integridad = lazy(() => import('../paginas/empresa/Integridad').then((m) => ({ default: m.Integridad })));
-const AjustesEmpresa = lazy(() =>
+const Fichar = perezosa(() => import('../paginas/jornada/Fichar').then((m) => ({ default: m.Fichar })));
+const Historial = perezosa(() => import('../paginas/historial/Historial').then((m) => ({ default: m.Historial })));
+const Ausencias = perezosa(() => import('../paginas/ausencias/Ausencias').then((m) => ({ default: m.Ausencias })));
+const Calendario = perezosa(() => import('../paginas/ausencias/Calendario').then((m) => ({ default: m.Calendario })));
+const Avisos = perezosa(() => import('../paginas/cuenta/Avisos').then((m) => ({ default: m.Avisos })));
+const Perfil = perezosa(() => import('../paginas/cuenta/Perfil').then((m) => ({ default: m.PaginaPerfil })));
+const Ajustes = perezosa(() => import('../paginas/cuenta/Ajustes').then((m) => ({ default: m.Ajustes })));
+const MiCuadrante = perezosa(() => import('../paginas/cuadrante/MiCuadrante').then((m) => ({ default: m.MiCuadrante })));
+const Incidencias = perezosa(() => import('../paginas/cuadrante/Incidencias').then((m) => ({ default: m.Incidencias })));
+const Firmas = perezosa(() => import('../paginas/cuadrante/Firmas').then((m) => ({ default: m.Firmas })));
+const HorasExtra = perezosa(() => import('../paginas/revisiones/HorasExtra').then((m) => ({ default: m.HorasExtra })));
+const Correcciones = perezosa(() => import('../paginas/revisiones/Correcciones').then((m) => ({ default: m.Correcciones })));
+const Ofertas = perezosa(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.Ofertas })));
+const MisCandidaturas = perezosa(() => import('../paginas/ofertas/Ofertas').then((m) => ({ default: m.PaginaMisCandidaturas })));
+const Denuncias = perezosa(() => import('../paginas/denuncias/Denuncias').then((m) => ({ default: m.Denuncias })));
+const HistorialEquipo = perezosa(() => import('../paginas/equipo/HistorialEquipo').then((m) => ({ default: m.HistorialEquipo })));
+const PanelGestion = perezosa(() => import('../paginas/gestion/PanelGestion').then((m) => ({ default: m.PanelGestion })));
+const AusenciasEquipo = perezosa(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.AusenciasEquipo })));
+const AusenciasResueltas = perezosa(() => import('../paginas/gestion/AusenciasEquipo').then((m) => ({ default: m.PaginaAusenciasResueltas })));
+const Plantilla = perezosa(() => import('../paginas/plantilla/Plantilla').then((m) => ({ default: m.Plantilla })));
+const Departamentos = perezosa(() => import('../paginas/plantilla/Departamentos').then((m) => ({ default: m.Departamentos })));
+const Proyectos = perezosa(() => import('../paginas/proyectos/Proyectos').then((m) => ({ default: m.Proyectos })));
+const CalendarioLaboral = perezosa(() => import('../paginas/proyectos/CalendarioLaboral').then((m) => ({ default: m.CalendarioLaboral })));
+const PanelEmpresa = perezosa(() => import('../paginas/empresa/PanelEmpresa').then((m) => ({ default: m.PanelEmpresa })));
+const Informes = perezosa(() => import('../paginas/empresa/Informes').then((m) => ({ default: m.Informes })));
+const Integridad = perezosa(() => import('../paginas/empresa/Integridad').then((m) => ({ default: m.Integridad })));
+const AjustesEmpresa = perezosa(() =>
   import('../paginas/empresa/AjustesEmpresa').then((m) => ({ default: m.AjustesEmpresa })),
 );
-const TarjetasKiosco = lazy(() =>
+const TarjetasKiosco = perezosa(() =>
   import('../paginas/plantilla/TarjetasKiosco').then((m) => ({ default: m.TarjetasKiosco })),
 );
-const Borrados = lazy(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
-const GestionOfertas = lazy(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
-const CanalDenuncias = lazy(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
-const VisadoFirmas = lazy(() => import('../paginas/cuadrante/VisadoFirmas').then((m) => ({ default: m.VisadoFirmas })));
-const Analitica = lazy(() => import('../paginas/analitica/Analitica').then((m) => ({ default: m.Analitica })));
-const Cuadrantes = lazy(() => import('../paginas/cuadrantes/Cuadrantes').then((m) => ({ default: m.Cuadrantes })));
+const Borrados = perezosa(() => import('../paginas/borrados/Borrados').then((m) => ({ default: m.Borrados })));
+const GestionOfertas = perezosa(() => import('../paginas/ofertas/GestionOfertas').then((m) => ({ default: m.GestionOfertas })));
+const CanalDenuncias = perezosa(() => import('../paginas/denuncias/CanalDenuncias').then((m) => ({ default: m.CanalDenuncias })));
+const VisadoFirmas = perezosa(() => import('../paginas/cuadrante/VisadoFirmas').then((m) => ({ default: m.VisadoFirmas })));
+const Analitica = perezosa(() => import('../paginas/analitica/Analitica').then((m) => ({ default: m.Analitica })));
+const Cuadrantes = perezosa(() => import('../paginas/cuadrantes/Cuadrantes').then((m) => ({ default: m.Cuadrantes })));
 
 const S = T.navegacion.secciones;
 
