@@ -3,10 +3,12 @@ package com.nxtime.nxtime.repository;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -72,4 +74,26 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * llega al cliente como un 500 sin explicación.
      */
     long countByDepartamento_Id(long departamentoId);
+
+    /**
+     * Apunta que a esa cuenta se le manda ahora el correo de «ya tienes
+     * cuenta», si no se le ha mandado otro después de {@code desde} (V40,
+     * ADR 037).
+     *
+     * Comprobar y apuntar van en una sola sentencia a propósito. Leyendo
+     * primero y guardando después, dos registros a la vez con el mismo correo
+     * mandarían dos avisos; y guardando la entidad, el segundo chocaría con
+     * {@code @Version} y respondería distinto que un correo sin cuenta, que es
+     * justo lo que el registro no puede decir.
+     *
+     * Nativa porque la columna no está en {@link User}: nadie más la lee, y
+     * así ningún {@code save} de otra parte puede pisarla con un valor viejo.
+     *
+     * @return 1 si toca mandarlo, 0 si ya se le mandó uno hace poco
+     */
+    @Modifying
+    @Query(value = "UPDATE usuarios SET aviso_cuenta_existente_en = :ahora "
+            + "WHERE id = :id AND (aviso_cuenta_existente_en IS NULL OR aviso_cuenta_existente_en < :desde)",
+            nativeQuery = true)
+    int marcarAvisoDeCuentaExistente(@Param("id") long id, @Param("ahora") Instant ahora, @Param("desde") Instant desde);
 }

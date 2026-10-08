@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**1213 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1218 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -605,6 +605,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 34. [Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había](docs/adr/034-endurecimiento-de-octubre.md)
 35. [El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas](docs/adr/035-sistema-visual-de-la-web.md)
 36. [Entrar con Google o con Microsoft: solo para quien ya tiene cuenta, y a quién se le cree el correo](docs/adr/036-entrar-con-google-o-microsoft.md)
+37. [Registrarse con un correo que ya tiene cuenta: se le dice a su dueño, por correo](docs/adr/037-ya-tienes-cuenta-por-correo.md)
 
 ---
 

@@ -209,6 +209,36 @@ class EmailTemplateRenderingTest {
         assertThat(html).doesNotContain("<!--");
     }
 
+    @Test
+    @DisplayName("El correo de «ya tienes cuenta» dice cómo entrar y no lleva ningún código")
+    void accountAlreadyExists_diceComoEntrar() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombre", "Ana");
+        vars.put("email", "ana@techcorp.demo");
+        vars.put("nombreEmpresa", "TechCorp");
+        vars.put("activa", true);
+
+        String html = render("account-already-exists", vars);
+
+        assertThat(html).contains("Ana").contains("ana@techcorp.demo").contains("TechCorp")
+                .contains("¿Has olvidado tu contraseña o es tu primera vez?");
+        assertThat(html).doesNotContain("dada de baja").doesNotContain("<!--");
+    }
+
+    @Test
+    @DisplayName("A una cuenta dada de baja el correo de «ya tienes cuenta» no le dice que entre")
+    void accountAlreadyExists_cuentaDeBaja() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombre", "Ana");
+        vars.put("email", "ana@techcorp.demo");
+        vars.put("nombreEmpresa", "TechCorp");
+        vars.put("activa", false);
+
+        String html = render("account-already-exists", vars);
+
+        assertThat(html).contains("dada de baja").doesNotContain("Has olvidado tu contraseña");
+    }
+
     private static Map<String, Object> variablesDeCodigo() {
         Map<String, Object> vars = new HashMap<>();
         vars.put("nombre", "Ana");
