@@ -5,8 +5,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    // Desde AGP 9 el propio plugin de Android compila Kotlin: el plugin
+    // `org.jetbrains.kotlin.android` ya no se aplica (y aplicarlo es un error).
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     // El compilador de Compose. Desde Kotlin 2.0 va como plugin propio
     // y toma la versión del propio Kotlin, así que ya no hay que
     // emparejar a mano Kotlin <-> compilador de Compose.
@@ -36,7 +37,7 @@ kotlin {
 
 android {
     namespace = "com.nxtime.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.nxtime.app"
@@ -222,9 +223,13 @@ dependencies {
     /*
      * Dependencias de Retrofit:
      */
-    implementation("com.squareup.retrofit2:retrofit:2.12.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    // Retrofit 3 arrastra OkHttp 4.12: la 5 se declara, para que no dependa
+    // de que logging-interceptor la suba por su cuenta. OkHttp 5.5 es lo que
+    // obliga a compilar contra Android 37.
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
 
     /*
      * Gson, declarado a propósito aunque converter-gson ya lo arrastre.
@@ -243,14 +248,13 @@ dependencies {
      * abajo van sin número.
      */
     /*
-     * BOM 2025.11.00 y no uno más nuevo: es el primero cuyo Material 3
-     * es la 1.4.0, es decir, Expressive ya estable (formas, esquemas de
-     * movimiento, LoadingIndicator, ButtonGroup...), y el último de esa
-     * serie que sigue compilando contra `compileSdk 36` con AGP 8.x.
-     * Del BOM 2025.12.00 en adelante, Compose pasa a la 1.10 y **exige
-     * AGP 9.1+ y compileSdk 37**, que es otra migración distinta.
+     * Hasta octubre de 2026 esto estaba clavado en el BOM 2025.11.00, el
+     * último que compilaba contra `compileSdk 36` con AGP 8.x: del 2025.12
+     * en adelante Compose exige AGP 9.1+ y compileSdk 37. Hecha esa
+     * migración (Gradle 9, AGP 9.4, compileSdk 37), el BOM vuelve a poder
+     * seguir al día.
      */
-    val composeBom = platform("androidx.compose:compose-bom:2025.11.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     testImplementation(composeBom)
