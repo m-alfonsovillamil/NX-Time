@@ -7,6 +7,7 @@ import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Kiosk;
 import com.nxtime.nxtime.domain.TimeEntry;
+import com.nxtime.nxtime.domain.TimeEntryAction;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
@@ -80,6 +81,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private final TimeEntrySnapshotSerializer snapshotSerializer;
     private final NonWorkingDayService nonWorkingDayService;
     private final ProjectAllocationService projectAllocationService;
+    private final IncompleteTimeEntryCloser cierreDeOlvidadas;
 
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
@@ -89,7 +91,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             ApplicationEventPublisher eventPublisher,
             TimeEntrySnapshotSerializer snapshotSerializer,
             NonWorkingDayService nonWorkingDayService,
-            ProjectAllocationService projectAllocationService
+            ProjectAllocationService projectAllocationService,
+            IncompleteTimeEntryCloser cierreDeOlvidadas
     ) {
         this.timeEntryRepository = timeEntryRepository;
         this.timeEntryAuditRepository = timeEntryAuditRepository;
@@ -99,6 +102,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         this.snapshotSerializer = snapshotSerializer;
         this.nonWorkingDayService = nonWorkingDayService;
         this.projectAllocationService = projectAllocationService;
+        this.cierreDeOlvidadas = cierreDeOlvidadas;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -133,6 +137,29 @@ public class TimeEntryServiceImpl implements TimeEntryService {
 
     private TimeEntry registrar(User user, TimeEntryRequest request, Kiosk kiosco) {
         TimeEntry activeEntry = timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null);
+
+        if (activeEntry != null && IncompleteTimeEntryCloser.estaOlvidada(activeEntry, Instant.now())) {
+            // Una jornada que se quedó abierta más del límite ya no se puede
+            // seguir como si nada: se cierra aquí como la cerraría el proceso
+            // de las 3:00, con la salida en el tope y marcada para corregir.
+            // Antes, qué quedaba registrado dependía de si las 3:00 habían
+            // caído en medio: terminarla a mano por la tarde dejaba una
+            // jornada de veinte horas sin ninguna marca.
+            cierreDeOlvidadas.cerrar(activeEntry);
+            log.warn("Jornada {} de {} cerrada al fichar: llevaba abierta más de {} horas.",
+                    activeEntry.getId(), user.getId(), IncompleteTimeEntryCloser.HORAS_PARA_CONSIDERARLA_OLVIDADA);
+            if (request.tipo() != TimeEntryAction.INICIO) {
+                // Terminar, pausar o reanudar una jornada olvidada es
+                // cerrarla: no hay nada que seguir.
+                return activeEntry;
+            }
+            // Antes de insertar la nueva: con IDENTITY el INSERT sale en el
+            // save, por delante del UPDATE pendiente de la que se acaba de
+            // cerrar, y chocaría con uq_registros_jornada_abierta.
+            timeEntryRepository.flush();
+            activeEntry = null;
+        }
+
         // Instantánea de "antes" para la auditoría: se toma ya, antes de
         // que ninguna de las ramas de abajo mute activeEntry.
         String beforeJson = (activeEntry != null) ? toJson(activeEntry) : null;
@@ -277,8 +304,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         return respuestaDeProyectos(user, timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null));
     }
 
+    // noRollbackFor: sobre una jornada olvidada esto la cierra Y lanza, y el
+    // cierre tiene que quedarse (como el intento fallido de un código de
+    // acceso). Las demás reglas lanzan antes de escribir nada.
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = BusinessException.class)
     public ClockProjectsResponse cambiarProyecto(String userEmail, long registroId, long proyectoId) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -290,6 +320,18 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         if (registro.getHoraSalida() != null) {
             throw new BusinessException("La jornada ya está cerrada. Para repartir sus horas entre proyectos, "
                     + "hazlo desde el historial.");
+        }
+        if (IncompleteTimeEntryCloser.estaOlvidada(registro, Instant.now())) {
+            // Como al fichar sobre una jornada olvidada (ver registrar): se
+            // cierra en su tope. Abrirle un tramo ahora sería imputar a un
+            // proyecto horas que caen fuera de la jornada. La excepción no
+            // deshace el cierre: ver noRollbackFor.
+            cierreDeOlvidadas.cerrar(registro);
+            log.warn("Jornada {} de {} cerrada al cambiar de proyecto: llevaba abierta más de {} horas.",
+                    registro.getId(), user.getId(), IncompleteTimeEntryCloser.HORAS_PARA_CONSIDERARLA_OLVIDADA);
+            throw new BusinessException("Esa jornada llevaba abierta más de "
+                    + IncompleteTimeEntryCloser.HORAS_PARA_CONSIDERARLA_OLVIDADA
+                    + " horas y se ha cerrado. Ficha la entrada de nuevo y pide que te corrijan la anterior.");
         }
         // En pausa no: el tramo que se cierra no sabría cuánto de esa pausa es suyo.
         if (registro.isEnPausa()) {

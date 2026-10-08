@@ -649,6 +649,44 @@ class CorrectionServiceImplTest {
     }
 
     @Test
+    @DisplayName("La bandeja pide el reparto propuesto de todas sus solicitudes en una consulta, y cada una recibe el suyo")
+    void pendientesParaMi_pideElRepartoDeTodasDeUnaVez() {
+        CorrectionRequest primera = solicitudDe(empleado, CorrectionStatus.PENDIENTE);
+        CorrectionRequest segunda = solicitudDe(empleado, CorrectionStatus.PENDIENTE);
+        segunda.setId(79L);
+        CorrectionRequest sinReparto = solicitudDe(empleado, CorrectionStatus.PENDIENTE);
+        sinReparto.setId(80L);
+        when(correctionRepository.findVivasDeEmpresa(1L)).thenReturn(List.of(primera, segunda, sinReparto));
+        com.nxtime.nxtime.domain.Project web =
+                com.nxtime.nxtime.domain.Project.builder().id(1L).codigo("WEB").build();
+        com.nxtime.nxtime.domain.Project app =
+                com.nxtime.nxtime.domain.Project.builder().id(2L).codigo("APP").build();
+        when(proposedAllocationRepository.findBySolicitud_IdInOrderByIdAsc(List.of(77L, 79L, 80L)))
+                .thenReturn(List.of(
+                        linea(primera, web, 3600),
+                        linea(segunda, app, 1800),
+                        linea(primera, app, 7200)));
+
+        List<CorrectionResponse> bandeja = service.pendientesParaMi(gestor);
+
+        assertThat(bandeja).extracting(CorrectionResponse::id).containsExactly(77L, 79L, 80L);
+        assertThat(bandeja.get(0).repartoPropuesto()).containsExactly(
+                new CorrectionResponse.ProjectShare(1L, "WEB", 60),
+                new CorrectionResponse.ProjectShare(2L, "APP", 120));
+        assertThat(bandeja.get(1).repartoPropuesto()).containsExactly(
+                new CorrectionResponse.ProjectShare(2L, "APP", 30));
+        assertThat(bandeja.get(2).repartoPropuesto()).isEmpty();
+        // Lo que se arregla: antes era una consulta por solicitud.
+        verify(proposedAllocationRepository, never()).findBySolicitudOrderByIdAsc(any());
+    }
+
+    private static com.nxtime.nxtime.domain.ProposedAllocation linea(
+            CorrectionRequest solicitud, com.nxtime.nxtime.domain.Project proyecto, long segundos) {
+        return com.nxtime.nxtime.domain.ProposedAllocation.builder()
+                .solicitud(solicitud).proyecto(proyecto).segundos(segundos).build();
+    }
+
+    @Test
     @DisplayName("La respuesta dice a quien pregunta si puede resolver y si puede disputar")
     void toResponse_calculaLosPermisosParaQuienPregunta() {
         CorrectionRequest laPidioElGestor = solicitudDe(gestor, CorrectionStatus.PENDIENTE);

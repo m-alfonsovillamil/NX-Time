@@ -62,8 +62,10 @@ class IncompleteTimeEntrySchedulerTest {
         // y ScheduledTaskMonitorIT: aquí solo tiene que dejar correr el trabajo.
         doAnswer(invocacion -> invocacion.<Supplier<String>>getArgument(1).get())
                 .when(taskMonitor).ejecutar(any(), any());
-        scheduler = new IncompleteTimeEntryScheduler(timeEntryRepository, eventPublisher, serializer,
-                taskMonitor, new TransactionTemplate(transactionManager), org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class));
+        scheduler = new IncompleteTimeEntryScheduler(timeEntryRepository,
+                new com.nxtime.nxtime.service.impl.IncompleteTimeEntryCloser(timeEntryRepository, eventPublisher,
+                        serializer, org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class)),
+                taskMonitor, new TransactionTemplate(transactionManager));
         Company empresa = Company.builder().id(1L).build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").empresa(empresa).build();
     }

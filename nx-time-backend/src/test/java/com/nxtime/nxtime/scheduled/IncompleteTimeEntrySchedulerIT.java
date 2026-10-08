@@ -124,6 +124,53 @@ class IncompleteTimeEntrySchedulerIT {
         assertThat(nueva.getHoraSalida()).isNull();
     }
 
+    /**
+     * Sin esperar a las 3:00: quien se encuentra con una jornada olvidada y
+     * ficha la entrada. Contra la base de verdad porque lo delicado es el
+     * orden: el cierre de la vieja tiene que llegar antes que el INSERT de la
+     * nueva, o salta {@code uq_registros_jornada_abierta}. Con mocks no hay
+     * índice que lo diga.
+     */
+    @Test
+    @DisplayName("Fichar la entrada con una jornada olvidada la cierra en el tope y abre la nueva, sin esperar al proceso nocturno")
+    void ficharConUnaJornadaOlvidada_laCierraYAbreLaNueva() {
+        User empleado = crearEmpleado("sin.esperar@nxtime.test");
+        TimeEntry olvidada = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(empleado).empresa(empleado.getEmpresa())
+                .horaEntrada(Instant.now().minus(20, ChronoUnit.HOURS)).build());
+
+        TimeEntry nueva = timeEntryService.registerTimeEntry(
+                empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+
+        TimeEntry cerrada = timeEntryRepository.findById(olvidada.getId()).orElseThrow();
+        assertThat(cerrada.isJornadaIncompleta()).isTrue();
+        assertThat(ChronoUnit.HOURS.between(cerrada.getHoraEntrada(), cerrada.getHoraSalida())).isEqualTo(16);
+        assertThat(nueva.getId()).isNotEqualTo(olvidada.getId());
+        assertThat(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado))
+                .get().extracting(TimeEntry::getId).isEqualTo(nueva.getId());
+        // La traza del cierre es del sistema; la de la jornada nueva, de quien ficha.
+        assertThat(timeEntryAuditRepository.findAll().stream()
+                .filter(traza -> traza.getRegistro().getId() == olvidada.getId())
+                .filter(traza -> traza.getModificadoPor() == null))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Terminar a mano una jornada olvidada deja lo mismo que el proceso nocturno: 16 h y marcada")
+    void terminarUnaJornadaOlvidada_dejaLoMismoQueElProcesoNocturno() {
+        User empleado = crearEmpleado("termina.tarde@nxtime.test");
+        TimeEntry olvidada = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(empleado).empresa(empleado.getEmpresa())
+                .horaEntrada(Instant.now().minus(20, ChronoUnit.HOURS)).build());
+
+        timeEntryService.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.FIN));
+
+        TimeEntry cerrada = timeEntryRepository.findById(olvidada.getId()).orElseThrow();
+        assertThat(cerrada.isJornadaIncompleta()).isTrue();
+        assertThat(ChronoUnit.HOURS.between(cerrada.getHoraEntrada(), cerrada.getHoraSalida())).isEqualTo(16);
+        assertThat(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).isEmpty();
+    }
+
     @Test
     @DisplayName("La jornada cerrada por el sistema queda marcada como incompleta y con hora de salida acotada")
     void cierreAutomatico_marcaLaJornadaYAcotaLaHoraDeSalida() {
