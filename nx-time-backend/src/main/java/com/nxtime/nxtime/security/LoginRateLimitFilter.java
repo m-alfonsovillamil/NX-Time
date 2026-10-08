@@ -63,7 +63,10 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             // al suyo para canjear el código: sin límite, cualquiera con una cookie de
             // estado (que se consigue con solo empezar) podría usarlo para machacarlo.
             // Empezar no se limita: es una redirección y no cuesta nada.
-            "/auth/sso/google/vuelta", "/auth/sso/microsoft/vuelta", "/auth/sso/canjear");
+            "/auth/sso/google/vuelta", "/auth/sso/microsoft/vuelta", "/auth/sso/canjear",
+            // Registrar una empresa con una cuenta de fuera (ADR 038) crea una
+            // empresa, como /auth/register-manager.
+            "/auth/sso/registro");
     static final int PETICIONES_POR_MINUTO = 10;
 
     /**

@@ -57,6 +57,19 @@ interface ApiService {
         @Body peticion: PeticionCanjeSso
     ): Response<RespuestaAutenticacion>
 
+    /* Mis cuentas vinculadas: verlas, añadir una (confirmando el código con el
+       que volvió el navegador) y quitarla. */
+    @GET("api/v1/perfil/identidades")
+    suspend fun getIdentidadesVinculadas(): Response<List<IdentidadVinculadaDTO>>
+
+    @POST("api/v1/perfil/identidades")
+    suspend fun confirmarVinculoSso(
+        @Body peticion: PeticionCanjeSso
+    ): Response<List<IdentidadVinculadaDTO>>
+
+    @DELETE("api/v1/perfil/identidades/{proveedor}")
+    suspend fun desvincularSso(@Path("proveedor") proveedor: String): Response<Unit>
+
     @POST("auth/refresh")
     suspend fun refrescarToken(
         @Body peticion: RefreshTokenRequest

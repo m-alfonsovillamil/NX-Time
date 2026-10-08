@@ -26,7 +26,8 @@ class VueltaDeSsoActivity : Activity() {
         val vuelta = intent?.data
         (application as NxTimeApplication).accesoSso.recibir(
             codigo = vuelta?.getQueryParameter("codigo"),
-            error = vuelta?.getQueryParameter("error")
+            error = vuelta?.getQueryParameter("error"),
+            vinculo = vuelta?.getQueryParameter("vinculo")
         )
         startActivity(
             Intent(this, MainActivity::class.java)

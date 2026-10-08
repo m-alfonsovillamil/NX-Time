@@ -48,6 +48,7 @@ class LoginScreenTest {
     private var accesos = 0
     private val guarda = object : GuardaDelVerificador {
         override var verificador: String? = null
+        override var paraVincular: Boolean = false
     }
 
     private fun texto(id: Int): String = RuntimeEnvironment.getApplication().getString(id)

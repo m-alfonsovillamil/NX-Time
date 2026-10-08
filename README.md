@@ -606,6 +606,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 35. [El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas](docs/adr/035-sistema-visual-de-la-web.md)
 36. [Entrar con Google o con Microsoft: solo para quien ya tiene cuenta, y a quién se le cree el correo](docs/adr/036-entrar-con-google-o-microsoft.md)
 37. [Registrarse con un correo que ya tiene cuenta: se le dice a su dueño, por correo](docs/adr/037-ya-tienes-cuenta-por-correo.md)
+38. [SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado](docs/adr/038-sso-lo-que-faltaba.md)
 
 ---
 
@@ -632,9 +633,11 @@ recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
 
 **Hecho y sin encender: entrar con Google o con Microsoft**
-([ADR 036](docs/adr/036-entrar-con-google-o-microsoft.md)), en la web y en la
-app, para quien ya tiene cuenta: no crea usuarios, y la contraseña sigue
-valiendo. Lo que decide si alguien entra no es el correo sino la cuenta del
+([ADR 036](docs/adr/036-entrar-con-google-o-microsoft.md) y
+[038](docs/adr/038-sso-lo-que-faltaba.md)), en la web y en la app, para quien ya
+tiene cuenta: no crea usuarios, y la contraseña sigue valiendo. También se puede
+registrar una empresa con una de esas cuentas, desde la web, sin contraseña ni
+código; y vincularlas desde Ajustes, en la web y en la app. Lo que decide si alguien entra no es el correo sino la cuenta del
 proveedor, una vez vinculada; el correo solo sirve la primera vez, y solo si el
 proveedor lo garantiza (el de Microsoft no siempre). Está apagado hasta poner
 las credenciales de cada proveedor

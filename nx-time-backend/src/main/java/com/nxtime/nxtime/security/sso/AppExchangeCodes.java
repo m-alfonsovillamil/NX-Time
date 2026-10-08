@@ -44,7 +44,11 @@ public class AppExchangeCodes {
     /** Tope de códigos vivos. Cada uno exige un SSO completo, así que es de sobra. */
     private static final int MAXIMO = 10_000;
 
-    private record Pendiente(long usuarioId, String reto, Instant caduca) {
+    /**
+     * Lo que espera a que la app lo recoja: la persona a la que abrirle la
+     * sesión, o la cuenta del proveedor que quiere vincular. Nunca las dos.
+     */
+    private record Pendiente(Long usuarioId, VerifiedIdentity paraVincular, String reto, Instant caduca) {
     }
 
     private final Map<String, Pendiente> pendientes = new ConcurrentHashMap<>();
@@ -61,6 +65,21 @@ public class AppExchangeCodes {
 
     /** Un código para esta persona, atado al reto que mandó la app al empezar. */
     public String emitir(long usuarioId, String reto) {
+        return guardar(usuarioId, null, reto);
+    }
+
+    /**
+     * Un código para <b>vincular</b> esa cuenta del proveedor. No dice a quién:
+     * eso lo dirá la sesión de quien lo confirme. Así el tramo del navegador no
+     * lleva nada que ate la cuenta a una persona, y un enlace que alguien le
+     * mande a otro para que «vincule» no consigue nada: el código vuelve a la
+     * app de la víctima, que no tiene el verificador de esa ida.
+     */
+    public String emitirParaVincular(VerifiedIdentity identidad, String reto) {
+        return guardar(null, identidad, reto);
+    }
+
+    private String guardar(Long usuarioId, VerifiedIdentity paraVincular, String reto) {
         Instant ahora = reloj.instant();
         pendientes.values().removeIf(pendiente -> !pendiente.caduca().isAfter(ahora));
         if (pendientes.size() >= MAXIMO) {
@@ -70,7 +89,7 @@ public class AppExchangeCodes {
         azar.nextBytes(bytes);
         String codigo = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         // Se guarda su resumen, no el código: un volcado de memoria no lo regala.
-        pendientes.put(sha256Hex(codigo), new Pendiente(usuarioId, reto, ahora.plus(VIDA)));
+        pendientes.put(sha256Hex(codigo), new Pendiente(usuarioId, paraVincular, reto, ahora.plus(VIDA)));
         return codigo;
     }
 
@@ -79,6 +98,19 @@ public class AppExchangeCodes {
      * o no el verificador: quien lo intercepta no tiene varios intentos.
      */
     public Optional<Long> canjear(String codigo, String verificador) {
+        return recoger(codigo, verificador).map(Pendiente::usuarioId);
+    }
+
+    /**
+     * La cuenta del proveedor que ese código permite vincular. Se gasta igual.
+     * Un código de sesión no vale aquí, ni uno de vincular en {@link #canjear}:
+     * presentarlo en el sitio que no es lo quema y no da nada.
+     */
+    public Optional<VerifiedIdentity> canjearParaVincular(String codigo, String verificador) {
+        return recoger(codigo, verificador).map(Pendiente::paraVincular);
+    }
+
+    private Optional<Pendiente> recoger(String codigo, String verificador) {
         if (codigo == null || verificador == null) {
             return Optional.empty();
         }
@@ -89,7 +121,7 @@ public class AppExchangeCodes {
         boolean esSuyo = MessageDigest.isEqual(
                 retoDe(verificador).getBytes(StandardCharsets.UTF_8),
                 pendiente.reto().getBytes(StandardCharsets.UTF_8));
-        return esSuyo ? Optional.of(pendiente.usuarioId()) : Optional.empty();
+        return esSuyo ? Optional.of(pendiente) : Optional.empty();
     }
 
     /** El reto que corresponde a un verificador: su SHA-256 en base64url, como en PKCE (S256). */

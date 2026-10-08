@@ -837,6 +837,84 @@
         }
       }
     },
+    "/auth/sso/registro" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Con qué cuenta estoy registrando una empresa",
+        "description" : "Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.",
+        "operationId" : "registroPendiente",
+        "responses" : {
+          "200" : {
+            "description" : "La cuenta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SsoPendingSignupDTO"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No hay ningún registro a medias, o ha caducado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Registrar la empresa con la cuenta con la que he entrado",
+        "description" : "Crea la empresa y su ADMIN con el correo de esa cuenta, ya confirmado, y abre la sesión como un login desde la web (el refresh, en la cookie). No hay contraseña ni código.",
+        "operationId" : "registrar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoSignupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Registrada: la sesión",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No hay ningún registro a medias, o ha caducado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/sso/canjear" : {
       "post" : {
         "tags" : [ "SSO" ],
@@ -1574,6 +1652,86 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/KioskCard"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/identidades" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Mis cuentas vinculadas",
+        "description" : "Las cuentas de fuera con las que entro.",
+        "operationId" : "misIdentidades",
+        "responses" : {
+          "200" : {
+            "description" : "Cuentas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "La app confirma un vínculo",
+        "description" : "Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. El código es el que llegó en nxtime://sso?vinculo=…: vale una vez y un minuto, y solo con el verificador con el que se empezó.",
+        "operationId" : "confirmarVinculo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoExchangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Vinculada: mis cuentas, con la nueva",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El código no vale, ha caducado o ya se usó",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Esa cuenta ya es de otra persona, o ya tengo otra de ese proveedor",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -2957,7 +3115,7 @@
         "tags" : [ "Push" ],
         "summary" : "Registrar este dispositivo",
         "description" : "Idempotente: la app lo llama al entrar. Si el token era de otra persona (un móvil compartido), pasa a ser de quien lo registra.",
-        "operationId" : "registrar",
+        "operationId" : "registrar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3872,7 +4030,7 @@
         "tags" : [ "Borrado de datos" ],
         "summary" : "Registrar una solicitud recibida fuera de la app",
         "description" : "Para quien no puede pedirlo desde Ajustes, normalmente porque ya está de baja y lo ha pedido por correo o por carta. 'motivo' es obligatorio y dice cómo llegó. Queda constancia de quién la registró, se avisa a los demás que pueden ejecutarla y a la persona le llega un acuse de recibo por correo. No sirve para uno mismo.",
-        "operationId" : "registrar_1",
+        "operationId" : "registrar_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -5948,7 +6106,15 @@
         }, {
           "name" : "vincular",
           "in" : "query",
-          "description" : "'1' para añadir la cuenta a la sesión que ya hay abierta en la web",
+          "description" : "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "registro",
+          "in" : "query",
+          "description" : "'1' para registrar una empresa con esa cuenta. Solo desde la web",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -6238,32 +6404,6 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/MyKioskStatus"
-                }
-              }
-            }
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
-    "/api/v1/perfil/identidades" : {
-      "get" : {
-        "tags" : [ "SSO" ],
-        "summary" : "Mis cuentas vinculadas",
-        "description" : "Las cuentas de fuera con las que entro.",
-        "operationId" : "misIdentidades",
-        "responses" : {
-          "200" : {
-            "description" : "Cuentas",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
-                  }
                 }
               }
             }
@@ -9869,21 +10009,26 @@
           }
         }
       },
-      "SsoExchangeRequest" : {
+      "SsoSignupRequest" : {
         "type" : "object",
         "properties" : {
-          "codigo" : {
+          "nombreEmpresa" : {
             "type" : "string",
             "maxLength" : 200,
             "minLength" : 0
           },
-          "verificador" : {
+          "nombre" : {
             "type" : "string",
-            "maxLength" : 200,
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "apellidos" : {
+            "type" : "string",
+            "maxLength" : 150,
             "minLength" : 0
           }
         },
-        "required" : [ "codigo", "verificador" ]
+        "required" : [ "apellidos", "nombre", "nombreEmpresa" ]
       },
       "AuthenticationResponse" : {
         "type" : "object",
@@ -9911,6 +10056,22 @@
             "type" : "string"
           }
         }
+      },
+      "SsoExchangeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "verificador" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo", "verificador" ]
       },
       "ConfirmRegistrationRequest" : {
         "type" : "object",
@@ -10193,6 +10354,28 @@
           },
           "svg" : {
             "type" : "string"
+          }
+        }
+      },
+      "LinkedIdentityDTO" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "vinculadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoAcceso" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -11576,6 +11759,20 @@
           }
         }
       },
+      "SsoPendingSignupDTO" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          }
+        }
+      },
       "SsoProviderDTO" : {
         "type" : "object",
         "properties" : {
@@ -11824,6 +12021,28 @@
           "hasta" : {
             "type" : "string",
             "format" : "date"
+          }
+        }
+      },
+      "CuentaVinculada" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "sujeto" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "vinculadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoAcceso" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -12181,6 +12400,12 @@
               "$ref" : "#/components/schemas/DispositivoPush"
             }
           },
+          "cuentasVinculadas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CuentaVinculada"
+            }
+          },
           "adjuntos" : {
             "type" : "array",
             "items" : {
@@ -12236,28 +12461,6 @@
           "diasTotales" : {
             "type" : "integer",
             "format" : "int32"
-          }
-        }
-      },
-      "LinkedIdentityDTO" : {
-        "type" : "object",
-        "properties" : {
-          "proveedor" : {
-            "type" : "string"
-          },
-          "nombre" : {
-            "type" : "string"
-          },
-          "correo" : {
-            "type" : "string"
-          },
-          "vinculadaEn" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "ultimoAcceso" : {
-            "type" : "string",
-            "format" : "date-time"
           }
         }
       },
