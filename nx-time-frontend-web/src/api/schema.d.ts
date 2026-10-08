@@ -2971,15 +2971,15 @@ export interface components {
         ProblemDetail: {
             /** Format: uri */
             type?: string;
-            title?: string | null;
+            title?: string;
             /** Format: int32 */
             status?: number;
-            detail?: string | null;
+            detail?: string;
             /** Format: uri */
-            instance?: string | null;
+            instance?: string;
             properties?: {
                 [key: string]: unknown;
-            } | null;
+            };
         };
         Linea: {
             /** Format: int64 */

@@ -18,10 +18,10 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        // La MISMA que en settings.gradle.kts: es la que pasa los tests. Estuvo
-        // en 3.5.6 mientras el build normal subía hasta 3.5.16, así que la
+        // La MISMA que en settings.gradle.kts: es la que pasa los tests. Con la
+        // 3.x estuvo meses desalineada (3.5.6 aquí, 3.5.16 allí), así que la
         // imagen desplegada llevaba un Spring Boot que el CI no probaba.
-        id("org.springframework.boot") version "3.5.16"
+        id("org.springframework.boot") version "4.1.1"
         id("io.spring.dependency-management") version "1.1.7"
         id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     }
