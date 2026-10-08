@@ -62,6 +62,27 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
     /** Cuántas filas quedan por detrás de un punto de control. */
     long countByIdGreaterThan(long id);
 
+    /*
+     * Lo mismo, pero solo lo de UNA empresa: es lo que se le enseña a quien
+     * pregunta (ver VerificadorDeAuditoria#ultimaComprobacionPara). La empresa
+     * de un movimiento es la de su fichaje.
+     */
+
+    /** Movimientos de esa empresa hasta un punto de control, con el hash recalculable o sin él. */
+    @Query("select count(a) from auditoria_fichaje a where a.registro.empresa.id = :empresaId "
+            + "and a.id <= :hastaId and a.versionHash >= :version")
+    long contarComprobablesDeEmpresaHasta(
+            @Param("empresaId") long empresaId, @Param("hastaId") long hastaId, @Param("version") short version);
+
+    @Query("select count(a) from auditoria_fichaje a where a.registro.empresa.id = :empresaId "
+            + "and a.id <= :hastaId and a.versionHash < :version")
+    long contarSoloEnlaceDeEmpresaHasta(
+            @Param("empresaId") long empresaId, @Param("hastaId") long hastaId, @Param("version") short version);
+
+    /** Movimientos de esa empresa escritos después de un punto de control. */
+    @Query("select count(a) from auditoria_fichaje a where a.registro.empresa.id = :empresaId and a.id > :hastaId")
+    long contarDeEmpresaDesde(@Param("empresaId") long empresaId, @Param("hastaId") long hastaId);
+
     /** Línea temporal completa de un fichaje, más antiguo primero. */
     List<TimeEntryAudit> findByRegistro_IdOrderByFechaHoraAsc(long registroId);
 

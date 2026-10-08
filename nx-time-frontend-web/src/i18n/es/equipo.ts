@@ -26,7 +26,8 @@ export const equipo = {
     vacioTitulo: 'Sin cambios registrados',
     vacioTexto: 'Este fichaje no ha sufrido ninguna modificación desde que se creó.',
     cadenaIntacta: 'Traza verificada',
-    cadenaComprobada: (cuando: string, movimientos: number) => `Comprobada el ${cuando}: ${movimientos} movimientos sin alteraciones.`,
+    cadenaComprobada: (cuando: string, movimientos: number) =>
+      `Comprobada el ${cuando}: ${movimientos} movimientos de tu empresa sin alteraciones.`,
     cadenaPendientes: (n: number) =>
       n === 1 ? 'Hay 1 movimiento posterior aún sin comprobar.' : `Hay ${n} movimientos posteriores aún sin comprobar.`,
     cadenaSinComprobar: 'La traza todavía no se ha comprobado ninguna vez.',

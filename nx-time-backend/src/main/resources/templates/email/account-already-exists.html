@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--/* Registrar una empresa con un correo que ya tiene cuenta (V40, ADR 037). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Ya tienes una cuenta', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Alguien, seguramente tú, ha intentado registrar una empresa en NX Time con este correo
+        (<span th:text="${email}">correo@ejemplo.com</span>). No se ha creado nada, porque este correo
+        ya tiene una cuenta en <strong th:text="${nombreEmpresa}">tu empresa</strong>.</p>
+
+    <p th:if="${activa}">Para entrar, usa este correo y tu contraseña en la pantalla de acceso de la web o
+        de la aplicación. Si no recuerdas la contraseña, pulsa
+        <strong>«¿Has olvidado tu contraseña o es tu primera vez?»</strong>
+        en esa misma pantalla y te mandaremos un código para elegir una nueva.</p>
+
+    <p th:unless="${activa}">Esa cuenta está dada de baja, así que no se puede entrar con ella. Si crees que
+        es un error, habla con quien administra NX Time en esa empresa.</p>
+
+    <p>Cada correo solo puede tener una cuenta. Si lo que quieres es registrar otra empresa, hazlo con
+        un correo distinto.</p>
+
+    <!--/*
+      Como en los correos con código: quien no lo ha pedido no tiene que hacer
+      nada, y hay que decírselo para que no se asuste.
+    */-->
+    <p style="color: #6a737d;">
+        Si no has sido tú, no hagas nada: nadie ha entrado en tu cuenta ni ha cambiado nada en ella.
+    </p>
+</div>
+</body>
+</html>

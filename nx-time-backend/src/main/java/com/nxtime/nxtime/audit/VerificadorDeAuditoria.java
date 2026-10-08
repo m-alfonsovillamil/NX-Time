@@ -2,9 +2,12 @@ package com.nxtime.nxtime.audit;
 
 import com.nxtime.nxtime.domain.AuditCheckpoint;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
+import com.nxtime.nxtime.dto.AuditCheckpointResponse;
 import com.nxtime.nxtime.dto.AuditIntegrityResponse;
+import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AuditCheckpointRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
+import com.nxtime.nxtime.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.List;
@@ -73,6 +76,7 @@ public class VerificadorDeAuditoria {
 
     private final TimeEntryAuditRepository auditRepository;
     private final AuditCheckpointRepository checkpointRepository;
+    private final UserRepository userRepository;
     private final HuellaDeAuditoria huella;
     private final EntityManager entityManager;
 
@@ -90,11 +94,13 @@ public class VerificadorDeAuditoria {
     public VerificadorDeAuditoria(
             TimeEntryAuditRepository auditRepository,
             AuditCheckpointRepository checkpointRepository,
+            UserRepository userRepository,
             HuellaDeAuditoria huella,
             EntityManager entityManager,
             @Value("${application.auditoria.filas-por-bloque:1000}") int filasPorBloque) {
         this.auditRepository = auditRepository;
         this.checkpointRepository = checkpointRepository;
+        this.userRepository = userRepository;
         this.huella = huella;
         this.entityManager = entityManager;
         this.filasPorBloque = filasPorBloque;
@@ -110,7 +116,62 @@ public class VerificadorDeAuditoria {
      * cómo se encadena, y por eso esto lo puede pedir RRHH, no cualquiera.
      */
     public AuditIntegrityResponse verificar() {
-        return recorrer(Desde.elPrincipio());
+        return recorrer(Desde.elPrincipio(), null);
+    }
+
+    /**
+     * Lo mismo, contado para una empresa: es lo que ve quien lo pide desde la
+     * pantalla de integridad.
+     *
+     * <b>Se recorre la cadena entera igual</b> --es una sola, y comprobar un
+     * trozo daría un enlace roto en cada borde--, pero en las cifras solo
+     * entran los movimientos de esa empresa. Hasta octubre de 2026 se devolvían
+     * los totales de la instalación, y una empresa recién registrada, sin un
+     * solo fichaje, veía «74 movimientos revisados»: los de todas las demás. No
+     * era el contenido de nadie, pero sí cuánto se usa el servicio, y se leía
+     * como si fueran suyos.
+     *
+     * Si la cadena falla en un movimiento de otra empresa, se dice que falla
+     * pero no dónde: ver {@link AuditIntegrityResponse#rotaEnOtraParte}.
+     */
+    public AuditIntegrityResponse verificarPara(long empresaId) {
+        return recorrer(Desde.elPrincipio(), empresaId);
+    }
+
+    /** {@link #verificarPara(long)} para la empresa de quien tiene la sesión. */
+    public AuditIntegrityResponse verificarParaLaEmpresaDe(String emailDelActor) {
+        return verificarPara(empresaDe(emailDelActor));
+    }
+
+    /**
+     * La última comprobación automática, con las cifras de una empresa: cuántos
+     * de SUS movimientos entraron en ella y cuántos ha escrito después. La
+     * fecha es la de la comprobación, que es común.
+     */
+    public Optional<AuditCheckpointResponse> ultimaComprobacionPara(long empresaId) {
+        return checkpointRepository.findTopByOrderByHastaIdDesc().map(punto -> {
+            long comprobados = auditRepository.contarComprobablesDeEmpresaHasta(
+                    empresaId, punto.getHastaId(), HuellaDeAuditoria.VERSION_VERIFICABLE);
+            long soloEnlace = auditRepository.contarSoloEnlaceDeEmpresaHasta(
+                    empresaId, punto.getHastaId(), HuellaDeAuditoria.VERSION_VERIFICABLE);
+            return new AuditCheckpointResponse(
+                    punto.getVerificadoEn(),
+                    comprobados + soloEnlace,
+                    comprobados,
+                    soloEnlace,
+                    auditRepository.contarDeEmpresaDesde(empresaId, punto.getHastaId()));
+        });
+    }
+
+    /** {@link #ultimaComprobacionPara(long)} para la empresa de quien tiene la sesión. */
+    public Optional<AuditCheckpointResponse> ultimaComprobacionParaLaEmpresaDe(String emailDelActor) {
+        return ultimaComprobacionPara(empresaDe(emailDelActor));
+    }
+
+    private long empresaDe(String emailDelActor) {
+        return userRepository.findByEmail(emailDelActor)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + emailDelActor))
+                .getEmpresa().getId();
     }
 
     /**
@@ -127,7 +188,7 @@ public class VerificadorDeAuditoria {
                 .map(Desde::desdeElPuntoDeControl)
                 .orElseGet(Desde::elPrincipio);
 
-        AuditIntegrityResponse resultado = recorrer(desde);
+        AuditIntegrityResponse resultado = recorrer(desde, null);
         if (resultado.intacta()) {
             anotarPuntoDeControl(resultado, desde);
         }
@@ -174,7 +235,11 @@ public class VerificadorDeAuditoria {
         }
     }
 
-    private AuditIntegrityResponse recorrer(Desde desde) {
+    /**
+     * @param soloDeEmpresa si no es null, en las cifras solo entran los
+     *        movimientos de esa empresa. La cadena se comprueba entera igual.
+     */
+    private AuditIntegrityResponse recorrer(Desde desde, Long soloDeEmpresa) {
         long ultimoId = desde.ultimoId();
         String hashDeLaAnterior = desde.hashDeLaAnterior();
         long filas = desde.filas();
@@ -184,15 +249,25 @@ public class VerificadorDeAuditoria {
         List<TimeEntryAudit> bloque;
         while (!(bloque = auditRepository.findBloqueDesde(ultimoId, PageRequest.of(0, filasPorBloque))).isEmpty()) {
             for (TimeEntryAudit fila : bloque) {
+                boolean esSuya = soloDeEmpresa == null || esDe(fila, soloDeEmpresa);
                 String problema = revisar(fila, hashDeLaAnterior);
                 if (problema != null) {
+                    if (!esSuya) {
+                        // El detalle, para quien mantiene el servicio: a quien
+                        // pregunta desde otra empresa no se le da.
+                        log.warn("Cadena de auditoría rota en la fila {} ({}); lo ha visto la empresa {}, que no es la suya.",
+                                fila.getId(), problema, soloDeEmpresa);
+                        return AuditIntegrityResponse.rotaEnOtraParte(filas, comprobadas, soloEnlace);
+                    }
                     return AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, fila.getId(), problema);
                 }
-                filas++;
-                if (fila.getVersionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE) {
-                    comprobadas++;
-                } else {
-                    soloEnlace++;
+                if (esSuya) {
+                    filas++;
+                    if (fila.getVersionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE) {
+                        comprobadas++;
+                    } else {
+                        soloEnlace++;
+                    }
                 }
                 hashDeLaAnterior = fila.getHash();
                 ultimoId = fila.getId();
@@ -230,6 +305,13 @@ public class VerificadorDeAuditoria {
                 .build());
         log.info("Cadena de auditoría comprobada hasta la fila {}: {} movimientos, {} recalculados.",
                 ultima.getId(), resultado.movimientos(), resultado.comprobados());
+    }
+
+    /** La empresa de un movimiento es la de su fichaje. */
+    private static boolean esDe(TimeEntryAudit fila, long empresaId) {
+        return fila.getRegistro() != null
+                && fila.getRegistro().getEmpresa() != null
+                && fila.getRegistro().getEmpresa().getId() == empresaId;
     }
 
     /** Qué le pasa a esta fila, o null si está bien. */
