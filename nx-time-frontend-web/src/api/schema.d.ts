@@ -201,6 +201,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sso/registro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Con qué cuenta estoy registrando una empresa
+         * @description Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.
+         */
+        get: operations["registroPendiente"];
+        put?: never;
+        /**
+         * Registrar la empresa con la cuenta con la que he entrado
+         * @description Crea la empresa y su ADMIN con el correo de esa cuenta, ya confirmado, y abre la sesión como un login desde la web (el refresh, en la cookie). No hay contraseña ni código.
+         */
+        post: operations["registrar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/sso/canjear": {
         parameters: {
             query?: never;
@@ -902,7 +926,7 @@ export interface paths {
          * Registrar este dispositivo
          * @description Idempotente: la app lo llama al entrar. Si el token era de otra persona (un móvil compartido), pasa a ser de quien lo registra.
          */
-        post: operations["registrar"];
+        post: operations["registrar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1168,7 +1192,7 @@ export interface paths {
          * Registrar una solicitud recibida fuera de la app
          * @description Para quien no puede pedirlo desde Ajustes, normalmente porque ya está de baja y lo ha pedido por correo o por carta. 'motivo' es obligatorio y dice cómo llegó. Queda constancia de quién la registró, se avisa a los demás que pueden ejecutarla y a la persona le llega un acuse de recibo por correo. No sirve para uno mismo.
          */
-        post: operations["registrar_1"];
+        post: operations["registrar_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3151,9 +3175,10 @@ export interface components {
             token?: string;
             kiosco?: components["schemas"]["KioskInfo"];
         };
-        SsoExchangeRequest: {
-            codigo: string;
-            verificador: string;
+        SsoSignupRequest: {
+            nombreEmpresa: string;
+            nombre: string;
+            apellidos: string;
         };
         AuthenticationResponse: {
             token?: string;
@@ -3163,6 +3188,10 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
             zonaHoraria?: string;
+        };
+        SsoExchangeRequest: {
+            codigo: string;
+            verificador: string;
         };
         ConfirmRegistrationRequest: {
             /** Format: email */
@@ -3805,6 +3834,11 @@ export interface components {
             ultimoResultado?: "EN_CURSO" | "OK" | "ERROR";
             /** Format: date-time */
             ultimaCorrecta?: string;
+        };
+        SsoPendingSignupDTO: {
+            proveedor?: string;
+            nombre?: string;
+            correo?: string;
         };
         SsoProviderDTO: {
             id?: string;
@@ -5158,6 +5192,77 @@ export interface operations {
             };
             /** @description Ese secreto no es de ningún emparejamiento */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registroPendiente: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La cuenta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SsoPendingSignupDTO"];
+                };
+            };
+            /** @description No hay ningún registro a medias, o ha caducado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registrar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoSignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Registrada: la sesión */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthenticationResponse"];
+                };
+            };
+            /** @description No hay ningún registro a medias, o ha caducado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description El nombre de la empresa está cogido, o ya hay cuenta con ese correo */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6963,7 +7068,7 @@ export interface operations {
             };
         };
     };
-    registrar: {
+    registrar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -7697,7 +7802,7 @@ export interface operations {
             };
         };
     };
-    registrar_1: {
+    registrar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -9318,6 +9423,8 @@ export interface operations {
                 reto?: string;
                 /** @description '1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app */
                 vincular?: string;
+                /** @description '1' para registrar una empresa con esa cuenta. Solo desde la web */
+                registro?: string;
             };
             header?: never;
             path: {

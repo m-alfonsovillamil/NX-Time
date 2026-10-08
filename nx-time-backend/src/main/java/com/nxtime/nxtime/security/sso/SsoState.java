@@ -57,6 +57,26 @@ public class SsoState {
 
     private static final String CONTEXTO_DE_LA_CLAVE = "nx-time/sso/estado/v1";
 
+    /** La cookie de quien ha vuelto del proveedor para registrar una empresa. */
+    public static final String COOKIE_DE_ALTA = "nx_sso_alta";
+
+    /** Un cuarto de hora para escribir el nombre de la empresa y el propio. */
+    public static final Duration VIDA_DEL_ALTA = Duration.ofMinutes(15);
+
+    private static final String CONTEXTO_DE_LA_CLAVE_DEL_ALTA = "nx-time/sso/alta/v1";
+
+    /**
+     * Quién ha demostrado ser, mientras termina de registrar su empresa (ADR
+     * 038): la cuenta del proveedor y su correo, ya garantizado. Va firmada
+     * con OTRA clave que el estado: una cookie de estado —que se consigue con
+     * solo empezar, y lleva lo que uno quiera pedir— no se puede presentar
+     * como un alta, que vale por «este correo es mío».
+     *
+     * @param expira segundos desde la época
+     */
+    public record Alta(SsoProvider proveedor, String sujeto, String correo, long expira) {
+    }
+
     /** Para qué es esta ida al proveedor. */
     public enum Modo {
         /** Entrar desde la web: al volver se ponen las cookies de la sesión. */
@@ -69,7 +89,12 @@ public class SsoState {
          * Lo mismo, empezado en la app. Al volver no se vincula nada: se le da
          * un código, y es ella quien lo confirma con su sesión.
          */
-        VINCULAR_APP
+        VINCULAR_APP,
+        /**
+         * Registrar una empresa (ADR 038). Al volver no se crea nada: queda
+         * apuntado quién es ({@link Alta}) y la web pide lo que falta.
+         */
+        REGISTRO
     }
 
     /**
@@ -90,44 +115,77 @@ public class SsoState {
 
     private final ObjectMapper json;
     private final byte[] clave;
+    private final byte[] claveDelAlta;
 
     public SsoState(ObjectMapper json, @Value("${application.security.jwt.secret-key}") String claveDelJwt) {
         this.json = json;
-        this.clave = hmac(Decoders.BASE64.decode(claveDelJwt), CONTEXTO_DE_LA_CLAVE.getBytes(StandardCharsets.UTF_8));
+        byte[] delJwt = Decoders.BASE64.decode(claveDelJwt);
+        this.clave = hmac(delJwt, CONTEXTO_DE_LA_CLAVE.getBytes(StandardCharsets.UTF_8));
+        this.claveDelAlta = hmac(delJwt, CONTEXTO_DE_LA_CLAVE_DEL_ALTA.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public void guardarAlta(HttpServletResponse respuesta, VerifiedIdentity identidad) {
+        Alta alta = new Alta(identidad.proveedor(), identidad.sujeto(), identidad.correo(),
+                Instant.now().plus(VIDA_DEL_ALTA).getEpochSecond());
+        respuesta.addHeader(HttpHeaders.SET_COOKIE,
+                cookie(COOKIE_DE_ALTA, sellar(alta, claveDelAlta), VIDA_DEL_ALTA).toString());
+    }
+
+    public void borrarAlta(HttpServletResponse respuesta) {
+        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookie(COOKIE_DE_ALTA, "", Duration.ZERO).toString());
+    }
+
+    /** El alta pendiente de la cookie, si la hay, la firma es buena y no ha caducado. */
+    public Optional<Alta> leerAlta(HttpServletRequest peticion) {
+        return deLaCookie(peticion, COOKIE_DE_ALTA)
+                .flatMap(sellado -> abrir(sellado, Alta.class, claveDelAlta))
+                .filter(alta -> alta.expira() > Instant.now().getEpochSecond());
     }
 
     public void guardar(HttpServletResponse respuesta, Estado estado) {
-        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookie(sellar(estado), VIDA).toString());
+        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookie(COOKIE, sellar(estado), VIDA).toString());
     }
 
     /** Se usa una vez: en cuanto se lee a la vuelta, se borra. */
     public void borrar(HttpServletResponse respuesta) {
-        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookie("", Duration.ZERO).toString());
+        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookie(COOKIE, "", Duration.ZERO).toString());
     }
 
     /** El estado de la cookie, si la hay, la firma es buena y no ha caducado. */
     public Optional<Estado> leer(HttpServletRequest peticion) {
+        return deLaCookie(peticion, COOKIE).flatMap(this::abrir);
+    }
+
+    private static Optional<String> deLaCookie(HttpServletRequest peticion, String nombre) {
         Cookie[] cookies = peticion.getCookies();
         if (cookies == null) {
             return Optional.empty();
         }
         return Arrays.stream(cookies)
-                .filter(c -> COOKIE.equals(c.getName()))
+                .filter(c -> nombre.equals(c.getName()))
                 .map(Cookie::getValue)
-                .findFirst()
-                .flatMap(this::abrir);
+                .findFirst();
     }
 
     String sellar(Estado estado) {
+        return sellar(estado, clave);
+    }
+
+    Optional<Estado> abrir(String sellado) {
+        return abrir(sellado, Estado.class, clave)
+                .filter(estado -> estado.expira() > Instant.now().getEpochSecond());
+    }
+
+    private String sellar(Object contenido, byte[] conClave) {
         try {
-            String cuerpo = Base64.getUrlEncoder().withoutPadding().encodeToString(json.writeValueAsBytes(estado));
-            return cuerpo + "." + firmaDe(cuerpo);
+            String cuerpo = Base64.getUrlEncoder().withoutPadding().encodeToString(json.writeValueAsBytes(contenido));
+            return cuerpo + "." + firmaDe(cuerpo, conClave);
         } catch (Exception e) {
             throw new IllegalStateException("No se ha podido sellar el estado del SSO", e);
         }
     }
 
-    Optional<Estado> abrir(String sellado) {
+    private <T> Optional<T> abrir(String sellado, Class<T> tipo, byte[] conClave) {
         if (sellado == null) {
             return Optional.empty();
         }
@@ -140,20 +198,19 @@ public class SsoState {
         // La firma ANTES de mirar nada de dentro, y sin atajos: comparar con
         // equals() tarda menos cuanto antes difieren, y eso se puede medir.
         if (!MessageDigest.isEqual(
-                firmaDe(cuerpo).getBytes(StandardCharsets.UTF_8), firma.getBytes(StandardCharsets.UTF_8))) {
+                firmaDe(cuerpo, conClave).getBytes(StandardCharsets.UTF_8), firma.getBytes(StandardCharsets.UTF_8))) {
             return Optional.empty();
         }
         try {
-            Estado estado = json.readValue(Base64.getUrlDecoder().decode(cuerpo), Estado.class);
-            return estado.expira() > Instant.now().getEpochSecond() ? Optional.of(estado) : Optional.empty();
+            return Optional.of(json.readValue(Base64.getUrlDecoder().decode(cuerpo), tipo));
         } catch (Exception e) {
             return Optional.empty();
         }
     }
 
-    private String firmaDe(String cuerpo) {
+    private static String firmaDe(String cuerpo, byte[] conClave) {
         return Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(hmac(clave, cuerpo.getBytes(StandardCharsets.UTF_8)));
+                .encodeToString(hmac(conClave, cuerpo.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static byte[] hmac(byte[] clave, byte[] datos) {
@@ -166,8 +223,8 @@ public class SsoState {
         }
     }
 
-    private static ResponseCookie cookie(String valor, Duration vida) {
-        return ResponseCookie.from(COOKIE, valor)
+    private static ResponseCookie cookie(String nombre, String valor, Duration vida) {
+        return ResponseCookie.from(nombre, valor)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Lax")

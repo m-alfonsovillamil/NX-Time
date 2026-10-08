@@ -6,6 +6,8 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.LinkedIdentityDTO;
 import com.nxtime.nxtime.dto.SsoExchangeRequest;
+import com.nxtime.nxtime.dto.SsoPendingSignupDTO;
+import com.nxtime.nxtime.dto.SsoSignupRequest;
 import com.nxtime.nxtime.dto.SsoProviderDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SecurityUser;
@@ -143,12 +145,14 @@ public class SsoController {
             @RequestParam(required = false) String reto,
             @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app")
             @RequestParam(required = false) String vincular,
+            @Parameter(description = "'1' para registrar una empresa con esa cuenta. Solo desde la web")
+            @RequestParam(required = false) String registro,
             HttpServletRequest peticion,
             HttpServletResponse respuesta) {
         boolean paraVincular = "1".equals(vincular);
         Modo modo = "app".equals(cliente)
                 ? (paraVincular ? Modo.VINCULAR_APP : Modo.APP)
-                : (paraVincular ? Modo.VINCULAR : Modo.WEB);
+                : paraVincular ? Modo.VINCULAR : "1".equals(registro) ? Modo.REGISTRO : Modo.WEB;
         boolean desdeLaApp = modo == Modo.APP || modo == Modo.VINCULAR_APP;
         try {
             SsoProvider elegido = SsoProvider.deId(proveedor)
@@ -237,10 +241,78 @@ public class SsoController {
                 // su sesión, en POST /api/v1/perfil/identidades.
                 case VINCULAR_APP -> redirigir(VUELTA_A_LA_APP + "?vinculo="
                         + codigos.emitirParaVincular(identidad, estado.retoDeLaApp()));
+                case REGISTRO -> alVolverParaRegistrar(identidad, respuesta);
             };
         } catch (SsoException e) {
             return volverConError(modo, e);
         }
+    }
+
+    /**
+     * Quien pulsa «Registrar con Google» y ya tiene cuenta, entra: ha
+     * demostrado lo mismo que pulsando «Entrar con Google». Quien no la tiene
+     * se lleva una cookie firmada con quién es y vuelve a la web, que le pide
+     * el nombre de su empresa y el suyo.
+     */
+    private ResponseEntity<Void> alVolverParaRegistrar(VerifiedIdentity identidad, HttpServletResponse respuesta) {
+        try {
+            User usuario = sso.identificar(identidad);
+            AuthenticationResponse sesion = authService.abrirSesion(usuario.getId(), RefreshToken.Origen.WEB);
+            sesionWeb.emitir(respuesta, sesion.refreshToken());
+            return redirigir(config.urlWeb() + "/");
+        } catch (SsoException e) {
+            // Solo «no tiene cuenta» deja seguir. identificar() ya ha exigido
+            // que el correo esté garantizado antes de decir eso.
+            if (e.motivo() != Motivo.SIN_CUENTA) {
+                throw e;
+            }
+        }
+        estados.guardarAlta(respuesta, identidad);
+        return redirigir(config.urlWeb() + "/registro?sso=continuar");
+    }
+
+    @Operation(summary = "Con qué cuenta estoy registrando una empresa",
+            description = "Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para "
+                    + "enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.")
+    @ApiResponse(responseCode = "200", description = "La cuenta",
+            content = @Content(schema = @Schema(implementation = SsoPendingSignupDTO.class)))
+    @ApiResponse(responseCode = "404", description = "No hay ningún registro a medias, o ha caducado",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping("/auth/sso/registro")
+    public ResponseEntity<SsoPendingSignupDTO> registroPendiente(HttpServletRequest peticion) {
+        SsoState.Alta alta = estados.leerAlta(peticion).orElseThrow(SsoController::sinRegistroAMedias);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SsoPendingSignupDTO(alta.proveedor().id(), alta.proveedor().nombre(), alta.correo()));
+    }
+
+    @Operation(summary = "Registrar la empresa con la cuenta con la que he entrado",
+            description = "Crea la empresa y su ADMIN con el correo de esa cuenta, ya confirmado, y abre la "
+                    + "sesión como un login desde la web (el refresh, en la cookie). No hay contraseña ni código.")
+    @ApiResponse(responseCode = "200", description = "Registrada: la sesión",
+            content = @Content(schema = @Schema(implementation = AuthenticationResponse.class)))
+    @ApiResponse(responseCode = "404", description = "No hay ningún registro a medias, o ha caducado",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/auth/sso/registro")
+    public ResponseEntity<AuthenticationResponse> registrar(
+            @Valid @RequestBody SsoSignupRequest request, HttpServletRequest peticion, HttpServletResponse respuesta) {
+        SsoState.Alta alta = estados.leerAlta(peticion).orElseThrow(SsoController::sinRegistroAMedias);
+        User admin = sso.registrarEmpresa(alta.proveedor(), alta.sujeto(), alta.correo(),
+                request.nombreEmpresa(), request.nombre(), request.apellidos());
+        // Vale para un registro: si el nombre estaba cogido se ha lanzado
+        // arriba y la cookie sigue ahí para probar con otro.
+        estados.borrarAlta(respuesta);
+        AuthenticationResponse sesion = authService.abrirSesion(admin.getId(), RefreshToken.Origen.WEB);
+        sesionWeb.emitir(respuesta, sesion.refreshToken());
+        return ResponseEntity.ok(sesion.sinRefreshToken());
+    }
+
+    private static BusinessException sinRegistroAMedias() {
+        return new BusinessException(
+                "El registro ha caducado. Vuelve a empezar con tu cuenta de Google o de Microsoft.",
+                HttpStatus.NOT_FOUND);
     }
 
     @Operation(summary = "La app recoge su sesión",
@@ -330,6 +402,7 @@ public class SsoController {
         return redirigir(switch (modo) {
             case APP, VINCULAR_APP -> VUELTA_A_LA_APP + "?error=" + motivo;
             case VINCULAR -> web + "ajustes?sso=" + motivo;
+            case REGISTRO -> web + "registro?sso=" + motivo;
             case WEB -> web + "?sso=" + motivo;
         });
     }

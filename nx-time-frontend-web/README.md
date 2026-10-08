@@ -198,6 +198,15 @@ el SSO del backend apuntando a él. En local, sin eso, esas specs se saltan; par
 correrlas, `node e2e/proveedor-oidc.mjs` y los parámetros que lleva la cabecera
 de la spec.
 
+Tres cosas al repetirlas en local contra la misma base: la spec que registra
+una empresa con Google (ADR 038) usa una cuenta que cambia en cada arranque del
+proveedor de mentira, así que hay que **reiniciarlo** entre una ejecución y la
+siguiente; el backend admite **diez vueltas de SSO por minuto y por IP**, y dos
+ejecuciones seguidas las gastan (se nota porque fallan todas a la vez); y contra
+el servidor de desarrollo algún aviso sale repetido, porque React ejecuta los
+efectos dos veces: con `CI=1` se prueban contra el build de producción, que es
+lo que hace el CI.
+
 **Accesibilidad** (fase W8): `accesibilidad.spec.ts` pasa axe (WCAG 2.1 A y AA)
 por **todas** las páginas, en tema claro y oscuro. No lleva una lista de
 páginas: cada cuenta de demo recorre su propio menú, así que una página nueva
