@@ -771,6 +771,130 @@ class SsoIT {
     }
 
     // ------------------------------------------------------------------
+    // Vincular desde la app
+    // ------------------------------------------------------------------
+
+    private static final String VERIFICADOR = "el-verificador-que-se-queda-la-app-0123456789";
+
+    /** Entra con contraseña como la app (sin cookies) y devuelve su access token. */
+    private String entrarDesdeLaApp(User usuario) throws Exception {
+        HttpResponse<String> login =
+                post("/auth/login", Map.of("email", usuario.getEmail(), "contrasena", "password123"));
+        assertThat(login.statusCode()).isEqualTo(200);
+        return json.readTree(login.body()).get("token").asText();
+    }
+
+    /** La app empieza a vincular y el navegador vuelve: el código de vínculo que trae. */
+    private String codigoDeVinculo(String proveedor, Map<String, Object> token, Ida ida) throws Exception {
+        PROVEEDOR.proximoToken(token);
+        HttpResponse<String> vuelta = volver(proveedor, ida);
+        assertThat(destino(vuelta)).startsWith("nxtime://sso?vinculo=");
+        // Ni sesión ni nada vinculado todavía: eso lo hace la app al confirmar.
+        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        return parametros(destino(vuelta)).get("vinculo");
+    }
+
+    private Ida iniciarVinculoDesdeLaApp(String proveedor) throws Exception {
+        return iniciar(proveedor, "?cliente=app&vincular=1&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+    }
+
+    private HttpResponse<String> confirmarVinculo(String token, String codigo, String verificador) throws Exception {
+        return post("/api/v1/perfil/identidades", Map.of("codigo", codigo, "verificador", verificador),
+                "Authorization", "Bearer " + token);
+    }
+
+    @Test
+    @DisplayName("La app vincula: el navegador vuelve con un código, ella lo confirma con su sesión y ya entra con esa cuenta")
+    void laAppVincula() throws Exception {
+        User ana = persona("Ana");
+        String token = entrarDesdeLaApp(ana);
+        String sujeto = sujeto();
+
+        Ida ida = iniciarVinculoDesdeLaApp("microsoft");
+        // Como desde la web: una cuenta de trabajo con otro correo y sin xms_edov.
+        String codigo = codigoDeVinculo(
+                "microsoft", deMicrosoft(ida, sujeto, "ana.trabajo@empresa.example", INQUILINO), ida);
+        assertThat(identidadesDe(ana)).as("la vuelta del navegador no vincula nada").isZero();
+
+        HttpResponse<String> confirmado = confirmarVinculo(token, codigo, VERIFICADOR);
+
+        assertThat(confirmado.statusCode()).isEqualTo(200);
+        JsonNode lista = json.readTree(confirmado.body());
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("proveedor").asText()).isEqualTo("microsoft");
+        assertThat(lista.get(0).get("correo").asText()).isEqualTo("ana.trabajo@empresa.example");
+        assertThat(identidadesDe(ana)).isEqualTo(1);
+
+        // El código no vale dos veces.
+        assertThat(confirmarVinculo(token, codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // Y ya entra con ella desde la app, por el sujeto.
+        Ida entrada = iniciar("microsoft", "?cliente=app&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+        PROVEEDOR.proximoToken(deMicrosoft(entrada, sujeto, "ana.trabajo@empresa.example", INQUILINO));
+        assertThat(destino(volver("microsoft", entrada))).startsWith("nxtime://sso?codigo=");
+    }
+
+    /**
+     * Lo que protege el diseño en dos pasos: el código que vuelve por la URL
+     * no dice a quién vincular, y solo lo puede usar quien empezó.
+     */
+    @Test
+    @DisplayName("La app vincula: sin sesión, sin el verificador o con un código de entrar no se vincula nada")
+    void laAppVinculaLoQueNoSePuede() throws Exception {
+        User ana = persona("Ana");
+        String token = entrarDesdeLaApp(ana);
+
+        // Sin sesión: 401, y el código ni se mira.
+        Ida ida = iniciarVinculoDesdeLaApp("google");
+        String codigo = codigoDeVinculo("google", deGoogle(ida, sujeto(), "ana.personal@gmail.test"), ida);
+        assertThat(post("/api/v1/perfil/identidades", Map.of("codigo", codigo, "verificador", VERIFICADOR))
+                .statusCode()).isEqualTo(401);
+
+        // Sin el verificador de esa ida: 400, y el código se quema.
+        assertThat(confirmarVinculo(token, codigo, "otro-verificador").statusCode()).isEqualTo(400);
+        assertThat(confirmarVinculo(token, codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // Un código de ENTRAR no sirve para vincular...
+        Ida entrada = iniciar("google", "?cliente=app&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+        PROVEEDOR.proximoToken(deGoogle(entrada, sujeto(), ana.getEmail()));
+        String deEntrar = parametros(destino(volver("google", entrada))).get("codigo");
+        assertThat(confirmarVinculo(token, deEntrar, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // ...ni uno de VINCULAR abre una sesión.
+        ida = iniciarVinculoDesdeLaApp("microsoft");
+        String deVincular = codigoDeVinculo(
+                "microsoft", deMicrosoft(ida, sujeto(), "ana.trabajo@empresa.example", INQUILINO), ida);
+        assertThat(post("/auth/sso/canjear", Map.of("codigo", deVincular, "verificador", VERIFICADOR)).statusCode())
+                .isEqualTo(400);
+
+        // Sin reto no empieza, y el error vuelve a la app.
+        assertThat(destino(get("/auth/sso/google/iniciar?cliente=app&vincular=1", null)))
+                .isEqualTo("nxtime://sso?error=fallo");
+
+        assertThat(identidadesDe(ana)).isEqualTo(1); // solo la de haber entrado con Google arriba
+    }
+
+    @Test
+    @DisplayName("La app vincula: una cuenta que ya es de otra persona da 409 y no cambia de dueño")
+    void laAppVinculaUnaCuentaAjena() throws Exception {
+        User ana = persona("Ana");
+        String deAna = sujeto();
+        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "nx_refresh")).isNotBlank();
+
+        User javi = persona("Javi");
+        String token = entrarDesdeLaApp(javi);
+        Ida ida = iniciarVinculoDesdeLaApp("google");
+        String codigo = codigoDeVinculo("google", deGoogle(ida, deAna, ana.getEmail()), ida);
+
+        HttpResponse<String> respuesta = confirmarVinculo(token, codigo, VERIFICADOR);
+
+        assertThat(respuesta.statusCode()).isEqualTo(409);
+        assertThat(json.readTree(respuesta.body()).get("detail").asText()).contains("otra persona");
+        assertThat(identidadesDe(javi)).isZero();
+        assertThat(identidadesDe(ana)).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------
     // Borrado de datos
     // ------------------------------------------------------------------
 

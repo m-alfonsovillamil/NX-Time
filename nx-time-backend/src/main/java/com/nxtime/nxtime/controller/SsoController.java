@@ -75,7 +75,9 @@ import org.springframework.web.bind.annotation.RestController;
  *           tras un login, y se vuelve a la web;</li>
  *       <li><b>la app</b>: se vuelve a la app con un código de un solo uso, que
  *           ella canjea en {@code /canjear} ({@link AppExchangeCodes});</li>
- *       <li><b>vincular</b>: se añade esa cuenta a la sesión que ya había.</li>
+ *       <li><b>vincular</b>: se añade esa cuenta a la sesión que ya había. Desde
+ *           la app, en dos pasos: vuelve con un código y lo confirma ella con su
+ *           sesión, en {@code POST /api/v1/perfil/identidades}.</li>
  *     </ul>
  *   </li>
  * </ol>
@@ -139,18 +141,22 @@ public class SsoController {
             @RequestParam(required = false) String cliente,
             @Parameter(description = "Solo la app: el SHA-256 en base64url de su verificador")
             @RequestParam(required = false) String reto,
-            @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta en la web")
+            @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app")
             @RequestParam(required = false) String vincular,
             HttpServletRequest peticion,
             HttpServletResponse respuesta) {
-        Modo modo = "app".equals(cliente) ? Modo.APP : "1".equals(vincular) ? Modo.VINCULAR : Modo.WEB;
+        boolean paraVincular = "1".equals(vincular);
+        Modo modo = "app".equals(cliente)
+                ? (paraVincular ? Modo.VINCULAR_APP : Modo.APP)
+                : (paraVincular ? Modo.VINCULAR : Modo.WEB);
+        boolean desdeLaApp = modo == Modo.APP || modo == Modo.VINCULAR_APP;
         try {
             SsoProvider elegido = SsoProvider.deId(proveedor)
                     .filter(config::activo)
                     .orElseThrow(() -> new SsoException(Motivo.NO_DISPONIBLE));
 
             Long usuarioId = null;
-            if (modo == Modo.APP && (reto == null || !RETO.matcher(reto).matches())) {
+            if (desdeLaApp && (reto == null || !RETO.matcher(reto).matches())) {
                 throw new SsoException(Motivo.FALLO, "La app ha empezado un SSO sin un reto válido");
             }
             if (modo == Modo.VINCULAR) {
@@ -164,7 +170,7 @@ public class SsoController {
 
             String verificador = aleatorio();
             Estado estado = new Estado(elegido, modo, aleatorio(), aleatorio(), verificador,
-                    modo == Modo.APP ? reto : null, usuarioId,
+                    desdeLaApp ? reto : null, usuarioId,
                     Instant.now().plus(SsoState.VIDA).getEpochSecond());
             estados.guardar(respuesta, estado);
             return redirigir(oidc.urlDeAutorizacion(
@@ -226,6 +232,11 @@ public class SsoController {
                     sso.vincular(estado.usuarioId(), identidad);
                     yield redirigir(config.urlWeb() + "/ajustes?sso=vinculada");
                 }
+                // Aquí no se vincula nada todavía: en la app no hay cookie que
+                // diga quién es. Vuelve con un código y lo confirma ella, con
+                // su sesión, en POST /api/v1/perfil/identidades.
+                case VINCULAR_APP -> redirigir(VUELTA_A_LA_APP + "?vinculo="
+                        + codigos.emitirParaVincular(identidad, estado.retoDeLaApp()));
             };
         } catch (SsoException e) {
             return volverConError(modo, e);
@@ -257,6 +268,38 @@ public class SsoController {
         return ResponseEntity.ok(sso.identidadesDe(usuario.getUser()));
     }
 
+    @Operation(summary = "La app confirma un vínculo",
+            description = "Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. "
+                    + "El código es el que llegó en nxtime://sso?vinculo=…: vale una vez y un minuto, y solo "
+                    + "con el verificador con el que se empezó.")
+    @ApiResponse(responseCode = "200", description = "Vinculada: mis cuentas, con la nueva",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = LinkedIdentityDTO.class))))
+    @ApiResponse(responseCode = "400", description = "El código no vale, ha caducado o ya se usó",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "Esa cuenta ya es de otra persona, o ya tengo otra de ese proveedor",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/api/v1/perfil/identidades")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<LinkedIdentityDTO>> confirmarVinculo(
+            @Valid @RequestBody SsoExchangeRequest request, @AuthenticationPrincipal SecurityUser usuario) {
+        VerifiedIdentity identidad = codigos.canjearParaVincular(request.codigo(), request.verificador())
+                .orElseThrow(() -> new BusinessException(
+                        "No se ha podido vincular la cuenta. Vuelve a intentarlo.", HttpStatus.BAD_REQUEST));
+        try {
+            sso.vincular(usuario.getUser().getId(), identidad);
+        } catch (SsoException e) {
+            // Aquí sí se responde con un JSON: lo pide la app, no un navegador.
+            throw new BusinessException(switch (e.motivo()) {
+                case YA_VINCULADA -> "Esa cuenta ya está vinculada a otra persona de NX Time.";
+                case YA_TIENE_OTRA -> "Ya tienes vinculada otra cuenta de " + identidad.proveedor().nombre()
+                        + ". Desvincúlala antes.";
+                default -> "No se ha podido vincular la cuenta. Vuelve a intentarlo.";
+            }, HttpStatus.CONFLICT);
+        }
+        return ResponseEntity.ok(sso.identidadesDe(usuario.getUser()));
+    }
+
     @Operation(summary = "Desvincular una cuenta",
             description = "Dejo de poder entrar con ella. La contraseña sigue valiendo.")
     @ApiResponse(responseCode = "204", description = "Desvinculada")
@@ -285,7 +328,7 @@ public class SsoController {
         // Sin URL de la web no hay adónde volver: es que el SSO no está montado.
         String web = config.urlWeb().isEmpty() ? "/" : config.urlWeb() + "/";
         return redirigir(switch (modo) {
-            case APP -> VUELTA_A_LA_APP + "?error=" + motivo;
+            case APP, VINCULAR_APP -> VUELTA_A_LA_APP + "?error=" + motivo;
             case VINCULAR -> web + "ajustes?sso=" + motivo;
             case WEB -> web + "?sso=" + motivo;
         });

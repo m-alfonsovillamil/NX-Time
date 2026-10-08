@@ -1584,6 +1584,86 @@
         } ]
       }
     },
+    "/api/v1/perfil/identidades" : {
+      "get" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Mis cuentas vinculadas",
+        "description" : "Las cuentas de fuera con las que entro.",
+        "operationId" : "misIdentidades",
+        "responses" : {
+          "200" : {
+            "description" : "Cuentas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "La app confirma un vínculo",
+        "description" : "Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. El código es el que llegó en nxtime://sso?vinculo=…: vale una vez y un minuto, y solo con el verificador con el que se empezó.",
+        "operationId" : "confirmarVinculo",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoExchangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Vinculada: mis cuentas, con la nueva",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El código no vale, ha caducado o ya se usó",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Esa cuenta ya es de otra persona, o ya tengo otra de ese proveedor",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/perfil/borrado" : {
       "get" : {
         "tags" : [ "Borrado de datos" ],
@@ -5948,7 +6028,7 @@
         }, {
           "name" : "vincular",
           "in" : "query",
-          "description" : "'1' para añadir la cuenta a la sesión que ya hay abierta en la web",
+          "description" : "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -6238,32 +6318,6 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/MyKioskStatus"
-                }
-              }
-            }
-          }
-        },
-        "security" : [ {
-          "bearerAuth" : [ ]
-        } ]
-      }
-    },
-    "/api/v1/perfil/identidades" : {
-      "get" : {
-        "tags" : [ "SSO" ],
-        "summary" : "Mis cuentas vinculadas",
-        "description" : "Las cuentas de fuera con las que entro.",
-        "operationId" : "misIdentidades",
-        "responses" : {
-          "200" : {
-            "description" : "Cuentas",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/LinkedIdentityDTO"
-                  }
                 }
               }
             }
@@ -10196,6 +10250,28 @@
           }
         }
       },
+      "LinkedIdentityDTO" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "vinculadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoAcceso" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "DeletionRequestDTO" : {
         "type" : "object",
         "properties" : {
@@ -12264,28 +12340,6 @@
           "diasTotales" : {
             "type" : "integer",
             "format" : "int32"
-          }
-        }
-      },
-      "LinkedIdentityDTO" : {
-        "type" : "object",
-        "properties" : {
-          "proveedor" : {
-            "type" : "string"
-          },
-          "nombre" : {
-            "type" : "string"
-          },
-          "correo" : {
-            "type" : "string"
-          },
-          "vinculadaEn" : {
-            "type" : "string",
-            "format" : "date-time"
-          },
-          "ultimoAcceso" : {
-            "type" : "string",
-            "format" : "date-time"
           }
         }
       },

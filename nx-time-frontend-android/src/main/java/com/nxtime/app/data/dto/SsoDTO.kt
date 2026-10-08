@@ -25,3 +25,17 @@ data class PeticionCanjeSso(
     val codigo: String,
     val verificador: String
 )
+
+/**
+ * Una cuenta de Google o de Microsoft con la que entro.
+ *
+ * @param proveedor el id (`google`, `microsoft`), que es con lo que se desvincula
+ * @param correo el de esa cuenta cuando se vinculó; puede no ser el de NX Time
+ */
+data class IdentidadVinculadaDTO(
+    val proveedor: String,
+    val nombre: String,
+    val correo: String? = null,
+    val vinculadaEn: String? = null,
+    val ultimoAcceso: String? = null
+)

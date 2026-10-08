@@ -64,7 +64,12 @@ public class SsoState {
         /** Entrar desde la app: al volver se le da un código que canjea ella. */
         APP,
         /** Añadir esta cuenta a la sesión de NX Time que ya hay abierta. */
-        VINCULAR
+        VINCULAR,
+        /**
+         * Lo mismo, empezado en la app. Al volver no se vincula nada: se le da
+         * un código, y es ella quien lo confirma con su sesión.
+         */
+        VINCULAR_APP
     }
 
     /**

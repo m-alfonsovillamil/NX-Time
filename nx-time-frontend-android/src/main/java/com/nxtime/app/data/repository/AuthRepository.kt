@@ -25,6 +25,13 @@ interface AuthRepository {
     /** Canjea el código con el que el navegador volvió a la app. Si vale, la respuesta es la sesión. */
     suspend fun canjearSso(codigo: String, verificador: String): Response<RespuestaAutenticacion>
 
+    suspend fun getIdentidadesVinculadas(): Response<List<IdentidadVinculadaDTO>>
+
+    /** Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. Devuelve las que tengo. */
+    suspend fun confirmarVinculoSso(codigo: String, verificador: String): Response<List<IdentidadVinculadaDTO>>
+
+    suspend fun desvincularSso(proveedor: String): Response<Unit>
+
     /* Códigos de acceso (ADR 014): recuperar la contraseña o elegirla la primera vez */
     suspend fun solicitarCodigoAcceso(email: String): Response<Unit>
     suspend fun restablecerContrasena(

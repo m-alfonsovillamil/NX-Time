@@ -46,11 +46,27 @@
     <string name="sso_sin_navegador">No hay ningún navegador en este dispositivo para seguir. Entra con tu contraseña.</string>
     <string name="sso_error_cancelado">No has terminado de entrar. Puedes volver a intentarlo.</string>
     <string name="sso_error_sin_cuenta">No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.</string>
-    <string name="sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde los ajustes de la web.</string>
+    <string name="sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.</string>
     <string name="sso_error_cuenta_inactiva">Tu cuenta de NX Time está dada de baja. Habla con tu empresa.</string>
     <string name="sso_error_ya_tiene_otra">Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="sso_error_no_disponible">Ese acceso no está disponible ahora mismo. Entra con tu contraseña.</string>
     <string name="sso_error_fallo">No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.</string>
+    <!-- Cuentas vinculadas, en Ajustes (ADR 036 y 038) -->
+    <string name="vinculadas_titulo">Cuentas vinculadas</string>
+    <string name="vinculadas_detalle">Para entrar también con una cuenta de Google o de Microsoft. Tu contraseña sigue valiendo.</string>
+    <string name="vinculadas_sin_vincular">Sin vincular</string>
+    <string name="vinculadas_vinculada_sin_correo">Vinculada</string>
+    <string name="vinculadas_vincular">Vincular %1$s</string>
+    <string name="vinculadas_desvincular">Desvincular %1$s</string>
+    <string name="vinculadas_vinculada">Cuenta vinculada. Ya puedes entrar con ella.</string>
+    <string name="vinculadas_desvinculada">Cuenta desvinculada.</string>
+    <string name="vinculadas_confirmar_titulo">¿Desvincular %1$s?</string>
+    <string name="vinculadas_confirmar_texto">Dejarás de poder entrar con esa cuenta. Tu contraseña sigue valiendo, y puedes volver a vincularla cuando quieras.</string>
+    <string name="vinculadas_confirmar_si">Desvincular</string>
+    <string name="vinculadas_sin_navegador">No hay ningún navegador en este dispositivo para seguir.</string>
+    <string name="vinculadas_error_cancelado">No has terminado de vincular la cuenta.</string>
+    <string name="vinculadas_error_no_disponible">Ese proveedor no está disponible ahora mismo.</string>
+    <string name="vinculadas_error_fallo">No se ha podido vincular la cuenta. Vuelve a intentarlo.</string>
 
     <!--
         Elegir contraseña con un código (ADR 014). Sirve para recuperarla y

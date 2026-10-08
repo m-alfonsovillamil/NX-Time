@@ -486,6 +486,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/identidades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis cuentas vinculadas
+         * @description Las cuentas de fuera con las que entro.
+         */
+        get: operations["misIdentidades"];
+        put?: never;
+        /**
+         * La app confirma un vínculo
+         * @description Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. El código es el que llegó en nxtime://sso?vinculo=…: vale una vez y un minuto, y solo con el verificador con el que se empezó.
+         */
+        post: operations["confirmarVinculo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/borrado": {
         parameters: {
             query?: never;
@@ -1815,26 +1839,6 @@ export interface paths {
          * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
          */
         get: operations["estado_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/perfil/identidades": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Mis cuentas vinculadas
-         * @description Las cuentas de fuera con las que entro.
-         */
-        get: operations["misIdentidades"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3262,6 +3266,15 @@ export interface components {
             codigo?: string;
             svg?: string;
         };
+        LinkedIdentityDTO: {
+            proveedor?: string;
+            nombre?: string;
+            correo?: string;
+            /** Format: date-time */
+            vinculadaEn?: string;
+            /** Format: date-time */
+            ultimoAcceso?: string;
+        };
         DeletionRequestDTO: {
             motivo?: string;
         };
@@ -4050,15 +4063,6 @@ export interface components {
             anio?: number;
             /** Format: int32 */
             diasTotales?: number;
-        };
-        LinkedIdentityDTO: {
-            proveedor?: string;
-            nombre?: string;
-            correo?: string;
-            /** Format: date-time */
-            vinculadaEn?: string;
-            /** Format: date-time */
-            ultimoAcceso?: string;
         };
         PaginaDTOScheduleIncidentResponse: {
             contenido?: components["schemas"]["ScheduleIncidentResponse"][];
@@ -5805,6 +5809,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["KioskCard"];
+                };
+            };
+        };
+    };
+    misIdentidades: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cuentas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LinkedIdentityDTO"][];
+                };
+            };
+        };
+    };
+    confirmarVinculo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Vinculada: mis cuentas, con la nueva */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LinkedIdentityDTO"][];
+                };
+            };
+            /** @description El código no vale, ha caducado o ya se usó */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Esa cuenta ya es de otra persona, o ya tengo otra de ese proveedor */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
         };
@@ -9250,7 +9316,7 @@ export interface operations {
                 cliente?: string;
                 /** @description Solo la app: el SHA-256 en base64url de su verificador */
                 reto?: string;
-                /** @description '1' para añadir la cuenta a la sesión que ya hay abierta en la web */
+                /** @description '1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app */
                 vincular?: string;
             };
             header?: never;
@@ -9496,26 +9562,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MyKioskStatus"];
-                };
-            };
-        };
-    };
-    misIdentidades: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Cuentas */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LinkedIdentityDTO"][];
                 };
             };
         };
