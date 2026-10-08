@@ -85,9 +85,12 @@ class TimeEntryServiceImplTest {
         // registrado por defecto -- y los snapshots serializan Instant.
         var snapshotSerializer = new TimeEntrySnapshotSerializer(
                 new ObjectMapper().registerModule(new JavaTimeModule()));
+        var proyectos = org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class);
         service = new TimeEntryServiceImpl(
                 timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
-                eventPublisher, snapshotSerializer, nonWorkingDayService, org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class));
+                eventPublisher, snapshotSerializer, nonWorkingDayService, proyectos,
+                // El de verdad: lo que deja al cerrar una jornada olvidada es parte de lo que se prueba.
+                new IncompleteTimeEntryCloser(timeEntryRepository, eventPublisher, snapshotSerializer, proyectos));
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         empleado = User.builder().id(10L).email("empleado@nxtime.test").nombre("Empleado").empresa(empresa).build();
         // lenient: no todos los tests llegan a guardar (varios cortan antes con una excepción de negocio).
@@ -178,6 +181,83 @@ class TimeEntryServiceImplTest {
         assertThatThrownBy(() ->
                         service.registerTimeEntry("fantasma@nxtime.test", new TimeEntryRequest(TimeEntryAction.INICIO)))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ---- Jornada olvidada: abierta desde hace más de 16 horas ----
+
+    private TimeEntry abiertaHace(int horas) {
+        return TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(Instant.now().minus(horas, java.time.temporal.ChronoUnit.HOURS)).build();
+    }
+
+    @Test
+    @DisplayName("FIN sobre una jornada olvidada la cierra en el tope de 16 h y marcada, no a la hora de ahora")
+    void fin_jornadaOlvidada_seCierraEnElTope() {
+        TimeEntry olvidada = abiertaHace(20);
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(olvidada));
+
+        TimeEntry result = service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.FIN));
+
+        assertThat(result.getHoraSalida())
+                .isEqualTo(olvidada.getHoraEntrada().plus(16, java.time.temporal.ChronoUnit.HOURS));
+        assertThat(result.isJornadaIncompleta()).isTrue();
+        // Una sola traza, y del sistema: la hora no la ha puesto quien ficha.
+        ArgumentCaptor<TimeEntryAuditEvent> traza = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher).publishEvent(traza.capture());
+        assertThat(traza.getValue().auditRow().getModificadoPor()).isNull();
+        assertThat(traza.getValue().auditRow().getMotivo()).contains("Cierre automático");
+    }
+
+    @Test
+    @DisplayName("Reanudar una jornada olvidada que se quedó en pausa la cierra, sin sumar la pausa de un día entero")
+    void pausaFin_jornadaOlvidadaEnPausa_seCierra() {
+        TimeEntry olvidada = abiertaHace(30);
+        olvidada.setEnPausa(true);
+        olvidada.setInicioPausaActual(olvidada.getHoraEntrada().plus(4, java.time.temporal.ChronoUnit.HOURS));
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(olvidada));
+
+        TimeEntry result =
+                service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.PAUSA_FIN));
+
+        assertThat(result.getHoraSalida()).isNotNull();
+        assertThat(result.isEnPausa()).isFalse();
+        assertThat(result.getSegundosPausaAcumulados()).isZero();
+    }
+
+    @Test
+    @DisplayName("INICIO con una jornada olvidada la cierra en el tope y abre la nueva")
+    void inicio_conJornadaOlvidada_laCierraYAbreOtra() {
+        TimeEntry olvidada = abiertaHace(20);
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(olvidada));
+
+        TimeEntry nueva = service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO));
+
+        assertThat(olvidada.getHoraSalida()).isNotNull();
+        assertThat(olvidada.isJornadaIncompleta()).isTrue();
+        assertThat(nueva).isNotSameAs(olvidada);
+        assertThat(nueva.getHoraSalida()).isNull();
+        // El cierre tiene que llegar a la base antes del INSERT de la nueva
+        // (uq_registros_jornada_abierta): lo comprueba de verdad el IT.
+        var orden = org.mockito.Mockito.inOrder(timeEntryRepository);
+        orden.verify(timeEntryRepository).save(olvidada);
+        orden.verify(timeEntryRepository).flush();
+        orden.verify(timeEntryRepository).save(nueva);
+    }
+
+    @Test
+    @DisplayName("FIN sobre una jornada larga pero dentro del margen (15 h) la cierra a la hora de ahora, sin marca")
+    void fin_jornadaLargaDentroDelMargen_seCierraNormal() {
+        TimeEntry larga = abiertaHace(15);
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(larga));
+
+        TimeEntry result = service.registerTimeEntry(empleado.getEmail(), new TimeEntryRequest(TimeEntryAction.FIN));
+
+        assertThat(result.isJornadaIncompleta()).isFalse();
+        assertThat(java.time.Duration.between(result.getHoraEntrada(), result.getHoraSalida()).toHours()).isEqualTo(15);
     }
 
     // ---- FIN ----

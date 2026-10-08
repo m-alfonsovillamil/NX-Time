@@ -700,6 +700,79 @@ h1 {
   }
 }
 
+/* Pantalla ancha pero baja (un portátil a 1440×900, o un 1080p con las barras
+   del navegador): «Mi jornada» cabe entera sin desplazarse, que es para lo que
+   se abre. Se aprieta lo que no lleva información —aire, y el tamaño del
+   cronómetro y de los botones, que vuelven a los del móvil— y se baja el
+   gráfico. Medido el 8/10/2026 a 1440×900: sin esto sobraban 58 px sin fichar
+   y 146 px con la jornada en curso. A partir de 1100 px de ancho, que es
+   cuando el resumen va en dos columnas; más estrecho ya se desplaza igual. */
+@media (min-width: 1100px) and (max-height: 1050px) {
+  .nx-pagina--jornada {
+    gap: 16px;
+    padding-bottom: 24px;
+  }
+
+  /* A partes iguales: con «Mi tiempo» más ancho, el detalle de cada cifra
+     («22 de 22 días disponibles») cabe en una línea, y es esa columna la que
+     marca el alto de la fila. El gráfico no pierde nada: va limitado en alto. */
+  .nx-pagina--jornada .nx-composicion--jornada {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .nx-pagina--jornada .nx-cifras {
+    gap: 8px;
+  }
+
+  .nx-pagina--jornada .nx-cifra {
+    padding: 10px 14px;
+    gap: 4px;
+  }
+
+  .nx-pagina--jornada * + .nx-cifras-contenedor {
+    margin-top: 12px;
+  }
+
+  .nx-pagina--jornada .nx-cifras-contenedor + .nx-sutil {
+    margin-top: 8px;
+  }
+
+  .nx-jornada {
+    padding: 16px 32px;
+  }
+
+  .nx-jornada__cronometro {
+    font-size: var(--nx-fs-display-medium);
+    line-height: var(--nx-lh-display-medium);
+    letter-spacing: var(--nx-ls-display-medium);
+  }
+
+  .nx-jornada .nx-boton--fichar,
+  .nx-jornada .nx-acciones:has(> .nx-boton--fichar) > .nx-boton {
+    min-height: 56px;
+  }
+
+  .nx-jornada__acciones {
+    margin-top: 12px;
+    gap: 8px;
+  }
+
+  .nx-pagina--jornada .nx-composicion > .nx-tarjeta {
+    padding: 20px 24px;
+  }
+
+  .nx-pagina--jornada .nx-grafico__dibujo {
+    max-height: 144px;
+  }
+
+  /* El dibujo se encoge entero al limitarle el alto, letras incluidas: las
+     de los días se agrandan para que se sigan leyendo al mismo tamaño. */
+  .nx-pagina--jornada .nx-grafico__eje {
+    font-size: 17px;
+  }
+}
+
 /* ---- Avisos ---- */
 
 .nx-aviso {

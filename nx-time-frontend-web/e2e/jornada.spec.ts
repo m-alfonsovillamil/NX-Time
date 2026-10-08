@@ -81,6 +81,32 @@ test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ 
  * este test decía lo contrario, y su comentario avisaba de que el día de la
  * cookie tendría que cambiar.
  */
+/**
+ * «Mi jornada» se abre para fichar y ver cómo va el día: en un portátil tiene
+ * que verse entera, sin desplazarse. A 1440×900 no cabía (sobraban 58 px sin
+ * fichar y 146 con la jornada en curso) hasta que se apretó para ventanas
+ * anchas y bajas (8/10/2026, `.nx-pagina--jornada` en base.css).
+ *
+ * Contra el navegador de verdad porque es lo único que lo mide: jsdom no
+ * calcula alturas, así que un test de Vitest no vería que una tarjeta nueva
+ * vuelve a empujar el resumen fuera de la pantalla.
+ */
+test('en un portatil a 1440×900 «Mi jornada» cabe entera sin desplazarse', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
+  await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
+  await page.getByRole('button', { name: 'Entrar' }).click();
+
+  // Con el resumen ya pintado y las fuentes cargadas: antes, la página mide menos.
+  await expect(page.getByRole('heading', { name: 'Mi tiempo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mis horas' })).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const sobra = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+  expect(sobra, 'píxeles que hay que desplazarse para ver el final de la página').toBeLessThanOrEqual(0);
+});
+
 test('recargar la pagina mantiene la sesion', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);

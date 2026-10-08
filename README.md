@@ -662,17 +662,19 @@ propios ID token.
   de versiones) y no crece con nada, pero es el coste más repetido del backend.
   Medidos los cincuenta listados con `scripts/medir-consultas.mjs`, el único que
   empeoraba con el tamaño de la empresa eran las ausencias del equipo, ya
-  arreglado; queda la bandeja de correcciones, que pide el reparto propuesto de
-  cada solicitud por separado y no se nota porque es una bandeja corta.
+  arreglado, como la bandeja de correcciones, que pedía el reparto propuesto de
+  cada solicitud por separado.
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que
   se cree desde la propia API.
-- **El proceso nocturno cierra jornadas olvidadas de más de 16 h**, así que una
-  abierta de madrugada puede seguir bloqueando al empleado hasta ~24 h. El fallo
-  grave (quedar bloqueado *indefinidamente*) sí está resuelto y verificado. La
-  jornada que cierra el sistema sale marcada en los historiales («Cerrada por el
-  sistema»), porque su hora de salida es un tope y no un dato.
+- **Una jornada que nadie cierra se da por olvidada a las 16 h**, y se cierra
+  con la salida en ese tope: lo hace el proceso de las 3:00 y, sin esperar a él,
+  el propio fichaje en cuanto su dueño hace algo con ella (fichar la entrada del
+  día siguiente, terminarla, pausarla o cambiar de proyecto). Sale marcada en
+  los historiales («Cerrada por el sistema»), porque esa hora de salida es un
+  tope y no un dato, y hay que pedir que la corrijan. Quien de verdad trabaje
+  más de 16 horas seguidas se encuentra con lo mismo.
 
 ---
 
