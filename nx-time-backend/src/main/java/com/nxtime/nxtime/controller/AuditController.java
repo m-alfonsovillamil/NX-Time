@@ -73,7 +73,8 @@ public class AuditController {
     }
 
     @Operation(summary = "Comprobar que la traza no se ha manipulado",
-            description = "Recorre la cadena de hashes y dice si sigue intacta. Es la respuesta a "
+            description = "Recorre la cadena de hashes entera y dice si sigue intacta, con las cifras de "
+                    + "mi empresa (la cadena es común a todas las de la instalación). Es la respuesta a "
                     + "\"demuéstrame que este registro no se ha tocado\": el RD-ley 8/2019 exige "
                     + "conservarlo cuatro años y que sea fiable, y una cadena que nadie comprueba nunca "
                     + "no demuestra nada. Los movimientos anteriores a septiembre de 2026 solo admiten "
@@ -88,16 +89,17 @@ public class AuditController {
     })
     @PreAuthorize("hasAuthority('fichaje:auditoria')")
     @GetMapping("/integridad")
-    public ResponseEntity<AuditIntegrityResponse> verificarIntegridad() {
-        // Sin parámetros a propósito: la cadena enlaza TODAS las filas de la
-        // tabla, sean de la empresa que sean, así que comprobar un trozo
-        // suelto daría un enlace roto en cada borde. O se comprueba entera, o
-        // no se comprueba.
+    public ResponseEntity<AuditIntegrityResponse> verificarIntegridad(Authentication authentication) {
+        // La cadena enlaza TODAS las filas de la tabla, sean de la empresa que
+        // sean, así que comprobar un trozo suelto daría un enlace roto en cada
+        // borde: se comprueba entera. Lo que se devuelve son las cifras de la
+        // empresa de quien pregunta, no las de la instalación (ver
+        // VerificadorDeAuditoria#verificarPara).
         //
         // Desde la Fase A4 se recorre por bloques en vez de traérsela entera a
         // memoria, así que sigue siendo la comprobación completa pero ya no
         // crece sin techo con los años de traza.
-        return ResponseEntity.ok(verificador.verificar());
+        return ResponseEntity.ok(verificador.verificarParaLaEmpresaDe(authentication.getName()));
     }
 
     @Operation(summary = "Cuándo se comprobó la traza por última vez",
@@ -116,15 +118,9 @@ public class AuditController {
     })
     @PreAuthorize("hasAuthority('fichaje:auditoria')")
     @GetMapping("/integridad/ultima")
-    public ResponseEntity<AuditCheckpointResponse> ultimaComprobacion() {
-        return verificador.ultimoPuntoDeControl()
-                .map(punto -> ResponseEntity.ok(new AuditCheckpointResponse(
-                        punto.getVerificadoEn(),
-                        punto.getHastaId(),
-                        punto.getFilas(),
-                        punto.getComprobadas(),
-                        punto.getSoloEnlace(),
-                        verificador.movimientosSinRevisar(punto))))
+    public ResponseEntity<AuditCheckpointResponse> ultimaComprobacion(Authentication authentication) {
+        return verificador.ultimaComprobacionParaLaEmpresaDe(authentication.getName())
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

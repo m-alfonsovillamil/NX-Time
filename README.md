@@ -664,6 +664,11 @@ propios ID token.
   empeoraba con el tamaño de la empresa eran las ausencias del equipo, ya
   arreglado; queda la bandeja de correcciones, que pide el reparto propuesto de
   cada solicitud por separado y no se nota porque es una bandeja corta.
+- **La cadena de auditoría es una sola para todas las empresas** de la
+  instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
+  la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio
+  compartido es una cadena por empresa
+  ([ADR 018](docs/adr/018-la-cadena-de-auditoria-se-serializa-en-postgres.md)).
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que
