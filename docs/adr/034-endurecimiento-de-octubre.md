@@ -58,6 +58,8 @@ confirmar: es más estricto y más fácil de explicar.
 - El registro con un correo que **ya tiene cuenta** responde lo mismo (202,
   «te hemos mandado un código») y no crea ni manda nada. Gasta el mismo
   BCrypt que un registro nuevo, para que tampoco lo diga el tiempo.
+  **Cambiado por el [ADR 037](037-ya-tienes-cuenta-por-correo.md):** la
+  respuesta sigue igual, pero al dueño de ese correo se le avisa por correo.
 - `/auth/recuperar` sin cuenta gasta el BCrypt de un código que no emite.
 - Lo que **sí** se sigue diciendo: que ya existe una empresa con ese nombre.
   Los nombres de empresa no son datos personales, y no hay forma razonable de

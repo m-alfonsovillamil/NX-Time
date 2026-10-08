@@ -26,6 +26,8 @@ import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
@@ -71,6 +73,14 @@ public class AuthServiceImpl implements AuthService {
      */
     static final String CORREO_SIN_CONFIRMAR =
             "Falta confirmar tu correo. Te hemos mandado un código: escríbelo para entrar.";
+
+    /**
+     * Lo que tiene que pasar entre dos correos de «ya tienes cuenta» a la
+     * misma cuenta (ADR 037). Un día: el correo no caduca ni lleva nada que
+     * usar, así que repetirlo antes no ayuda a su dueño y sí a quien quiera
+     * molestarle.
+     */
+    static final Duration ESPERA_ENTRE_AVISOS = Duration.ofHours(24);
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
@@ -119,11 +129,11 @@ public class AuthServiceImpl implements AuthService {
         Optional<User> existente = userRepository.findByEmail(request.email());
 
         if (existente.isPresent() && !existente.get().correoPendienteDeConfirmar()) {
-            // Ese correo ya es de alguien. Ni se dice (enumeraría cuentas) ni
-            // se le manda nada: la respuesta es la de siempre y aquí acaba.
+            // Ese correo ya es de alguien. Aquí no se dice (enumeraría
+            // cuentas): la respuesta es la de siempre. Se le dice a su dueño,
+            // por correo (ADR 037).
             passwordEncoder.encode(contrasena); // el BCrypt del código que no se emite
-            log.info("Registro con un correo que ya tiene cuenta (usuario {}): no se crea nada.",
-                    existente.get().getId());
+            avisarDeQueYaTieneCuenta(existente.get());
             return pendienteDeConfirmar(request.email());
         }
 
@@ -171,9 +181,42 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    /**
+     * El correo de «ya tienes cuenta» (ADR 037), a quien se registra con un
+     * correo que ya la tiene: casi siempre es su dueño, que no se acordaba, y
+     * sin este correo se queda esperando un código que no va a llegar.
+     *
+     * Sale después del commit y sin esperar, como el código de confirmación
+     * (mismo evento), para que este camino y el de un correo nuevo sigan
+     * pareciéndose también en lo que tardan. Y como mucho uno cada
+     * {@link #ESPERA_ENTRE_AVISOS} por cuenta: el registro es público, y sin
+     * tope serviría para llenarle el buzón a cualquiera que tenga cuenta.
+     */
+    private void avisarDeQueYaTieneCuenta(User usuario) {
+        Instant ahora = Instant.now();
+        if (userRepository.marcarAvisoDeCuentaExistente(
+                usuario.getId(), ahora, ahora.minus(ESPERA_ENTRE_AVISOS)) == 0) {
+            log.warn("Registro con un correo que ya tiene cuenta (usuario {}): ya se le avisó hace menos de {} h.",
+                    usuario.getId(), ESPERA_ENTRE_AVISOS.toHours());
+            return;
+        }
+        Map<String, Object> variables = new LinkedHashMap<>();
+        variables.put("nombre", usuario.getNombre());
+        variables.put("email", usuario.getEmail());
+        variables.put("nombreEmpresa", usuario.getEmpresa().getNombre());
+        // A quien está de baja no se le puede decir «entra»: no puede.
+        variables.put("activa", usuario.isActivo());
+        eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
+                usuario.getEmail(), variables, "account-already-exists", "Ya tienes una cuenta en NX Time"));
+        log.info("Registro con un correo que ya tiene cuenta (usuario {}): no se crea nada y se le avisa.",
+                usuario.getId());
+    }
+
+    // No dice «un código»: a quien ya tenía cuenta le llega otro correo (ADR
+    // 037), y este texto tiene que valer para los dos.
     private static RegistrationPendingResponse pendienteDeConfirmar(String email) {
         return new RegistrationPendingResponse(email,
-                "Te hemos mandado un código a " + email + ". Escríbelo para entrar. Si no llega en unos minutos, "
+                "Te hemos mandado un correo a " + email + " con el siguiente paso. Si no llega en unos minutos, "
                         + "mira en la carpeta de spam.");
     }
 
