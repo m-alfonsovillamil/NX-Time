@@ -248,7 +248,7 @@
     <!-- Estado de la cadena de hashes (comprobacion automatica nocturna) -->
     <string name="auditoria_cadena_intacta">Traza verificada</string>
     <string name="auditoria_cadena_comprobada">
-        Comprobada el %1$s: %2$d movimientos sin alteraciones.
+        Comprobada el %1$s: %2$d movimientos de tu empresa sin alteraciones.
     </string>
     <plurals name="auditoria_cadena_pendientes">
         <item quantity="one">Hay 1 movimiento posterior aún sin comprobar.</item>

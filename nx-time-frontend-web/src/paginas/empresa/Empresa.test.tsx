@@ -182,4 +182,40 @@ describe('integridad', () => {
     expect(within(resultado).getByText(G.rota)).toBeTruthy();
     expect(within(resultado).getByText(G.primerFallo(7, 'Su huella no cuadra con su contenido.'))).toBeTruthy();
   });
+
+  /*
+   * La cadena es común a todas las empresas, pero lo que se enseña es lo de la
+   * propia. Una empresa recién registrada veía «74 movimientos revisados»: los
+   * de las demás (10/2026).
+   */
+  it('una empresa sin movimientos lo lee así, y no como si la cadena fuera suya', async () => {
+    simularApi({
+      'GET /api/v1/auditoria/integridad/ultima': () => ({ verificadoEn: '2026-10-07T01:50:00Z', movimientos: 0, pendientes: 0 }),
+      'GET /api/v1/auditoria/integridad': () => json({ intacta: true, movimientos: 0, comprobados: 0, soloEnlace: 0 }),
+    });
+    pintar(<Integridad />, { sesion: sesionDe('ADMIN') });
+
+    expect((await screen.findByText(G.cifras.movimientos)).closest('.nx-cifra')?.textContent).toContain('0');
+    expect(G.cifras.movimientos).toContain('de tu empresa');
+    await userEvent.click(screen.getByRole('button', { name: G.comprobar }));
+    const resultado = await screen.findByRole('status');
+    expect(within(resultado).getByText(G.intacta)).toBeTruthy();
+    expect(within(resultado).getByText(G.detalle(0, 0, 0))).toBeTruthy();
+    expect(G.detalle(0, 0, 0)).toContain('todavía no tiene movimientos');
+  });
+
+  it('si la cadena falla en un movimiento de otra empresa, lo explica sin dar el número', async () => {
+    const motivo = 'El problema está en un movimiento que no es de tu empresa.';
+    simularApi({
+      'GET /api/v1/auditoria/integridad/ultima': () => sinContenido(),
+      'GET /api/v1/auditoria/integridad': () => json({ intacta: false, movimientos: 4, comprobados: 4, soloEnlace: 0, motivo }),
+    });
+    pintar(<Integridad />, { sesion: sesionDe('ADMIN') });
+
+    await userEvent.click(await screen.findByRole('button', { name: G.comprobar }));
+    const resultado = await screen.findByRole('status');
+    expect(within(resultado).getByText(G.rota)).toBeTruthy();
+    expect(within(resultado).getByText(motivo)).toBeTruthy();
+    expect(resultado.textContent).not.toContain('Primer movimiento con problemas');
+  });
 });
