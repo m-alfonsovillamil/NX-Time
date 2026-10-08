@@ -2741,7 +2741,7 @@ export interface paths {
         };
         /**
          * Comprobar que la traza no se ha manipulado
-         * @description Recorre la cadena de hashes y dice si sigue intacta. Es la respuesta a "demuéstrame que este registro no se ha tocado": el RD-ley 8/2019 exige conservarlo cuatro años y que sea fiable, y una cadena que nadie comprueba nunca no demuestra nada. Los movimientos anteriores a septiembre de 2026 solo admiten la comprobación del enlace con el anterior, y se cuentan aparte.
+         * @description Recorre la cadena de hashes entera y dice si sigue intacta, con las cifras de mi empresa (la cadena es común a todas las de la instalación). Es la respuesta a "demuéstrame que este registro no se ha tocado": el RD-ley 8/2019 exige conservarlo cuatro años y que sea fiable, y una cadena que nadie comprueba nunca no demuestra nada. Los movimientos anteriores a septiembre de 2026 solo admiten la comprobación del enlace con el anterior, y se cuentan aparte.
          */
         get: operations["verificarIntegridad"];
         put?: never;
@@ -4424,18 +4424,18 @@ export interface components {
             /** Format: int64 */
             noLeidos?: number;
         };
-        /** @description Resultado de comprobar la cadena de hashes de la auditoría */
+        /** @description Resultado de comprobar la cadena de hashes de la auditoría. La cadena es común a todas las empresas de la instalación y se recorre entera, pero las cifras son solo las de la empresa de quien pregunta */
         AuditIntegrityResponse: {
             /** @description Si la traza está intacta hasta donde se puede comprobar */
             intacta?: boolean;
             /**
              * Format: int64
-             * @description Movimientos de auditoría revisados
+             * @description Movimientos de auditoría de mi empresa revisados
              */
             movimientos?: number;
             /**
              * Format: int64
-             * @description Movimientos cuyo hash se ha recalculado y cuadra
+             * @description De esos, a cuántos se les ha recalculado el hash y cuadra
              */
             comprobados?: number;
             /**
@@ -4445,13 +4445,13 @@ export interface components {
             soloEnlace?: number;
             /**
              * Format: int64
-             * @description Id del primer movimiento con problemas, si lo hay
+             * @description Id del primer movimiento con problemas, si lo hay y es de mi empresa
              */
             primerFallo?: number;
             /** @description Qué le pasa a ese movimiento, en una frase */
             motivo?: string;
         };
-        /** @description Resultado de la última comprobación automática de la cadena de auditoría */
+        /** @description Resultado de la última comprobación automática de la cadena de auditoría. La comprobación recorre la cadena de todas las empresas; las cifras son solo las de la empresa de quien pregunta */
         AuditCheckpointResponse: {
             /**
              * Format: date-time
@@ -4460,12 +4460,7 @@ export interface components {
             verificadoEn?: string;
             /**
              * Format: int64
-             * @description Hasta qué movimiento de auditoría llegó
-             */
-            hastaMovimiento?: number;
-            /**
-             * Format: int64
-             * @description Movimientos revisados en total
+             * @description Movimientos de mi empresa revisados en esa comprobación
              */
             movimientos?: number;
             /**
@@ -4480,7 +4475,7 @@ export interface components {
             soloEnlace?: number;
             /**
              * Format: int64
-             * @description Movimientos escritos después de esa comprobación, todavía sin revisar
+             * @description Movimientos de mi empresa escritos después de esa comprobación, todavía sin revisar
              */
             pendientes?: number;
         };

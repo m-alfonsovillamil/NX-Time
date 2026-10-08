@@ -116,8 +116,11 @@ export const acceso = {
   /** Confirmar el correo con el código, tras registrar la empresa (ADR 034). */
   confirmarCorreo: {
     titulo: 'Confirma tu correo',
+    // No promete un código: a quien se registra con un correo que ya tenía
+    // cuenta le llega otro correo (ADR 037), y esta pantalla no puede saber
+    // cuál de los dos ha salido.
     explicacion: (email: string) =>
-      `Te hemos mandado un código de 6 cifras a ${email}. Escríbelo para entrar. Si no llega en unos minutos, mira en la carpeta de spam.`,
+      `Te hemos mandado un correo a ${email}. Lo normal es que traiga un código de 6 cifras: escríbelo aquí para entrar. Si te dice que ya tienes una cuenta, vuelve al inicio y entra con ella. Si no llega en unos minutos, mira en la carpeta de spam.`,
     codigo: 'Código',
     faltaCodigo: 'El código son 6 cifras.',
     entrar: 'Confirmar y entrar',

@@ -101,7 +101,8 @@
     <string name="registro_crear">Crear empresa</string>
     <!-- Confirmar el correo al registrar la empresa (ADR 034) -->
     <string name="confirmar_correo_titulo">Confirma tu correo</string>
-    <string name="confirmar_correo_explicacion">Te hemos mandado un código de 6 cifras a %1$s. Escríbelo para entrar. Si no llega en unos minutos, mira en la carpeta de spam.</string>
+    <!-- No promete un código: a quien ya tenía cuenta le llega otro correo (ADR 037). -->
+    <string name="confirmar_correo_explicacion">Te hemos mandado un correo a %1$s. Lo normal es que traiga un código de 6 cifras: escríbelo aquí para entrar. Si te dice que ya tienes una cuenta, vuelve atrás y entra con ella. Si no llega en unos minutos, mira en la carpeta de spam.</string>
     <string name="confirmar_correo_entrar">Confirmar y entrar</string>
     <string name="confirmar_correo_otro">¿No te ha llegado? Entra con tu correo y tu contraseña y te mandaremos otro.</string>
 
@@ -264,7 +265,7 @@
     <!-- Estado de la cadena de hashes (comprobacion automatica nocturna) -->
     <string name="auditoria_cadena_intacta">Traza verificada</string>
     <string name="auditoria_cadena_comprobada">
-        Comprobada el %1$s: %2$d movimientos sin alteraciones.
+        Comprobada el %1$s: %2$d movimientos de tu empresa sin alteraciones.
     </string>
     <plurals name="auditoria_cadena_pendientes">
         <item quantity="one">Hay 1 movimiento posterior aún sin comprobar.</item>

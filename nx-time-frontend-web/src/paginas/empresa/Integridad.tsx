@@ -8,6 +8,10 @@
  * sonaría a que está todo comprobado. Comprobar ahora recorre la cadena entera
  * y puede tardar; si algo falla, se dice en qué movimiento y qué le pasa.
  *
+ * **Las cifras son las de la empresa de quien mira**, no las de la
+ * instalación: la cadena es una sola para todas las empresas, pero el servidor
+ * cuenta solo los movimientos de la suya (10/2026).
+ *
  * A lo ancho (5/10/2026): lo que se mira y se hace, a la izquierda; el «cómo
  * funciona», al lado y en puntos. Antes era un párrafo largo encima de dos
  * tarjetas en una columna de 560 px.
@@ -76,7 +80,15 @@ export function Integridad() {
                 titulo={r.intacta === true ? I.intacta : I.rota}
               >
                 <p>{I.detalle(r.movimientos ?? 0, r.comprobados ?? 0, r.soloEnlace ?? 0)}</p>
-                {r.intacta !== true && r.primerFallo !== undefined && <p>{I.primerFallo(r.primerFallo, r.motivo ?? '')}</p>}
+                {/* Con el número del movimiento si es de esta empresa. Si el
+                    problema está en la parte de otra, el servidor solo manda
+                    la explicación: el movimiento no es suyo. */}
+                {r.intacta !== true &&
+                  (r.primerFallo !== undefined ? (
+                    <p>{I.primerFallo(r.primerFallo, r.motivo ?? '')}</p>
+                  ) : (
+                    r.motivo !== undefined && <p>{r.motivo}</p>
+                  ))}
               </Destacado>
             )}
           </Tarjeta>

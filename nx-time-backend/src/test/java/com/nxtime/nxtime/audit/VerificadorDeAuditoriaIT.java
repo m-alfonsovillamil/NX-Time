@@ -334,4 +334,120 @@ class VerificadorDeAuditoriaIT {
 
         assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getId()).isEqualTo(primero);
     }
+
+    // ------------------------------------------------------------------
+    // Lo que ve cada empresa (10/2026)
+    // ------------------------------------------------------------------
+
+    private long empresaDe(String email) {
+        return userRepository.findByEmail(email).orElseThrow().getEmpresa().getId();
+    }
+
+    /**
+     * El fallo que se arregla: la pantalla de integridad enseñaba los totales
+     * de la instalación, y una empresa recién registrada, sin un fichaje, veía
+     * los movimientos de todas las demás.
+     */
+    @Test
+    @DisplayName("Cada empresa ve sus movimientos, no los de la instalación; una recién creada ve cero")
+    void cadaEmpresaVeSoloLoSuyo() {
+        jornadaCompleta("de-a@nxtime.test");
+        jornadaCompleta("de-b@nxtime.test");
+        Company recienCreada = companyRepository.save(Company.builder().nombre("Recién creada " + System.nanoTime()).build());
+
+        // La cadena es una y tiene los ocho...
+        assertThat(verificador.verificar().movimientos()).isEqualTo(8);
+
+        // ...pero a cada una se le cuentan los suyos.
+        AuditIntegrityResponse paraA = verificador.verificarPara(empresaDe("de-a@nxtime.test"));
+        assertThat(paraA.intacta()).isTrue();
+        assertThat(paraA.movimientos()).isEqualTo(4);
+        assertThat(paraA.comprobados()).isEqualTo(4);
+        assertThat(verificador.verificarPara(empresaDe("de-b@nxtime.test")).movimientos()).isEqualTo(4);
+
+        AuditIntegrityResponse paraLaNueva = verificador.verificarPara(recienCreada.getId());
+        assertThat(paraLaNueva.intacta()).isTrue();
+        assertThat(paraLaNueva.movimientos()).isZero();
+        assertThat(paraLaNueva.comprobados()).isZero();
+        assertThat(paraLaNueva.soloEnlace()).isZero();
+
+        // Y por el correo de quien tiene la sesión, que es como lo pide el controlador.
+        assertThat(verificador.verificarParaLaEmpresaDe("de-b@nxtime.test").movimientos()).isEqualTo(4);
+    }
+
+    /**
+     * La cadena es común: si se rompe en la parte de otra empresa, lo de esta
+     * que venga después se queda sin comprobar, y hay que decírselo. Lo que no
+     * se le dice es en qué movimiento, que no es suyo.
+     */
+    @Test
+    @DisplayName("Una fila manipulada de OTRA empresa: se dice que la traza falla, pero no cuál; a su dueña, sí")
+    void filaManipuladaDeOtraEmpresa() throws Exception {
+        jornadaCompleta("rota-antes@nxtime.test");
+        jornadaCompleta("rota-medio@nxtime.test");
+        jornadaCompleta("rota-despues@nxtime.test");
+        long id = todasLasFilas().get(5).getId(); // la segunda de la empresa del medio
+
+        manipularSaltandoseElTrigger(
+                "UPDATE auditoria_fichaje SET motivo = 'Lo cambie yo' WHERE id = " + id);
+
+        // A su dueña: cuál es y qué le pasa. Su primera fila sí estaba bien.
+        AuditIntegrityResponse paraLaDuenia = verificador.verificarPara(empresaDe("rota-medio@nxtime.test"));
+        assertThat(paraLaDuenia.intacta()).isFalse();
+        assertThat(paraLaDuenia.primerFallo()).isEqualTo(id);
+        assertThat(paraLaDuenia.motivo()).contains("no coincide con su hash");
+        assertThat(paraLaDuenia.movimientos()).isEqualTo(1);
+
+        // A la que escribió antes: falla, sin decir dónde; lo suyo, comprobado entero.
+        AuditIntegrityResponse paraLaDeAntes = verificador.verificarPara(empresaDe("rota-antes@nxtime.test"));
+        assertThat(paraLaDeAntes.intacta()).isFalse();
+        assertThat(paraLaDeAntes.primerFallo()).isNull();
+        assertThat(paraLaDeAntes.motivo()).contains("no es de tu empresa").doesNotContain(String.valueOf(id));
+        assertThat(paraLaDeAntes.movimientos()).isEqualTo(4);
+
+        // A la que escribió después: lo mismo, y de lo suyo no se ha llegado a comprobar nada.
+        AuditIntegrityResponse paraLaDeDespues = verificador.verificarPara(empresaDe("rota-despues@nxtime.test"));
+        assertThat(paraLaDeDespues.intacta()).isFalse();
+        assertThat(paraLaDeDespues.primerFallo()).isNull();
+        assertThat(paraLaDeDespues.movimientos()).isZero();
+    }
+
+    @Test
+    @DisplayName("La última comprobación automática también se cuenta por empresa: lo revisado y lo pendiente")
+    void ultimaComprobacionPorEmpresa() {
+        jornadaCompleta("punto-a@nxtime.test");
+        jornadaCompleta("punto-b@nxtime.test");
+        Company recienCreada = companyRepository.save(Company.builder().nombre("Recién creada " + System.nanoTime()).build());
+        long a = empresaDe("punto-a@nxtime.test");
+        long b = empresaDe("punto-b@nxtime.test");
+
+        // Sin comprobación todavía, no hay nada que enseñar a nadie.
+        assertThat(verificador.ultimaComprobacionPara(a)).isEmpty();
+
+        verificador.verificarLoNuevoYAnotar();
+        // Después de la comprobación, la empresa B sigue fichando.
+        timeEntryService.registerTimeEntry("punto-b@nxtime.test", new TimeEntryRequest(TimeEntryAction.INICIO));
+        timeEntryService.registerTimeEntry("punto-b@nxtime.test", new TimeEntryRequest(TimeEntryAction.FIN));
+
+        // El punto de control es de la cadena entera...
+        assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getFilas()).isEqualTo(8);
+
+        // ...y a cada empresa se le da su parte.
+        var paraA = verificador.ultimaComprobacionPara(a).orElseThrow();
+        assertThat(paraA.movimientos()).isEqualTo(4);
+        assertThat(paraA.comprobados()).isEqualTo(4);
+        assertThat(paraA.pendientes()).isZero();
+        assertThat(paraA.verificadoEn()).isNotNull();
+
+        var paraB = verificador.ultimaComprobacionPara(b).orElseThrow();
+        assertThat(paraB.movimientos()).isEqualTo(4);
+        assertThat(paraB.pendientes()).isEqualTo(2);
+
+        var paraLaNueva = verificador.ultimaComprobacionPara(recienCreada.getId()).orElseThrow();
+        assertThat(paraLaNueva.movimientos()).isZero();
+        assertThat(paraLaNueva.pendientes()).isZero();
+
+        assertThat(verificador.ultimaComprobacionParaLaEmpresaDe("punto-b@nxtime.test").orElseThrow().pendientes())
+                .isEqualTo(2);
+    }
 }

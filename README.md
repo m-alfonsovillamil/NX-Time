@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**1213 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1218 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -605,6 +605,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 34. [Endurecimiento de octubre: confirmar el correo al registrarse y topes donde no los había](docs/adr/034-endurecimiento-de-octubre.md)
 35. [El sistema visual de la web: el ancho, el acento de cada zona y piezas compartidas](docs/adr/035-sistema-visual-de-la-web.md)
 36. [Entrar con Google o con Microsoft: solo para quien ya tiene cuenta, y a quién se le cree el correo](docs/adr/036-entrar-con-google-o-microsoft.md)
+37. [Registrarse con un correo que ya tiene cuenta: se le dice a su dueño, por correo](docs/adr/037-ya-tienes-cuenta-por-correo.md)
 38. [SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado](docs/adr/038-sso-lo-que-faltaba.md)
 
 ---
@@ -667,6 +668,11 @@ propios ID token.
   empeoraba con el tamaño de la empresa eran las ausencias del equipo, ya
   arreglado; queda la bandeja de correcciones, que pide el reparto propuesto de
   cada solicitud por separado y no se nota porque es una bandeja corta.
+- **La cadena de auditoría es una sola para todas las empresas** de la
+  instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
+  la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio
+  compartido es una cadena por empresa
+  ([ADR 018](docs/adr/018-la-cadena-de-auditoria-se-serializa-en-postgres.md)).
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que
