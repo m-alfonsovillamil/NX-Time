@@ -3894,6 +3894,15 @@ export interface components {
             /** Format: date */
             hasta?: string;
         };
+        CuentaVinculada: {
+            proveedor?: string;
+            sujeto?: string;
+            correo?: string;
+            /** Format: date-time */
+            vinculadaEn?: string;
+            /** Format: date-time */
+            ultimoAcceso?: string;
+        };
         Denuncia: {
             categoria?: string;
             descripcion?: string;
@@ -4022,6 +4031,7 @@ export interface components {
             firmasMensuales?: components["schemas"]["FirmaMensual"][];
             avisos?: components["schemas"]["Aviso"][];
             dispositivosPush?: components["schemas"]["DispositivoPush"][];
+            cuentasVinculadas?: components["schemas"]["CuentaVinculada"][];
             adjuntos?: components["schemas"]["Adjunto"][];
             candidaturas?: components["schemas"]["Candidatura"][];
             denunciasIdentificadas?: components["schemas"]["Denuncia"][];

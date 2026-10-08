@@ -39,6 +39,7 @@ public record PersonalDataExport(
         List<FirmaMensual> firmasMensuales,
         List<Aviso> avisos,
         List<DispositivoPush> dispositivosPush,
+        List<CuentaVinculada> cuentasVinculadas,
         List<Adjunto> adjuntos,
         List<Candidatura> candidaturas,
         List<Denuncia> denunciasIdentificadas,
@@ -117,6 +118,16 @@ public record PersonalDataExport(
      * aparato tuyo, y es tuyo saber qué se guarda de él.
      */
     public record DispositivoPush(String plataforma, String token, Instant registradoEn, Instant vistoEn) {
+    }
+
+    /**
+     * Una cuenta de Google o de Microsoft con la que entras (ADR 036). Con el
+     * identificador que da el proveedor ({@code sujeto}): es lo que de verdad
+     * se guarda para reconocerte, y es tuyo saberlo. El correo es el que tenía
+     * esa cuenta al vincularla.
+     */
+    public record CuentaVinculada(
+            String proveedor, String sujeto, String correo, Instant vinculadaEn, Instant ultimoAcceso) {
     }
 
     public record Adjunto(String tipo, String nombre, String mime, long tamanoBytes, Instant subidoEn, boolean vigente) {

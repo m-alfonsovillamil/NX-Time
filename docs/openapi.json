@@ -11827,6 +11827,28 @@
           }
         }
       },
+      "CuentaVinculada" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "sujeto" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "vinculadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ultimoAcceso" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "Denuncia" : {
         "type" : "object",
         "properties" : {
@@ -12179,6 +12201,12 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/DispositivoPush"
+            }
+          },
+          "cuentasVinculadas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CuentaVinculada"
             }
           },
           "adjuntos" : {

@@ -153,6 +153,13 @@ public class PersonalDataPdfGenerator {
                         d.plataforma(), en.fechaHora(d.registradoEn()), en.fechaHora(d.vistoEn()),
                         "…" + d.token().substring(Math.max(0, d.token().length() - 12))});
 
+        // El identificador del proveedor es una ristra que no le dice nada a
+        // quien lo lee: aquí va el correo de esa cuenta. Entero va en el JSON.
+        tabla(documento, "Cuentas de Google o Microsoft con las que entras", datos.cuentasVinculadas(),
+                new String[] {"Proveedor", "Correo de esa cuenta", "Vinculada", "Último acceso"},
+                c -> new String[] {
+                        c.proveedor(), c.correo(), en.fechaHora(c.vinculadaEn()), en.fechaHora(c.ultimoAcceso())});
+
         tabla(documento, "Ficheros adjuntos", datos.adjuntos(),
                 new String[] {"Tipo", "Nombre", "Tamaño", "Subido", "Vigente"},
                 ad -> new String[] {
