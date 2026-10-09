@@ -23,7 +23,17 @@ dependencies {
     // Librerías principales de Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    /*
+     * Jackson 2, con el puente que trae Spring Boot 4. La 4 usa Jackson 3 por
+     * defecto (otro paquete, `tools.jackson`, y otros valores por defecto) y
+     * ya no publica el ObjectMapper de siempre. Aqui no se cambia a proposito:
+     * el JSON de la API es un contrato, y las instantaneas de la auditoria de
+     * fichajes se firman con un hash sobre su texto. Subir de Spring Boot y
+     * cambiar de serializador a la vez seria no saber cual de los dos ha
+     * movido una coma. El paso a Jackson 3 va aparte.
+     */
+    implementation("org.springframework.boot:spring-boot-jackson2")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
@@ -85,17 +95,14 @@ dependencies {
     // Boot 3 ("-jakarta"); con Boot 4 sería sentry-spring-boot-4. Con
     // sentry-logback, cada log.error se convierte en un evento. Sin DSN
     // (SENTRY_DSN vacía, como en local y en los tests) no envía nada.
-    implementation("io.sentry:sentry-spring-boot-starter-jakarta:8.59.0")
+    implementation("io.sentry:sentry-spring-boot-4-starter:8.59.0")
     implementation("io.sentry:sentry-logback:8.59.0")
 
-    // Documentación de la API (Swagger UI / OpenAPI), Fase 6. 2.8.17 (no
-    // la 2.6.0 fijada desde la Fase 0): esa version es anterior al
-    // soporte de Spring Boot 3.4+/Spring Framework 6.2 y el arranque
-    // fallaba con NoSuchMethodError sobre ControllerAdviceBean -- una
-    // API interna de Spring que cambio de firma. 2.8.x sigue siendo la
-    // misma linea mayor (2.x, para Spring Boot 3.x); no se salta a la
-    // 3.x de springdoc, que apunta a Spring Boot 4/Framework 7.
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
+    // Documentación de la API (Swagger UI / OpenAPI), Fase 6. La linea
+    // mayor de springdoc va con la de Spring Boot: 2.x para Boot 3, 3.x para
+    // Boot 4. Con la que no toca, el arranque falla con un NoSuchMethodError
+    // sobre alguna API interna de Spring (ya paso con la 2.6.0 y Boot 3.4).
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 
     // Lombok: getters/setters/constructores en las entidades JPA. No genera
     // equals/hashCode (eso se escribe a mano, basado solo en el id: ver
@@ -111,12 +118,18 @@ dependencies {
     // Migraciones de esquema versionadas (ver src/main/resources/db/migration).
     // Sustituye a ddl-auto=update, que generaba el esquema sin control de
     // versiones y sin claves foráneas ni índices (ver auditoría).
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
 
     // Librerías para Tests
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-resttestclient")
+    // TestRestTemplate se construye con el RestTemplateBuilder, que en la 4 vive aqui.
+    testImplementation("org.springframework.boot:spring-boot-restclient")
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
     testCompileOnly("org.projectlombok:lombok:1.18.34")
     testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
     // testImplementation y no testRuntimeOnly: hace falta en compilacion
@@ -140,8 +153,8 @@ dependencies {
     // SQLite, sin la complicación de Testcontainers en este entorno.
     // Se dejan las dependencias listas por si se retoma en la Fase 5.
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
-    testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
 
     /*
      * Base de datos: PostgreSQL (antes SQLite, ver Fase 3 del plan).

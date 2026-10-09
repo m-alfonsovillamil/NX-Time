@@ -1,6 +1,5 @@
 package com.nxtime.nxtime.security.sso;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.nxtime.nxtime.domain.Emails;
 import com.nxtime.nxtime.domain.SsoProvider;
 import java.nio.charset.StandardCharsets;
@@ -10,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -63,6 +63,10 @@ public class OidcClient {
     private static final Pattern GUID = Pattern.compile("[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}");
 
     private final SsoConfig config;
+    private static final ParameterizedTypeReference<Map<String, Object>> RESPUESTA_DEL_TOKEN =
+            new ParameterizedTypeReference<>() {
+            };
+
     private final RestClient http;
     /** Un decodificador por proveedor: guarda en caché las claves públicas que se descarga. */
     private final Map<SsoProvider, JwtDecoder> decodificadores = new ConcurrentHashMap<>();
@@ -118,14 +122,17 @@ public class OidcClient {
 
         String idToken;
         try {
-            JsonNode respuesta = http.post()
+            // Un mapa, y no un JsonNode: el arbol es de UNA version de Jackson, y
+            // con cual lee este cliente lo decide lo que haya en el classpath
+            // (con Spring Boot 4, la 3). Un mapa lo entienden las dos.
+            Map<String, Object> respuesta = http.post()
                     .uri(datos.tokenUri())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .accept(MediaType.APPLICATION_JSON)
                     .body(formulario)
                     .retrieve()
-                    .body(JsonNode.class);
-            idToken = respuesta == null ? null : respuesta.path("id_token").asText(null);
+                    .body(RESPUESTA_DEL_TOKEN);
+            idToken = respuesta != null && respuesta.get("id_token") instanceof String texto ? texto : null;
         } catch (Exception e) {
             // Sin el cuerpo de la respuesta en el mensaje: puede llevar el código.
             throw new SsoException(SsoException.Motivo.FALLO,

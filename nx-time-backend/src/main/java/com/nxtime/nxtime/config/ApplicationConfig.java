@@ -37,13 +37,13 @@ public class ApplicationConfig {
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 
-    // Desde la Fase 4: constructor que recibe el PasswordEncoder
-    // directamente (Spring Security 6.3+), en vez del constructor sin
-    // argumentos + setPasswordEncoder() ya deprecado.
+    // Spring Security 7 le ha dado la vuelta: el constructor recibe el
+    // UserDetailsService, que es lo obligatorio, y el PasswordEncoder se pone
+    // aparte. En la 6.3 era justo al revés.
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(passwordEncoder());
-        authProvider.setUserDetailsService(userDetailsService());
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
+        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 

@@ -17,7 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 
 /**
  * {@code docs/openapi.json} es lo que dice el backend, no lo que alguien copió
@@ -52,6 +52,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
  * existía.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate
 class OpenApiSnapshotTest {
 
     /** Dónde vive el contrato versionado, desde la raíz del repositorio. */

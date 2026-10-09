@@ -9541,21 +9541,21 @@
             "format" : "uri"
           },
           "title" : {
-            "type" : [ "string", "null" ]
+            "type" : "string"
           },
           "status" : {
             "type" : "integer",
             "format" : "int32"
           },
           "detail" : {
-            "type" : [ "string", "null" ]
+            "type" : "string"
           },
           "instance" : {
-            "type" : [ "string", "null" ],
+            "type" : "string",
             "format" : "uri"
           },
           "properties" : {
-            "type" : [ "object", "null" ],
+            "type" : "object",
             "additionalProperties" : { }
           }
         }
@@ -10788,7 +10788,8 @@
         "properties" : {
           "proyectoId" : {
             "type" : "integer",
-            "format" : "int64"
+            "format" : "int64",
+            "exclusiveMinimum" : 0
           }
         }
       },
@@ -11298,7 +11299,8 @@
         "properties" : {
           "usuarioId" : {
             "type" : "integer",
-            "format" : "int64"
+            "format" : "int64",
+            "exclusiveMinimum" : 0
           },
           "motivo" : {
             "type" : "string",

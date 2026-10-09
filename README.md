@@ -4,7 +4,7 @@
 [![Web](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/web.yml)
 [![E2E](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml/badge.svg)](https://github.com/m-alfonsovillamil/NX-Time/actions/workflows/e2e.yml)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://openjdk.org/projects/jdk/21/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.16-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)](https://www.postgresql.org/)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-lightgrey)](LICENSE)
 
@@ -253,7 +253,7 @@ repiten con `npm run capturas`.
 | Capa | Tecnología |
 |---|---|
 | Lenguaje | Java 21 |
-| Framework | Spring Boot 3.5.6 (Web, Data JPA, Security, Validation, Mail, Cache, Actuator) |
+| Framework | Spring Boot 4.1.1 (Web MVC, Data JPA, Security, Validation, Mail, Cache, Actuator) |
 | Base de datos | PostgreSQL 18 + Flyway (esquema versionado, escrito a mano) |
 | Seguridad | JWT (jjwt 0.12.6) con *refresh tokens* revocables, BCrypt, Bucket4j |
 | Mapeo | MapStruct 1.6.3 · Lombok |
@@ -315,7 +315,7 @@ flowchart TB
         APP["App Android<br/>Kotlin · MVVM · Retrofit"]
     end
 
-    subgraph api["Backend — Spring Boot 3"]
+    subgraph api["Backend — Spring Boot 4"]
         SEC["Filtros de seguridad<br/>JWT · rate limit · correlation id"]
         CTRL["Controladores REST<br/>@PreAuthorize por authority"]
         SRV["Servicios<br/>reglas de negocio"]
