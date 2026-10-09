@@ -255,13 +255,13 @@ repiten con `npm run capturas`.
 | Lenguaje | Java 21 |
 | Framework | Spring Boot 4.1.1 (Web MVC, Data JPA, Security, Validation, Mail, Cache, Actuator) |
 | Base de datos | PostgreSQL 18 + Flyway (esquema versionado, escrito a mano) |
-| Seguridad | JWT (jjwt 0.12.6) con *refresh tokens* revocables, BCrypt, Bucket4j |
+| Seguridad | JWT (jjwt 0.13.0) con *refresh tokens* revocables, BCrypt, Bucket4j |
 | Mapeo | MapStruct 1.6.3 · Lombok |
 | Documentación | springdoc-openapi (Swagger UI) |
 | Informes | Apache POI (Excel) · OpenPDF (PDF) |
 | Caché | Caffeine |
 | Tests | JUnit 5 · Mockito · AssertJ · MockMvc · JaCoCo |
-| Build | Gradle (Kotlin DSL), monorepo de dos módulos + la web, que va aparte |
+| Build | Gradle 9 (Kotlin DSL), monorepo de dos módulos + la web, que va aparte |
 | App móvil | Kotlin 2.2 · Jetpack Compose (Material 3 **Expressive**) · MVVM con `StateFlow` · navigation-compose · `NavigationSuiteScaffold` (barra en móvil, raíl en tablet) · tema propio de color, formas y tipografía · Retrofit |
 | Cliente web | React 19 · TypeScript *strict* · Vite · react-router · `openapi-fetch` (**fuera de Gradle**, `nx-time-frontend-web/`): tipos generados del OpenAPI y *design tokens* generados del tema de Android · Vitest + Playwright |
 | Infra | Docker multi-stage · GitHub Actions · Render + Neon |
@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**1218 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1241 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**425 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**442 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -560,7 +560,7 @@ Dos detalles del despliegue que no son evidentes y están declarados en
   conexión directa, porque PgBouncer en modo transacción no soporta `SET`, que
   las herramientas de migración necesitan.
 
-El CI ejecuta los 241 tests contra un PostgreSQL real en cada push, con la misma
+El CI ejecuta los 1241 tests contra un PostgreSQL real en cada push, con la misma
 versión mayor que producción.
 
 ---
@@ -627,7 +627,7 @@ recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
 ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Se puede instalar como
 app y avisa con notificaciones push, igual que la app Android; en el iPhone es
 la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene dos workflows:
-`web.yml` (tipos, 366 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+`web.yml` (tipos, 385 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
@@ -648,9 +648,10 @@ propios ID token.
 
 **Pendiente:**
 
-- **Los tests de interfaz de la app cubren cinco recorridos, no todas las
+- **Los tests de interfaz de la app cubren seis recorridos, no todas las
   pantallas**: entrar, una jornada entera, elegir contraseña con un código, el
-  panel de gestión y la navegación con la sesión caducada (20 tests con
+  panel de gestión, la navegación con la sesión caducada y las cuentas
+  vinculadas de Ajustes (24 tests con
   Robolectric, en la JVM, que el CI ejecuta con los demás). Del resto de
   pantallas se prueba el ViewModel, no lo que se pinta. Y Robolectric no dibuja:
   no ve si algo se solapa o se sale de la pantalla. Eso sigue siendo cosa de las
