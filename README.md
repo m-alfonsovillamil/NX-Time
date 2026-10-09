@@ -674,8 +674,13 @@ propios ID token.
   las cachés y el cerrojo de la comprobación de integridad viven en memoria, y
   las tareas programadas no tienen cerrojo entre instancias: antes de poner una
   segunda hay que mover todo eso
-  ([ADR 039](docs/adr/039-limites-a-lo-caro.md)). Tampoco hay todavía una prueba
-  de carga.
+  ([ADR 039](docs/adr/039-limites-a-lo-caro.md)).
+- **Con poca CPU, lo que no aguanta es que toda la plantilla entre a la vez.**
+  La [prueba de carga](docs/PRUEBA-DE-CARGA.md), con un año de fichajes de tres
+  mil personas, dice qué se rompe primero: entrar con contraseña (con la décima
+  de CPU del plan gratuito, cien personas en un minuto ya lo hunden) y el límite
+  de diez entradas por minuto e IP, que deja fuera a una oficina de más de diez.
+  Fichar con la sesión ya abierta y los listados aguantan sin problema.
 - **La cadena de auditoría es una sola para todas las empresas** de la
   instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
   la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio
