@@ -70,7 +70,9 @@ class AuditControllerTest {
     @WithMockUser(username = "rrhh@nxtime.test", authorities = "fichaje:auditoria")
     @DisplayName("GET /auditoria/integridad devuelve el resultado de la comprobación")
     void verificarIntegridad_conAuthority_devuelveElResultado() throws Exception {
-        when(verificador.verificar()).thenReturn(AuditIntegrityResponse.intacta(120, 100, 20));
+        // Para la empresa de quien pregunta, no para la instalación entera.
+        when(verificador.verificarParaLaEmpresaDe("rrhh@nxtime.test"))
+                .thenReturn(AuditIntegrityResponse.intacta(120, 100, 20));
 
         mockMvc.perform(get("/api/v1/auditoria/integridad"))
                 .andExpect(status().isOk())
@@ -80,6 +82,31 @@ class AuditControllerTest {
                 // decir "120 verificadas" cuando 20 no se han podido
                 // recalcular sería justo lo que no debe hacer.
                 .andExpect(jsonPath("$.soloEnlace").value(20));
+    }
+
+    @Test
+    @WithMockUser(username = "rrhh@nxtime.test", authorities = "fichaje:auditoria")
+    @DisplayName("GET /auditoria/integridad/ultima devuelve las cifras de mi empresa, y no dice hasta qué fila llegó")
+    void ultimaComprobacion_devuelveLasCifrasDeMiEmpresa() throws Exception {
+        when(verificador.ultimaComprobacionParaLaEmpresaDe("rrhh@nxtime.test")).thenReturn(java.util.Optional.of(
+                new com.nxtime.nxtime.dto.AuditCheckpointResponse(Instant.parse("2026-10-07T01:50:00Z"), 12, 10, 2, 3)));
+
+        mockMvc.perform(get("/api/v1/auditoria/integridad/ultima"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.movimientos").value(12))
+                .andExpect(jsonPath("$.pendientes").value(3))
+                // El id de la última fila de la cadena es otra forma de decir
+                // cuántos movimientos hay en toda la instalación.
+                .andExpect(jsonPath("$.hastaMovimiento").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "rrhh@nxtime.test", authorities = "fichaje:auditoria")
+    @DisplayName("GET /auditoria/integridad/ultima sin ninguna comprobación todavía devuelve 204")
+    void ultimaComprobacion_sinNinguna_devuelve204() throws Exception {
+        when(verificador.ultimaComprobacionParaLaEmpresaDe("rrhh@nxtime.test")).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/auditoria/integridad/ultima")).andExpect(status().isNoContent());
     }
 
     @Test

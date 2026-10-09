@@ -23,9 +23,17 @@ import { createServer } from 'node:http';
 const PUERTO = Number(process.env.PUERTO_OIDC ?? 9099);
 const INQUILINO_DE_EMPRESA = '11111111-2222-3333-4444-555555555555';
 
+/**
+ * Distinto en cada arranque: la cuenta que registra una empresa deja de estar
+ * «sin cuenta» en cuanto lo hace, y con un correo fijo la spec solo pasaría la
+ * primera vez contra una misma base. Para repetirla, se reinicia esto.
+ */
+const ARRANQUE = randomBytes(4).toString('hex');
+
 /** Las cuentas que ofrece cada proveedor. El correo de Javier es el de la demo. */
 const CUENTAS = {
   google: [
+    { id: 'fundadora', nombre: 'Eva, que va a registrar su empresa', sub: `google-eva-${ARRANQUE}`, email: `eva-${ARRANQUE}@empresa-nueva.example`, claims: { email_verified: true } },
     { id: 'javier', nombre: 'Javier (con cuenta en NX Time)', sub: 'google-javier', email: 'javier.lopez@techcorp.demo', claims: { email_verified: true } },
     { id: 'nadie', nombre: 'Alguien sin cuenta en NX Time', sub: 'google-nadie', email: 'nadie@sin-cuenta.example', claims: { email_verified: true } },
   ],

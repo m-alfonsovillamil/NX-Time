@@ -1,10 +1,14 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.ExternalIdentity;
+import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.SsoProvider;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.LinkedIdentityDTO;
+import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.ExternalIdentityRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.sso.SsoException;
@@ -14,8 +18,11 @@ import com.nxtime.nxtime.service.SsoService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,10 +58,58 @@ public class SsoServiceImpl implements SsoService {
 
     private final ExternalIdentityRepository identidades;
     private final UserRepository usuarios;
+    private final CompanyRepository empresas;
+    private final PasswordEncoder passwordEncoder;
 
-    public SsoServiceImpl(ExternalIdentityRepository identidades, UserRepository usuarios) {
+    public SsoServiceImpl(ExternalIdentityRepository identidades, UserRepository usuarios,
+            CompanyRepository empresas, PasswordEncoder passwordEncoder) {
         this.identidades = identidades;
         this.usuarios = usuarios;
+        this.empresas = empresas;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    @Transactional
+    public User registrarEmpresa(
+            SsoProvider proveedor, String sujeto, String correo, String nombreEmpresa, String nombre, String apellidos) {
+        // Entre volver del proveedor y mandar el formulario ha podido pasar un
+        // cuarto de hora: se vuelve a mirar todo.
+        if (usuarios.findByEmail(correo).isPresent()
+                || identidades.findByProveedorAndSujeto(proveedor, sujeto).isPresent()) {
+            throw new BusinessException(
+                    "Ya hay una cuenta de NX Time con esa cuenta de " + proveedor.nombre() + ". Entra con ella.",
+                    HttpStatus.CONFLICT);
+        }
+        if (empresas.findByNombre(nombreEmpresa.strip()).isPresent()) {
+            // El mismo texto que el registro con contraseña (AuthServiceImpl).
+            throw new BusinessException("La empresa ya existe. Solicita acceso al administrador.");
+        }
+
+        Company empresa = empresas.save(Company.builder().nombre(nombreEmpresa.strip()).build());
+        User admin = usuarios.save(User.builder()
+                .nombre(nombre.strip())
+                .apellidos(apellidos.strip())
+                .email(correo)
+                // Inutilizable, como en las altas (ADR 014): el hash de un
+                // valor al azar que no se guarda. Entra con su cuenta del
+                // proveedor, y si quiere contraseña la elige con un código.
+                .contrasena(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .rol(Role.ADMIN)
+                .empresa(empresa)
+                // Sin correo pendiente de confirmar (V37): que es suyo lo ha
+                // garantizado el proveedor, que es lo que el código demostraba.
+                .build());
+        identidades.save(ExternalIdentity.builder()
+                .usuario(admin)
+                .proveedor(proveedor)
+                .sujeto(sujeto)
+                .correo(correo)
+                .ultimoAcceso(Instant.now())
+                .build());
+        log.info("Empresa '{}' registrada con {}; su ADMIN es el usuario {}.",
+                empresa.getNombre(), proveedor.id(), admin.getId());
+        return admin;
     }
 
     /*

@@ -21,6 +21,18 @@ public interface SsoService {
      */
     User identificar(VerifiedIdentity identidad);
 
+    /**
+     * Registra una empresa a nombre de quien ha entrado con esa cuenta del
+     * proveedor, que queda como su ADMIN, con el correo ya confirmado y la
+     * cuenta vinculada (ADR 038). Sin contraseña: puede elegir una después con
+     * un código al correo.
+     *
+     * @throws com.nxtime.nxtime.exception.BusinessException 409 si el nombre de la empresa
+     *         está cogido, o si mientras tanto ese correo o esa cuenta han pasado a ser de alguien
+     */
+    User registrarEmpresa(
+            SsoProvider proveedor, String sujeto, String correo, String nombreEmpresa, String nombre, String apellidos);
+
     /** Añade esa cuenta a esta persona, que ya tiene la sesión abierta. */
     void vincular(long usuarioId, VerifiedIdentity identidad);
 

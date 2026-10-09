@@ -12,16 +12,14 @@ import java.time.Instant;
  * <em>cómodamente</em>, que en la práctica es la diferencia entre comprobarla y
  * no comprobarla nunca.
  */
-@Schema(description = "Resultado de la última comprobación automática de la cadena de auditoría")
+@Schema(description = "Resultado de la última comprobación automática de la cadena de auditoría. La comprobación "
+        + "recorre la cadena de todas las empresas; las cifras son solo las de la empresa de quien pregunta")
 public record AuditCheckpointResponse(
 
         @Schema(description = "Cuándo se comprobó por última vez")
         Instant verificadoEn,
 
-        @Schema(description = "Hasta qué movimiento de auditoría llegó")
-        long hastaMovimiento,
-
-        @Schema(description = "Movimientos revisados en total")
+        @Schema(description = "Movimientos de mi empresa revisados en esa comprobación")
         long movimientos,
 
         @Schema(description = "De esos, a cuántos se les ha recalculado el hash")
@@ -30,7 +28,7 @@ public record AuditCheckpointResponse(
         @Schema(description = "De esos, a cuántos solo se les ha podido comprobar el enlace (ver V26)")
         long soloEnlace,
 
-        @Schema(description = "Movimientos escritos después de esa comprobación, todavía sin revisar")
+        @Schema(description = "Movimientos de mi empresa escritos después de esa comprobación, todavía sin revisar")
         long pendientes
 ) {
 }

@@ -181,7 +181,134 @@ describe('registrar una empresa', () => {
     await userEvent.click(screen.getByRole('button', { name: G.crear }));
 
     expect((await screen.findByRole('alert')).textContent).toBe(G.faltan);
-    expect(llamadas.llamadas).toHaveLength(0);
+    // Lo único que sale es la pregunta por los proveedores, al cargar.
+    expect(llamadas.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0);
+  });
+});
+
+/*
+ * Registrar con una cuenta de Google o de Microsoft (ADR 038). El viaje al
+ * proveedor es del navegador y del servidor: aquí se prueba lo que hace la web
+ * antes (a dónde manda) y después (qué pide y qué manda al volver).
+ */
+describe('registrar una empresa con Google o Microsoft', () => {
+  const proveedores = [
+    { id: 'google', nombre: 'Google', inicio: 'https://api.nxtime.test/auth/sso/google/iniciar' },
+    { id: 'microsoft', nombre: 'Microsoft', inicio: 'https://api.nxtime.test/auth/sso/microsoft/iniciar' },
+  ];
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('con proveedores, ofrece registrarla con cada uno, y el enlace pide un registro', async () => {
+    simularApi({ 'GET /auth/sso/proveedores': () => json(proveedores) });
+    pintar(<RegistroEmpresa />);
+
+    const google = await screen.findByRole('link', { name: G.sso.registrarCon('Google') });
+    expect(google.getAttribute('href')).toBe('https://api.nxtime.test/auth/sso/google/iniciar?registro=1');
+    expect(screen.getByRole('link', { name: G.sso.registrarCon('Microsoft') })).toBeTruthy();
+  });
+
+  it('sin proveedores no hay botones: el formulario es el de siempre', async () => {
+    simularApi({ 'GET /auth/sso/proveedores': () => json([]) });
+    pintar(<RegistroEmpresa />);
+
+    expect(await screen.findByLabelText(G.contrasena)).toBeTruthy();
+    expect(screen.queryByRole('group', { name: G.sso.etiqueta })).toBeNull();
+  });
+
+  it('al volver del proveedor solo pide la empresa y el nombre, y al mandarlos abre la sesión y lleva a la jornada', async () => {
+    window.history.replaceState({}, '', '/registro?sso=continuar');
+    const llamadas = simularApi({
+      'GET /auth/sso/proveedores': () => json(proveedores),
+      'GET /auth/sso/registro': () => json({ proveedor: 'google', nombre: 'Google', correo: 'eva@gmail.test' }),
+      'POST /auth/sso/registro': () =>
+        json({ token: 'access', refreshToken: null, nombre: 'Eva', rol: 'ADMIN', authorities: ['gestor:crear'] }),
+    });
+    pintar(
+      <Routes>
+        <Route path="/" element={<RegistroEmpresa />} />
+        <Route path="/fichar" element={<h1>Mi jornada</h1>} />
+      </Routes>,
+    );
+
+    // Dice con qué cuenta se registra, y no pide ni correo ni contraseña.
+    expect(await screen.findByText(G.sso.explicacion('Google', 'eva@gmail.test'))).toBeTruthy();
+    expect(screen.queryByLabelText(G.email)).toBeNull();
+    expect(screen.queryByLabelText(G.contrasena)).toBeNull();
+    // El `?sso=` se quita de la URL: recargar no repite nada.
+    expect(window.location.search).toBe('');
+
+    await userEvent.type(screen.getByLabelText(G.empresa), ' Talleres Eva SL ');
+    await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
+    await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.click(screen.getByRole('button', { name: G.crear }));
+
+    expect(await screen.findByRole('heading', { name: 'Mi jornada' })).toBeTruthy();
+    expect(llamadas.a('POST', '/auth/sso/registro').map((l) => l.cuerpo)).toEqual([
+      { nombreEmpresa: 'Talleres Eva SL', nombre: 'Eva', apellidos: 'Martín' },
+    ]);
+    expect(llamadas.a('POST', '/auth/register-manager')).toHaveLength(0);
+    await waitFor(() => expect(sesionActual()?.nombre).toBe('Eva'));
+  });
+
+  it('si el nombre de la empresa está cogido se lee lo que dice el servidor y se puede corregir', async () => {
+    window.history.replaceState({}, '', '/registro?sso=continuar');
+    simularApi({
+      'GET /auth/sso/proveedores': () => json(proveedores),
+      'GET /auth/sso/registro': () => json({ proveedor: 'google', nombre: 'Google', correo: 'eva@gmail.test' }),
+      'POST /auth/sso/registro': () => problema(409, 'La empresa ya existe. Solicita acceso al administrador.'),
+    });
+    pintar(<RegistroEmpresa />);
+
+    await userEvent.type(await screen.findByLabelText(G.empresa), 'TechCorp');
+    await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
+    await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.click(screen.getByRole('button', { name: G.crear }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'La empresa ya existe. Solicita acceso al administrador.',
+    );
+    expect(sesionActual()).toBeNull();
+    // Sigue en el formulario corto: no hay que volver al proveedor.
+    expect(screen.queryByLabelText(G.contrasena)).toBeNull();
+  });
+
+  it('si el registro a medias ha caducado lo dice y deja el formulario de siempre', async () => {
+    window.history.replaceState({}, '', '/registro?sso=continuar');
+    simularApi({
+      'GET /auth/sso/proveedores': () => json(proveedores),
+      'GET /auth/sso/registro': () => problema(404, 'El registro ha caducado.'),
+    });
+    pintar(<RegistroEmpresa />);
+
+    expect((await screen.findByRole('alert')).textContent).toBe(G.sso.motivos.caducado);
+    expect(screen.getByLabelText(G.contrasena)).toBeTruthy();
+  });
+
+  it('si vuelve sin poder seguir, dice por qué con palabras de registrar y no de entrar', async () => {
+    window.history.replaceState({}, '', '/registro?sso=correo-sin-verificar');
+    simularApi({ 'GET /auth/sso/proveedores': () => json(proveedores) });
+    pintar(<RegistroEmpresa />);
+
+    expect((await screen.findByRole('alert')).textContent).toBe(G.sso.motivos['correo-sin-verificar']);
+    // Un motivo que esta versión no conoce cae en el genérico (ver `mensajeDeVuelta`).
+    expect(G.sso.motivos.fallo).toContain('registra la empresa');
+  });
+
+  it('se puede dejar la cuenta de fuera y registrar con correo y contraseña', async () => {
+    window.history.replaceState({}, '', '/registro?sso=continuar');
+    simularApi({
+      'GET /auth/sso/proveedores': () => json(proveedores),
+      'GET /auth/sso/registro': () => json({ proveedor: 'google', nombre: 'Google', correo: 'eva@gmail.test' }),
+    });
+    pintar(<RegistroEmpresa />);
+
+    await userEvent.click(await screen.findByRole('button', { name: G.sso.otraForma }));
+
+    expect(screen.getByLabelText(G.email)).toBeTruthy();
+    expect(screen.getByLabelText(G.contrasena)).toBeTruthy();
   });
 });
 

@@ -170,7 +170,11 @@ fun AjustesScreen(
                 onCerrarTodas = { viewModel.cerrarTodasLasSesiones(onCerrarSesion) }
             )
 
+            // Solo si el servidor ofrece entrar con Google o Microsoft: sin
+            // proveedores no pinta nada, ni su hueco.
             Spacer(Modifier.height(16.dp))
+            CuentasVinculadas(alHaberTarjeta = { Spacer(Modifier.height(16.dp)) })
+
             Seguridad(
                 activa = estado.huella,
                 estadoHuella = estadoDeLaHuella(LocalContext.current),
@@ -296,7 +300,7 @@ private fun DialogoContrasena(
 }
 
 @Composable
-private fun Tarjeta(titulo: String, contenido: @Composable ColumnScope.() -> Unit) {
+internal fun Tarjeta(titulo: String, contenido: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = elevacionDeTarjeta(),

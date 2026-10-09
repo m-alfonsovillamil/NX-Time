@@ -84,13 +84,43 @@ export const acceso = {
     crear: 'Crear empresa',
     faltan: 'Rellena todos los campos.',
     yaTengoCuenta: 'Ya tengo cuenta: entrar',
+    /**
+     * Registrar la empresa con una cuenta de Google o de Microsoft (ADR 038):
+     * sin contraseña ni código, porque quién eres lo dice el proveedor.
+     */
+    sso: {
+      etiqueta: 'Registrar con otra cuenta',
+      registrarCon: (proveedor: string) => `Registrar con ${proveedor}`,
+      comprobando: 'Comprobando tu cuenta…',
+      explicacion: (proveedor: string, correo: string) =>
+        `Has entrado con tu cuenta de ${proveedor} (${correo}). Ese será tu correo en NX Time, y entrarás con esa cuenta: no hace falta contraseña. Solo falta esto:`,
+      otraForma: 'Registrarla con mi correo y una contraseña',
+      /**
+       * Por qué no se ha podido seguir. La clave es lo que el servidor manda en
+       * la URL de vuelta (`?sso=…`); una que esta versión no conozca cae en `fallo`.
+       */
+      motivos: {
+        cancelado: 'No has terminado de entrar con esa cuenta. Puedes volver a intentarlo.',
+        'correo-sin-verificar':
+          'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.',
+        'cuenta-inactiva': 'Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.',
+        'ya-tiene-otra':
+          'Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
+        'no-disponible': 'Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.',
+        caducado: 'El registro ha caducado. Vuelve a empezar con tu cuenta, o hazlo con tu correo y una contraseña.',
+        fallo: 'No se ha podido completar. Vuelve a intentarlo, o registra la empresa con tu correo y una contraseña.',
+      },
+    },
   },
 
   /** Confirmar el correo con el código, tras registrar la empresa (ADR 034). */
   confirmarCorreo: {
     titulo: 'Confirma tu correo',
+    // No promete un código: a quien se registra con un correo que ya tenía
+    // cuenta le llega otro correo (ADR 037), y esta pantalla no puede saber
+    // cuál de los dos ha salido.
     explicacion: (email: string) =>
-      `Te hemos mandado un código de 6 cifras a ${email}. Escríbelo para entrar. Si no llega en unos minutos, mira en la carpeta de spam.`,
+      `Te hemos mandado un correo a ${email}. Lo normal es que traiga un código de 6 cifras: escríbelo aquí para entrar. Si te dice que ya tienes una cuenta, vuelve al inicio y entra con ella. Si no llega en unos minutos, mira en la carpeta de spam.`,
     codigo: 'Código',
     faltaCodigo: 'El código son 6 cifras.',
     entrar: 'Confirmar y entrar',

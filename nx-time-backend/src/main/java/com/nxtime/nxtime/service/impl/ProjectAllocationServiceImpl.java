@@ -50,7 +50,16 @@ public class ProjectAllocationServiceImpl implements ProjectAllocationService {
     @Override
     public void alCerrar(TimeEntry registro) {
         segmentRepository.findByRegistroAndFinIsNull(registro).ifPresent(tramo -> {
-            tramo.setFin(registro.getHoraSalida());
+            // Una jornada olvidada se cierra en su tope de horas, no «ahora»
+            // (IncompleteTimeEntryCloser), y el tramo en curso puede haber
+            // empezado después de ese tope: alguien que cambió de proyecto en
+            // una jornada que ya llevaba abierta más de la cuenta. Ese tramo
+            // queda con duración cero. Cerrarlo en la hora de salida lo
+            // dejaba acabando antes de empezar, la base lo rechazaba
+            // (ck_tramos_fechas) y el cierre nocturno, que va en una sola
+            // transacción, no cerraba esa noche la jornada de nadie.
+            Instant salida = registro.getHoraSalida();
+            tramo.setFin(salida.isBefore(tramo.getInicio()) ? tramo.getInicio() : salida);
             segmentRepository.save(tramo);
         });
         recalcular(registro);

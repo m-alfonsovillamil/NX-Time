@@ -6,6 +6,8 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.LinkedIdentityDTO;
 import com.nxtime.nxtime.dto.SsoExchangeRequest;
+import com.nxtime.nxtime.dto.SsoPendingSignupDTO;
+import com.nxtime.nxtime.dto.SsoSignupRequest;
 import com.nxtime.nxtime.dto.SsoProviderDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SecurityUser;
@@ -75,7 +77,9 @@ import org.springframework.web.bind.annotation.RestController;
  *           tras un login, y se vuelve a la web;</li>
  *       <li><b>la app</b>: se vuelve a la app con un código de un solo uso, que
  *           ella canjea en {@code /canjear} ({@link AppExchangeCodes});</li>
- *       <li><b>vincular</b>: se añade esa cuenta a la sesión que ya había.</li>
+ *       <li><b>vincular</b>: se añade esa cuenta a la sesión que ya había. Desde
+ *           la app, en dos pasos: vuelve con un código y lo confirma ella con su
+ *           sesión, en {@code POST /api/v1/perfil/identidades}.</li>
  *     </ul>
  *   </li>
  * </ol>
@@ -139,18 +143,24 @@ public class SsoController {
             @RequestParam(required = false) String cliente,
             @Parameter(description = "Solo la app: el SHA-256 en base64url de su verificador")
             @RequestParam(required = false) String reto,
-            @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta en la web")
+            @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app")
             @RequestParam(required = false) String vincular,
+            @Parameter(description = "'1' para registrar una empresa con esa cuenta. Solo desde la web")
+            @RequestParam(required = false) String registro,
             HttpServletRequest peticion,
             HttpServletResponse respuesta) {
-        Modo modo = "app".equals(cliente) ? Modo.APP : "1".equals(vincular) ? Modo.VINCULAR : Modo.WEB;
+        boolean paraVincular = "1".equals(vincular);
+        Modo modo = "app".equals(cliente)
+                ? (paraVincular ? Modo.VINCULAR_APP : Modo.APP)
+                : paraVincular ? Modo.VINCULAR : "1".equals(registro) ? Modo.REGISTRO : Modo.WEB;
+        boolean desdeLaApp = modo == Modo.APP || modo == Modo.VINCULAR_APP;
         try {
             SsoProvider elegido = SsoProvider.deId(proveedor)
                     .filter(config::activo)
                     .orElseThrow(() -> new SsoException(Motivo.NO_DISPONIBLE));
 
             Long usuarioId = null;
-            if (modo == Modo.APP && (reto == null || !RETO.matcher(reto).matches())) {
+            if (desdeLaApp && (reto == null || !RETO.matcher(reto).matches())) {
                 throw new SsoException(Motivo.FALLO, "La app ha empezado un SSO sin un reto válido");
             }
             if (modo == Modo.VINCULAR) {
@@ -164,7 +174,7 @@ public class SsoController {
 
             String verificador = aleatorio();
             Estado estado = new Estado(elegido, modo, aleatorio(), aleatorio(), verificador,
-                    modo == Modo.APP ? reto : null, usuarioId,
+                    desdeLaApp ? reto : null, usuarioId,
                     Instant.now().plus(SsoState.VIDA).getEpochSecond());
             estados.guardar(respuesta, estado);
             return redirigir(oidc.urlDeAutorizacion(
@@ -226,10 +236,83 @@ public class SsoController {
                     sso.vincular(estado.usuarioId(), identidad);
                     yield redirigir(config.urlWeb() + "/ajustes?sso=vinculada");
                 }
+                // Aquí no se vincula nada todavía: en la app no hay cookie que
+                // diga quién es. Vuelve con un código y lo confirma ella, con
+                // su sesión, en POST /api/v1/perfil/identidades.
+                case VINCULAR_APP -> redirigir(VUELTA_A_LA_APP + "?vinculo="
+                        + codigos.emitirParaVincular(identidad, estado.retoDeLaApp()));
+                case REGISTRO -> alVolverParaRegistrar(identidad, respuesta);
             };
         } catch (SsoException e) {
             return volverConError(modo, e);
         }
+    }
+
+    /**
+     * Quien pulsa «Registrar con Google» y ya tiene cuenta, entra: ha
+     * demostrado lo mismo que pulsando «Entrar con Google». Quien no la tiene
+     * se lleva una cookie firmada con quién es y vuelve a la web, que le pide
+     * el nombre de su empresa y el suyo.
+     */
+    private ResponseEntity<Void> alVolverParaRegistrar(VerifiedIdentity identidad, HttpServletResponse respuesta) {
+        try {
+            User usuario = sso.identificar(identidad);
+            AuthenticationResponse sesion = authService.abrirSesion(usuario.getId(), RefreshToken.Origen.WEB);
+            sesionWeb.emitir(respuesta, sesion.refreshToken());
+            return redirigir(config.urlWeb() + "/");
+        } catch (SsoException e) {
+            // Solo «no tiene cuenta» deja seguir. identificar() ya ha exigido
+            // que el correo esté garantizado antes de decir eso.
+            if (e.motivo() != Motivo.SIN_CUENTA) {
+                throw e;
+            }
+        }
+        estados.guardarAlta(respuesta, identidad);
+        return redirigir(config.urlWeb() + "/registro?sso=continuar");
+    }
+
+    @Operation(summary = "Con qué cuenta estoy registrando una empresa",
+            description = "Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para "
+                    + "enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.")
+    @ApiResponse(responseCode = "200", description = "La cuenta",
+            content = @Content(schema = @Schema(implementation = SsoPendingSignupDTO.class)))
+    @ApiResponse(responseCode = "404", description = "No hay ningún registro a medias, o ha caducado",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @GetMapping("/auth/sso/registro")
+    public ResponseEntity<SsoPendingSignupDTO> registroPendiente(HttpServletRequest peticion) {
+        SsoState.Alta alta = estados.leerAlta(peticion).orElseThrow(SsoController::sinRegistroAMedias);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SsoPendingSignupDTO(alta.proveedor().id(), alta.proveedor().nombre(), alta.correo()));
+    }
+
+    @Operation(summary = "Registrar la empresa con la cuenta con la que he entrado",
+            description = "Crea la empresa y su ADMIN con el correo de esa cuenta, ya confirmado, y abre la "
+                    + "sesión como un login desde la web (el refresh, en la cookie). No hay contraseña ni código.")
+    @ApiResponse(responseCode = "200", description = "Registrada: la sesión",
+            content = @Content(schema = @Schema(implementation = AuthenticationResponse.class)))
+    @ApiResponse(responseCode = "404", description = "No hay ningún registro a medias, o ha caducado",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/auth/sso/registro")
+    public ResponseEntity<AuthenticationResponse> registrar(
+            @Valid @RequestBody SsoSignupRequest request, HttpServletRequest peticion, HttpServletResponse respuesta) {
+        SsoState.Alta alta = estados.leerAlta(peticion).orElseThrow(SsoController::sinRegistroAMedias);
+        User admin = sso.registrarEmpresa(alta.proveedor(), alta.sujeto(), alta.correo(),
+                request.nombreEmpresa(), request.nombre(), request.apellidos());
+        // Vale para un registro: si el nombre estaba cogido se ha lanzado
+        // arriba y la cookie sigue ahí para probar con otro.
+        estados.borrarAlta(respuesta);
+        AuthenticationResponse sesion = authService.abrirSesion(admin.getId(), RefreshToken.Origen.WEB);
+        sesionWeb.emitir(respuesta, sesion.refreshToken());
+        return ResponseEntity.ok(sesion.sinRefreshToken());
+    }
+
+    private static BusinessException sinRegistroAMedias() {
+        return new BusinessException(
+                "El registro ha caducado. Vuelve a empezar con tu cuenta de Google o de Microsoft.",
+                HttpStatus.NOT_FOUND);
     }
 
     @Operation(summary = "La app recoge su sesión",
@@ -254,6 +337,38 @@ public class SsoController {
     @GetMapping("/api/v1/perfil/identidades")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<LinkedIdentityDTO>> misIdentidades(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(sso.identidadesDe(usuario.getUser()));
+    }
+
+    @Operation(summary = "La app confirma un vínculo",
+            description = "Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. "
+                    + "El código es el que llegó en nxtime://sso?vinculo=…: vale una vez y un minuto, y solo "
+                    + "con el verificador con el que se empezó.")
+    @ApiResponse(responseCode = "200", description = "Vinculada: mis cuentas, con la nueva",
+            content = @Content(array = @ArraySchema(schema = @Schema(implementation = LinkedIdentityDTO.class))))
+    @ApiResponse(responseCode = "400", description = "El código no vale, ha caducado o ya se usó",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "Esa cuenta ya es de otra persona, o ya tengo otra de ese proveedor",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/api/v1/perfil/identidades")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<LinkedIdentityDTO>> confirmarVinculo(
+            @Valid @RequestBody SsoExchangeRequest request, @AuthenticationPrincipal SecurityUser usuario) {
+        VerifiedIdentity identidad = codigos.canjearParaVincular(request.codigo(), request.verificador())
+                .orElseThrow(() -> new BusinessException(
+                        "No se ha podido vincular la cuenta. Vuelve a intentarlo.", HttpStatus.BAD_REQUEST));
+        try {
+            sso.vincular(usuario.getUser().getId(), identidad);
+        } catch (SsoException e) {
+            // Aquí sí se responde con un JSON: lo pide la app, no un navegador.
+            throw new BusinessException(switch (e.motivo()) {
+                case YA_VINCULADA -> "Esa cuenta ya está vinculada a otra persona de NX Time.";
+                case YA_TIENE_OTRA -> "Ya tienes vinculada otra cuenta de " + identidad.proveedor().nombre()
+                        + ". Desvincúlala antes.";
+                default -> "No se ha podido vincular la cuenta. Vuelve a intentarlo.";
+            }, HttpStatus.CONFLICT);
+        }
         return ResponseEntity.ok(sso.identidadesDe(usuario.getUser()));
     }
 
@@ -285,8 +400,9 @@ public class SsoController {
         // Sin URL de la web no hay adónde volver: es que el SSO no está montado.
         String web = config.urlWeb().isEmpty() ? "/" : config.urlWeb() + "/";
         return redirigir(switch (modo) {
-            case APP -> VUELTA_A_LA_APP + "?error=" + motivo;
+            case APP, VINCULAR_APP -> VUELTA_A_LA_APP + "?error=" + motivo;
             case VINCULAR -> web + "ajustes?sso=" + motivo;
+            case REGISTRO -> web + "registro?sso=" + motivo;
             case WEB -> web + "?sso=" + motivo;
         });
     }

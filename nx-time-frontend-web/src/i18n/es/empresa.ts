@@ -71,9 +71,12 @@ export const empresa = {
     titulo: 'Integridad de la auditoría',
     explicacion: 'La prueba de que nadie ha tocado el registro de jornada después de escribirlo.',
     ultima: 'Última comprobación automática',
-    cadaNoche: 'Cada noche se recorre la cadena entera.',
+    cadaNoche: 'Cada noche se recorre la cadena entera. Las cifras son las de tu empresa.',
     cifras: {
-      movimientos: 'Movimientos sin alteraciones',
+      // «De tu empresa»: la cadena es común a todas las de este servicio, y
+      // hasta octubre de 2026 aquí salía el total de la instalación. Una
+      // empresa recién registrada veía los movimientos de las demás.
+      movimientos: 'Movimientos de tu empresa, sin alteraciones',
       pendientes: 'Posteriores, aún sin comprobar',
       pendientesDetalle: 'Se comprueban esta noche, o ahora con el botón.',
       cuando: 'Comprobada el',
@@ -86,7 +89,9 @@ export const empresa = {
     intacta: 'La traza está intacta.',
     rota: 'La traza NO está intacta.',
     detalle: (movimientos: number, comprobados: number, soloEnlace: number) =>
-      `${movimientos} movimientos revisados: a ${comprobados} se les ha recalculado la huella${soloEnlace > 0 ? ` y de ${soloEnlace}, anteriores a septiembre de 2026, solo se ha podido comprobar el enlace con el anterior` : ''}.`,
+      movimientos === 0
+        ? 'Tu empresa todavía no tiene movimientos. La cadena, que es común a todas las empresas de este servicio, se ha recorrido entera.'
+        : `${movimientos} movimientos de tu empresa revisados: a ${comprobados} se les ha recalculado la huella${soloEnlace > 0 ? ` y de ${soloEnlace}, anteriores a septiembre de 2026, solo se ha podido comprobar el enlace con el anterior` : ''}.`,
     primerFallo: (id: number, motivo: string) => `Primer movimiento con problemas: el ${id}. ${motivo}`,
     comoFunciona: 'Cómo funciona',
     puntos: [
@@ -99,6 +104,11 @@ export const empresa = {
         icono: 'candado',
         titulo: 'Tocar uno rompe la cadena',
         texto: 'Si alguien modificara un movimiento directamente en la base de datos, la cadena dejaría de cuadrar a partir de ese punto, y se vería cuál es.',
+      },
+      {
+        icono: 'empresa',
+        titulo: 'La cadena es común; las cifras, las tuyas',
+        texto: 'Todas las empresas de este servicio escriben en la misma cadena, y se comprueba entera. Aquí solo se cuentan los movimientos de la tuya, y nadie más ve los tuyos.',
       },
       {
         icono: 'verificado',

@@ -83,6 +83,8 @@ class ClockProjectsIT {
     private CompanyRepository companyRepository;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private com.nxtime.nxtime.scheduled.IncompleteTimeEntryScheduler cierreNocturno;
 
     private Company empresa;
     private User ana;
@@ -233,6 +235,69 @@ class ClockProjectsIT {
         fichar(TimeEntryAction.FIN, null);
         assertThatThrownBy(() -> service.cambiarProyecto(ana.getEmail(), registro.getId(), app.getId()))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("cerrada");
+    }
+
+    // ---- Jornadas olvidadas y tramos (8/10/2026) ----
+
+    /**
+     * El fallo que salió probando a mano: un tramo que empieza DESPUÉS del
+     * tope en el que se cierra una jornada olvidada. Cerrarlo en la hora de
+     * salida lo dejaba acabando antes de empezar, la base lo rechazaba
+     * ({@code ck_tramos_fechas}) y el proceso nocturno, que cierra todas en
+     * una transacción, no cerraba ninguna.
+     *
+     * Aquí se fabrica moviendo solo la entrada, que es como queda una jornada
+     * en la que alguien cambió de proyecto pasado el tope antes de este
+     * arreglo. Contra la base de verdad: con mocks no hay restricción.
+     */
+    @Test
+    @DisplayName("El cierre nocturno cierra una jornada olvidada aunque su tramo en curso empezara después del tope")
+    void cierreNocturno_conUnTramoPosteriorAlTope_cierraIgual() {
+        asignar(ana, core);
+        TimeEntry registro = fichar(TimeEntryAction.INICIO, core.getId());
+        jdbc.update("UPDATE registros SET hora_entrada = hora_entrada - make_interval(hours => 30) WHERE id = ?",
+                registro.getId());
+        // Y otra persona con una jornada olvidada normal: tampoco puede quedarse sin cerrar.
+        User luis = persona("luis");
+        service.registerTimeEntry(luis.getEmail(), new TimeEntryRequest(TimeEntryAction.INICIO, null));
+        jdbc.update("UPDATE registros SET hora_entrada = hora_entrada - make_interval(hours => 30) "
+                + "WHERE usuario_id = ? AND hora_salida IS NULL", luis.getId());
+
+        cierreNocturno.cerrarJornadasOlvidadas();
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM registros WHERE usuario_id IN (?, ?) "
+                + "AND hora_salida IS NULL", Integer.class, ana.getId(), luis.getId())).isZero();
+        ProjectSegment tramo = segmentRepository.findByRegistroOrderByInicioAsc(registro).get(0);
+        assertThat(tramo.getFin()).isEqualTo(tramo.getInicio());
+        // Las 16 horas del tope siguen imputadas a su proyecto: la suma es el neto.
+        assertThat(allocationRepository.findByRegistroOrderByIdAsc(registro))
+                .extracting(ProjectAllocation::getSegundos).containsExactly(16 * 3600L);
+    }
+
+    @Test
+    @DisplayName("Cambiar de proyecto en una jornada olvidada la cierra en el tope en vez de abrirle un tramo")
+    void cambiarProyecto_enJornadaOlvidada_laCierra() {
+        asignar(ana, core);
+        asignar(ana, app);
+        TimeEntry registro = fichar(TimeEntryAction.INICIO, core.getId());
+        retrasar(registro, 20);
+
+        assertThatThrownBy(() -> service.cambiarProyecto(ana.getEmail(), registro.getId(), app.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("se ha cerrado");
+
+        // El cierre se queda aunque la petición responda con un error.
+        assertThat(jdbc.queryForObject("SELECT jornada_incompleta FROM registros WHERE id = ?",
+                Boolean.class, registro.getId())).isTrue();
+        assertThat(jdbc.queryForObject(
+                "SELECT round(extract(epoch FROM (hora_salida - hora_entrada)) / 3600) FROM registros WHERE id = ?",
+                Integer.class, registro.getId())).isEqualTo(16);
+        // Ni un tramo de APP ni ninguno abierto: las 16 horas son de CORE.
+        assertThat(segmentRepository.findByRegistroOrderByInicioAsc(registro))
+                .extracting(tramo -> tramo.getProyecto().getId()).containsExactly(core.getId());
+        assertThat(segmentRepository.findByRegistroAndFinIsNull(registro)).isEmpty();
+        // Y puede volver a fichar.
+        assertThat(fichar(TimeEntryAction.INICIO, app.getId()).getHoraSalida()).isNull();
     }
 
     @Test
