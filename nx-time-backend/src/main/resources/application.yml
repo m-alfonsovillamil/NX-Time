@@ -3,6 +3,17 @@
 # application-dev.yml / application-prod.yml.
 
 spring:
+  datasource:
+    hikari:
+      # Ninguna consulta dura más de esto (ADR 039). Sin tope, una consulta
+      # lenta se queda con su conexión lo que tarde, y con un pool pequeño
+      # bastan unas pocas para dejar sin base de datos a todo lo demás.
+      # Treinta segundos es mucho más de lo que tarda nada legítimo: la traza
+      # se recorre por bloques y los informes son consultas acotadas. Cuenta
+      # también el tiempo esperando un cerrojo, así que un fichaje que no
+      # consiga su turno en la cadena de auditoría falla en vez de colgarse.
+      # No afecta a Flyway, que va con su propia conexión.
+      connection-init-sql: "SET statement_timeout = '${DB_STATEMENT_TIMEOUT:30s}'"
   servlet:
     multipart:
       # Hasta la Fase B no había ninguna subida de ficheros, así que
