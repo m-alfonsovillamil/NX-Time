@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 // de Node no entran en un proyecto que corre en el navegador.
 import noticeTypeJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/NoticeType.java?raw';
 import roleAuthoritiesJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java?raw';
-import { AUTHORITIES } from '../pruebas/api';
+import { AUTHORITIES, PLATAFORMA_VER } from '../pruebas/api';
 import {
   ICONOS_DE_SUBGRUPO,
   SECCIONES,
@@ -114,7 +114,44 @@ describe('el menú de cada rol', () => {
   it('sin las pendientes, el menú solo tiene lo que ya existe', () => {
     const menu = menuPara(AUTHORITIES.ADMIN);
     expect(menu.every((s) => s.pagina !== undefined)).toBe(true);
-    expect(menu.map((s) => s.ruta)).toEqual(disponibles().filter((s) => s.enMenu).map((s) => s.ruta));
+    // Todo lo que hay, salvo la plataforma: no es de ningún rol (ADR 040).
+    expect(menu.map((s) => s.ruta)).toEqual(
+      disponibles()
+        .filter((s) => s.enMenu && s.grupo !== 'plataforma')
+        .map((s) => s.ruta),
+    );
+  });
+});
+
+describe('la plataforma', () => {
+  const ROLES = ['EMPLEADO', 'GESTOR', 'RRHH', 'ADMIN'] as const;
+
+  it('ningún rol la ve: ni el ADMIN', () => {
+    for (const rol of ROLES) {
+      expect(menuPara(AUTHORITIES[rol]).filter((s) => s.grupo === 'plataforma'), rol).toEqual([]);
+    }
+  });
+
+  it('el backend la declara fuera de los roles, y ningún rol la trae', () => {
+    const backend = authoritiesDelBackend();
+    expect([...(backend['FUERA_DE_LOS_ROLES'] ?? [])]).toEqual([PLATAFORMA_VER]);
+    for (const rol of ROLES) {
+      expect(backend[rol]?.has(PLATAFORMA_VER), rol).toBe(false);
+    }
+  });
+
+  it('con el permiso, una empleada ve su apartado además de lo suyo, y nada de gestión', () => {
+    const menu = menuPara([...AUTHORITIES.EMPLEADO, PLATAFORMA_VER]);
+    expect(menuAgrupado(menu).map((g) => g.grupo)).toEqual(['personal', 'plataforma']);
+    expect(menu.filter((s) => s.grupo === 'plataforma').map((s) => s.ruta)).toEqual(['plataforma']);
+  });
+
+  it('todo lo del grupo pide el permiso: una sección nueva no se cuela sin él', () => {
+    expect(SECCIONES.filter((s) => s.grupo === 'plataforma' && s.requiere !== PLATAFORMA_VER)).toEqual([]);
+  });
+
+  it('el detalle de una empresa es la misma sección', () => {
+    expect(seccionDeRuta('/plataforma')?.grupo).toBe('plataforma');
   });
 });
 

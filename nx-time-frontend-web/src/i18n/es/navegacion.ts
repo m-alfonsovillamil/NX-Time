@@ -8,6 +8,8 @@ export const navegacion = {
   grupos: {
     personal: 'Lo mío',
     gestion: 'Gestión',
+    // Solo la ve quien mantiene el servicio (ADR 040).
+    plataforma: 'Plataforma',
   },
 
   /**
@@ -24,6 +26,7 @@ export const navegacion = {
     organizacion: 'Organización',
     control: 'Informes y control',
     administracion: 'Administración',
+    instalacion: 'La instalación',
   },
 
   /** Una por sección del catálogo (`navegacion/secciones.tsx`), también las que aún no tienen página. */
@@ -62,6 +65,7 @@ export const navegacion = {
     visadoFirmas: 'Visado de firmas',
     ajustesEmpresa: 'Ajustes de la empresa',
     tarjetasKiosco: 'Tarjetas del kiosco',
+    plataforma: 'Empresas',
   },
 
   /** El número al lado de una entrada del menú: lo que espera una decisión. */

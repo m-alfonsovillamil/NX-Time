@@ -29,7 +29,11 @@ import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import type { NombreIcono } from '../componentes/Icono';
 import { T } from '../i18n/es';
 
-export type Grupo = 'personal' | 'gestion';
+/**
+ * `plataforma` no es de la empresa de quien mira: es la instalación entera, y
+ * solo la ve quien la mantiene (`plataforma:ver`, que no es de ningún rol; ADR 040).
+ */
+export type Grupo = 'personal' | 'gestion' | 'plataforma';
 export type Fase = 'W2' | 'W3' | 'W4' | 'W5' | 'W6' | 'W7';
 
 /**
@@ -45,12 +49,14 @@ export type Subgrupo =
   | 'equipo'
   | 'organizacion'
   | 'control'
-  | 'administracion';
+  | 'administracion'
+  | 'instalacion';
 
 /** Los subgrupos de cada grupo, en el orden en que salen en el menú. */
 export const SUBGRUPOS: Readonly<Record<Grupo, readonly Subgrupo[]>> = {
   personal: ['jornada', 'ausencias', 'en-la-empresa', 'cuenta'],
   gestion: ['equipo', 'organizacion', 'control', 'administracion'],
+  plataforma: ['instalacion'],
 };
 
 /**
@@ -67,6 +73,7 @@ export const ICONOS_DE_SUBGRUPO: Readonly<Record<Subgrupo, NombreIcono>> = {
   organizacion: 'organizar',
   control: 'control',
   administracion: 'escudo',
+  instalacion: 'servidores',
 };
 
 /**
@@ -151,6 +158,7 @@ const CanalDenuncias = perezosa(() => import('../paginas/denuncias/CanalDenuncia
 const VisadoFirmas = perezosa(() => import('../paginas/cuadrante/VisadoFirmas').then((m) => ({ default: m.VisadoFirmas })));
 const Analitica = perezosa(() => import('../paginas/analitica/Analitica').then((m) => ({ default: m.Analitica })));
 const Cuadrantes = perezosa(() => import('../paginas/cuadrantes/Cuadrantes').then((m) => ({ default: m.Cuadrantes })));
+const Plataforma = perezosa(() => import('../paginas/plataforma/Plataforma').then((m) => ({ default: m.Plataforma })));
 
 const S = T.navegacion.secciones;
 
@@ -194,6 +202,10 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'visado', grupo: 'gestion', subgrupo: 'control', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
   { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'empresa', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
   { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'qr', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
+
+  /* ---- Plataforma ---- */
+  // La lista y, con `?empresa=7`, el detalle de una: la misma página.
+  { ruta: 'plataforma', etiqueta: S.plataforma, icono: 'mundo', grupo: 'plataforma', subgrupo: 'instalacion', requiere: 'plataforma:ver', enMenu: true, pagina: Plataforma },
 ];
 
 /** Si esta cuenta puede ver la sección, según las authorities que mandó el servidor. */

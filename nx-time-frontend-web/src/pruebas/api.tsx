@@ -144,6 +144,14 @@ export function sesionDe(rol: keyof typeof AUTHORITIES, nombre = 'Ana'): Sesion 
   return { accessToken: 'access', nombre, authorities: AUTHORITIES[rol] };
 }
 
+/** La que no es de ningún rol: la concede el servidor por una lista de correos (ADR 040). */
+export const PLATAFORMA_VER = 'plataforma:ver';
+
+/** Quien mantiene el servicio. Una empleada rasa por defecto: el permiso no va con el rol. */
+export function sesionDeOperadora(rol: keyof typeof AUTHORITIES = 'EMPLEADO', nombre = 'Olga'): Sesion {
+  return { accessToken: 'access', nombre, authorities: [...AUTHORITIES[rol], PLATAFORMA_VER] };
+}
+
 /**
  * Pinta algo con lo que tiene la aplicación de verdad alrededor: el router, y
  * una caché de datos **nueva en cada test** y sin reintentos (un 500 simulado
