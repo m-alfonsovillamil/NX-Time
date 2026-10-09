@@ -28,6 +28,10 @@ Lo que condicionaba el diseño ya estaba decidido antes:
 
 ### Solo entra quien ya tiene cuenta
 
+> Desde el [ADR 038](038-sso-lo-que-faltaba.md) hay una excepción: se puede
+> **registrar una empresa** con una de estas cuentas. A los empleados los sigue
+> dando de alta su empresa.
+
 El SSO **no crea usuarios ni empresas**. Es otra forma de abrir la sesión de una
 cuenta que existe, no otra forma de tenerla. Quien entra con Google y no está
 dado de alta vuelve a la pantalla de acceso con «pide a tu empresa que te dé de
@@ -145,7 +149,8 @@ A quien no lo ha demostrado no se le dice nada del correo.
 - Un SSO con el correo garantizado **confirma el correo** de quien registró su
   empresa y no había canjeado el código (V37): demuestra lo mismo.
 - Las cuentas vinculadas son dato personal: se borran con el borrado de datos
-  (`PersonalDataEraser`). **No salen todavía en la exportación de mis datos.**
+  (`PersonalDataEraser`). No salían en la exportación de mis datos: ya salen
+  ([ADR 038](038-sso-lo-que-faltaba.md)).
 - Reiniciar el backend en el minuto en que alguien vuelve del navegador a la app
   le hace repetir el botón.
 

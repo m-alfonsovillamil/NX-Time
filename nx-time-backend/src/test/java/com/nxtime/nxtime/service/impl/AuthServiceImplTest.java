@@ -28,6 +28,7 @@ import com.nxtime.nxtime.dto.RegistrationPendingResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -123,21 +124,63 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("registerManager con un correo que ya tiene cuenta responde lo mismo y no crea ni manda nada")
-    void registerManager_correoYaRegistrado_respondeIgualSinHacerNada() {
+    @DisplayName("registerManager con un correo que ya tiene cuenta responde lo mismo, no crea nada y avisa a su dueño")
+    void registerManager_correoYaRegistrado_respondeIgualYAvisaAlDueno() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
-        User existente = User.builder().id(7L).email("ada@nxtime.test").rol(Role.EMPLEADO).build();
+        User existente = User.builder().id(7L).email("ada@nxtime.test").nombre("Ada").rol(Role.EMPLEADO)
+                .empresa(Company.builder().id(3L).nombre("Talleres SL").build()).build();
         when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(existente));
+        when(userRepository.marcarAvisoDeCuentaExistente(eq(7L), any(), any())).thenReturn(1);
         when(passwordEncoder.encode(any())).thenReturn("hash");
 
         RegistrationPendingResponse response = service.registerManager(request);
 
-        assertThat(response.email()).isEqualTo("ada@nxtime.test");
-        assertThat(response.mensaje()).contains("Te hemos mandado un código");
+        // Lo mismo que a un correo nuevo: ver el test de la empresa nueva.
+        assertThat(response).isEqualTo(respuestaDeUnCorreoNuevo("ada@nxtime.test"));
         verify(companyRepository, never()).save(any());
         verify(userRepository, never()).save(any());
         verify(accessCodeService, never()).emitirCodigoDeConfirmacion(any());
+
+        ArgumentCaptor<NotificationEvents.AccessCodeRequested> correo =
+                ArgumentCaptor.forClass(NotificationEvents.AccessCodeRequested.class);
+        verify(eventPublisher).publishEvent(correo.capture());
+        assertThat(correo.getValue().email()).isEqualTo("ada@nxtime.test");
+        assertThat(correo.getValue().plantilla()).isEqualTo("account-already-exists");
+        assertThat(correo.getValue().variables())
+                .containsEntry("nombreEmpresa", "Talleres SL")
+                .containsEntry("activa", true)
+                // Ni un código ni nada con lo que entrar: solo se le dice qué hacer.
+                .doesNotContainKey("codigo");
+    }
+
+    @Test
+    @DisplayName("registerManager con un correo que ya tiene cuenta no vuelve a avisar si ya lo hizo hace poco")
+    void registerManager_correoYaRegistrado_noAvisaDosVecesSeguidas() {
+        RegisterManagerRequest request =
+                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+        User existente = User.builder().id(7L).email("ada@nxtime.test").rol(Role.EMPLEADO).build();
+        when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(existente));
+        when(userRepository.marcarAvisoDeCuentaExistente(eq(7L), any(), any())).thenReturn(0);
+        when(passwordEncoder.encode(any())).thenReturn("hash");
+
+        RegistrationPendingResponse response = service.registerManager(request);
+
+        assertThat(response).isEqualTo(respuestaDeUnCorreoNuevo("ada@nxtime.test"));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    /** Lo que responde el registro de una empresa nueva con ese correo: con lo que hay que comparar. */
+    private RegistrationPendingResponse respuestaDeUnCorreoNuevo(String email) {
+        CompanyRepository empresas = org.mockito.Mockito.mock(CompanyRepository.class);
+        UserRepository usuarios = org.mockito.Mockito.mock(UserRepository.class);
+        when(empresas.save(any(Company.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(usuarios.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        AuthServiceImpl nuevo = new AuthServiceImpl(usuarios, empresas, refreshTokenRepository, passwordEncoder,
+                jwtService, authenticationManager, org.mockito.Mockito.mock(ApplicationEventPublisher.class),
+                org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta);
+        return nuevo.registerManager(
+                new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null));
     }
 
     @Test

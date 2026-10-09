@@ -15,6 +15,13 @@ data class VueltaDeSso(val codigo: String?, val error: String?)
 /** Dónde se guarda el verificador mientras la persona está en el navegador. */
 interface GuardaDelVerificador {
     var verificador: String?
+
+    /**
+     * Para qué era la ida pendiente: vincular una cuenta a la sesión abierta
+     * (true) o entrar (false). Se guarda con el verificador por lo mismo: al
+     * volver, la app puede haber arrancado de cero.
+     */
+    var paraVincular: Boolean
 }
 
 /**
@@ -33,8 +40,15 @@ class VerificadorEnPreferencias(context: Context) : GuardaDelVerificador {
             prefs.edit().apply { if (valor == null) remove(CLAVE) else putString(CLAVE, valor) }.commit()
         }
 
+    override var paraVincular: Boolean
+        get() = prefs.getBoolean(CLAVE_VINCULAR, false)
+        set(valor) {
+            prefs.edit().putBoolean(CLAVE_VINCULAR, valor).commit()
+        }
+
     private companion object {
         const val CLAVE = "verificador"
+        const val CLAVE_VINCULAR = "para_vincular"
     }
 }
 
@@ -62,31 +76,56 @@ class AccesoSso(
 
     private val _vuelta = MutableStateFlow<VueltaDeSso?>(null)
 
-    /** La vuelta que nadie ha atendido todavía, o null. */
+    /** La vuelta de una ida para ENTRAR que nadie ha atendido todavía, o null. */
     val vuelta: StateFlow<VueltaDeSso?> = _vuelta.asStateFlow()
 
+    private val _vueltaDeVinculo = MutableStateFlow<VueltaDeSso?>(null)
+
     /**
-     * Prepara una ida y devuelve la URL que hay que abrir en el navegador.
-     * Empezar otra vez descarta la anterior: solo vale la última.
+     * La vuelta de una ida para VINCULAR, aparte de [vuelta] a propósito: la
+     * atiende Ajustes, no la pantalla de acceso. En un solo flujo, una vuelta
+     * de vincular que nadie recogiera se la encontraría el acceso al cerrar la
+     * sesión, y la tomaría por un intento de entrar.
      */
-    fun empezar(inicio: String): String {
+    val vueltaDeVinculo: StateFlow<VueltaDeSso?> = _vueltaDeVinculo.asStateFlow()
+
+    /**
+     * Prepara una ida para entrar y devuelve la URL que hay que abrir en el
+     * navegador. Empezar otra vez descarta la anterior: solo vale la última.
+     */
+    fun empezar(inicio: String): String = preparar(inicio, paraVincular = false)
+
+    /**
+     * Lo mismo, para añadir una cuenta a la sesión que ya hay abierta. El
+     * navegador volverá con un código de vínculo, que no vincula nada por sí
+     * solo: lo confirma la app con su sesión.
+     */
+    fun empezarAVincular(inicio: String): String = preparar(inicio, paraVincular = true)
+
+    private fun preparar(inicio: String, paraVincular: Boolean): String {
         val verificador = base64Url(aleatorio().toByteString())
         guarda.verificador = verificador
+        guarda.paraVincular = paraVincular
         _vuelta.value = null
+        _vueltaDeVinculo.value = null
         val union = if (inicio.contains('?')) '&' else '?'
-        return "$inicio${union}cliente=app&reto=${retoDe(verificador)}"
+        val vincular = if (paraVincular) "&vincular=1" else ""
+        return "$inicio${union}cliente=app$vincular&reto=${retoDe(verificador)}"
     }
 
     /**
-     * Lo llama quien recibe `nxtime://sso?…`, con sus dos parámetros. Sin una
-     * ida pendiente, se ignora.
+     * Lo llama quien recibe `nxtime://sso?…`, con sus parámetros. Sin una ida
+     * pendiente, se ignora. De los dos códigos solo se mira el de la ida que
+     * había: uno de entrar no sirve a quien estaba vinculando, ni al revés.
      */
-    fun recibir(codigo: String?, error: String?) {
+    fun recibir(codigo: String?, error: String?, vinculo: String? = null) {
         if (guarda.verificador == null) return
-        _vuelta.value = VueltaDeSso(
-            codigo = codigo?.takeIf { it.isNotBlank() },
-            error = error?.takeIf { it.isNotBlank() }
-        )
+        val motivo = error?.takeIf { it.isNotBlank() }
+        if (guarda.paraVincular) {
+            _vueltaDeVinculo.value = VueltaDeSso(codigo = vinculo?.takeIf { it.isNotBlank() }, error = motivo)
+        } else {
+            _vuelta.value = VueltaDeSso(codigo = codigo?.takeIf { it.isNotBlank() }, error = motivo)
+        }
     }
 
     /**
@@ -96,7 +135,9 @@ class AccesoSso(
     fun gastarVerificador(): String? {
         val verificador = guarda.verificador
         guarda.verificador = null
+        guarda.paraVincular = false
         _vuelta.value = null
+        _vueltaDeVinculo.value = null
         return verificador
     }
 

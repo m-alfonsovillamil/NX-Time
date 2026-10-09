@@ -771,6 +771,279 @@ class SsoIT {
     }
 
     // ------------------------------------------------------------------
+    // Vincular desde la app
+    // ------------------------------------------------------------------
+
+    private static final String VERIFICADOR = "el-verificador-que-se-queda-la-app-0123456789";
+
+    /** Entra con contraseña como la app (sin cookies) y devuelve su access token. */
+    private String entrarDesdeLaApp(User usuario) throws Exception {
+        HttpResponse<String> login =
+                post("/auth/login", Map.of("email", usuario.getEmail(), "contrasena", "password123"));
+        assertThat(login.statusCode()).isEqualTo(200);
+        return json.readTree(login.body()).get("token").asText();
+    }
+
+    /** La app empieza a vincular y el navegador vuelve: el código de vínculo que trae. */
+    private String codigoDeVinculo(String proveedor, Map<String, Object> token, Ida ida) throws Exception {
+        PROVEEDOR.proximoToken(token);
+        HttpResponse<String> vuelta = volver(proveedor, ida);
+        assertThat(destino(vuelta)).startsWith("nxtime://sso?vinculo=");
+        // Ni sesión ni nada vinculado todavía: eso lo hace la app al confirmar.
+        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        return parametros(destino(vuelta)).get("vinculo");
+    }
+
+    private Ida iniciarVinculoDesdeLaApp(String proveedor) throws Exception {
+        return iniciar(proveedor, "?cliente=app&vincular=1&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+    }
+
+    private HttpResponse<String> confirmarVinculo(String token, String codigo, String verificador) throws Exception {
+        return post("/api/v1/perfil/identidades", Map.of("codigo", codigo, "verificador", verificador),
+                "Authorization", "Bearer " + token);
+    }
+
+    @Test
+    @DisplayName("La app vincula: el navegador vuelve con un código, ella lo confirma con su sesión y ya entra con esa cuenta")
+    void laAppVincula() throws Exception {
+        User ana = persona("Ana");
+        String token = entrarDesdeLaApp(ana);
+        String sujeto = sujeto();
+
+        Ida ida = iniciarVinculoDesdeLaApp("microsoft");
+        // Como desde la web: una cuenta de trabajo con otro correo y sin xms_edov.
+        String codigo = codigoDeVinculo(
+                "microsoft", deMicrosoft(ida, sujeto, "ana.trabajo@empresa.example", INQUILINO), ida);
+        assertThat(identidadesDe(ana)).as("la vuelta del navegador no vincula nada").isZero();
+
+        HttpResponse<String> confirmado = confirmarVinculo(token, codigo, VERIFICADOR);
+
+        assertThat(confirmado.statusCode()).isEqualTo(200);
+        JsonNode lista = json.readTree(confirmado.body());
+        assertThat(lista).hasSize(1);
+        assertThat(lista.get(0).get("proveedor").asText()).isEqualTo("microsoft");
+        assertThat(lista.get(0).get("correo").asText()).isEqualTo("ana.trabajo@empresa.example");
+        assertThat(identidadesDe(ana)).isEqualTo(1);
+
+        // El código no vale dos veces.
+        assertThat(confirmarVinculo(token, codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // Y ya entra con ella desde la app, por el sujeto.
+        Ida entrada = iniciar("microsoft", "?cliente=app&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+        PROVEEDOR.proximoToken(deMicrosoft(entrada, sujeto, "ana.trabajo@empresa.example", INQUILINO));
+        assertThat(destino(volver("microsoft", entrada))).startsWith("nxtime://sso?codigo=");
+    }
+
+    /**
+     * Lo que protege el diseño en dos pasos: el código que vuelve por la URL
+     * no dice a quién vincular, y solo lo puede usar quien empezó.
+     */
+    @Test
+    @DisplayName("La app vincula: sin sesión, sin el verificador o con un código de entrar no se vincula nada")
+    void laAppVinculaLoQueNoSePuede() throws Exception {
+        User ana = persona("Ana");
+        String token = entrarDesdeLaApp(ana);
+
+        // Sin sesión: 401, y el código ni se mira.
+        Ida ida = iniciarVinculoDesdeLaApp("google");
+        String codigo = codigoDeVinculo("google", deGoogle(ida, sujeto(), "ana.personal@gmail.test"), ida);
+        assertThat(post("/api/v1/perfil/identidades", Map.of("codigo", codigo, "verificador", VERIFICADOR))
+                .statusCode()).isEqualTo(401);
+
+        // Sin el verificador de esa ida: 400, y el código se quema.
+        assertThat(confirmarVinculo(token, codigo, "otro-verificador").statusCode()).isEqualTo(400);
+        assertThat(confirmarVinculo(token, codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // Un código de ENTRAR no sirve para vincular...
+        Ida entrada = iniciar("google", "?cliente=app&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+        PROVEEDOR.proximoToken(deGoogle(entrada, sujeto(), ana.getEmail()));
+        String deEntrar = parametros(destino(volver("google", entrada))).get("codigo");
+        assertThat(confirmarVinculo(token, deEntrar, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // ...ni uno de VINCULAR abre una sesión.
+        ida = iniciarVinculoDesdeLaApp("microsoft");
+        String deVincular = codigoDeVinculo(
+                "microsoft", deMicrosoft(ida, sujeto(), "ana.trabajo@empresa.example", INQUILINO), ida);
+        assertThat(post("/auth/sso/canjear", Map.of("codigo", deVincular, "verificador", VERIFICADOR)).statusCode())
+                .isEqualTo(400);
+
+        // Sin reto no empieza, y el error vuelve a la app.
+        assertThat(destino(get("/auth/sso/google/iniciar?cliente=app&vincular=1", null)))
+                .isEqualTo("nxtime://sso?error=fallo");
+
+        assertThat(identidadesDe(ana)).isEqualTo(1); // solo la de haber entrado con Google arriba
+    }
+
+    @Test
+    @DisplayName("La app vincula: una cuenta que ya es de otra persona da 409 y no cambia de dueño")
+    void laAppVinculaUnaCuentaAjena() throws Exception {
+        User ana = persona("Ana");
+        String deAna = sujeto();
+        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "nx_refresh")).isNotBlank();
+
+        User javi = persona("Javi");
+        String token = entrarDesdeLaApp(javi);
+        Ida ida = iniciarVinculoDesdeLaApp("google");
+        String codigo = codigoDeVinculo("google", deGoogle(ida, deAna, ana.getEmail()), ida);
+
+        HttpResponse<String> respuesta = confirmarVinculo(token, codigo, VERIFICADOR);
+
+        assertThat(respuesta.statusCode()).isEqualTo(409);
+        assertThat(json.readTree(respuesta.body()).get("detail").asText()).contains("otra persona");
+        assertThat(identidadesDe(javi)).isZero();
+        assertThat(identidadesDe(ana)).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------
+    // Registrar una empresa (ADR 038)
+    // ------------------------------------------------------------------
+
+    /** Vuelve del proveedor tras pulsar «Registrar con…» sin tener cuenta: la cookie de alta. */
+    private String altaCon(String proveedor, Map<String, Object> token, Ida ida) throws Exception {
+        PROVEEDOR.proximoToken(token);
+        HttpResponse<String> vuelta = volver(proveedor, ida);
+        assertThat(destino(vuelta)).isEqualTo(WEB + "/registro?sso=continuar");
+        // Todavía no hay cuenta ni sesión: falta saber cómo se llama la empresa.
+        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        assertThat(atributos(vuelta, "nx_sso_alta")).contains("HttpOnly", "Secure", "SameSite=Lax", "Path=/auth/sso");
+        return cookie(vuelta, "nx_sso_alta");
+    }
+
+    private HttpResponse<String> registrar(String alta, String empresaNueva) throws Exception {
+        Map<String, String> cuerpo = Map.of("nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora");
+        return alta == null
+                ? post("/auth/sso/registro", cuerpo)
+                : post("/auth/sso/registro", cuerpo, "Cookie", "nx_sso_alta=" + alta);
+    }
+
+    @Test
+    @DisplayName("Registrar con Google: quién es lo dice el proveedor, la web pone el nombre, y nace la empresa con su ADMIN ya dentro")
+    void registrarUnaEmpresa() throws Exception {
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        String sujeto = sujeto();
+        String empresaNueva = "Talleres " + System.nanoTime();
+        Ida ida = iniciar("google", "?registro=1", null);
+        String alta = altaCon("google", deGoogle(ida, sujeto, correo), ida);
+        assertThat(userRepository.findByEmail(correo)).as("volver del proveedor no crea nada").isEmpty();
+
+        // La web pregunta con qué cuenta se está registrando, para decirlo.
+        HttpResponse<String> pendiente = get("/auth/sso/registro", "nx_sso_alta=" + alta);
+        assertThat(pendiente.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(pendiente.body()).get("correo").asText()).isEqualTo(correo);
+        assertThat(json.readTree(pendiente.body()).get("nombre").asText()).isEqualTo("Google");
+
+        HttpResponse<String> registrada = registrar(alta, empresaNueva);
+
+        assertThat(registrada.statusCode()).isEqualTo(200);
+        JsonNode sesion = json.readTree(registrada.body());
+        assertThat(sesion.get("rol").asText()).isEqualTo("ADMIN");
+        assertThat(sesion.get("token").asText()).isNotBlank();
+        // Como un login desde la web: el refresh va en la cookie, no en el cuerpo.
+        assertThat(sesion.hasNonNull("refreshToken")).isFalse();
+        assertThat(cookie(registrada, "nx_refresh")).isNotBlank();
+        // La cookie de alta se gasta.
+        assertThat(cookie(registrada, "nx_sso_alta")).isEmpty();
+
+        User admin = userRepository.findByEmail(correo).orElseThrow();
+        assertThat(admin.getRol()).isEqualTo(Role.ADMIN);
+        assertThat(admin.getNombre()).isEqualTo("Eva");
+        assertThat(admin.getEmpresa().getNombre()).isEqualTo(empresaNueva);
+        // Sin esperar a ningún código: el correo lo ha garantizado Google.
+        assertThat(admin.correoPendienteDeConfirmar()).isFalse();
+        assertThat(identidadesDe(admin)).isEqualTo(1);
+
+        // La sesión es de verdad...
+        assertThat(conToken("GET", "/api/v1/perfil/identidades", sesion.get("token").asText()).statusCode())
+                .isEqualTo(200);
+        // ...y desde ahora entra con Google como cualquiera.
+        assertThat(cookie(entrarConGoogle(sujeto, correo), "nx_refresh")).isNotBlank();
+        // La contraseña no existe: nadie la ha elegido.
+        assertThat(post("/auth/login", Map.of("email", correo, "contrasena", "password123")).statusCode())
+                .isEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("Registrar: quien ya tiene cuenta entra en ella, y no se le ofrece registrar otra")
+    void registrarTeniendoCuentaEntra() throws Exception {
+        User ana = persona("Ana");
+        Ida ida = iniciar("google", "?registro=1", null);
+        PROVEEDOR.proximoToken(deGoogle(ida, sujeto(), ana.getEmail()));
+
+        HttpResponse<String> vuelta = volver("google", ida);
+
+        assertThat(destino(vuelta)).isEqualTo(WEB + "/");
+        assertThat(cookie(vuelta, "nx_refresh")).isNotBlank();
+        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+    }
+
+    @Test
+    @DisplayName("Registrar: con el correo sin garantizar no se registra nada, y los errores vuelven al registro")
+    void registrarSinCorreoGarantizado() throws Exception {
+        Ida ida = iniciar("microsoft", "?registro=1", null);
+        // Una cuenta de trabajo sin xms_edov: su correo no está garantizado.
+        PROVEEDOR.proximoToken(
+                deMicrosoft(ida, sujeto(), "alguien-" + System.nanoTime() + "@empresa.example", INQUILINO));
+
+        HttpResponse<String> vuelta = volver("microsoft", ida);
+
+        assertThat(destino(vuelta)).isEqualTo(WEB + "/registro?sso=correo-sin-verificar");
+        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+        assertThat(destino(get("/auth/sso/nadie/iniciar?registro=1", null)))
+                .isEqualTo(WEB + "/registro?sso=no-disponible");
+    }
+
+    /**
+     * La cookie de alta vale por «este correo es mío»: lo que no puede pasar es
+     * que se consiga sin haber vuelto del proveedor.
+     */
+    @Test
+    @DisplayName("Registrar: sin la cookie de alta, con una retocada o con una de estado no se registra nada")
+    void registrarSinElAlta() throws Exception {
+        String empresaNueva = "Fantasma " + System.nanoTime();
+        assertThat(registrar(null, empresaNueva).statusCode()).isEqualTo(404);
+        assertThat(get("/auth/sso/registro", null).statusCode()).isEqualTo(404);
+
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        Ida ida = iniciar("google", "?registro=1", null);
+        String alta = altaCon("google", deGoogle(ida, sujeto(), correo), ida);
+        int punto = alta.lastIndexOf('.');
+        // El mismo contenido con otro correo dentro: la firma ya no cuadra.
+        String cuerpo = new String(java.util.Base64.getUrlDecoder().decode(alta.substring(0, punto)),
+                java.nio.charset.StandardCharsets.UTF_8).replace(correo, "victima@sso.test");
+        String retocada = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(cuerpo.getBytes(java.nio.charset.StandardCharsets.UTF_8)) + alta.substring(punto);
+        assertThat(registrar(retocada, empresaNueva).statusCode()).isEqualTo(404);
+
+        // Una cookie de ESTADO, que se consigue con solo empezar, no es un alta:
+        // va firmada con otra clave.
+        Ida otra = iniciar("google", "?registro=1", null);
+        assertThat(registrar(otra.cookie(), empresaNueva).statusCode()).isEqualTo(404);
+
+        assertThat(companyRepository.findByNombre(empresaNueva)).isEmpty();
+        assertThat(userRepository.findByEmail("victima@sso.test")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Registrar: si el nombre de la empresa está cogido se dice, y se puede probar con otro sin volver al proveedor")
+    void registrarConElNombreCogido() throws Exception {
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        Ida ida = iniciar("google", "?registro=1", null);
+        String alta = altaCon("google", deGoogle(ida, sujeto(), correo), ida);
+
+        HttpResponse<String> cogido = registrar(alta, empresa.getNombre());
+
+        assertThat(cogido.statusCode()).isEqualTo(409);
+        assertThat(json.readTree(cogido.body()).get("detail").asText()).contains("La empresa ya existe");
+        assertThat(userRepository.findByEmail(correo)).isEmpty();
+        // La cookie sigue valiendo: no se ha gastado.
+        assertThat(cookie(cogido, "nx_sso_alta")).isNull();
+
+        assertThat(registrar(alta, "Otra " + System.nanoTime()).statusCode()).isEqualTo(200);
+        // Y ya no vale: esa cuenta tiene dueño.
+        assertThat(registrar(alta, "Tercera " + System.nanoTime()).statusCode()).isEqualTo(409);
+    }
+
+    // ------------------------------------------------------------------
     // Borrado de datos
     // ------------------------------------------------------------------
 

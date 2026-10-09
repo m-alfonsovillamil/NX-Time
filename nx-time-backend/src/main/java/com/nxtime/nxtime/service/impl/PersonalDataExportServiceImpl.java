@@ -74,6 +74,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
     private final ScheduleIncidentRepository scheduleIncidentRepository;
     private final MonthlySignatureRepository signatureRepository;
     private final com.nxtime.nxtime.repository.PushDeviceRepository pushDeviceRepository;
+    private final com.nxtime.nxtime.repository.ExternalIdentityRepository externalIdentityRepository;
     private final NoticeRepository noticeRepository;
     private final AttachmentRepository attachmentRepository;
     private final JobApplicationRepository applicationRepository;
@@ -95,6 +96,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
             ScheduleIncidentRepository scheduleIncidentRepository,
             MonthlySignatureRepository signatureRepository,
             com.nxtime.nxtime.repository.PushDeviceRepository pushDeviceRepository,
+            com.nxtime.nxtime.repository.ExternalIdentityRepository externalIdentityRepository,
             NoticeRepository noticeRepository,
             AttachmentRepository attachmentRepository,
             JobApplicationRepository applicationRepository,
@@ -112,6 +114,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
         this.scheduleIncidentRepository = scheduleIncidentRepository;
         this.signatureRepository = signatureRepository;
         this.pushDeviceRepository = pushDeviceRepository;
+        this.externalIdentityRepository = externalIdentityRepository;
         this.noticeRepository = noticeRepository;
         this.attachmentRepository = attachmentRepository;
         this.applicationRepository = applicationRepository;
@@ -217,6 +220,12 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                 pushDeviceRepository.findByUsuario_IdOrderByRegistradoEnDesc(id).stream()
                         .map(d -> new PersonalDataExport.DispositivoPush(
                                 d.getPlataforma().name(), d.getToken(), d.getRegistradoEn(), d.getVistoEn()))
+                        .toList(),
+
+                externalIdentityRepository.findByUsuarioOrderByProveedorAsc(p).stream()
+                        .map(c -> new PersonalDataExport.CuentaVinculada(
+                                c.getProveedor().name(), c.getSujeto(), c.getCorreo(), c.getVinculadaEn(),
+                                c.getUltimoAcceso()))
                         .toList(),
 
                 attachmentRepository.findByUsuarioOrderBySubidoEnDesc(p).stream()

@@ -292,9 +292,14 @@ public class CorrectionServiceImpl implements CorrectionService {
         // exigiría repetir esa regla en JPQL -- dos copias de lo más
         // delicado de la fase. El volumen lo permite: son las que están
         // sin resolver, no el histórico.
-        return correctionRepository.findVivasDeEmpresa(actor.getEmpresa().getId()).stream()
+        List<CorrectionRequest> mias = correctionRepository.findVivasDeEmpresa(actor.getEmpresa().getId()).stream()
                 .filter(solicitud -> puedeResolver(solicitud, actor))
-                .map(solicitud -> toResponse(solicitud, actor))
+                .toList();
+        // El reparto de todas, en una consulta: pedirlo solicitud a solicitud
+        // eran tantas consultas como correcciones hubiera en la bandeja.
+        Map<Long, List<CorrectionResponse.ProjectShare>> repartos = repartosDe(mias);
+        return mias.stream()
+                .map(solicitud -> toResponse(solicitud, actor, repartos.getOrDefault(solicitud.getId(), List.of())))
                 .toList();
     }
 
@@ -312,11 +317,13 @@ public class CorrectionServiceImpl implements CorrectionService {
 
     @Override
     public com.nxtime.nxtime.dto.PaginaDTO<CorrectionResponse> mias(User actor, org.springframework.data.domain.Pageable pagina) {
-        // toResponse consulta el reparto por proyecto de cada solicitud: con
-        // la lista entera eran tantas consultas como correcciones se hubieran
-        // pedido nunca. Ahora, como mucho las de una página.
-        return com.nxtime.nxtime.dto.PaginaDTO.de(correctionRepository.findMias(actor.getId(), pagina),
-                solicitud -> toResponse(solicitud, actor));
+        // Paginado, y el reparto por proyecto de la página entera en una
+        // consulta (ver pendientesParaMi).
+        org.springframework.data.domain.Page<CorrectionRequest> mias =
+                correctionRepository.findMias(actor.getId(), pagina);
+        Map<Long, List<CorrectionResponse.ProjectShare>> repartos = repartosDe(mias.getContent());
+        return com.nxtime.nxtime.dto.PaginaDTO.de(mias,
+                solicitud -> toResponse(solicitud, actor, repartos.getOrDefault(solicitud.getId(), List.of())));
     }
 
     // ------------------------------------------------------------------
@@ -680,12 +687,39 @@ public class CorrectionServiceImpl implements CorrectionService {
 
     private List<CorrectionResponse.ProjectShare> repartoDe(CorrectionRequest solicitud) {
         return proposedAllocationRepository.findBySolicitudOrderByIdAsc(solicitud).stream()
-                .map(linea -> new CorrectionResponse.ProjectShare(
-                        linea.getProyecto().getId(), linea.getProyecto().getCodigo(), linea.getSegundos() / 60))
+                .map(CorrectionServiceImpl::comoParte)
                 .toList();
     }
 
+    /**
+     * El reparto propuesto de varias solicitudes a la vez, por id de
+     * solicitud y con las líneas en el mismo orden que {@link #repartoDe}.
+     * Las que no proponen reparto no salen en el mapa.
+     */
+    private Map<Long, List<CorrectionResponse.ProjectShare>> repartosDe(List<CorrectionRequest> solicitudes) {
+        if (solicitudes.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = solicitudes.stream().map(CorrectionRequest::getId).toList();
+        Map<Long, List<CorrectionResponse.ProjectShare>> porSolicitud = new LinkedHashMap<>();
+        proposedAllocationRepository.findBySolicitud_IdInOrderByIdAsc(ids).forEach(linea ->
+                porSolicitud.computeIfAbsent(linea.getSolicitud().getId(), id -> new java.util.ArrayList<>())
+                        .add(comoParte(linea)));
+        return porSolicitud;
+    }
+
+    private static CorrectionResponse.ProjectShare comoParte(ProposedAllocation linea) {
+        return new CorrectionResponse.ProjectShare(
+                linea.getProyecto().getId(), linea.getProyecto().getCodigo(), linea.getSegundos() / 60);
+    }
+
+    /** La de una sola solicitud: pide su reparto. Para listas, la de tres argumentos. */
     private CorrectionResponse toResponse(CorrectionRequest solicitud, User actor) {
+        return toResponse(solicitud, actor, repartoDe(solicitud));
+    }
+
+    private CorrectionResponse toResponse(
+            CorrectionRequest solicitud, User actor, List<CorrectionResponse.ProjectShare> reparto) {
         TimeEntry fichaje = solicitud.getRegistro();
         return new CorrectionResponse(
                 solicitud.getId(),
@@ -708,6 +742,6 @@ public class CorrectionServiceImpl implements CorrectionService {
                 solicitud.getCreadoEn(),
                 puedeResolver(solicitud, actor),
                 puedeDisputar(solicitud, actor),
-                repartoDe(solicitud));
+                reparto);
     }
 }

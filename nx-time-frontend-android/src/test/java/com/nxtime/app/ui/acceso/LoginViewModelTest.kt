@@ -35,6 +35,7 @@ class LoginViewModelTest {
     // El SSO tiene sus tests (SsoEnElAccesoTest); aquí solo hace falta que exista.
     private val sso = AccesoSso(object : GuardaDelVerificador {
         override var verificador: String? = null
+        override var paraVincular: Boolean = false
     })
     private val viewModel by lazy { LoginViewModel(repositorio, sso) }
 

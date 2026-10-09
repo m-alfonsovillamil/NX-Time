@@ -99,6 +99,39 @@ test('quien no tiene cuenta en NX Time vuelve al acceso sabiendo por qué, y sin
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
+/**
+ * Registrar una empresa con una cuenta de fuera (ADR 038). Lo que solo se ve
+ * con un navegador: que la cookie del alta a medias —que pone el servidor al
+ * volver del proveedor— viaja después en la petición del formulario, y que de
+ * ahí se sale con la sesión hecha.
+ */
+test('registrar una empresa con Google: sin contraseña ni código, del registro a «Mi jornada»', async ({ page }) => {
+  await page.goto('/registro');
+  await page.getByRole('link', { name: 'Registrar con Google' }).click();
+  await elegir(page, /registrar su empresa/);
+
+  // De vuelta: dice con qué cuenta, y solo pide lo que el proveedor no sabe.
+  await expect(page.getByText(/Has entrado con tu cuenta de Google \(eva-.*@empresa-nueva\.example\)/)).toBeVisible();
+  await expect(page.getByLabel('Contraseña')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/registro$/);
+
+  await page.getByLabel('Nombre de la empresa').fill(`Empresa de Eva ${Date.now()}`);
+  await page.getByLabel('Tu nombre').fill('Eva');
+  await page.getByLabel('Tus apellidos').fill('Fundadora');
+  await page.getByRole('button', { name: 'Crear empresa' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+  // La sesión está en las cookies, como tras un login: recargar la retoma.
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+
+  // Y desde ahora entra con esa cuenta como cualquiera.
+  await cerrarSesion(page);
+  await page.getByRole('link', { name: 'Entrar con Google' }).click();
+  await elegir(page, /registrar su empresa/);
+  await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+});
+
 test('cancelar en el proveedor vuelve al acceso', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'Entrar con Google' }).click();

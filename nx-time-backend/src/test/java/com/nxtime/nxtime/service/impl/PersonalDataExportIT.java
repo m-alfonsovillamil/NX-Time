@@ -9,6 +9,8 @@ import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.AddedPause;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.ExternalIdentity;
+import com.nxtime.nxtime.domain.SsoProvider;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.Role;
@@ -87,6 +89,8 @@ class PersonalDataExportIT {
     private AbsenceRequestRepository absenceRepository;
     @Autowired
     private NoticeRepository noticeRepository;
+    @Autowired
+    private com.nxtime.nxtime.repository.ExternalIdentityRepository externalIdentityRepository;
 
     private Company empresa;
     private User ana;
@@ -185,6 +189,43 @@ class PersonalDataExportIT {
 
         assertThat(json.toString()).doesNotContain("$2a$10$", "hashquenodebesalir");
         assertThat(json.get("persona").has("contrasena")).isFalse();
+    }
+
+    /*
+     * Las cuentas de Google o Microsoft vinculadas (ADR 036) son dato
+     * personal: se borraban con el borrado, pero no salían aquí.
+     */
+    @Test
+    @DisplayName("Salen las cuentas de Google o Microsoft vinculadas, y solo las propias")
+    void salenLasCuentasVinculadasPropias() throws Exception {
+        externalIdentityRepository.save(ExternalIdentity.builder()
+                .usuario(ana).proveedor(SsoProvider.GOOGLE).sujeto("sujeto-de-ana").correo("ana.personal@gmail.test")
+                .build());
+        externalIdentityRepository.save(ExternalIdentity.builder()
+                .usuario(javi).proveedor(SsoProvider.MICROSOFT).sujeto("sujeto-de-javi")
+                .correo("javi.personal@outlook.test").build());
+
+        PersonalDataExport exportacion = exportService.exportar(ana);
+
+        assertThat(exportacion.cuentasVinculadas()).singleElement().satisfies(cuenta -> {
+            assertThat(cuenta.proveedor()).isEqualTo("GOOGLE");
+            assertThat(cuenta.sujeto()).isEqualTo("sujeto-de-ana");
+            assertThat(cuenta.correo()).isEqualTo("ana.personal@gmail.test");
+            assertThat(cuenta.vinculadaEn()).isNotNull();
+        });
+        assertThat(objectMapper.writeValueAsString(exportacion))
+                .doesNotContain("sujeto-de-javi", "javi.personal@outlook.test");
+
+        // Y en el PDF, con el correo de esa cuenta.
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        pdfGenerator.generar(exportacion, salida);
+        PdfReader lector = new PdfReader(salida.toByteArray());
+        StringBuilder texto = new StringBuilder();
+        PdfTextExtractor extractor = new PdfTextExtractor(lector);
+        for (int pagina = 1; pagina <= lector.getNumberOfPages(); pagina++) {
+            texto.append(extractor.getTextFromPage(pagina));
+        }
+        assertThat(texto.toString()).contains("ana.personal@gmail.test");
     }
 
     /*

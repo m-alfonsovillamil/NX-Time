@@ -160,7 +160,7 @@ export function Fichar() {
   const error = aviso ?? fichar.error?.message ?? cambiarProyecto.error?.message ?? null;
 
   return (
-    <div className="nx-pagina">
+    <div className="nx-pagina nx-pagina--jornada">
       <CabeceraDePagina titulo={F.titulo} descripcion={sesion !== null ? F.saludo(sesion.nombre) : fechaLarga()} />
 
       {hoy.data?.laborable === false && <Aviso>{F.noLaborable(hoy.data.motivo ?? '')}</Aviso>}

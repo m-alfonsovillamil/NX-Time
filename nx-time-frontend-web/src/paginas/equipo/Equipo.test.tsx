@@ -125,7 +125,6 @@ describe('historial del equipo', () => {
       'GET /api/v1/fichaje/gestor/historial': () => ({ contenido: [fila(10, 2, 'Javier')], hayMas: false }),
       'GET /api/v1/auditoria/integridad/ultima': () => ({
         verificadoEn: '2026-09-27T01:00:00Z',
-        hastaMovimiento: 900,
         movimientos: 900,
         comprobados: 900,
         soloEnlace: 0,

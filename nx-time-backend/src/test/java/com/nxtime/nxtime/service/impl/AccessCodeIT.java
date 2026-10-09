@@ -16,6 +16,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.CreateEmployeeRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
+import com.nxtime.nxtime.dto.RegisterManagerRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.notification.EmailNotSentException;
 import com.nxtime.nxtime.notification.EmailSender;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -102,6 +104,8 @@ class AccessCodeIT {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private CapturaDeCodigos capturas;
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private User crearUsuario(String email, Role rol, String contrasena) {
         Company empresa = companyRepository.save(Company.builder().nombre("Empresa " + email).build());
@@ -137,7 +141,9 @@ class AccessCodeIT {
      */
     @org.springframework.boot.test.context.TestConfiguration
     static class CapturaDeCodigos {
-        final List<NotificationEvents.AccessCodeRequested> codigos = new java.util.ArrayList<>();
+        // Sincronizada: hay un test que registra desde varios hilos a la vez.
+        final List<NotificationEvents.AccessCodeRequested> codigos =
+                java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
         @org.springframework.context.event.EventListener
         void capturar(NotificationEvents.AccessCodeRequested evento) {
@@ -263,5 +269,76 @@ class AccessCodeIT {
                 ultimoCodigoEnviadoA("olvidadiza@nxtime.test"), "nuevaSegura123");
         assertThat(authService.login(new LoginRequest("olvidadiza@nxtime.test", "nuevaSegura123")).token())
                 .isNotBlank();
+    }
+
+    // ---- Registrar una empresa con un correo que ya tiene cuenta (V40, ADR 037) ----
+
+    private List<NotificationEvents.AccessCodeRequested> avisosDeCuentaExistenteA(String email) {
+        return capturas.codigos.stream()
+                .filter(evento -> evento.email().equals(email))
+                .filter(evento -> evento.plantilla().equals("account-already-exists"))
+                .toList();
+    }
+
+    private RegisterManagerRequest registroCon(String email) {
+        return new RegisterManagerRequest(
+                "Empresa de " + System.nanoTime(), "Ada", "Lovelace", email, "contrasena-de-prueba", "WEB");
+    }
+
+    @Test
+    @DisplayName("Registrarse con un correo que ya tiene cuenta avisa a su dueño una vez al día, y no crea nada")
+    void registroConCorreoExistente_avisaUnaVezAlDia() {
+        User dueno = crearUsuario("ya.tengo.cuenta@nxtime.test", Role.EMPLEADO, "antigua12345");
+        long empresasAntes = companyRepository.count();
+
+        authService.registerManager(registroCon("ya.tengo.cuenta@nxtime.test"));
+        // Otra vez, y con mayúsculas: es la misma cuenta y el aviso ya ha salido.
+        authService.registerManager(registroCon("Ya.Tengo.Cuenta@NXTime.test"));
+
+        assertThat(avisosDeCuentaExistenteA("ya.tengo.cuenta@nxtime.test")).hasSize(1);
+        assertThat(companyRepository.count()).isEqualTo(empresasAntes);
+        // Ni código ni contraseña nueva: la cuenta sigue como estaba.
+        assertThat(codigosDe(dueno)).isEmpty();
+        assertThat(authService.login(new LoginRequest("ya.tengo.cuenta@nxtime.test", "antigua12345")).token())
+                .isNotBlank();
+
+        // Pasado el día, vuelve a avisar.
+        jdbc.update("UPDATE usuarios SET aviso_cuenta_existente_en = now() - interval '25 hours' WHERE id = ?",
+                dueno.getId());
+        authService.registerManager(registroCon("ya.tengo.cuenta@nxtime.test"));
+        assertThat(avisosDeCuentaExistenteA("ya.tengo.cuenta@nxtime.test")).hasSize(2);
+    }
+
+    /**
+     * Lo que justifica que el límite sea un UPDATE condicionado y no un
+     * leer-y-guardar: dos registros a la vez no pueden mandar dos correos, y
+     * sobre todo ninguno puede fallar. Un error aquí sería una respuesta
+     * distinta de la de un correo sin cuenta, y diría que la cuenta existe.
+     */
+    @Test
+    @DisplayName("Dos registros a la vez con un correo que ya tiene cuenta: un solo aviso y ninguno falla")
+    void registroConCorreoExistente_aLaVez_unSoloAviso() throws Exception {
+        crearUsuario("a.la.vez@nxtime.test", Role.EMPLEADO, "antigua12345");
+        int cuantos = 6;
+        var salida = new java.util.concurrent.CountDownLatch(1);
+        var hilos = java.util.concurrent.Executors.newFixedThreadPool(cuantos);
+        try {
+            List<java.util.concurrent.Future<String>> respuestas = new java.util.ArrayList<>();
+            for (int i = 0; i < cuantos; i++) {
+                respuestas.add(hilos.submit(() -> {
+                    salida.await();
+                    return authService.registerManager(registroCon("a.la.vez@nxtime.test")).mensaje();
+                }));
+            }
+            salida.countDown();
+            for (var respuesta : respuestas) {
+                // get() relanza lo que haya lanzado el registro.
+                assertThat(respuesta.get(30, java.util.concurrent.TimeUnit.SECONDS)).contains("a.la.vez@nxtime.test");
+            }
+        } finally {
+            hilos.shutdownNow();
+        }
+
+        assertThat(avisosDeCuentaExistenteA("a.la.vez@nxtime.test")).hasSize(1);
     }
 }

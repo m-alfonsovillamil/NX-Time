@@ -114,3 +114,40 @@ y complicaría la verificación sin resolver nada que hoy duela.
 - El comentario de `TimeEntryAuditListener` que afirmaba lo contrario está
   reescrito. Un comentario que tranquiliza sobre algo falso hace más daño que
   no tener comentario.
+
+## Octubre de 2026: la cadena es común, y eso se veía
+
+La cadena es **una sola para todas las empresas** de la instalación: cada fila
+enlaza con la anterior de la tabla, sea de quien sea. Es lo que hace que
+escribirla sea sencillo (un solo cerrojo, arriba) y comprobarla también.
+
+La consecuencia que no se había mirado: la pantalla de «Integridad de la
+auditoría» devolvía los totales de la cadena entera. Una empresa recién
+registrada, sin un solo fichaje, veía «74 movimientos revisados»: los de todas
+las demás. No se cruzaba el contenido de nadie —la traza de un fichaje ajeno
+responde 403—, pero sí cuánto se usa el servicio, y se leía como propio.
+
+Lo que se ha hecho:
+
+- `GET /api/v1/auditoria/integridad` y `…/integridad/ultima` **recorren la
+  cadena entera igual**, pero cuentan solo los movimientos de la empresa de
+  quien pregunta (`VerificadorDeAuditoria.verificarPara`).
+- De la respuesta sale `hastaMovimiento`, el id de la última fila de la
+  cadena: era otra forma de decir cuántos movimientos hay en total.
+- Si la cadena falla en un movimiento de **otra** empresa, se dice que falla
+  —lo propio posterior a ese punto se ha quedado sin comprobar— pero no en cuál.
+  El detalle queda en el log.
+
+Lo que **no** se ha hecho, y sigue siendo así:
+
+- Una rotura en la traza de una empresa la ven todas, porque de verdad les
+  afecta: es una sola cadena.
+- Comprobarla cuesta lo que pese la traza de todas, y la puede pedir cualquier
+  RRHH o ADMIN de cualquier empresa.
+
+El arreglo de fondo es **una cadena por empresa**: cada una comprueba la suya,
+el coste va con sus datos y una rotura no salpica a las demás. Toca cómo se
+encadena (el cerrojo, la migración de lo ya escrito sobre una tabla que no
+admite cambios, los puntos de control) y va en su propio plan. Solo importa si
+la instalación la comparten varias empresas; en una autoalojada, la cadena de
+la instalación es la de la empresa.
