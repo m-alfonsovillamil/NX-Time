@@ -17,11 +17,16 @@ WORKDIR /workspace
 # cada capa por separado, así que mientras no cambien el wrapper ni las
 # dependencias declaradas, "gradlew dependencies" reutiliza la capa
 # entera aunque el código (nx-time-backend/src) cambie constantemente.
-COPY gradlew settings-docker.gradle.kts ./
+#
+# settings-docker.gradle.kts se copia CON EL NOMBRE settings.gradle.kts: hasta
+# Gradle 8 se elegía con la opción -c, que Gradle 9 ha quitado. Dentro de la
+# imagen no hay otro settings, así que basta con llamarlo como Gradle espera.
+COPY gradlew ./
+COPY settings-docker.gradle.kts settings.gradle.kts
 COPY gradle gradle
 COPY nx-time-backend/build.gradle.kts nx-time-backend/build.gradle.kts
 RUN chmod +x gradlew && \
-    ./gradlew -c settings-docker.gradle.kts :nx-time-backend:dependencies --no-daemon > /dev/null 2>&1 || true
+    ./gradlew :nx-time-backend:dependencies --no-daemon > /dev/null 2>&1 || true
 
 COPY nx-time-backend/src nx-time-backend/src
 
@@ -29,7 +34,7 @@ COPY nx-time-backend/src nx-time-backend/src
 # de docker-compose corriendo aparte -- no tiene sentido ni es posible
 # ejecutarlos dentro del build de la imagen. Se ejecutan en CI (Fase 11)
 # y en local antes de construir la imagen, no aquí.
-RUN ./gradlew -c settings-docker.gradle.kts :nx-time-backend:bootJar -x test --no-daemon
+RUN ./gradlew :nx-time-backend:bootJar -x test --no-daemon
 
 # "tools extract --layers" (jarmode "tools"; sustituye al "layertools"
 # de versiones anteriores de Spring Boot, ya deprecado) separa el jar

@@ -80,7 +80,9 @@ jobs:
       - name: Compilar el backend
         run: |
           chmod +x gradlew
-          ./gradlew -c settings-docker.gradle.kts :nx-time-backend:bootJar --no-daemon
+          # Solo el backend: ver ci.yml (Gradle 9 ya no tiene la opción -c).
+          cp settings-docker.gradle.kts settings.gradle.kts
+          ./gradlew :nx-time-backend:bootJar --no-daemon
 
       # El jar y no bootRun: es lo que se despliega, y no deja un Gradle
       # vivo en medio. Perfiles `dev,demo`: la base de arriba y los datos de

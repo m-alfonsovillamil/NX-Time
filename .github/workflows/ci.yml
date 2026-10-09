@@ -4,10 +4,13 @@
 # incluye los 220 tests y el umbral de cobertura de JaCoCo -- en cada
 # push y cada pull request.
 #
-# Solo construye el BACKEND (`-c settings-docker.gradle.kts`, el settings
-# alternativo de la Fase 7 que declara únicamente :nx-time-backend). El
+# Solo construye el BACKEND, con settings-docker.gradle.kts: el settings
+# alternativo de la Fase 7, que declara únicamente :nx-time-backend. El
 # módulo Android necesita el SDK de Android y su propio workflow; aquí
 # solo alargaría el build sin aportar.
+#
+# Se usa copiándolo encima de settings.gradle.kts, como en el Dockerfile:
+# la opción -c con la que se elegía la quitó Gradle 9.
 name: CI
 
 on:
@@ -89,7 +92,9 @@ jobs:
       # check = compilar + los 220 tests + jacocoTestCoverageVerification
       # (falla si la cobertura de service/controller/audit baja del 60%).
       - name: Build y tests
-        run: ./gradlew -c settings-docker.gradle.kts :nx-time-backend:check --no-daemon
+        run: |
+          cp settings-docker.gradle.kts settings.gradle.kts
+          ./gradlew :nx-time-backend:check --no-daemon
 
       # Se suben SIEMPRE (if: always()), también cuando los tests fallan:
       # es justo entonces cuando hacen falta para saber qué se rompió.
