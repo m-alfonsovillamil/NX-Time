@@ -123,6 +123,8 @@ import java.util.stream.Collectors;
  * "empresa:configurar" (fase Z2) es solo de ADMIN: el nombre y la zona
  * horaria de la empresa (ADR 032). La zona decide a qué día pertenece cada
  * fichaje de todo el histórico, y cambiarla puede tumbar firmas mensuales.
+ * "plataforma:ver" (ADR 040) NO es de ningún rol, y es la única: ver
+ * {@link #FUERA_DE_LOS_ROLES}.
  */
 public final class RoleAuthorities {
 
@@ -177,6 +179,26 @@ public final class RoleAuthorities {
             "denuncia:instruir",
             "empresa:configurar"
     ));
+
+    /** Ver todas las empresas de la instalación: el panel de plataforma (ADR 040). */
+    public static final String PLATAFORMA_VER = "plataforma:ver";
+
+    /**
+     * Lo que no concede ningún rol.
+     *
+     * Los roles son de una empresa y se conceden desde dentro de la aplicación:
+     * un ADMIN nombra a otro ADMIN. Ver la instalación entera cruza todas las
+     * empresas, así que no puede salir de ahí, o cualquiera que registre una
+     * empresa --que es público-- se lo concedería a sí mismo. La tiene quien
+     * mantiene el servicio, y lo decide una variable de entorno, no una
+     * pantalla: ver {@code OperadoresDePlataforma}.
+     *
+     * Está declarada aquí, y no solo donde se concede, para que este fichero
+     * siga siendo la lista de todas las authorities que existen: es lo que
+     * leen los dos tests que cruzan los permisos con los endpoints y con las
+     * secciones de la web.
+     */
+    public static final Set<String> FUERA_DE_LOS_ROLES = Set.of("plataforma:ver");
 
     public static Set<String> forRole(Role role) {
         return switch (role) {

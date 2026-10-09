@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Version;
+import java.time.Instant;
 import java.time.ZoneId;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,6 +53,13 @@ public class Company {
     @Builder.Default
     private String zonaHoraria = ZONA_POR_DEFECTO;
 
+    /**
+     * Cuándo se dio de alta (V41, ADR 040). La pone {@link #alCrear()}. Null en
+     * las anteriores a octubre de 2026 de las que no quedaba ningún rastro.
+     */
+    @Column(name = "creada_en")
+    private Instant creadaEn;
+
     @Version
     private long version;
 
@@ -65,11 +73,19 @@ public class Company {
         return empresa != null ? empresa.zona() : ZoneId.of(ZONA_POR_DEFECTO);
     }
 
-    /** Quien crea la empresa sin decir zona (el builder o {@code new}) se queda con la de por defecto. */
+    /**
+     * Quien crea la empresa sin decir zona (el builder o {@code new}) se queda
+     * con la de por defecto, y la fecha de alta es la de este momento. Aquí y no
+     * en cada sitio que crea una empresa (el registro, el del SSO y los datos
+     * de demo): así ninguno se la puede dejar.
+     */
     @PrePersist
-    void zonaPorDefectoSiFalta() {
+    void alCrear() {
         if (zonaHoraria == null) {
             zonaHoraria = ZONA_POR_DEFECTO;
+        }
+        if (creadaEn == null) {
+            creadaEn = Instant.now();
         }
     }
 

@@ -151,6 +151,13 @@ services:
       - key: SSO_MICROSOFT_CLIENT_SECRET
         sync: false
 
+      # Quién ve el panel de plataforma (ADR 040): todas las empresas dadas de
+      # alta y sus cifras de uso. Los correos de las cuentas de quien mantiene
+      # el servicio, separados por comas. Vacía, no lo ve nadie. No es un rol:
+      # ningún ADMIN de ninguna empresa lo puede conceder, solo esta variable.
+      - key: PLATAFORMA_OPERADORES
+        sync: false
+
       # Sentry (paso 5 del piloto): adónde van los errores del backend.
       # Vacía, la aplicación arranca igual y no envía nada. El DSN no da
       # acceso a leer nada -- solo identifica adónde mandar los errores --,

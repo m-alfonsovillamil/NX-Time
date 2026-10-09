@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,8 +23,21 @@ public class SecurityUser implements UserDetails {
 
     private final User user;
 
+    /** Lo que tiene esta persona además de lo de su rol. Casi siempre, nada. */
+    private final List<String> extra;
+
     public SecurityUser(User user) {
+        this(user, List.of());
+    }
+
+    /**
+     * Con authorities que no salen del rol (ADR 040). No se construye a mano:
+     * lo hace {@link OperadoresDePlataforma#principalDe}, que es quien sabe a
+     * quién le tocan.
+     */
+    SecurityUser(User user, List<String> extra) {
         this.user = user;
+        this.extra = List.copyOf(extra);
     }
 
     public User getUser() {
@@ -32,7 +46,7 @@ public class SecurityUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return RoleAuthorities.forRole(user.getRol()).stream()
+        return Stream.concat(RoleAuthorities.forRole(user.getRol()).stream(), extra.stream())
                 .map(SimpleGrantedAuthority::new)
                 .toList();
     }

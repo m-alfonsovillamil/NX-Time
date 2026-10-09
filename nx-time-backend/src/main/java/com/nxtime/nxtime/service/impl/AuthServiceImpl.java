@@ -3,7 +3,6 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.RefreshToken;
 import com.nxtime.nxtime.domain.Role;
-import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.ChangePasswordRequest;
@@ -22,7 +21,7 @@ import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
-import com.nxtime.nxtime.security.SecurityUser;
+import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
@@ -91,6 +90,7 @@ public class AuthServiceImpl implements AuthService {
     private final ApplicationEventPublisher eventPublisher;
     private final AccessCodeService accessCodeService;
     private final LimitadorDeIntentosPorCuenta limitadorPorCuenta;
+    private final OperadoresDePlataforma operadores;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -104,7 +104,8 @@ public class AuthServiceImpl implements AuthService {
             AuthenticationManager authenticationManager,
             ApplicationEventPublisher eventPublisher,
             AccessCodeService accessCodeService,
-            LimitadorDeIntentosPorCuenta limitadorPorCuenta
+            LimitadorDeIntentosPorCuenta limitadorPorCuenta,
+            OperadoresDePlataforma operadores
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -115,6 +116,7 @@ public class AuthServiceImpl implements AuthService {
         this.eventPublisher = eventPublisher;
         this.accessCodeService = accessCodeService;
         this.limitadorPorCuenta = limitadorPorCuenta;
+        this.operadores = operadores;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -344,10 +346,10 @@ public class AuthServiceImpl implements AuthService {
         stored.setSustituidoPor(sucesor.fila());
         refreshTokenRepository.save(stored);
 
-        String newAccessToken = jwtService.generateToken(new SecurityUser(user), stored.getFamilia());
+        String newAccessToken = jwtService.generateToken(operadores.principalDe(user), stored.getFamilia());
         log.info("Access token renovado para {}", user.getId());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
-                RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
+                operadores.authoritiesDe(user), user.zona().getId());
     }
 
     @Override
@@ -509,10 +511,10 @@ public class AuthServiceImpl implements AuthService {
         // (claim sid, ADR 034) para saber, al cambiar la contraseña, cuál es
         // la sesión que NO hay que cerrar.
         UUID familia = UUID.randomUUID();
-        String accessToken = jwtService.generateToken(new SecurityUser(user), familia);
+        String accessToken = jwtService.generateToken(operadores.principalDe(user), familia);
         TokenEmitido refreshToken = issueRefreshToken(user, origen, familia);
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
-                RoleAuthorities.enOrden(user.getRol()), user.zona().getId());
+                operadores.authoritiesDe(user), user.zona().getId());
     }
 
     /**

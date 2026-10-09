@@ -25,6 +25,7 @@ import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
+import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -71,7 +72,8 @@ class EmployeeProfileServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new EmployeeProfileServiceImpl(
-                userRepository, vacationBalanceRepository, departmentRepository);
+                userRepository, vacationBalanceRepository, departmentRepository,
+                new OperadoresDePlataforma(""));
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         rrhh = User.builder().id(5L).email("rrhh@nxtime.test").nombre("Elena")

@@ -97,6 +97,9 @@ class RoleAuthoritiesTest {
         Set<String> concedidas = Stream.of(Role.values())
                 .flatMap(rol -> RoleAuthorities.forRole(rol).stream())
                 .collect(java.util.stream.Collectors.toCollection(TreeSet::new));
+        // La del panel de plataforma no es de ningún rol y sí se concede: por
+        // la lista de operadores, no desde aquí (ADR 040).
+        concedidas.addAll(RoleAuthorities.FUERA_DE_LOS_ROLES);
 
         Set<String> exigidas = authoritiesExigidasEnElFuente();
 
@@ -108,6 +111,19 @@ class RoleAuthoritiesTest {
                 .as("estas authorities se exigen en un endpoint y no las tiene ningún rol: "
                         + "ese endpoint responde 403 a todo el mundo")
                 .containsAll(exigidas);
+    }
+
+    /**
+     * Ver la instalación entera cruza todas las empresas. Si entrase en un rol,
+     * la tendría cualquiera que registre una empresa, que es público.
+     */
+    @ParameterizedTest
+    @EnumSource(Role.class)
+    @DisplayName("Ningún rol trae lo que está fuera de los roles")
+    void loDeFueraDeLosRolesNoLoTraeNingunRol(Role rol) {
+        assertThat(RoleAuthorities.FUERA_DE_LOS_ROLES).containsExactly(RoleAuthorities.PLATAFORMA_VER);
+        assertThat(RoleAuthorities.forRole(rol)).doesNotContainAnyElementsOf(RoleAuthorities.FUERA_DE_LOS_ROLES);
+        assertThat(RoleAuthorities.rolesCon(RoleAuthorities.PLATAFORMA_VER)).isEmpty();
     }
 
     private static Set<String> authoritiesExigidasEnElFuente() throws IOException {

@@ -4,6 +4,7 @@ import com.nxtime.nxtime.domain.AuditCheckpoint;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.dto.AuditCheckpointResponse;
 import com.nxtime.nxtime.dto.AuditIntegrityResponse;
+import com.nxtime.nxtime.dto.PlatformIntegrityResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AuditCheckpointRepository;
@@ -187,6 +188,24 @@ public class VerificadorDeAuditoria {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuditIntegrityResponse verificarParaLaEmpresaDe(String emailDelActor) {
         return verificarPara(empresaDe(emailDelActor));
+    }
+
+    /**
+     * Lo mismo, para quien mantiene el servicio (ADR 040): las cifras de toda
+     * la instalación y, si la cadena está rota, la fila y de qué empresa es.
+     *
+     * Es el mismo recorrido compartido que el de las empresas, con sus mismos
+     * límites: pedirlo desde el panel de plataforma no es otra forma de recorrer
+     * la cadena dos veces.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public PlatformIntegrityResponse verificarParaLaPlataforma() {
+        return recorridoCompartido().paraLaPlataforma();
+    }
+
+    /** Cuántos movimientos tiene la traza, comprobados o no. */
+    public long movimientosEnTotal() {
+        return auditRepository.count();
     }
 
     /**
@@ -382,6 +401,14 @@ public class VerificadorDeAuditoria {
             return Objects.equals(empresaDeLaRota, empresaId)
                     ? AuditIntegrityResponse.rota(comprobados + soloEnlace, comprobados, soloEnlace, filaRota, problema)
                     : AuditIntegrityResponse.rotaEnOtraParte(comprobados + soloEnlace, comprobados, soloEnlace);
+        }
+
+        /** Todo, sin recortar: solo para quien puede ver la instalación entera. */
+        PlatformIntegrityResponse paraLaPlataforma() {
+            long comprobados = porEmpresa.values().stream().mapToLong(suyas -> suyas[0]).sum();
+            long soloEnlace = porEmpresa.values().stream().mapToLong(suyas -> suyas[1]).sum();
+            return new PlatformIntegrityResponse(filaRota == null, comprobados + soloEnlace, comprobados,
+                    soloEnlace, filaRota, empresaDeLaRota, problema, cuando);
         }
     }
 
