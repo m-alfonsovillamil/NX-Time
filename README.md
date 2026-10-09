@@ -607,6 +607,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 36. [Entrar con Google o con Microsoft: solo para quien ya tiene cuenta, y a quién se le cree el correo](docs/adr/036-entrar-con-google-o-microsoft.md)
 37. [Registrarse con un correo que ya tiene cuenta: se le dice a su dueño, por correo](docs/adr/037-ya-tienes-cuenta-por-correo.md)
 38. [SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado](docs/adr/038-sso-lo-que-faltaba.md)
+39. [Límites a lo caro: que lo más pesado no sirva para tumbar el servicio](docs/adr/039-limites-a-lo-caro.md)
 
 ---
 
@@ -669,6 +670,12 @@ propios ID token.
   empeoraba con el tamaño de la empresa eran las ausencias del equipo, ya
   arreglado, como la bandeja de correcciones, que pedía el reparto propuesto de
   cada solicitud por separado.
+- **Está pensado para una sola instancia.** El límite de intentos, los cupos,
+  las cachés y el cerrojo de la comprobación de integridad viven en memoria, y
+  las tareas programadas no tienen cerrojo entre instancias: antes de poner una
+  segunda hay que mover todo eso
+  ([ADR 039](docs/adr/039-limites-a-lo-caro.md)). Tampoco hay todavía una prueba
+  de carga.
 - **La cadena de auditoría es una sola para todas las empresas** de la
   instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
   la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio

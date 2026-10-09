@@ -3,6 +3,7 @@ package com.nxtime.nxtime.config;
 import com.nxtime.nxtime.security.JwtAuthenticationFilter;
 import com.nxtime.nxtime.security.KioskAuthenticationFilter;
 import com.nxtime.nxtime.security.KioskPrincipal;
+import com.nxtime.nxtime.security.LimiteDeLoCaro;
 import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import com.nxtime.nxtime.security.RestAccessDeniedHandler;
 import com.nxtime.nxtime.security.RestAuthenticationEntryPoint;
@@ -43,6 +44,7 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final LoginRateLimitFilter loginRateLimitFilter;
+    private final LimiteDeLoCaro limiteDeLoCaro;
     private final KioskAuthenticationFilter kioskAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
@@ -60,6 +62,7 @@ public class SecurityConfig {
             AuthenticationProvider authenticationProvider,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             LoginRateLimitFilter loginRateLimitFilter,
+            LimiteDeLoCaro limiteDeLoCaro,
             KioskAuthenticationFilter kioskAuthenticationFilter,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             RestAccessDeniedHandler restAccessDeniedHandler,
@@ -68,6 +71,7 @@ public class SecurityConfig {
         this.authenticationProvider = authenticationProvider;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.loginRateLimitFilter = loginRateLimitFilter;
+        this.limiteDeLoCaro = limiteDeLoCaro;
         this.kioskAuthenticationFilter = kioskAuthenticationFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
@@ -186,7 +190,10 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(kioskAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(kioskAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Después del JWT, no antes: limita por cuenta, y hasta que el
+                // filtro del JWT no ha pasado no se sabe de quién es la petición.
+                .addFilterAfter(limiteDeLoCaro, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

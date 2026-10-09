@@ -65,6 +65,11 @@ class VerificadorDeAuditoriaIT {
         // Con el valor de producción (1000) haría falta sembrar más de mil
         // filas para ejercitar el mismo código.
         registry.add("application.auditoria.filas-por-bloque", () -> 2);
+        // Sin compartir recorridos: aqui cada test manipula la traza y vuelve
+        // a comprobarla, y con el medio minuto de produccion leeria el
+        // resultado de antes de manipular. Lo compartido se prueba en
+        // VerificacionManualConcurrenteIT.
+        registry.add("application.auditoria.vigencia-del-recorrido", () -> "0s");
     }
 
     @Autowired

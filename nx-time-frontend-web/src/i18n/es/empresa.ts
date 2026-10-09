@@ -84,7 +84,8 @@ export const empresa = {
     nunca: 'Todavía no se ha comprobado ninguna vez.',
     nuncaDetalle: 'La primera comprobación automática será esta noche. También puedes hacerla ahora.',
     comprobarTitulo: 'Comprobar ahora',
-    comprobarTexto: 'Recorre la cadena entera en este momento. Con años de traza puede tardar un poco.',
+    comprobarTexto:
+      'Recorre la cadena entera. Con años de traza puede tardar un poco; si alguien acaba de comprobarla, se enseña ese resultado.',
     comprobar: 'Comprobar la cadena',
     intacta: 'La traza está intacta.',
     rota: 'La traza NO está intacta.',
