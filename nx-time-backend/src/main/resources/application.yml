@@ -177,6 +177,12 @@ application:
     # base64. ES UN SECRETO: solo en el panel de Render. Vacía = sin push, y la
     # aplicación funciona igual (ver FirebaseConfig).
     credenciales: "${FIREBASE_CREDENTIALS_JSON:}"
+  plataforma:
+    # Quién puede ver la instalación entera: el panel de plataforma (ADR 040).
+    # Los correos de sus cuentas, separados por comas. Vacía = nadie, que es
+    # como tiene que estar en cualquier sitio donde no se haya decidido otra
+    # cosa. No es un rol y no se concede desde ninguna pantalla: solo aquí.
+    operadores: "${PLATAFORMA_OPERADORES:}"
 
   security:
     jwt:

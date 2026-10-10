@@ -2,7 +2,6 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Role;
-import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.dto.ProfileResponse;
@@ -15,6 +14,7 @@ import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
+import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import com.nxtime.nxtime.service.EmployeeProfileService;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -39,13 +39,16 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     private final UserRepository userRepository;
     private final VacationBalanceRepository vacationBalanceRepository;
     private final DepartmentRepository departmentRepository;
+    private final OperadoresDePlataforma operadores;
 
     public EmployeeProfileServiceImpl(UserRepository userRepository,
                                       VacationBalanceRepository vacationBalanceRepository,
-                                      DepartmentRepository departmentRepository) {
+                                      DepartmentRepository departmentRepository,
+                                      OperadoresDePlataforma operadores) {
         this.userRepository = userRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.departmentRepository = departmentRepository;
+        this.operadores = operadores;
     }
 
     @Override
@@ -219,7 +222,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.isActivo(),
                 usuario.getHorasSemanales(),
                 dias,
-                RoleAuthorities.enOrden(usuario.getRol()));
+                operadores.authoritiesDe(usuario));
     }
 
     private static String nombreCompleto(User usuario) {

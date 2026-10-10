@@ -1791,6 +1791,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plataforma/resumen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La instalación de un vistazo
+         * @description Empresas y cuentas en total, altas de empresas por semana, fichajes de hoy, si las tareas nocturnas han corrido y qué dejó dicho la última comprobación de la traza de auditoría.
+         */
+        get: operations["resumenDeLaInstalacion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/integridad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comprobar la traza de auditoría entera
+         * @description Recorre la cadena de hashes de toda la instalación y dice, si está rota, en qué movimiento y de qué empresa: lo que a las empresas no se les dice cuando la rotura no es suya. Es el mismo recorrido que piden ellas, uno a la vez y compartido medio minuto.
+         */
+        get: operations["integridad"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las empresas dadas de alta
+         * @description Paginada, con las cifras de uso de cada una: plantilla, fichajes de los últimos 7 y 30 días, cuánta gente ficha y la última vez que alguien entró.
+         */
+        get: operations["empresas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Una empresa
+         * @description Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda apuntada en el log del servidor, con quién la hizo.
+         */
+        get: operations["empresa"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/{usuarioId}": {
         parameters: {
             query?: never;
@@ -3875,6 +3955,237 @@ export interface components {
             /** Format: int32 */
             mes?: number;
             proyectos?: components["schemas"]["ProjectHoursItem"][];
+        };
+        Altas: {
+            /** Format: date */
+            semana?: string;
+            /** Format: int64 */
+            altas?: number;
+        };
+        Cadena: {
+            /** Format: date-time */
+            ultimaComprobacion?: string;
+            /** Format: int64 */
+            movimientosComprobados?: number;
+            /** Format: int64 */
+            movimientosSinRevisar?: number;
+        };
+        /** @description Los totales de la instalación, el estado de las tareas nocturnas y el de la traza de auditoría */
+        PlatformSummaryResponse: {
+            /** Format: int64 */
+            empresas?: number;
+            /**
+             * Format: int64
+             * @description Empresas en las que alguien ha fichado en los últimos 30 días
+             */
+            empresasConActividad?: number;
+            /**
+             * Format: int64
+             * @description Cuentas en activo, de todas las empresas y de todos los roles
+             */
+            empleadosActivos?: number;
+            /**
+             * Format: int64
+             * @description Registros de empresa que se quedaron sin confirmar el correo
+             */
+            registrosSinConfirmar?: number;
+            /**
+             * Format: int64
+             * @description Fichajes empezados hoy (día de Madrid), sin los anulados
+             */
+            fichajesHoy?: number;
+            /** @description Altas de empresas de las últimas doce semanas, de la más antigua a la actual */
+            altasPorSemana?: components["schemas"]["Altas"][];
+            tareas?: components["schemas"]["SystemStatusResponse"];
+            cadena?: components["schemas"]["Cadena"];
+        };
+        /** @description Resultado de comprobar la cadena de hashes de la auditoría, con las cifras de toda la instalación */
+        PlatformIntegrityResponse: {
+            /** @description Si la traza está intacta hasta donde se puede comprobar */
+            intacta?: boolean;
+            /**
+             * Format: int64
+             * @description Movimientos revisados. Si está rota, los anteriores a la rotura
+             */
+            movimientos?: number;
+            /**
+             * Format: int64
+             * @description De esos, a cuántos se les ha recalculado el hash y cuadra
+             */
+            comprobados?: number;
+            /**
+             * Format: int64
+             * @description Movimientos antiguos de los que solo se ha podido comprobar el enlace con el anterior
+             */
+            soloEnlace?: number;
+            /**
+             * Format: int64
+             * @description Id del primer movimiento con problemas, si lo hay
+             */
+            primerFallo?: number;
+            /**
+             * Format: int64
+             * @description De qué empresa es ese movimiento, si se sabe
+             */
+            empresaDelFallo?: number;
+            /** @description Qué le pasa a ese movimiento, en una frase */
+            motivo?: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se hizo el recorrido. Vale medio minuto para quien lo pida después
+             */
+            comprobadaEn?: string;
+        };
+        PaginaDTOPlatformCompanyResponse: {
+            contenido?: components["schemas"]["PlatformCompanyResponse"][];
+            /** Format: int32 */
+            pagina?: number;
+            /** Format: int32 */
+            tamano?: number;
+            /**
+             * Format: int64
+             * @description Cuántos elementos hay en total, en todas las páginas
+             */
+            totalElementos?: number;
+            /** Format: int32 */
+            totalPaginas?: number;
+            hayMas?: boolean;
+        };
+        /** @description Una empresa de la instalación, con sus cifras de uso */
+        PlatformCompanyResponse: {
+            /** Format: int64 */
+            id?: number;
+            nombre?: string;
+            /**
+             * @description Nombre IANA de su zona horaria
+             * @example Europe/Madrid
+             */
+            zonaHoraria?: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se dio de alta. Null en las anteriores a octubre de 2026 de las que no quedaba rastro; en las demás anteriores a esa fecha es una estimación
+             */
+            creadaEn?: string;
+            /** Format: int64 */
+            empleadosActivos?: number;
+            /** Format: int64 */
+            empleadosDeBaja?: number;
+            /** @description Quien la registró todavía no ha confirmado su correo: nadie ha podido entrar */
+            registroSinConfirmar?: boolean;
+            /**
+             * Format: date-time
+             * @description La entrada del fichaje más reciente. Null si no ha fichado nadie nunca
+             */
+            ultimoFichaje?: string;
+            /** Format: int64 */
+            fichajesEn7Dias?: number;
+            /** Format: int64 */
+            fichajesEn30Dias?: number;
+            /**
+             * Format: int64
+             * @description Personas distintas que han fichado en los últimos 30 días
+             */
+            personasQueFichan?: number;
+            /**
+             * Format: date-time
+             * @description La última vez que alguien suyo usó la web o la app. Null si nadie ha entrado
+             */
+            ultimaSesion?: string;
+        };
+        Administrador: {
+            nombre?: string;
+            email?: string;
+            correoSinConfirmar?: boolean;
+        };
+        Fichajes: {
+            /** Format: date-time */
+            ultimo?: string;
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            en7Dias?: number;
+            /** Format: int64 */
+            en30Dias?: number;
+            /** Format: int64 */
+            personasEn30Dias?: number;
+        };
+        Plantilla: {
+            /** @enum {string} */
+            rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
+            /** Format: int64 */
+            activos?: number;
+            /** Format: int64 */
+            deBaja?: number;
+        };
+        /** @description El detalle de una empresa de la instalación: cifras de uso y el contacto de sus administradores */
+        PlatformCompanyDetailResponse: {
+            /** Format: int64 */
+            id?: number;
+            nombre?: string;
+            /**
+             * @description Nombre IANA de su zona horaria
+             * @example Europe/Madrid
+             */
+            zonaHoraria?: string;
+            /**
+             * Format: date-time
+             * @description Cuándo se dio de alta. Null en las anteriores a octubre de 2026 de las que no quedaba rastro; en las demás anteriores a esa fecha es una estimación
+             */
+            creadaEn?: string;
+            /** Format: int64 */
+            empleadosActivos?: number;
+            /** Format: int64 */
+            empleadosDeBaja?: number;
+            /** @description La plantilla rol por rol; siempre los cuatro, aunque no haya nadie */
+            plantilla?: components["schemas"]["Plantilla"][];
+            /** @description A quién escribir: sus ADMIN en activo */
+            administradores?: components["schemas"]["Administrador"][];
+            fichajes?: components["schemas"]["Fichajes"];
+            sesiones?: components["schemas"]["Sesiones"];
+            /** Format: int64 */
+            cuentasConGoogle?: number;
+            /** Format: int64 */
+            cuentasConMicrosoft?: number;
+            /**
+             * Format: int64
+             * @description Kioscos sin revocar
+             */
+            kioscos?: number;
+            /**
+             * Format: int64
+             * @description Móviles y navegadores con los avisos push activados
+             */
+            dispositivosPush?: number;
+            /** Format: int64 */
+            departamentos?: number;
+            /**
+             * Format: int64
+             * @description Proyectos en activo
+             */
+            proyectos?: number;
+            /**
+             * Format: int64
+             * @description Lo que ocupan sus adjuntos (CV y fotos), en bytes
+             */
+            bytesDeAdjuntos?: number;
+            /**
+             * Format: int64
+             * @description Solicitudes de borrado de datos que aún no se han resuelto
+             */
+            borradosPendientes?: number;
+            /**
+             * Format: int64
+             * @description Filas suyas en la traza de auditoría de fichajes
+             */
+            movimientosDeAuditoria?: number;
+        };
+        Sesiones: {
+            /** Format: date-time */
+            ultima?: string;
+            /** Format: int64 */
+            webEn30Dias?: number;
+            /** Format: int64 */
+            appEn30Dias?: number;
         };
         Adjunto: {
             tipo?: string;
@@ -9531,6 +9842,157 @@ export interface operations {
                 };
             };
             /** @description Empleado no encontrado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    resumenDeLaInstalacion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlatformSummaryResponse"];
+                };
+            };
+            /** @description Sin 'plataforma:ver' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    integridad: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resultado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlatformIntegrityResponse"];
+                };
+            };
+            /** @description Sin 'plataforma:ver' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Hay otra comprobación en marcha y está tardando */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    empresas: {
+        parameters: {
+            query?: {
+                /** @description Parte del nombre, sin distinguir mayúsculas */
+                busqueda?: string;
+                orden?: "NOMBRE" | "ALTA" | "EMPLEADOS" | "ACTIVIDAD";
+                pagina?: number;
+                tamano?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Una página de empresas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PaginaDTOPlatformCompanyResponse"];
+                };
+            };
+            /** @description Página, tamaño u orden no válidos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'plataforma:ver' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    empresa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La empresa */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PlatformCompanyDetailResponse"];
+                };
+            };
+            /** @description Sin 'plataforma:ver' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
             404: {
                 headers: {
                     [name: string]: unknown;

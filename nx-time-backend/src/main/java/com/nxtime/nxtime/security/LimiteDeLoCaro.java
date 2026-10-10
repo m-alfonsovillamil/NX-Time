@@ -68,7 +68,8 @@ public class LimiteDeLoCaro extends OncePerRequestFilter {
             "/api/v1/informes/",
             "/api/v1/analitica/",
             "/api/v1/perfil/mis-datos",
-            "/api/v1/auditoria/integridad");
+            "/api/v1/auditoria/integridad",
+            "/api/v1/plataforma/");
 
     /** Acotado, como el del login: una entrada por cuenta vista, y se van solas. */
     private final Cache<String, Bucket> cupos = Caffeine.newBuilder()

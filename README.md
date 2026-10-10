@@ -608,6 +608,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 37. [Registrarse con un correo que ya tiene cuenta: se le dice a su dueño, por correo](docs/adr/037-ya-tienes-cuenta-por-correo.md)
 38. [SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado](docs/adr/038-sso-lo-que-faltaba.md)
 39. [Límites a lo caro: que lo más pesado no sirva para tumbar el servicio](docs/adr/039-limites-a-lo-caro.md)
+40. [El panel de plataforma: ver la instalación entera sin ser de ninguna empresa](docs/adr/040-panel-de-plataforma.md)
 
 ---
 

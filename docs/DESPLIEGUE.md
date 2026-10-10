@@ -361,6 +361,29 @@ Después, entrar de verdad: desde el escritorio, desde un iPhone y desde la app.
 Y con una cuenta **que no esté dada de alta** en NX Time: tiene que volver a la
 pantalla de acceso diciendo que no hay cuenta, no entrar.
 
+### El panel de plataforma
+
+Para quien mantiene la instalación: qué empresas hay dadas de alta, cuánta
+gente tienen y si usan el servicio (ADR 040). **Apagado mientras la variable
+esté vacía.**
+
+| Variable | Valor |
+|---|---|
+| `PLATAFORMA_OPERADORES` | los correos de las cuentas que lo pueden ver, separados por comas |
+
+No es un rol y no se concede desde ninguna pantalla: lo tiene quien esté en esa
+lista, y nadie más, sea ADMIN de la empresa que sea. La cuenta tiene que
+existir ya (se entra con ella como siempre) y tener el correo confirmado. Al
+cambiar la variable Render reinicia el servicio; quien ya tuviera la sesión
+abierta ve el apartado nuevo al volver a entrar.
+
+Lo que se ve son cifras, más el nombre y el correo de los ADMIN de cada
+empresa. Cada vez que alguien abre el detalle de una empresa queda una línea en
+el log: `Panel de plataforma: el usuario 12 ha consultado la empresa 7.`
+
+Para comprobar que está puesto, el log del arranque dice cuántos hay:
+`Panel de plataforma: 1 operador(es) configurado(s).`
+
 ## 2. Crear el servicio en Render
 
 1. *New* → *Blueprint*, apuntando a este repositorio: Render lee `render.yaml`.

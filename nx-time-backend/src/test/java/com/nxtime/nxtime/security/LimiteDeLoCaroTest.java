@@ -83,6 +83,15 @@ class LimiteDeLoCaroTest {
     }
 
     @Test
+    @DisplayName("El panel de plataforma es de lo caro: sus cuatro rutas recorren todas las empresas")
+    void elPanelDePlataformaEsCaro() {
+        for (String ruta : List.of("/api/v1/plataforma/resumen", "/api/v1/plataforma/empresas",
+                "/api/v1/plataforma/empresas/7", "/api/v1/plataforma/integridad")) {
+            assertThat(LimiteDeLoCaro.esCara(ruta)).as(ruta).isTrue();
+        }
+    }
+
+    @Test
     @DisplayName("El cupo es de cada cuenta: que una lo gaste no deja sin él a otra")
     void elCupoEsDeCadaCuenta() throws Exception {
         conSesionDe("ana@nxtime.test");

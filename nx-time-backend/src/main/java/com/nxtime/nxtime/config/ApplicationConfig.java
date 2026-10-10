@@ -1,7 +1,7 @@
 package com.nxtime.nxtime.config;
 
 import com.nxtime.nxtime.repository.UserRepository;
-import com.nxtime.nxtime.security.SecurityUser;
+import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,9 +20,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
+    private final OperadoresDePlataforma operadores;
 
-    public ApplicationConfig(UserRepository userRepository) {
+    public ApplicationConfig(UserRepository userRepository, OperadoresDePlataforma operadores) {
         this.userRepository = userRepository;
+        this.operadores = operadores;
     }
 
     @Bean
@@ -33,7 +35,7 @@ public class ApplicationConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
-                .map(SecurityUser::new)
+                .map(operadores::principalDe)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
     }
 

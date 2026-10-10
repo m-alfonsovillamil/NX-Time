@@ -34,6 +34,7 @@ import com.nxtime.nxtime.repository.RefreshTokenRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
+import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import com.nxtime.nxtime.service.AccessCodeService;
 import java.time.Instant;
 import java.util.Optional;
@@ -92,7 +93,8 @@ class AuthServiceImplTest {
         limitadorPorCuenta = new LimitadorDeIntentosPorCuenta();
         service = new AuthServiceImpl(
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
-                authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta);
+                authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta,
+                new OperadoresDePlataforma(""));
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
@@ -178,7 +180,8 @@ class AuthServiceImplTest {
         when(usuarios.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         AuthServiceImpl nuevo = new AuthServiceImpl(usuarios, empresas, refreshTokenRepository, passwordEncoder,
                 jwtService, authenticationManager, org.mockito.Mockito.mock(ApplicationEventPublisher.class),
-                org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta);
+                org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta,
+                new OperadoresDePlataforma(""));
         return nuevo.registerManager(
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null));
     }
