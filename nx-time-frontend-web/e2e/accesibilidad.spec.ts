@@ -72,6 +72,21 @@ for (const tema of ['light', 'dark'] as const) {
       }
     });
 
+    // El panel de plataforma no está en el menú de ningún rol (ADR 040): lo
+    // recorre quien lo ve, la operadora de `application-dev.yml`.
+    test('el panel de plataforma y el detalle de una empresa', async ({ page }) => {
+      await entrar(page, 'lucia.moreno@techcorp.demo');
+      await irASeccion(page, 'Empresas');
+      await paginaLista(page, '/plataforma');
+      await expect(page.getByRole('link', { name: 'TechCorp Solutions' })).toBeVisible();
+      await sinInfracciones(page, '/plataforma');
+
+      await page.getByRole('link', { name: 'TechCorp Solutions' }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'TechCorp Solutions' })).toBeVisible();
+      await expect(page.locator('.nx-esqueleto')).toHaveCount(0);
+      await sinInfracciones(page, '/plataforma?empresa (detalle)');
+    });
+
     for (const { rol, email } of CUENTAS) {
       test(`todas las páginas del menú de ${rol}`, async ({ page }) => {
         await entrar(page, email);

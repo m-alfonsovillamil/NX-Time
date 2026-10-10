@@ -193,6 +193,15 @@ h1 {
   --nx-on-acento-contenedor: var(--nx-on-tertiary-container);
 }
 
+/* La plataforma no es ni lo de uno ni lo de su empresa: va en el tercer color
+ * de la paleta, el gris azulado, que no se confunde con ninguno de los dos. */
+[data-zona='plataforma'] {
+  --nx-acento: var(--nx-secondary);
+  --nx-on-acento: var(--nx-on-secondary);
+  --nx-acento-contenedor: var(--nx-secondary-container);
+  --nx-on-acento-contenedor: var(--nx-on-secondary-container);
+}
+
 /* ---- Las pantallas de acceso (MarcoDeAcceso.tsx) ----
  *
  * En el móvil, el formulario centrado y nada más. En escritorio, al lado, un

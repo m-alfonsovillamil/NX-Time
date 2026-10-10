@@ -39,6 +39,12 @@ spring:
     cache: false
 
 application:
+  plataforma:
+    # Solo en local y en los e2e: quién ve el panel de plataforma (ADR 040).
+    # Lucía es una EMPLEADA de demo que ninguna otra spec usa, así que el menú
+    # de las cuentas de siempre no cambia. En producción esto sale de
+    # PLATAFORMA_OPERADORES y viene vacío.
+    operadores: "lucia.moreno@techcorp.demo"
   security:
     rate-limit:
       # En local no hay ningún proxy delante, así que X-Forwarded-For no es

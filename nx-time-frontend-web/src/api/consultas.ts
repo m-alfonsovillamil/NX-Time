@@ -176,6 +176,8 @@ export function useMutacion<V, D>(
 export interface Pagina<T> {
   contenido?: T[];
   hayMas?: boolean;
+  /** Cuántos hay en todas las páginas, para quien quiera decirlo («37 empresas»). */
+  totalElementos?: number;
 }
 
 /**
