@@ -28,7 +28,7 @@ import { EsqueletoDePagina } from '../componentes/Estados';
 import { ServidorDespertando } from '../componentes/ServidorDespertando';
 import { T } from '../i18n/es';
 import { Marco } from '../navegacion/Marco';
-import { disponibles } from '../navegacion/secciones';
+import { disponibles, permitida, seccionDeRuta } from '../navegacion/secciones';
 import { Login } from '../paginas/acceso/Login';
 import { PuenteDelServiceWorker } from '../push/PuenteDelServiceWorker';
 
@@ -59,6 +59,29 @@ export interface EstadoDeVuelta {
 function AlLogin() {
   const { pathname, search } = useLocation();
   return <Navigate to="/" replace state={{ desde: `${pathname}${search}` } satisfies EstadoDeVuelta} />;
+}
+
+/**
+ * Con sesión, la raíz lleva a donde se quería ir (o a la jornada).
+ *
+ * Tiene que decidirlo la propia raíz, y no solo el login al terminar: abrir la
+ * sesión vuelve a pintar esta ruta en el acto, antes de que el login llegue a
+ * navegar, y si aquí se mandase siempre a la jornada esa navegación ganaba a
+ * la suya. Así pasaba hasta octubre de 2026: el enlace de un correo o de un
+ * aviso pedía entrar y después dejaba en «Mi jornada», no en su página. El
+ * test que lo cubría entraba desde `/fichar`, que es también el destino por
+ * defecto, y no lo veía.
+ *
+ * Si la cuenta que entra no puede ver esa página (otra persona en el mismo
+ * navegador, tras cerrar sesión la anterior), a la jornada: mandarla a un «no
+ * es para tu cuenta» de una página que no ha pedido no le explica nada.
+ */
+function AlEntrar() {
+  const { sesion } = useSesion();
+  const desde = (useLocation().state as EstadoDeVuelta | null)?.desde;
+  const seccion = desde !== undefined ? seccionDeRuta(desde.split('?')[0] ?? '') : undefined;
+  const destino = desde !== undefined && seccion !== undefined && permitida(seccion, sesion?.authorities ?? []) ? desde : '/fichar';
+  return <Navigate to={destino} replace />;
 }
 
 function PaginaDeError({ titulo, detalle, volver }: { titulo: string; detalle?: string; volver: string }) {
@@ -146,7 +169,7 @@ export function App() {
       <PuenteDelServiceWorker />
       <Suspense fallback={<EsqueletoDePagina />}>
         <Routes>
-          <Route path="/" element={dentro ? <Navigate to="/fichar" replace /> : <Login />} />
+          <Route path="/" element={dentro ? <AlEntrar /> : <Login />} />
           <Route path="/recuperar-acceso" element={dentro ? <Navigate to="/fichar" replace /> : <RecuperarAcceso />} />
           <Route path="/registro" element={dentro ? <Navigate to="/fichar" replace /> : <RegistroEmpresa />} />
           <Route path="/kiosco" element={<Kiosco />} />

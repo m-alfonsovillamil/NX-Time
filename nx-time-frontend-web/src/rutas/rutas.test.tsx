@@ -4,6 +4,7 @@
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { reiniciarEstadoDeRed } from '../api/cliente';
@@ -14,6 +15,12 @@ import { json, pintar, sesionDe, simularApi, sinContenido, type Manejador, type 
 import { App, Requiere } from './rutas';
 
 const N = T.navegacion;
+
+/** La URL en la que está el router, para poder mirarla desde un test. */
+function DondeEstoy() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="donde">{`${pathname}${search}`}</output>;
+}
 
 /** Lo que el marco y la jornada piden siempre al abrirse. */
 function apiBasica(extra: Partial<Record<Ruta, Manejador>> = {}) {
@@ -46,6 +53,55 @@ describe('sin sesión', () => {
     await userEvent.click(screen.getByRole('button', { name: T.login.entrar }));
 
     expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
+  });
+
+  /*
+   * El de arriba entra desde `/fichar`, que es también adonde se va si no se
+   * vuelve a ninguna parte: pasaba aunque la vuelta estuviera rota, y lo
+   * estuvo hasta octubre de 2026. Este entra desde otra página, con su
+   * consulta, que es como llega el enlace de un correo.
+   */
+  it('al entrar se vuelve a la página que se pidió, con su consulta, y no a la jornada', async () => {
+    apiBasica({
+      'POST /auth/login': () => ({ token: 't', nombre: 'Ana', authorities: ['fichaje:leer'] }),
+      'GET /api/v1/avisos': () => ({ contenido: [], hayMas: false }),
+    });
+    pintar(
+      <>
+        <App />
+        <DondeEstoy />
+      </>,
+      { ruta: '/avisos?desde=correo' },
+    );
+
+    await userEvent.type(await screen.findByLabelText(T.login.email), 'ana@nxtime.test');
+    await userEvent.type(screen.getByLabelText(T.login.contrasena), 'x');
+    await userEvent.click(screen.getByRole('button', { name: T.login.entrar }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: N.secciones.avisos })).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('donde').textContent).toBe('/avisos?desde=correo'));
+    expect(screen.queryByRole('heading', { name: fichar.titulo })).toBeNull();
+  });
+
+  it('si la cuenta que entra no puede ver la página que se pidió, a la jornada', async () => {
+    apiBasica({
+      'POST /auth/login': () => ({ token: 't', nombre: 'Ana', authorities: ['fichaje:leer'] }),
+    });
+    pintar(
+      <>
+        <App />
+        <DondeEstoy />
+      </>,
+      { ruta: '/informes' },
+    );
+
+    await userEvent.type(await screen.findByLabelText(T.login.email), 'ana@nxtime.test');
+    await userEvent.type(screen.getByLabelText(T.login.contrasena), 'x');
+    await userEvent.click(screen.getByRole('button', { name: T.login.entrar }));
+
+    expect(await screen.findByRole('heading', { name: fichar.titulo })).toBeTruthy();
+    expect(screen.getByTestId('donde').textContent).toBe('/fichar');
+    expect(screen.queryByRole('heading', { name: T.sinPermiso.titulo })).toBeNull();
   });
 
   it('una ruta que no existe da 404 sin pedir entrar', async () => {
