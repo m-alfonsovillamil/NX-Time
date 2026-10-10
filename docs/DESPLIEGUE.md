@@ -774,11 +774,21 @@ Antes del keep-alive, lo más probable es que casi nunca hubieran corrido.
   reiniciaría un servicio que funciona.
 - `tareas-nocturnas.yml` lo consulta cada día a las 3:15 UTC y se pone en rojo
   con un 503.
+- **Cada tarea corre una vez por turno aunque haya más de una instancia**
+  (ADR 042), y eso incluye el rato de un despliegue en que conviven la vieja y
+  la nueva. La columna `instancia` dice cuál la hizo. Si esa instancia muere a
+  mitad, la otra **no** la repite: el turno queda sin hacer y se ve aquí.
+- **El cierre de jornadas en `ERROR` no quiere decir que no haya cerrado
+  ninguna.** Cierra las que puede y falla diciendo cuáles no (`detalle` trae
+  los ids): esas son las que hay que mirar.
+- **La comprobación de la traza la recorre entera los domingos**, y también la
+  noche siguiente a un error. El resto de noches solo mira lo nuevo. En
+  `detalle` pone «recorrida entera» cuando toca.
 
 El historial, desde la base:
 
 ```sql
-SELECT tarea, inicio, fin, resultado, detalle
+SELECT tarea, inicio, fin, resultado, instancia, detalle
 FROM ejecuciones_tarea
 ORDER BY inicio DESC
 LIMIT 20;

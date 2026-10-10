@@ -15,11 +15,16 @@ import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Ver {@link TaskMonitorService}.
@@ -44,30 +49,58 @@ public class TaskMonitorServiceImpl implements TaskMonitorService {
     /** Lo que cabe en la columna {@code detalle}. */
     static final int MAXIMO_DETALLE = 2000;
 
+    /**
+     * Cuánto pueden diferir los relojes de dos instancias, o adelantarse el
+     * disparo de una tarea a su hora, sin que el turno se calcule mal.
+     *
+     * Sin esto, una tarea que se dispare unas milésimas antes de las 3:00
+     * según su reloj buscaría en el turno de AYER, encontraría la ejecución de
+     * ayer --que tras un despliegue es de otra instancia-- y no correría. Un
+     * minuto sobra para relojes sincronizados y queda lejísimos del turno
+     * anterior, que es de hace un día.
+     */
+    static final Duration HOLGURA_DEL_TURNO = Duration.ofMinutes(1);
+
+    /** El primer entero de la clave del cerrojo de los turnos: ver {@code pedirTurno}. */
+    static final int ESPACIO_DE_LOS_TURNOS = 8_2019;
+
+    private static final Logger log = LoggerFactory.getLogger(TaskMonitorServiceImpl.class);
+
     private static final ZoneId ZONA = ZoneId.of(ScheduledTask.ZONA);
 
     private final ScheduledTaskRunRepository repository;
     private final Clock clock;
+    private final TransactionOperations transaccion;
+
+    /** Quién es esta instancia: al azar, y distinto en cada arranque. */
+    private final String instancia;
 
     @Autowired
-    public TaskMonitorServiceImpl(ScheduledTaskRunRepository repository) {
-        this(repository, Clock.systemUTC());
+    public TaskMonitorServiceImpl(ScheduledTaskRunRepository repository, TransactionTemplate transaccion) {
+        this(repository, Clock.systemUTC(), transaccion, UUID.randomUUID().toString());
     }
 
     TaskMonitorServiceImpl(ScheduledTaskRunRepository repository, Clock clock) {
+        this(repository, clock, TransactionOperations.withoutTransaction(), UUID.randomUUID().toString());
+    }
+
+    TaskMonitorServiceImpl(
+            ScheduledTaskRunRepository repository, Clock clock, TransactionOperations transaccion, String instancia) {
         this.repository = repository;
         this.clock = clock;
+        this.transaccion = transaccion;
+        this.instancia = instancia;
     }
 
     @Override
     public void ejecutar(ScheduledTask tarea, Supplier<String> trabajo) {
         // Si esto falla (la base caída), la tarea no llega a correr, y está
         // bien: las dos trabajan contra la misma base.
-        ScheduledTaskRun ejecucion = repository.save(ScheduledTaskRun.builder()
-                .tarea(tarea)
-                .inicio(clock.instant())
-                .resultado(ScheduledTaskResult.EN_CURSO)
-                .build());
+        ScheduledTaskRun ejecucion = transaccion.execute(estado -> empezarSiNoLaHaHechoOtra(tarea));
+        if (ejecucion == null) {
+            log.info("La tarea {} ya la ha empezado otra instancia en este turno: aquí no se repite.", tarea);
+            return;
+        }
 
         String detalle;
         try {
@@ -84,6 +117,48 @@ public class TaskMonitorServiceImpl implements TaskMonitorService {
             throw fallo;
         }
         terminar(ejecucion, ScheduledTaskResult.OK, detalle);
+    }
+
+    /**
+     * Apunta que la tarea empieza, salvo que otra instancia la haya empezado
+     * ya en este turno; entonces devuelve null (ADR 042).
+     *
+     * Mirar y apuntar van en una transacción corta y con el turno pedido: sin
+     * él, dos instancias que arrancan la tarea en la misma milésima mirarían
+     * las dos antes de que ninguna apuntase, y correrían las dos. La tarea en
+     * sí va fuera, después de confirmar: el cerrojo dura lo que estas dos
+     * consultas, no lo que tarde la tarea.
+     *
+     * <b>La misma instancia sí puede repetir</b>: no hay camino en producción
+     * que lo haga (cada tarea se dispara una vez por turno), y es lo que deja
+     * a los tests lanzar una tarea varias veces seguidas.
+     *
+     * <b>Si la otra instancia se queda a medias, este turno se pierde.</b> No
+     * se repite aquí porque no se sabe hasta dónde llegó, y varias tareas
+     * mandan correos. Se ve: {@code /estado/tareas} la da por no hecha.
+     */
+    private ScheduledTaskRun empezarSiNoLaHaHechoOtra(ScheduledTask tarea) {
+        repository.pedirTurno(ESPACIO_DE_LOS_TURNOS, tarea.name().hashCode());
+
+        Instant ahora = clock.instant();
+        Instant turno = ultimaHoraProgramada(tarea, ahora.plus(HOLGURA_DEL_TURNO));
+        if (repository.existsByTareaAndInicioGreaterThanEqualAndInstanciaNot(
+                tarea, turno.minus(HOLGURA_DEL_TURNO), instancia)) {
+            return null;
+        }
+        return repository.save(ScheduledTaskRun.builder()
+                .tarea(tarea)
+                .inicio(ahora)
+                .resultado(ScheduledTaskResult.EN_CURSO)
+                .instancia(instancia)
+                .build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ScheduledTaskResult> ultimoResultado(ScheduledTask tarea) {
+        return repository.findFirstByTareaAndResultadoNotOrderByInicioDesc(tarea, ScheduledTaskResult.EN_CURSO)
+                .map(ScheduledTaskRun::getResultado);
     }
 
     private void terminar(ScheduledTaskRun ejecucion, ScheduledTaskResult resultado, String detalle) {

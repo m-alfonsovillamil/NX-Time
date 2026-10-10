@@ -12,6 +12,9 @@ import static com.nxtime.nxtime.domain.ScheduledTaskResult.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,8 +35,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionOperations;
 
 /**
  * Unitarios del registro de tareas programadas (paso 5 del piloto).
@@ -133,6 +138,92 @@ class TaskMonitorServiceImplTest {
         ArgumentCaptor<ScheduledTaskRun> captor = ArgumentCaptor.forClass(ScheduledTaskRun.class);
         verify(repository, times(2)).save(captor.capture());
         assertThat(captor.getValue().getDetalle()).hasSize(TaskMonitorServiceImpl.MAXIMO_DETALLE);
+    }
+
+    // ------------------------------------------------------------------
+    // Una vez por turno, haya las instancias que haya (ADR 042)
+    // ------------------------------------------------------------------
+
+    private TaskMonitorServiceImpl instancia(String nombre, String fechaHoraMadrid) {
+        return new TaskMonitorServiceImpl(repository, Clock.fixed(madrid(fechaHoraMadrid), ZoneOffset.UTC),
+                TransactionOperations.withoutTransaction(), nombre);
+    }
+
+    @Test
+    @DisplayName("Si otra instancia ya ha empezado la tarea en este turno, aquí no se ejecuta ni se registra")
+    void ejecutar_otraInstanciaYaLaHaEmpezado_noSeRepite() {
+        when(repository.existsByTareaAndInicioGreaterThanEqualAndInstanciaNot(any(), any(), any())).thenReturn(true);
+        List<String> hecho = new ArrayList<>();
+
+        instancia("b", "2026-09-12T03:00:00").ejecutar(CIERRE_JORNADAS, () -> {
+            hecho.add("trabajo");
+            return "no debería";
+        });
+
+        assertThat(hecho).isEmpty();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Cada ejecución lleva apuntada la instancia que la hizo, y se pide el turno antes de mirar")
+    void ejecutar_apuntaLaInstancia_yPideElTurnoAntesDeMirar() {
+        apuntarCadaGuardado();
+
+        instancia("a", "2026-09-12T03:00:00").ejecutar(CIERRE_JORNADAS, () -> "hecho");
+
+        InOrder enOrden = inOrder(repository);
+        enOrden.verify(repository).pedirTurno(
+                TaskMonitorServiceImpl.ESPACIO_DE_LOS_TURNOS, CIERRE_JORNADAS.name().hashCode());
+        enOrden.verify(repository).existsByTareaAndInicioGreaterThanEqualAndInstanciaNot(
+                eq(CIERRE_JORNADAS), any(), eq("a"));
+        ArgumentCaptor<ScheduledTaskRun> captor = ArgumentCaptor.forClass(ScheduledTaskRun.class);
+        enOrden.verify(repository, times(2)).save(captor.capture());
+        assertThat(captor.getValue().getInstancia()).isEqualTo("a");
+    }
+
+    @Test
+    @DisplayName("El turno es el de la hora programada, con un minuto de holgura por detrás")
+    void ejecutar_elTurnoEmpiezaUnMinutoAntesDeLaHoraProgramada() {
+        apuntarCadaGuardado();
+
+        instancia("a", "2026-09-12T03:00:02").ejecutar(CIERRE_JORNADAS, () -> "hecho");
+
+        verify(repository).existsByTareaAndInicioGreaterThanEqualAndInstanciaNot(
+                CIERRE_JORNADAS, madrid("2026-09-12T02:59:00"), "a");
+    }
+
+    /**
+     * Una tarea que se dispara un pelo antes de su hora (el reloj de la
+     * máquina se ha ajustado entre que se programó y que salta) no puede
+     * buscar en el turno de ayer: la ejecución de ayer, tras un despliegue, es
+     * de otra instancia, y la de hoy no correría.
+     */
+    @Test
+    @DisplayName("Una tarea que se dispara unas milésimas antes de su hora cuenta para el turno de hoy, no el de ayer")
+    void ejecutar_disparadaUnPeloAntes_esElTurnoDeHoy() {
+        apuntarCadaGuardado();
+        Clock casiLasTres = Clock.fixed(madrid("2026-09-12T03:00:00").minusMillis(10), ZoneOffset.UTC);
+
+        new TaskMonitorServiceImpl(repository, casiLasTres, TransactionOperations.withoutTransaction(), "a")
+                .ejecutar(CIERRE_JORNADAS, () -> "hecho");
+
+        verify(repository).existsByTareaAndInicioGreaterThanEqualAndInstanciaNot(
+                CIERRE_JORNADAS, madrid("2026-09-12T02:59:00"), "a");
+    }
+
+    @Test
+    @DisplayName("El último resultado es el de la última ejecución que llegó a terminar")
+    void ultimoResultado_esElDeLaUltimaTerminada() {
+        when(repository.findFirstByTareaAndResultadoNotOrderByInicioDesc(VERIFICACION_INTEGRIDAD, EN_CURSO))
+                .thenReturn(Optional.of(ScheduledTaskRun.builder().tarea(VERIFICACION_INTEGRIDAD)
+                        .inicio(madrid("2026-09-12T03:50:00")).resultado(ERROR).build()));
+        when(repository.findFirstByTareaAndResultadoNotOrderByInicioDesc(CIERRE_JORNADAS, EN_CURSO))
+                .thenReturn(Optional.empty());
+
+        TaskMonitorServiceImpl servicio = servicioA("2026-09-13T03:50:00");
+
+        assertThat(servicio.ultimoResultado(VERIFICACION_INTEGRIDAD)).contains(ERROR);
+        assertThat(servicio.ultimoResultado(CIERRE_JORNADAS)).isEmpty();
     }
 
     @Test

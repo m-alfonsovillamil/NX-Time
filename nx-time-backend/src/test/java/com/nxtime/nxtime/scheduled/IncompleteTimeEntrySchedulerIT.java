@@ -1,18 +1,23 @@
 package com.nxtime.nxtime.scheduled;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.ScheduledTask;
+import com.nxtime.nxtime.domain.ScheduledTaskResult;
+import com.nxtime.nxtime.domain.ScheduledTaskRun;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAction;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.ScheduledTaskRunRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -55,6 +60,8 @@ import org.springframework.test.context.DynamicPropertySource;
 @SpringBootTest
 class IncompleteTimeEntrySchedulerIT {
 
+    private static String testUrl;
+
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) throws Exception {
         String testDb = "scheduler_it_" + System.nanoTime();
@@ -64,7 +71,7 @@ class IncompleteTimeEntrySchedulerIT {
             statement.execute("CREATE DATABASE " + testDb);
         }
 
-        String testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
+        testUrl = "jdbc:postgresql://localhost:5433/" + testDb;
         registry.add("spring.datasource.url", () -> testUrl);
         registry.add("spring.datasource.username", () -> "nxtime_app");
         registry.add("spring.datasource.password", () -> "nxtime_app");
@@ -85,6 +92,8 @@ class IncompleteTimeEntrySchedulerIT {
     private UserRepository userRepository;
     @Autowired
     private CompanyRepository companyRepository;
+    @Autowired
+    private ScheduledTaskRunRepository ejecuciones;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -226,6 +235,65 @@ class IncompleteTimeEntrySchedulerIT {
         JsonNode despues = json.readTree(fila.getValorNuevo());
         assertThat(despues.get("horaSalida").isNull()).isFalse();
         assertThat(despues.get("jornadaIncompleta").asBoolean()).isTrue();
+    }
+
+    /**
+     * Cada jornada en su transacción (ADR 042). Hasta octubre de 2026 iban
+     * todas en una, y una sola que no se dejase cerrar deshacía el cierre de
+     * las demás, esa noche y todas las siguientes.
+     *
+     * La que falla lo hace por un trigger puesto para el test: es la forma de
+     * tener, contra la base de verdad, una fila que no admite el cambio. Con
+     * mocks (ver el unitario) no se ve lo que importa aquí, que es que lo de
+     * las demás quede CONFIRMADO y lo de la que falla, deshecho entero.
+     */
+    @Test
+    @DisplayName("Una jornada que no se deja cerrar no impide cerrar las demás, y la tarea queda en ERROR diciendo cuál")
+    void cierreAutomatico_unaFalla_lasDemasQuedanCerradas() throws Exception {
+        User laQueFalla = crearEmpleado("no.se.deja@nxtime.test");
+        User laOtra = crearEmpleado("si.se.deja@nxtime.test");
+        TimeEntry rota = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(laQueFalla).empresa(laQueFalla.getEmpresa())
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build());
+        TimeEntry sana = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(laOtra).empresa(laOtra.getEmpresa())
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build());
+
+        comoDuenio("CREATE FUNCTION no_se_deja() RETURNS trigger AS $$ BEGIN "
+                + "RAISE EXCEPTION 'fila que no se deja cerrar'; END $$ LANGUAGE plpgsql");
+        comoDuenio("CREATE TRIGGER no_se_deja BEFORE UPDATE ON registros FOR EACH ROW "
+                + "WHEN (OLD.id = " + rota.getId() + ") EXECUTE FUNCTION no_se_deja()");
+        try {
+            assertThatThrownBy(() -> scheduler.cerrarJornadasOlvidadas())
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("ids " + rota.getId());
+        } finally {
+            // Los demás tests comparten base, y lanzan la misma tarea.
+            comoDuenio("DROP TRIGGER no_se_deja ON registros");
+            comoDuenio("DROP FUNCTION no_se_deja()");
+        }
+
+        assertThat(timeEntryRepository.findById(sana.getId()).orElseThrow().isJornadaIncompleta()).isTrue();
+        assertThat(timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(sana.getId())).hasSize(1);
+        // De la que falló no queda nada a medias: ni la salida ni la traza.
+        assertThat(timeEntryRepository.findById(rota.getId()).orElseThrow().getHoraSalida()).isNull();
+        assertThat(timeEntryAuditRepository.findByRegistro_IdOrderByFechaHoraAsc(rota.getId())).isEmpty();
+
+        ScheduledTaskRun ultima = ejecuciones.findFirstByTareaOrderByInicioDesc(ScheduledTask.CIERRE_JORNADAS)
+                .orElseThrow();
+        assertThat(ultima.getResultado()).isEqualTo(ScheduledTaskResult.ERROR);
+        assertThat(ultima.getDetalle()).contains("no se pudieron cerrar").contains("ids " + rota.getId());
+
+        // Y quitado el estorbo, la noche siguiente la cierra.
+        scheduler.cerrarJornadasOlvidadas();
+        assertThat(timeEntryRepository.findById(rota.getId()).orElseThrow().isJornadaIncompleta()).isTrue();
+    }
+
+    private void comoDuenio(String sql) throws Exception {
+        try (Connection duenio = DriverManager.getConnection(testUrl, "nxtime", "nxtime");
+             Statement statement = duenio.createStatement()) {
+            statement.execute(sql);
+        }
     }
 
     @Test

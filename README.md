@@ -610,6 +610,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 39. [Límites a lo caro: que lo más pesado no sirva para tumbar el servicio](docs/adr/039-limites-a-lo-caro.md)
 40. [El panel de plataforma: ver la instalación entera sin ser de ninguna empresa](docs/adr/040-panel-de-plataforma.md)
 41. [El acceso bajo carga: que entrar no tumbe lo demás](docs/adr/041-el-acceso-bajo-carga.md)
+42. [Las tareas de madrugada: una vez por turno, jornada a jornada y la traza entera cada semana](docs/adr/042-las-tareas-de-madrugada.md)
 
 ---
 
@@ -673,10 +674,11 @@ propios ID token.
   arreglado, como la bandeja de correcciones, que pedía el reparto propuesto de
   cada solicitud por separado.
 - **Está pensado para una sola instancia.** El límite de intentos, los cupos,
-  las cachés y el cerrojo de la comprobación de integridad viven en memoria, y
-  las tareas programadas no tienen cerrojo entre instancias: antes de poner una
-  segunda hay que mover todo eso
-  ([ADR 039](docs/adr/039-limites-a-lo-caro.md)).
+  las cachés y el cerrojo de la comprobación de integridad viven en memoria:
+  antes de poner una segunda hay que mover todo eso
+  ([ADR 039](docs/adr/039-limites-a-lo-caro.md)). Las tareas programadas ya no
+  están en esa lista: corren una vez por turno haya las instancias que haya
+  ([ADR 042](docs/adr/042-las-tareas-de-madrugada.md)).
 - **Con poca CPU, lo que no aguanta es que toda la plantilla entre a la vez.**
   La [prueba de carga](docs/PRUEBA-DE-CARGA.md), con un año de fichajes de tres
   mil personas, dice qué se rompe primero: entrar con contraseña. Con la décima

@@ -81,7 +81,11 @@ public enum ScheduledTask {
      * cada día de invierno.
      *
      * Es incremental --solo mira lo escrito desde el último punto de control--
-     * así que los 25 minutos reales de margen sobran holgadamente.
+     * así que los 25 minutos reales de margen sobran holgadamente. El domingo
+     * recorre la traza entera (ADR 042), y también caben: millón y medio de
+     * movimientos es menos de medio minuto con la base al lado. Si algún día
+     * no cupiese, el vigilante la daría por no hecha los domingos: es la señal
+     * para moverla de hora.
      */
     public static final String CRON_VERIFICACION_INTEGRIDAD = "0 50 3 * * *";
 
