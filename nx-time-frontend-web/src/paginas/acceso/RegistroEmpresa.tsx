@@ -15,7 +15,7 @@
  *   pide el nombre de la empresa y el tuyo.
  *
  * En los dos casos la sesión se abre con `origen: 'WEB'`: refresh en la cookie
- * `HttpOnly` y las 12 horas del navegador (ADR 019 y 030).
+ * `HttpOnly` y los siete días del navegador (ADR 030 y 041).
  */
 
 import { useEffect, useState, type FormEvent } from 'react';

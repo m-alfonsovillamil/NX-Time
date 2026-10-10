@@ -4,7 +4,7 @@
  * Dos detalles que no son de adorno:
  *
  * - **`origen: 'WEB'`** en el cuerpo. El servidor da 30 días de refresh a la
- *   app y 12 horas al navegador (ADR 019). Si no se declarara, esta sesión
+ *   app y siete al navegador (ADR 041). Si no se declarara, esta sesión
  *   heredaría el valor por defecto, que es `ANDROID`, y un navegador
  *   compartido se quedaría con un token de un mes. Es también lo que hace que
  *   el servidor ponga el refresh en una cookie `HttpOnly` y no en el cuerpo

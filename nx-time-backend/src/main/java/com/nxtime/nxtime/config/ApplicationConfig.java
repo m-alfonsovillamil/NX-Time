@@ -12,6 +12,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Configuración de los componentes base de la aplicación (Beans).
@@ -42,9 +44,29 @@ public class ApplicationConfig {
     // Spring Security 7 le ha dado la vuelta: el constructor recibe el
     // UserDetailsService, que es lo obligatorio, y el PasswordEncoder se pone
     // aparte. En la 6.3 era justo al revés.
+    //
+    // Al entrar, la persona se lee en SU transacción, corta, y no con el
+    // userDetailsService() de arriba a secas (ADR 041). No es un detalle:
+    // una consulta declarada en un repositorio no abre transacción, y fuera
+    // de una, Spring deja la conexión cogida hasta que acaba el método que la
+    // rodea. El login comprueba después la contraseña (BCrypt, lento a
+    // propósito) y abre otra transacción para guardar la sesión: sin esto,
+    // cada entrada retenía una conexión mientras pedía otra, y con cinco
+    // entradas a la vez el pool de cinco se quedaba bloqueado. Salió
+    // ejecutando la prueba de carga, con trescientas personas a la vez; los
+    // tests pasaban.
+    //
+    // El filtro del token sigue usando el de arriba: ahí no hay ningún método
+    // alrededor, la conexión se suelta al acabar la consulta, y una
+    // transacción sería un viaje más a la base en cada petición.
     @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService());
+    public AuthenticationProvider authenticationProvider(PlatformTransactionManager transacciones) {
+        TransactionTemplate lectura = new TransactionTemplate(transacciones);
+        lectura.setReadOnly(true);
+        UserDetailsService alEntrar =
+                email -> lectura.execute(estado -> userDetailsService().loadUserByUsername(email));
+
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(alEntrar);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }

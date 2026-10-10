@@ -22,6 +22,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.security.OperadoresDePlataforma;
+import com.nxtime.nxtime.security.TurnoDeContrasena;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import java.time.Instant;
@@ -38,13 +39,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionException;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Implementación de la lógica de negocio para Usuarios y Seguridad.
@@ -92,8 +99,22 @@ public class AuthServiceImpl implements AuthService {
     private final LimitadorDeIntentosPorCuenta limitadorPorCuenta;
     private final OperadoresDePlataforma operadores;
 
+    /** Para lo que escribe una entrada, que es lo único de ella que va en transacción: ver {@link #login}. */
+    private final TransactionTemplate escritura;
+
+    private final TurnoDeContrasena turnoDeContrasena;
+
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
+
+    /**
+     * Cuánto dura la sesión de un navegador sin usarse (ADR 041). Sale de la
+     * configuración y no de {@link RefreshToken.Origen}, que deja solo su
+     * valor por defecto: una instalación con ordenadores compartidos puede
+     * querer bajarla sin tocar código.
+     */
+    @Value("${application.security.web-session.duracion}")
+    private Duration vidaDeLaSesionWeb = RefreshToken.Origen.WEB.duracion();
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -105,7 +126,9 @@ public class AuthServiceImpl implements AuthService {
             ApplicationEventPublisher eventPublisher,
             AccessCodeService accessCodeService,
             LimitadorDeIntentosPorCuenta limitadorPorCuenta,
-            OperadoresDePlataforma operadores
+            OperadoresDePlataforma operadores,
+            PlatformTransactionManager transacciones,
+            TurnoDeContrasena turnoDeContrasena
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -117,6 +140,8 @@ public class AuthServiceImpl implements AuthService {
         this.accessCodeService = accessCodeService;
         this.limitadorPorCuenta = limitadorPorCuenta;
         this.operadores = operadores;
+        this.escritura = new TransactionTemplate(transacciones);
+        this.turnoDeContrasena = turnoDeContrasena;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -233,15 +258,25 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(usuario, origenDe(request.origen()));
     }
 
-    // @Transactional de escritura: desde la Fase 4, login() también
-    // persiste un RefreshToken (ver buildAuthResponse). Sin esto, la
-    // transacción de solo lectura heredada de la clase rechaza el
-    // INSERT con "cannot execute INSERT in a read-only transaction".
-    // noRollbackFor: a quien entra con la contraseña buena pero sin haber
-    // confirmado el correo se le manda otro código Y se le responde 403; el
-    // código tiene que guardarse aunque se lance.
+    // SIN transacción alrededor (ADR 041), y es lo que importa de este método:
+    // comprobar la contraseña es BCrypt, unos 80 ms de CPU a propósito, y
+    // hasta octubre de 2026 se hacía con una conexión a la base cogida. Con
+    // cinco conexiones y poca CPU, unas cuantas entradas a la vez las
+    // retenían todas mientras esperaban su turno de procesador, y nadie más
+    // podía ni fichar: en la prueba de carga el pool llegó a tener cinco
+    // ocupadas y noventa peticiones esperando (docs/PRUEBA-DE-CARGA.md).
+    //
+    // Y las contraseñas se comprueban por turnos (TurnoDeContrasena): la
+    // transacción hacía también, sin querer, de tope de cuántas a la vez.
+    //
+    // Ahora la persona se lee en una transacción corta (la que le pone
+    // ApplicationConfig#authenticationProvider, y hace falta que sea una: ver
+    // allí), la contraseña se comprueba sin ninguna, y solo lo que escribe --la
+    // sesión, o el código de confirmación-- abre la suya. Esa tiene que
+    // confirmarse también cuando se responde 403 por no haber confirmado el
+    // correo: el código que acaba de salir tiene que quedar guardado.
     @Override
-    @Transactional(noRollbackFor = BusinessException.class)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthenticationResponse login(LoginRequest request) {
         // Además del límite por IP (LoginRateLimitFilter), un límite por
         // CUENTA: la IP sale de una cabecera y depende de los proxies que
@@ -250,8 +285,19 @@ public class AuthServiceImpl implements AuthService {
         limitadorPorCuenta.comprobar(request.email());
 
         try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.contrasena()));
+            // Por turnos, tantas a la vez como procesadores: ver TurnoDeContrasena.
+            turnoDeContrasena.conTurno(() -> authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.contrasena())));
+        } catch (InternalAuthenticationServiceException e) {
+            // No es la contraseña: es que no se ha podido leer a la persona.
+            // Spring lo envuelve en una excepción de autenticación, y dejarla
+            // pasar la convertía en «credenciales incorrectas» y en un intento
+            // fallido de esa cuenta. Si es la base, que salga como lo que es
+            // (503) y que no cuente contra nadie.
+            if (e.getCause() instanceof DataAccessException || e.getCause() instanceof TransactionException) {
+                throw (RuntimeException) e.getCause();
+            }
+            throw e;
         } catch (org.springframework.security.core.AuthenticationException e) {
             // Cada fallo alarga la espera hasta el siguiente intento (ADR 034).
             limitadorPorCuenta.fallo(request.email());
@@ -259,6 +305,22 @@ public class AuthServiceImpl implements AuthService {
         }
         limitadorPorCuenta.acierto(request.email());
 
+        AuthenticationResponse sesion = escritura.execute(estado -> abrirSesionTrasLaContrasena(request));
+        if (sesion == null) {
+            // Fuera de la transacción, y no dentro: lanzarlo dentro la
+            // desharía, y el código que acaba de salir tiene que quedar guardado.
+            throw new BusinessException(CORREO_SIN_CONFIRMAR, HttpStatus.FORBIDDEN);
+        }
+        return sesion;
+    }
+
+    /**
+     * Lo que escribe una entrada, ya con la contraseña comprobada.
+     *
+     * @return la sesión, o null si falta confirmar el correo (y entonces ha
+     *         salido otro código)
+     */
+    private AuthenticationResponse abrirSesionTrasLaContrasena(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + request.email()));
 
@@ -266,7 +328,7 @@ public class AuthServiceImpl implements AuthService {
         // quien la sabe, y no dice a nadie más qué cuentas están a medias.
         if (user.correoPendienteDeConfirmar()) {
             accessCodeService.emitirCodigoDeConfirmacion(user);
-            throw new BusinessException(CORREO_SIN_CONFIRMAR, HttpStatus.FORBIDDEN);
+            return null;
         }
 
         log.info("Login correcto: {}", user.getId());
@@ -533,16 +595,17 @@ public class AuthServiceImpl implements AuthService {
      * Emite un refresh token. El valor EN CLARO solo existe en lo que
      * devuelve: en la base queda su sha256.
      *
-     * La vida la decide el origen y no la configuración: un navegador dura
-     * doce horas y un móvil treinta días (ver {@link RefreshToken.Origen}). La
-     * propiedad {@code refresh-expiration} sigue marcando el techo, para que
-     * bajarla siga sirviendo de freno global.
+     * La vida la decide el origen: un móvil dura treinta días y un navegador
+     * lo que diga {@code web-session.duracion}, siete días si no se dice otra
+     * cosa (ver {@link RefreshToken.Origen}). La propiedad
+     * {@code refresh-expiration} sigue marcando el techo, para que bajarla
+     * siga sirviendo de freno global.
      */
     private TokenEmitido issueRefreshToken(User user, RefreshToken.Origen origen, UUID familia) {
         String token = UUID.randomUUID().toString();
         Instant now = Instant.now();
 
-        Duration porOrigen = origen.duracion();
+        Duration porOrigen = origen == RefreshToken.Origen.WEB ? vidaDeLaSesionWeb : origen.duracion();
         Duration techo = Duration.ofMillis(refreshExpirationMillis);
         Duration vida = porOrigen.compareTo(techo) <= 0 ? porOrigen : techo;
 

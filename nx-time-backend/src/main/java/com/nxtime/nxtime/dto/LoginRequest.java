@@ -21,7 +21,7 @@ public record LoginRequest(
          *
          * Decide cuánto vive el refresh token, y por eso lo dice el cliente y
          * no se adivina de la cabecera {@code User-Agent}: un navegador dura
-         * doce horas y un móvil treinta días (ver
+         * siete días y un móvil treinta (ver
          * {@code RefreshToken.Origen}).
          *
          * <b>Opcional, y con ANDROID por defecto</b>: la app publicada no lo

@@ -165,7 +165,7 @@ class RefreshTokenRotadoIT {
     }
 
     @Test
-    @DisplayName("Un login desde la web dura 12 horas; desde el movil, 30 dias")
+    @DisplayName("Un login desde la web dura siete dias; desde el movil, 30")
     void laVidaDependeDelOrigen() {
         String web = entrarDesde("WEB").refreshToken();
         String android = entrarDesde("ANDROID").refreshToken();
@@ -175,7 +175,9 @@ class RefreshTokenRotadoIT {
                 refreshTokenRepository.findByTokenHash(AuthServiceImpl.hashDe(android)).orElseThrow();
 
         assertThat(deWeb.getOrigen()).isEqualTo(RefreshToken.Origen.WEB);
-        assertThat(deWeb.getExpiraEn()).isBefore(Instant.now().plus(Duration.ofHours(13)));
+        assertThat(deWeb.getExpiraEn())
+                .isAfter(Instant.now().plus(Duration.ofDays(6)))
+                .isBefore(Instant.now().plus(Duration.ofDays(8)));
         assertThat(deAndroid.getExpiraEn()).isAfter(Instant.now().plus(Duration.ofDays(29)));
     }
 

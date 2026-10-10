@@ -376,7 +376,7 @@ export interface paths {
         put?: never;
         /**
          * Iniciar sesión
-         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 12 horas desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va en la cookie HttpOnly nx_refresh, junto con la cookie nx_csrf (ADR 030).
+         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 7 días desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va en la cookie HttpOnly nx_refresh, junto con la cookie nx_csrf (ADR 030).
          */
         post: operations["login"];
         delete?: never;

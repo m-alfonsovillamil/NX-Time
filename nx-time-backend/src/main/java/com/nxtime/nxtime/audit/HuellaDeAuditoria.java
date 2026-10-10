@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.audit;
 
+import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
@@ -76,23 +78,53 @@ public class HuellaDeAuditoria {
      * contra el de la fila de al lado, no contra el que la fila dice tener.
      */
     public String calcular(TimeEntryAudit fila, String hashAnterior) {
+        return calcular(
+                fila.getRegistro().getId(),
+                fila.getUsuario().getId(),
+                fila.getModificadoPor() != null ? fila.getModificadoPor().getId() : null,
+                fila.getAccion(),
+                fila.getValorAnterior(),
+                fila.getValorNuevo(),
+                fila.getMotivo(),
+                fila.getFechaHora(),
+                hashAnterior);
+    }
+
+    /**
+     * Lo mismo, para quien recorre la traza sin cargar entidades (ver
+     * {@link FilaDeLaCadena}). Las dos entradas acaban en el mismo sitio a
+     * propósito: lo que se firma al escribir y lo que se recalcula al comprobar
+     * no pueden tener dos definiciones.
+     */
+    public String calcular(FilaDeLaCadena fila, String hashAnterior) {
+        return calcular(fila.registroId(), fila.usuarioId(), fila.modificadoPorId(), fila.accion(),
+                fila.valorAnterior(), fila.valorNuevo(), fila.motivo(), fila.fechaHora(), hashAnterior);
+    }
+
+    private String calcular(
+            long registroId, long usuarioId, Long modificadoPorId, AuditAction accion,
+            String valorAnterior, String valorNuevo, String motivo, Instant fechaHora, String hashAnterior) {
         String payload = String.join("|",
-                String.valueOf(fila.getRegistro().getId()),
-                String.valueOf(fila.getUsuario().getId()),
+                String.valueOf(registroId),
+                String.valueOf(usuarioId),
                 // "sistema" para las acciones automáticas sin autor humano.
-                (fila.getModificadoPor() != null) ? String.valueOf(fila.getModificadoPor().getId()) : "sistema",
-                fila.getAccion().name(),
-                canonizar(fila.getValorAnterior()),
-                canonizar(fila.getValorNuevo()),
-                Objects.toString(fila.getMotivo(), ""),
-                marcaDeTiempo(fila),
+                (modificadoPorId != null) ? String.valueOf(modificadoPorId) : "sistema",
+                accion.name(),
+                canonizar(valorAnterior),
+                canonizar(valorNuevo),
+                Objects.toString(motivo, ""),
+                marcaDeTiempo(fechaHora),
                 Objects.toString(hashAnterior, ""));
         return Canonico.sha256(payload);
     }
 
     /** La hora tal y como se guarda: microsegundos, ni uno más. */
     public String marcaDeTiempo(TimeEntryAudit fila) {
-        return fila.getFechaHora().truncatedTo(ChronoUnit.MICROS).toString();
+        return marcaDeTiempo(fila.getFechaHora());
+    }
+
+    private static String marcaDeTiempo(Instant fechaHora) {
+        return fechaHora.truncatedTo(ChronoUnit.MICROS).toString();
     }
 
     /** Ver {@link Canonico#json}: la forma canónica vive allí desde la Fase B3. */

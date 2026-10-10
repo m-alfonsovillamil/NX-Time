@@ -3248,9 +3248,10 @@ class ApiContractTest {
         // Aislado del resto del flujo con una IP falsa propia (vía
         // X-Forwarded-For), para no consumir ni verse afectado por el
         // cupo de /auth/login y /auth/register-manager que ya han usado
-        // el resto de tests de esta clase (comparten IP real). 10
-        // peticiones por minuto (ver LoginRateLimitFilter): la 11ª
-        // debe rechazarse.
+        // el resto de tests de esta clase (comparten IP real). 60
+        // entradas por minuto (ver LoginRateLimitFilter; eran 10 hasta el
+        // ADR 041, y una oficina no podía entrar a la vez): la 61ª debe
+        // rechazarse.
         //
         // Con la contraseña VACÍA, a propósito. El límite cuenta peticiones,
         // no logins fallidos, y va delante de todo: una petición que la
@@ -3259,21 +3260,52 @@ class ApiContractTest {
         // en un CI lento como para que el cupo (uno cada seis segundos) se
         // fuera rellenando por el camino, y el rechazo llegaba en un intento
         // distinto cada vez, o no llegaba: falló en #151, en #156 dos veces y
-        // en main, sin que nada estuviera roto. Así las once van en un
-        // instante y la que se rechaza es siempre la undécima.
+        // en main, sin que nada estuviera roto.
+        //
+        // Y todas A LA VEZ, sin fijar cuál se rechaza: el cupo de entrar se
+        // rellena a una por segundo, y de una en una, en una máquina lenta,
+        // se rellenaba al ritmo al que se gastaba y el corte no llegaba nunca
+        // (pasó al escribir esto: 200 peticiones en 140 segundos y ningún
+        // 429). Ciento veinte de golpe son, tarden lo que tarden, bastantes
+        // más de las sesenta del cupo.
         HttpHeaders headers = jsonHeaders();
         headers.set("X-Forwarded-For", "203.0.113.55");
         String sinContrasena = toJson(mapOf("email", "nadie@nxtime.test", "contrasena", ""));
 
-        for (int i = 1; i <= 10; i++) {
-            ResponseEntity<String> respuesta = rest.postForEntity(url("/auth/login"),
-                    new HttpEntity<>(sinContrasena, headers), String.class);
-            assertThat(respuesta.getStatusCode()).as("petición %d", i).isEqualTo(HttpStatus.BAD_REQUEST);
+        java.util.concurrent.ExecutorService hilos = java.util.concurrent.Executors.newFixedThreadPool(24);
+        java.util.List<java.util.concurrent.Future<org.springframework.http.HttpStatusCode>> respuestas =
+                new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < 120; i++) {
+                respuestas.add(hilos.submit(() -> rest.postForEntity(url("/auth/login"),
+                        new HttpEntity<>(sinContrasena, headers), String.class).getStatusCode()));
+            }
+            int pasan = 0;
+            int rechazadas = 0;
+            for (var respuesta : respuestas) {
+                org.springframework.http.HttpStatusCode estado = respuesta.get(120, java.util.concurrent.TimeUnit.SECONDS);
+                if (estado == HttpStatus.TOO_MANY_REQUESTS) {
+                    rechazadas++;
+                } else {
+                    assertThat(estado).isEqualTo(HttpStatus.BAD_REQUEST);
+                    pasan++;
+                }
+            }
+            assertThat(pasan).as("las que pasan el límite: el cupo entero, como poco").isGreaterThanOrEqualTo(60);
+            assertThat(rechazadas).as("las que se rechazan con 429").isGreaterThanOrEqualTo(1);
+        } finally {
+            hilos.shutdownNow();
         }
 
-        ResponseEntity<String> undecima = rest.postForEntity(url("/auth/login"),
-                new HttpEntity<>(sinContrasena, headers), String.class);
-        assertThat(undecima.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        // Lo que no es entrar tiene su cupo aparte, y sigue en diez: desde esa
+        // misma IP, que ya no puede entrar, todavía se puede pedir un código.
+        String recuperar = toJson(mapOf("email", ""));
+        for (int i = 1; i <= 10; i++) {
+            assertThat(rest.postForEntity(url("/auth/recuperar"), new HttpEntity<>(recuperar, headers), String.class)
+                    .getStatusCode()).as("recuperar %d", i).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        assertThat(rest.postForEntity(url("/auth/recuperar"), new HttpEntity<>(recuperar, headers), String.class)
+                .getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 
     // ------------------------------------------------------------------

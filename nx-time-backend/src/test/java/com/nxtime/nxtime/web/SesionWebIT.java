@@ -219,8 +219,8 @@ class SesionWebIT {
             assertThat(cuerpo(alta).path("token").asText()).isNotBlank();
             assertThat(cuerpo(alta).path("refreshToken").isNull()).isTrue();
             assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("HttpOnly");
-            // 12 horas, las del navegador (ADR 019), y no los 30 días de la app.
-            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("Max-Age=43200");
+            // Siete días, los del navegador (ADR 041), y no los 30 de la app.
+            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("Max-Age=604800");
         }
 
         @Test

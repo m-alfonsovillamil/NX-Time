@@ -1,6 +1,5 @@
 package com.nxtime.nxtime.security;
 
-import com.nxtime.nxtime.domain.RefreshToken;
 import com.nxtime.nxtime.exception.BusinessException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -80,10 +79,15 @@ public class SesionWeb {
     private final List<String> origenesPermitidos;
     private final SecureRandom azar = new SecureRandom();
 
+    /** Lo que duran las cookies: lo mismo que el refresh que llevan (ADR 041). */
+    private final Duration vida;
+
     public SesionWeb(
             @Value("${application.security.web-session.cookie-domain:}") String dominioComun,
-            @Value("${application.security.cors.allowed-origins}") String origenesRaw
+            @Value("${application.security.cors.allowed-origins}") String origenesRaw,
+            @Value("${application.security.web-session.duracion}") Duration vida
     ) {
+        this.vida = vida;
         this.dominioComun = dominioComun.trim();
         this.origenesPermitidos = Arrays.stream(origenesRaw.split(","))
                 .map(String::trim)
@@ -93,7 +97,6 @@ public class SesionWeb {
 
     /** Tras un login o un refresco desde la web: el refresh nuevo y un CSRF nuevo. */
     public void emitir(HttpServletResponse respuesta, String refreshToken) {
-        Duration vida = RefreshToken.Origen.WEB.duracion();
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh(refreshToken, vida).toString());
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieCsrf(valorAleatorio(), vida).toString());
     }

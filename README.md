@@ -609,6 +609,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 38. [SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado](docs/adr/038-sso-lo-que-faltaba.md)
 39. [Límites a lo caro: que lo más pesado no sirva para tumbar el servicio](docs/adr/039-limites-a-lo-caro.md)
 40. [El panel de plataforma: ver la instalación entera sin ser de ninguna empresa](docs/adr/040-panel-de-plataforma.md)
+41. [El acceso bajo carga: que entrar no tumbe lo demás](docs/adr/041-el-acceso-bajo-carga.md)
 
 ---
 
@@ -678,10 +679,11 @@ propios ID token.
   ([ADR 039](docs/adr/039-limites-a-lo-caro.md)).
 - **Con poca CPU, lo que no aguanta es que toda la plantilla entre a la vez.**
   La [prueba de carga](docs/PRUEBA-DE-CARGA.md), con un año de fichajes de tres
-  mil personas, dice qué se rompe primero: entrar con contraseña (con la décima
-  de CPU del plan gratuito, cien personas en un minuto ya lo hunden) y el límite
-  de diez entradas por minuto e IP, que deja fuera a una oficina de más de diez.
-  Fichar con la sesión ya abierta y los listados aguantan sin problema.
+  mil personas, dice qué se rompe primero: entrar con contraseña. Con la décima
+  de CPU del plan gratuito no caben cien personas entrando en un minuto. Lo que
+  sí se arregló ([ADR 041](docs/adr/041-el-acceso-bajo-carga.md)) es que eso ya
+  no arrastra a quien está dentro: fichar con la sesión abierta sigue yendo en
+  décimas de segundo, y a quien no cabe se le dice que vuelva a intentarlo.
 - **La cadena de auditoría es una sola para todas las empresas** de la
   instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
   la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio
