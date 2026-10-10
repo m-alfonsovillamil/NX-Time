@@ -1,7 +1,6 @@
 package com.nxtime.nxtime.audit;
 
 import com.nxtime.nxtime.domain.AuditCheckpoint;
-import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.dto.AuditCheckpointResponse;
 import com.nxtime.nxtime.dto.AuditIntegrityResponse;
 import com.nxtime.nxtime.dto.PlatformIntegrityResponse;
@@ -149,7 +148,7 @@ public class VerificadorDeAuditoria {
      * cómo se encadena, y por eso esto lo puede pedir RRHH, no cualquiera.
      */
     public AuditIntegrityResponse verificar() {
-        return recorrer(Desde.elPrincipio());
+        return recorrer(Desde.elPrincipio()).resultado();
     }
 
     /**
@@ -322,18 +321,74 @@ public class VerificadorDeAuditoria {
      * vez, o la comprobación anterior encontró algo-- recorre la traza entera,
      * que es lo correcto: un punto de control que no existe no se puede dar por
      * bueno.
+     *
+     * <b>Lo que esto no ve</b>: un cambio en una fila anterior al punto de
+     * control. Para eso está {@link #verificarTodoYAnotar}, una vez por semana.
+     * Lo que sí mira del pasado es que la fila del punto de control siga ahí y
+     * sea la misma: es una consulta, y es lo que delata que a la traza le han
+     * quitado el final.
      */
     @Transactional
     public AuditIntegrityResponse verificarLoNuevoYAnotar() {
-        Desde desde = checkpointRepository.findTopByOrderByHastaIdDesc()
-                .map(Desde::desdeElPuntoDeControl)
-                .orElseGet(Desde::elPrincipio);
-
-        AuditIntegrityResponse resultado = recorrer(desde);
-        if (resultado.intacta()) {
-            anotarPuntoDeControl(resultado, desde);
+        Optional<AuditCheckpoint> punto = checkpointRepository.findTopByOrderByHastaIdDesc();
+        if (punto.isPresent() && !sigueDondeEstaba(punto.get())) {
+            return faltaLoYaComprobado(punto.get(),
+                    punto.get().getFilas(), punto.get().getComprobadas(), punto.get().getSoloEnlace());
         }
+
+        Recorrido recorrido = recorrer(punto.map(Desde::desdeElPuntoDeControl).orElseGet(Desde::elPrincipio));
+        if (recorrido.resultado().intacta()) {
+            anotarPuntoDeControl(recorrido, punto);
+        }
+        return recorrido.resultado();
+    }
+
+    /**
+     * Verifica la traza ENTERA, sin fiarse de ningún punto de control, y anota
+     * uno si hay movimientos nuevos (ADR 042).
+     *
+     * La comprobación de cada noche solo mira lo escrito desde la anterior, y
+     * por eso es barata; pero quiere decir que una fila ya comprobada no se
+     * vuelve a mirar nunca, salvo que alguien pulse «Comprobar» en la pantalla
+     * de integridad. Esto es lo que la vuelve a mirar sin depender de nadie:
+     * la tarea nocturna lo usa una vez por semana.
+     *
+     * Va en una transacción, con una conexión cogida mientras dura: con millón
+     * y medio de movimientos es menos de medio minuto de madrugada (ADR 042).
+     * El recorrido que se pide desde la pantalla no puede permitirse eso y va
+     * por {@link #recorridoCompartido}.
+     */
+    @Transactional
+    public AuditIntegrityResponse verificarTodoYAnotar() {
+        Optional<AuditCheckpoint> punto = checkpointRepository.findTopByOrderByHastaIdDesc();
+
+        Recorrido recorrido = recorrer(Desde.elPrincipio());
+        AuditIntegrityResponse resultado = recorrido.resultado();
+        if (!resultado.intacta()) {
+            return resultado;
+        }
+        if (punto.isPresent() && !sigueDondeEstaba(punto.get())) {
+            return faltaLoYaComprobado(punto.get(),
+                    resultado.movimientos(), resultado.comprobados(), resultado.soloEnlace());
+        }
+        anotarPuntoDeControl(recorrido, punto);
         return resultado;
+    }
+
+    /**
+     * Una cadena a la que le quitan las últimas filas sigue cuadrando: cada
+     * fila que queda enlaza bien con la anterior. Lo único que dice que había
+     * más es el punto de control, que apuntó hasta dónde llegaba.
+     */
+    private boolean sigueDondeEstaba(AuditCheckpoint punto) {
+        return auditRepository.existsByIdAndHash(punto.getHastaId(), punto.getHash());
+    }
+
+    private AuditIntegrityResponse faltaLoYaComprobado(
+            AuditCheckpoint punto, long filas, long comprobadas, long soloEnlace) {
+        return AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, punto.getHastaId(),
+                "el movimiento hasta el que llegó la comprobación del " + punto.getVerificadoEn()
+                        + " ya no está o ya no es el mismo: a la traza le han quitado o cambiado el final");
     }
 
     /** El último punto de control, para poder decir "comprobada anoche, intacta". */
@@ -438,7 +493,14 @@ public class VerificadorDeAuditoria {
         return new RecorridoCompleto(Instant.now(), porEmpresa, null, null, null);
     }
 
-    private AuditIntegrityResponse recorrer(Desde desde) {
+    /**
+     * Lo que sale de un recorrido: el resultado y hasta qué fila llegó, con su
+     * hash. Lo segundo es lo que firma el punto de control.
+     */
+    private record Recorrido(AuditIntegrityResponse resultado, long ultimoId, String ultimoHash) {
+    }
+
+    private Recorrido recorrer(Desde desde) {
         long ultimoId = desde.ultimoId();
         String hashDeLaAnterior = desde.hashDeLaAnterior();
         long filas = desde.filas();
@@ -450,7 +512,9 @@ public class VerificadorDeAuditoria {
             for (FilaDeLaCadena fila : bloque) {
                 String problema = revisar(fila, hashDeLaAnterior);
                 if (problema != null) {
-                    return AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, fila.id(), problema);
+                    return new Recorrido(
+                            AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, fila.id(), problema),
+                            ultimoId, hashDeLaAnterior);
                 }
                 filas++;
                 if (fila.versionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE) {
@@ -463,7 +527,8 @@ public class VerificadorDeAuditoria {
             }
         }
 
-        return AuditIntegrityResponse.intacta(filas, comprobadas, soloEnlace);
+        return new Recorrido(
+                AuditIntegrityResponse.intacta(filas, comprobadas, soloEnlace), ultimoId, hashDeLaAnterior);
     }
 
     /**
@@ -482,30 +547,37 @@ public class VerificadorDeAuditoria {
         return auditRepository.findBloqueDeLaCadena(desdeId, PageRequest.of(0, filasPorBloque));
     }
 
-    private void anotarPuntoDeControl(AuditIntegrityResponse resultado, Desde desde) {
-        if (resultado.movimientos() == desde.filas()) {
+    /**
+     * Anota hasta dónde ha llegado un recorrido que ha salido intacto.
+     *
+     * <b>Firma la última fila RECORRIDA</b>, no la última de la tabla. Hasta
+     * octubre de 2026 se releía la última de la tabla al acabar, y si alguien
+     * fichaba entre el final del recorrido y esa lectura, el punto de control
+     * daba por comprobada una fila que nadie había mirado: la noche siguiente
+     * se empezaba después de ella.
+     */
+    private void anotarPuntoDeControl(Recorrido recorrido, Optional<AuditCheckpoint> ultimoPunto) {
+        if (recorrido.ultimoHash() == null) {
+            // La traza está vacía: no hay nada que firmar.
+            return;
+        }
+        if (ultimoPunto.isPresent() && ultimoPunto.get().getHastaId() >= recorrido.ultimoId()) {
             // No ha crecido nada desde la última vez: volver a anotar el mismo
             // punto chocaría con uq_punto_control_hasta, y además no diría nada
             // nuevo.
             return;
         }
-        // Se relee la última fila para quedarse con su hash. Es una consulta
-        // más, pero deja claro qué se está firmando; el recorrido ya soltó su
-        // bloque con el clear().
-        TimeEntryAudit ultima = auditRepository.findTopByOrderByIdDesc().orElse(null);
-        if (ultima == null) {
-            return;
-        }
+        AuditIntegrityResponse resultado = recorrido.resultado();
         checkpointRepository.save(AuditCheckpoint.builder()
-                .hastaId(ultima.getId())
-                .hash(ultima.getHash())
+                .hastaId(recorrido.ultimoId())
+                .hash(recorrido.ultimoHash())
                 .filas(resultado.movimientos())
                 .comprobadas(resultado.comprobados())
                 .soloEnlace(resultado.soloEnlace())
                 .verificadoEn(Instant.now())
                 .build());
         log.info("Cadena de auditoría comprobada hasta la fila {}: {} movimientos, {} recalculados.",
-                ultima.getId(), resultado.movimientos(), resultado.comprobados());
+                recorrido.ultimoId(), resultado.movimientos(), resultado.comprobados());
     }
 
     /** Qué le pasa a esta fila, o null si está bien. */

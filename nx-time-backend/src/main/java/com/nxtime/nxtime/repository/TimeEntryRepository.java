@@ -84,10 +84,14 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      * Jornadas todavía abiertas cuya entrada es anterior al límite dado:
      * las que nadie cerró (Fase 9, ver IncompleteTimeEntryScheduler).
      * Excluye las ya anuladas por una corrección, que no hay que tocar.
+     *
+     * Solo los ids, y en orden: cada una se cierra después en su propia
+     * transacción, que la vuelve a cargar (ADR 042), así que traer aquí las
+     * jornadas enteras sería cargarlas dos veces.
      */
-    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
-            + "WHERE t.horaSalida IS NULL AND t.anulado = false AND t.horaEntrada < :limite")
-    List<TimeEntry> findJornadasAbiertasAnterioresA(@Param("limite") Instant limite);
+    @Query("SELECT t.id FROM registros t "
+            + "WHERE t.horaSalida IS NULL AND t.anulado = false AND t.horaEntrada < :limite ORDER BY t.id")
+    List<Long> findIdsDeJornadasAbiertasAnterioresA(@Param("limite") Instant limite);
 
     // ------------------------------------------------------------------
     // Agregados del dashboard (Fase 10)

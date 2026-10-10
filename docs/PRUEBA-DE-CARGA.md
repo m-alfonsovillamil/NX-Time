@@ -224,6 +224,15 @@ por bloque. Cada uno, una vez.
 | 300 a la vez con contraseña: fichar, mediana / p95 | 1.658 / 2.546 ms | 785 / 1.300 ms |
 | 1.000 en diez segundos con sesión: fichar, mediana / p95 | 159 / 266 ms | 117 / 193 ms |
 
+**Los 18 segundos son de una traza de la que solo se comprueba el enlace.** La
+siembra escribe los movimientos como los anteriores a V26, sin el hash
+recalculable: el recorrido mira que cada uno enlace con el anterior, pero no
+vuelve a calcular su contenido. Los de verdad sí se recalculan. Medido aparte
+(ADR 042) con veinte mil movimientos escritos por la aplicación: unos 16
+microsegundos por movimiento, frente a los 12 de los sembrados. Millón y medio
+de movimientos de verdad serían unos 25 segundos, no 18. El «antes» y el
+«después» de la tabla son sobre la misma traza, así que la comparación vale.
+
 **Con la CPU limitada**, entrando con contraseña a lo largo de un minuto:
 
 | CPU | Personas | | Entran | Entrar: mediana | Fichar: mediana | Fichar: p95 | Fallos |

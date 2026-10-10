@@ -43,4 +43,11 @@ public class ScheduledTaskRun {
     private ScheduledTaskResult resultado;
 
     private String detalle;
+
+    /**
+     * Qué instancia del servicio la hizo: un identificador al azar por
+     * arranque (ADR 042). Sirve para que, con más de una instancia, la misma
+     * tarea no corra dos veces la misma noche. Null en las anteriores a V42.
+     */
+    private String instancia;
 }

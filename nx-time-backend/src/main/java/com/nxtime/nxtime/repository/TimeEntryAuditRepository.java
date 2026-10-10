@@ -91,6 +91,13 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
     /** Cuántas filas quedan por detrás de un punto de control. */
     long countByIdGreaterThan(long id);
 
+    /**
+     * ¿Sigue ahí, y con el mismo hash, la fila hasta la que llegó un punto de
+     * control? Si no, es que a la traza le han quitado el final o se lo han
+     * reescrito después de comprobarlo (ADR 042).
+     */
+    boolean existsByIdAndHash(long id, String hash);
+
     /*
      * Lo mismo, pero solo lo de UNA empresa: es lo que se le enseña a quien
      * pregunta (ver VerificadorDeAuditoria#ultimaComprobacionPara). La empresa

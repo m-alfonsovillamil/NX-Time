@@ -1,9 +1,11 @@
 package com.nxtime.nxtime.scheduled;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +21,8 @@ import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.service.TaskMonitorService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +32,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -70,10 +74,22 @@ class IncompleteTimeEntrySchedulerTest {
         empleado = User.builder().id(10L).email("empleado@nxtime.test").empresa(empresa).build();
     }
 
+    /**
+     * Lo que encuentra la tarea: la lista de ids primero y, al llegarle el
+     * turno a cada una, la jornada vuelta a cargar.
+     */
+    private void hayOlvidadas(TimeEntry... olvidadas) {
+        when(timeEntryRepository.findIdsDeJornadasAbiertasAnterioresA(any()))
+                .thenReturn(Arrays.stream(olvidadas).map(TimeEntry::getId).toList());
+        for (TimeEntry olvidada : olvidadas) {
+            when(timeEntryRepository.findById(olvidada.getId())).thenReturn(Optional.of(olvidada));
+        }
+    }
+
     @Test
     @DisplayName("Sin jornadas olvidadas no se toca nada ni se publica ningún evento")
     void cerrarJornadasOlvidadas_sinJornadasAbiertas_noHaceNada() {
-        when(timeEntryRepository.findJornadasAbiertasAnterioresA(any())).thenReturn(List.of());
+        hayOlvidadas();
 
         scheduler.cerrarJornadasOlvidadas();
 
@@ -87,7 +103,7 @@ class IncompleteTimeEntrySchedulerTest {
         Instant horaEntrada = Instant.now().minus(30, ChronoUnit.HOURS);
         TimeEntry olvidada = TimeEntry.builder().id(1L).usuario(empleado)
                 .horaEntrada(horaEntrada).build();
-        when(timeEntryRepository.findJornadasAbiertasAnterioresA(any())).thenReturn(List.of(olvidada));
+        hayOlvidadas(olvidada);
 
         scheduler.cerrarJornadasOlvidadas();
 
@@ -113,7 +129,7 @@ class IncompleteTimeEntrySchedulerTest {
         // trabajadas sería peor que no hacer nada.
         Instant horaEntrada = Instant.now().minus(72, ChronoUnit.HOURS);
         TimeEntry olvidada = TimeEntry.builder().id(1L).usuario(empleado).horaEntrada(horaEntrada).build();
-        when(timeEntryRepository.findJornadasAbiertasAnterioresA(any())).thenReturn(List.of(olvidada));
+        hayOlvidadas(olvidada);
 
         scheduler.cerrarJornadasOlvidadas();
 
@@ -128,7 +144,7 @@ class IncompleteTimeEntrySchedulerTest {
                 .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS))
                 .enPausa(true).inicioPausaActual(Instant.now().minus(20, ChronoUnit.HOURS))
                 .build();
-        when(timeEntryRepository.findJornadasAbiertasAnterioresA(any())).thenReturn(List.of(olvidada));
+        hayOlvidadas(olvidada);
 
         scheduler.cerrarJornadasOlvidadas();
 
@@ -143,7 +159,7 @@ class IncompleteTimeEntrySchedulerTest {
                 .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build();
         TimeEntry otra = TimeEntry.builder().id(2L).usuario(empleado)
                 .horaEntrada(Instant.now().minus(40, ChronoUnit.HOURS)).build();
-        when(timeEntryRepository.findJornadasAbiertasAnterioresA(any())).thenReturn(List.of(una, otra));
+        hayOlvidadas(una, otra);
 
         scheduler.cerrarJornadasOlvidadas();
 
@@ -151,5 +167,79 @@ class IncompleteTimeEntrySchedulerTest {
         assertThat(otra.isJornadaIncompleta()).isTrue();
         verify(timeEntryRepository).save(una);
         verify(timeEntryRepository).save(otra);
+    }
+
+    // ------------------------------------------------------------------
+    // Cada una en su transacción (ADR 042)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Cada jornada va en su propia transacción")
+    void cerrarJornadasOlvidadas_cadaUnaEnSuTransaccion() {
+        TimeEntry una = TimeEntry.builder().id(1L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build();
+        TimeEntry otra = TimeEntry.builder().id(2L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(40, ChronoUnit.HOURS)).build();
+        hayOlvidadas(una, otra);
+
+        scheduler.cerrarJornadasOlvidadas();
+
+        verify(transactionManager, times(2)).commit(any());
+    }
+
+    /**
+     * Lo que arregla el cambio: con todas en una transacción, la que fallaba
+     * deshacía el cierre de las demás, esa noche y todas las siguientes.
+     */
+    @Test
+    @DisplayName("Una jornada que no se puede cerrar no impide cerrar las demás, y la tarea acaba en error diciendo cuál")
+    void cerrarJornadasOlvidadas_unaFalla_lasDemasSeCierranYLaTareaFalla() {
+        TimeEntry rota = TimeEntry.builder().id(1L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build();
+        TimeEntry sana = TimeEntry.builder().id(2L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(40, ChronoUnit.HOURS)).build();
+        hayOlvidadas(rota, sana);
+        when(timeEntryRepository.save(rota)).thenThrow(new IllegalStateException("dato imposible"));
+
+        assertThatThrownBy(() -> scheduler.cerrarJornadasOlvidadas())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Cerradas 1 jornadas")
+                .hasMessageContaining("1 no se pudieron cerrar (ids 1)")
+                .hasMessageContaining("dato imposible");
+
+        verify(timeEntryRepository).save(sana);
+        assertThat(sana.isJornadaIncompleta()).isTrue();
+        // La de la rota se deshace; la de la sana se confirma.
+        verify(transactionManager).rollback(any());
+        verify(transactionManager).commit(any());
+    }
+
+    @Test
+    @DisplayName("Una jornada que su dueña cerró entre la lista y su turno no se toca")
+    void cerrarJornadasOlvidadas_cerradaMientrasTanto_noSeToca() {
+        Instant salida = Instant.now().minus(1, ChronoUnit.HOURS);
+        TimeEntry yaCerrada = TimeEntry.builder().id(1L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).horaSalida(salida).build();
+        hayOlvidadas(yaCerrada);
+
+        scheduler.cerrarJornadasOlvidadas();
+
+        verify(timeEntryRepository, never()).save(any());
+        assertThat(yaCerrada.getHoraSalida()).isEqualTo(salida);
+        assertThat(yaCerrada.isJornadaIncompleta()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Si alguien se adelanta justo al guardar, no es un fallo de la tarea")
+    void cerrarJornadasOlvidadas_alguienSeAdelanta_noEsUnFallo() {
+        TimeEntry disputada = TimeEntry.builder().id(1L).usuario(empleado)
+                .horaEntrada(Instant.now().minus(30, ChronoUnit.HOURS)).build();
+        hayOlvidadas(disputada);
+        when(timeEntryRepository.save(disputada))
+                .thenThrow(new ObjectOptimisticLockingFailureException(TimeEntry.class, 1L));
+
+        scheduler.cerrarJornadasOlvidadas();
+
+        verify(transactionManager).rollback(any());
     }
 }

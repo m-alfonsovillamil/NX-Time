@@ -1,6 +1,11 @@
 package com.nxtime.nxtime.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.AdditionalAnswers.delegatesTo;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
@@ -9,6 +14,7 @@ import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuditIntegrityResponse;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
+import com.nxtime.nxtime.repository.AuditCheckpointRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -17,7 +23,9 @@ import jakarta.persistence.EntityManagerFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
@@ -79,6 +87,10 @@ class VerificadorDeAuditoriaIT {
     private TimeEntryService timeEntryService;
     @Autowired
     private TimeEntryAuditRepository auditRepository;
+    @Autowired
+    private AuditCheckpointRepository checkpointRepository;
+    @Autowired
+    private HuellaDeAuditoria huella;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -392,6 +404,140 @@ class VerificadorDeAuditoriaIT {
         verificador.verificarLoNuevoYAnotar();
 
         assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getId()).isEqualTo(primero);
+    }
+
+    /**
+     * Entre que el recorrido lee su último bloque (vacío) y anota el punto de
+     * control, alguien ficha. Antes el punto se quedaba con la última fila DE
+     * LA TABLA, que ya era la de ese fichaje: la daba por comprobada sin
+     * haberla mirado, y la noche siguiente empezaba después de ella.
+     */
+    @Test
+    @DisplayName("El punto de control firma la última fila recorrida, no una que llegó después")
+    void fichajeDuranteLaComprobacion_noSeDaPorComprobado() {
+        jornadaCompleta("antes@nxtime.test");
+        long ultimaRecorrida = todasLasFilas().get(3).getId();
+        // Un verificador montado a mano sobre el repositorio de verdad, con un
+        // solo añadido: en cuanto el recorrido lee su último bloque, alguien
+        // ficha. Todo lo demás va a la base tal cual.
+        AtomicBoolean yaHaFichado = new AtomicBoolean();
+        TimeEntryAuditRepository conUnFichajeEnMedio =
+                mock(TimeEntryAuditRepository.class, delegatesTo(auditRepository));
+        doAnswer(invocacion -> {
+            List<FilaDeLaCadena> bloque = auditRepository.findBloqueDeLaCadena(
+                    invocacion.getArgument(0), invocacion.getArgument(1));
+            if (bloque.isEmpty() && yaHaFichado.compareAndSet(false, true)) {
+                jornadaCompleta("mientras@nxtime.test");
+            }
+            return bloque;
+        }).when(conUnFichajeEnMedio).findBloqueDeLaCadena(anyLong(), any());
+        VerificadorDeAuditoria verificador = new VerificadorDeAuditoria(conUnFichajeEnMedio, checkpointRepository,
+                userRepository, huella, 2, Duration.ZERO, Duration.ofSeconds(20));
+
+        AuditIntegrityResponse resultado = verificador.verificarLoNuevoYAnotar();
+
+        assertThat(yaHaFichado).isTrue();
+        assertThat(resultado.movimientos()).isEqualTo(4);
+        var punto = verificador.ultimoPuntoDeControl().orElseThrow();
+        assertThat(punto.getHastaId()).isEqualTo(ultimaRecorrida);
+        assertThat(punto.getFilas()).isEqualTo(4);
+        // Los cuatro del fichaje de en medio siguen pendientes, y la noche
+        // siguiente los revisa.
+        assertThat(verificador.movimientosSinRevisar(punto)).isEqualTo(4);
+        assertThat(verificador.verificarLoNuevoYAnotar().movimientos()).isEqualTo(8);
+    }
+
+    // ------------------------------------------------------------------
+    // El recorrido completo de cada semana (ADR 042)
+    // ------------------------------------------------------------------
+
+    /**
+     * Para qué existe: lo incremental no vuelve nunca sobre una fila ya
+     * comprobada. El test deja escrito también ese punto ciego, porque es lo
+     * que justifica el recorrido completo.
+     */
+    @Test
+    @DisplayName("Un cambio en una fila ya comprobada no lo ve la comprobación de cada noche, y sí el recorrido completo")
+    void cambioEnLoYaComprobado_loVeElRecorridoCompleto() throws Exception {
+        jornadaCompleta("ya.comprobada@nxtime.test");
+        verificador.verificarLoNuevoYAnotar();
+        long id = todasLasFilas().get(1).getId();
+        manipularSaltandoseElTrigger(
+                "UPDATE auditoria_fichaje SET motivo = 'Lo cambie yo' WHERE id = " + id);
+
+        assertThat(verificador.verificarLoNuevoYAnotar().intacta()).isTrue();
+
+        AuditIntegrityResponse completo = verificador.verificarTodoYAnotar();
+        assertThat(completo.intacta()).isFalse();
+        assertThat(completo.primerFallo()).isEqualTo(id);
+        assertThat(completo.motivo()).contains("le han cambiado algo");
+    }
+
+    @Test
+    @DisplayName("El recorrido completo sin movimientos nuevos no anota otro punto de control")
+    void recorridoCompleto_sinMovimientosNuevos_noAnotaOtroPunto() {
+        jornadaCompleta("completa1@nxtime.test");
+        verificador.verificarLoNuevoYAnotar();
+        long primero = verificador.ultimoPuntoDeControl().orElseThrow().getId();
+
+        // Chocaría con uq_punto_control_hasta: el recorrido completo llega a
+        // la misma fila que el punto que ya hay.
+        AuditIntegrityResponse completo = verificador.verificarTodoYAnotar();
+
+        assertThat(completo.intacta()).isTrue();
+        assertThat(completo.movimientos()).isEqualTo(4);
+        assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getId()).isEqualTo(primero);
+    }
+
+    @Test
+    @DisplayName("El recorrido completo con movimientos nuevos anota el punto de control, con el total de la traza")
+    void recorridoCompleto_conMovimientosNuevos_anotaElPunto() {
+        jornadaCompleta("completa2@nxtime.test");
+        verificador.verificarLoNuevoYAnotar();
+        jornadaCompleta("completa3@nxtime.test");
+
+        AuditIntegrityResponse completo = verificador.verificarTodoYAnotar();
+
+        assertThat(completo.intacta()).isTrue();
+        assertThat(completo.movimientos()).isEqualTo(8);
+        var punto = verificador.ultimoPuntoDeControl().orElseThrow();
+        assertThat(punto.getHastaId()).isEqualTo(todasLasFilas().get(7).getId());
+        assertThat(punto.getFilas()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("El recorrido completo sobre una traza sin ningún punto de control anota el primero")
+    void recorridoCompleto_sinPuntoDeControl_anotaElPrimero() {
+        jornadaCompleta("completa4@nxtime.test");
+
+        assertThat(verificador.verificarTodoYAnotar().intacta()).isTrue();
+
+        assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getFilas()).isEqualTo(4);
+    }
+
+    /**
+     * Una cadena a la que le quitan el final sigue cuadrando: cada fila que
+     * queda enlaza con la anterior. Lo único que dice que había más es el
+     * punto de control.
+     */
+    @Test
+    @DisplayName("Si a la traza le quitan el final después de comprobarlo, se nota: el punto de control apuntaba a una fila que ya no está")
+    void finalQuitado_seDetecta() throws Exception {
+        jornadaCompleta("recortada@nxtime.test");
+        verificador.verificarLoNuevoYAnotar();
+        long ultima = todasLasFilas().get(3).getId();
+        manipularSaltandoseElTrigger("DELETE FROM auditoria_fichaje WHERE id = " + ultima);
+
+        AuditIntegrityResponse nocturna = verificador.verificarLoNuevoYAnotar();
+        assertThat(nocturna.intacta()).isFalse();
+        assertThat(nocturna.primerFallo()).isEqualTo(ultima);
+        assertThat(nocturna.motivo()).contains("quitado o cambiado el final");
+
+        AuditIntegrityResponse completo = verificador.verificarTodoYAnotar();
+        assertThat(completo.intacta()).isFalse();
+        assertThat(completo.primerFallo()).isEqualTo(ultima);
+        // Las tres que quedan sí cuadran entre ellas.
+        assertThat(completo.movimientos()).isEqualTo(3);
     }
 
     // ------------------------------------------------------------------
