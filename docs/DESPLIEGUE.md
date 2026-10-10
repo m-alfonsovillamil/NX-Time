@@ -97,6 +97,24 @@ todo el tráfico comparta el contador del proxy y se limiten unos a otros.
 > intento, quince intentos y ningún 429. Hay además un límite **por cuenta**,
 > que no depende de ninguna cabecera.
 
+### El acceso bajo carga
+
+Nada de esto hace falta ponerlo en Render: son los valores por defecto, y están
+aquí para saber qué tocar si cambia el plan o el uso (ADR 041,
+`docs/PRUEBA-DE-CARGA.md`).
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `APPLICATION_SECURITY_RATE_LIMIT_ENTRADAS_POR_MINUTO` | `60` | Entradas por minuto y por IP (el login y las vueltas del SSO). Una oficina entera sale por una sola IP: con las 10 de antes no entraban más de diez a la vez |
+| `APPLICATION_SECURITY_RATE_LIMIT_PETICIONES_POR_MINUTO` | `10` | Lo demás que se limita por IP: registrar una empresa, pedir y canjear códigos, emparejar un kiosco |
+| `APPLICATION_SECURITY_CONTRASENAS_A_LA_VEZ` | `0` | Cuántas contraseñas se comprueban a la vez. `0` = tantas como procesadores vea la máquina (uno, en el plan gratuito). Las demás esperan su turno hasta 20 segundos y, si no llega, reciben un 503 |
+| `WEB_SESSION_DURACION` | `7d` | Cuánto dura la sesión de un navegador sin usarse. Con ordenadores compartidos tiene sentido bajarla (`12h`, que es lo que había) |
+
+Subir las entradas por minuto sin subir la CPU no sirve: cada entrada cuesta
+unos 80 ms de procesador, y con la décima de CPU del plan gratuito no salen ni
+dos por segundo. Lo que pase de ahí espera su turno o recibe un 503; quien ya
+está dentro no lo nota.
+
 ### Correo
 
 | Variable | Valor |

@@ -10,7 +10,6 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.AuditCheckpointRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.UserRepository;
-import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -27,10 +26,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Recorre la traza de auditoría y dice si sigue intacta.
@@ -70,10 +67,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  * costaba, se pedía poco, y una manipulación podía tardar meses en salir a la
  * luz.
  *
- * Ahora la traza se recorre en bloques, soltando cada uno antes de pedir el
- * siguiente ({@code entityManager.clear()}), y cada comprobación completa deja
- * un {@link AuditCheckpoint}. La verificación de cada noche arranca desde ahí y
+ * Ahora la traza se recorre en bloques, y cada comprobación completa deja un
+ * {@link AuditCheckpoint}. La verificación de cada noche arranca desde ahí y
  * solo mira lo nuevo.
+ *
+ * Desde octubre de 2026 un bloque es una sola consulta que trae lo justo
+ * ({@link FilaDeLaCadena}), no entidades: cargándolas, cada movimiento traía
+ * detrás su fichaje y su persona de uno en uno, y millón y medio de movimientos
+ * eran 46 minutos (docs/PRUEBA-DE-CARGA.md).
  *
  * Un punto de control no se cree a sí mismo más de lo que debe: solo se escribe
  * cuando la cadena ha salido intacta, y dice hasta qué fila. Si algo falla, no
@@ -90,7 +91,6 @@ public class VerificadorDeAuditoria {
     private final AuditCheckpointRepository checkpointRepository;
     private final UserRepository userRepository;
     private final HuellaDeAuditoria huella;
-    private final EntityManager entityManager;
 
     /**
      * Filas por bloque. Suficientemente grande para que no sean miles de
@@ -114,9 +114,6 @@ public class VerificadorDeAuditoria {
     /** Lo que espera una petición a que termine el recorrido de otra antes de rendirse. */
     private final Duration esperaMaxima;
 
-    /** El recorrido va en su propia transacción de lectura: ver {@link #recorridoCompartido}. */
-    private final TransactionTemplate lectura;
-
     /** Un recorrido completo a la vez en esta instancia. */
     private final ReentrantLock unoALaVez = new ReentrantLock();
 
@@ -130,8 +127,6 @@ public class VerificadorDeAuditoria {
             AuditCheckpointRepository checkpointRepository,
             UserRepository userRepository,
             HuellaDeAuditoria huella,
-            EntityManager entityManager,
-            PlatformTransactionManager transacciones,
             @Value("${application.auditoria.filas-por-bloque:1000}") int filasPorBloque,
             @Value("${application.auditoria.vigencia-del-recorrido:30s}") Duration vigenciaDelRecorrido,
             @Value("${application.auditoria.espera-maxima:20s}") Duration esperaMaxima) {
@@ -139,12 +134,9 @@ public class VerificadorDeAuditoria {
         this.checkpointRepository = checkpointRepository;
         this.userRepository = userRepository;
         this.huella = huella;
-        this.entityManager = entityManager;
         this.filasPorBloque = filasPorBloque;
         this.vigenciaDelRecorrido = vigenciaDelRecorrido;
         this.esperaMaxima = esperaMaxima;
-        this.lectura = new TransactionTemplate(transacciones);
-        this.lectura.setReadOnly(true);
     }
 
     /**
@@ -227,9 +219,10 @@ public class VerificadorDeAuditoria {
      *   <li><b>Vale un rato</b> ({@link #vigenciaDelRecorrido}): pulsar el botón
      *       veinte veces es un recorrido.</li>
      *   <li><b>Quien espera no ocupa una conexión.</b> Por eso este método se
-     *       llama desde fuera de toda transacción y abre la suya solo para
-     *       recorrer: si la espera fuese dentro de una, cada petición en cola
-     *       retendría su conexión sin usarla, y el pool se agotaría igual.</li>
+     *       llama desde fuera de toda transacción, y quien recorre coge una
+     *       solo para cada bloque: si la espera fuese dentro de una, cada
+     *       petición en cola retendría su conexión sin usarla, y el pool se
+     *       agotaría igual.</li>
      *   <li><b>La espera tiene tope.</b> Si el recorrido de otro tarda más de
      *       {@link #esperaMaxima}, se responde 503 y que vuelva a intentarlo: un
      *       hilo esperando sin límite es otra forma de quedarse sin hilos.</li>
@@ -257,7 +250,7 @@ public class VerificadorDeAuditoria {
             if (sirve(vigente)) {
                 return vigente;
             }
-            vigente = lectura.execute(estado -> recorrerParaTodas());
+            vigente = recorrerParaTodas();
             ultimoRecorrido = vigente;
             recorridosCompletos.incrementAndGet();
             return vigente;
@@ -312,10 +305,14 @@ public class VerificadorDeAuditoria {
         return ultimaComprobacionPara(empresaDe(emailDelActor));
     }
 
+    /**
+     * Con la consulta que suelta la conexión al acabar, y no cargando a la
+     * persona: desde aquí se pasa a esperar turno para recorrer, y esa espera
+     * no puede ir con una conexión cogida (ver el repositorio).
+     */
     private long empresaDe(String emailDelActor) {
-        return userRepository.findByEmail(emailDelActor)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + emailDelActor))
-                .getEmpresa().getId();
+        return userRepository.findEmpresaIdByEmail(emailDelActor)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + emailDelActor));
     }
 
     /**
@@ -418,26 +415,25 @@ public class VerificadorDeAuditoria {
         String hashDeLaAnterior = null;
         Map<Long, long[]> porEmpresa = new HashMap<>();
 
-        List<TimeEntryAudit> bloque;
-        while (!(bloque = auditRepository.findBloqueDesde(ultimoId, PageRequest.of(0, filasPorBloque))).isEmpty()) {
-            for (TimeEntryAudit fila : bloque) {
-                Long empresa = empresaDe(fila);
+        List<FilaDeLaCadena> bloque;
+        while (!(bloque = siguienteBloque(ultimoId)).isEmpty()) {
+            for (FilaDeLaCadena fila : bloque) {
+                Long empresa = fila.empresaId();
                 String problema = revisar(fila, hashDeLaAnterior);
                 if (problema != null) {
                     // El detalle, para quien mantiene el servicio: a quien
                     // pregunte desde otra empresa no se le va a dar.
                     log.warn("Cadena de auditoría rota en la fila {}, de la empresa {}: {}.",
-                            fila.getId(), empresa, problema);
-                    return new RecorridoCompleto(Instant.now(), porEmpresa, fila.getId(), empresa, problema);
+                            fila.id(), empresa, problema);
+                    return new RecorridoCompleto(Instant.now(), porEmpresa, fila.id(), empresa, problema);
                 }
                 if (empresa != null) {
                     long[] suyas = porEmpresa.computeIfAbsent(empresa, id -> new long[2]);
-                    suyas[fila.getVersionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE ? 0 : 1]++;
+                    suyas[fila.versionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE ? 0 : 1]++;
                 }
-                hashDeLaAnterior = fila.getHash();
-                ultimoId = fila.getId();
+                hashDeLaAnterior = fila.hash();
+                ultimoId = fila.id();
             }
-            entityManager.clear();
         }
         return new RecorridoCompleto(Instant.now(), porEmpresa, null, null, null);
     }
@@ -449,29 +445,41 @@ public class VerificadorDeAuditoria {
         long comprobadas = desde.comprobadas();
         long soloEnlace = desde.soloEnlace();
 
-        List<TimeEntryAudit> bloque;
-        while (!(bloque = auditRepository.findBloqueDesde(ultimoId, PageRequest.of(0, filasPorBloque))).isEmpty()) {
-            for (TimeEntryAudit fila : bloque) {
+        List<FilaDeLaCadena> bloque;
+        while (!(bloque = siguienteBloque(ultimoId)).isEmpty()) {
+            for (FilaDeLaCadena fila : bloque) {
                 String problema = revisar(fila, hashDeLaAnterior);
                 if (problema != null) {
-                    return AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, fila.getId(), problema);
+                    return AuditIntegrityResponse.rota(filas, comprobadas, soloEnlace, fila.id(), problema);
                 }
                 filas++;
-                if (fila.getVersionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE) {
+                if (fila.versionHash() >= HuellaDeAuditoria.VERSION_VERIFICABLE) {
                     comprobadas++;
                 } else {
                     soloEnlace++;
                 }
-                hashDeLaAnterior = fila.getHash();
-                ultimoId = fila.getId();
+                hashDeLaAnterior = fila.hash();
+                ultimoId = fila.id();
             }
-            // Sin esto, la sesión de JPA acumularía todas las filas de todos
-            // los bloques y el recorrido por bloques no serviría de nada: el
-            // problema de memoria seguiría ahí, solo que más repartido.
-            entityManager.clear();
         }
 
         return AuditIntegrityResponse.intacta(filas, comprobadas, soloEnlace);
+    }
+
+    /**
+     * Los movimientos que siguen a uno dado, en orden de escritura.
+     *
+     * Una consulta por bloque, y cada una en su propia transacción corta (la
+     * que declara el repositorio: ver allí por qué hace falta declararla). El
+     * recorrido completo iba antes en una sola, y con millón y medio de
+     * movimientos esa transacción duraba tres cuartos de hora con una de las
+     * cinco conexiones cogida (docs/PRUEBA-DE-CARGA.md).
+     *
+     * No son entidades, así que no hay sesión de JPA que vaciar entre bloque y
+     * bloque.
+     */
+    private List<FilaDeLaCadena> siguienteBloque(long desdeId) {
+        return auditRepository.findBloqueDeLaCadena(desdeId, PageRequest.of(0, filasPorBloque));
     }
 
     private void anotarPuntoDeControl(AuditIntegrityResponse resultado, Desde desde) {
@@ -500,24 +508,17 @@ public class VerificadorDeAuditoria {
                 ultima.getId(), resultado.movimientos(), resultado.comprobados());
     }
 
-    /** La empresa de un movimiento es la de su fichaje. Null si no la tiene. */
-    private static Long empresaDe(TimeEntryAudit fila) {
-        return fila.getRegistro() != null && fila.getRegistro().getEmpresa() != null
-                ? fila.getRegistro().getEmpresa().getId()
-                : null;
-    }
-
     /** Qué le pasa a esta fila, o null si está bien. */
-    private String revisar(TimeEntryAudit fila, String hashDeLaAnterior) {
+    private String revisar(FilaDeLaCadena fila, String hashDeLaAnterior) {
         // El enlace: lo que la fila dice que había antes contra lo que había
         // antes de verdad. La primera de todas no enlaza con nada.
-        if (!Objects.equals(fila.getHashAnterior(), hashDeLaAnterior)) {
+        if (!Objects.equals(fila.hashAnterior(), hashDeLaAnterior)) {
             return "el enlace con la fila anterior no cuadra: falta una fila, sobra una o se han reordenado";
         }
-        if (fila.getVersionHash() < HuellaDeAuditoria.VERSION_VERIFICABLE) {
+        if (fila.versionHash() < HuellaDeAuditoria.VERSION_VERIFICABLE) {
             return null;
         }
-        if (!huella.calcular(fila, hashDeLaAnterior).equals(fila.getHash())) {
+        if (!huella.calcular(fila, hashDeLaAnterior).equals(fila.hash())) {
             return "el contenido de la fila no coincide con su hash: le han cambiado algo";
         }
         return null;

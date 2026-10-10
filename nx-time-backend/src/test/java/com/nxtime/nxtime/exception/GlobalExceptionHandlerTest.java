@@ -10,9 +10,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.ServerErrorMessage;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 /**
  * Unitarios de la traducción de violaciones de integridad (Fase A2).
@@ -155,5 +159,32 @@ class GlobalExceptionHandlerTest {
                 new DataIntegrityViolationException("algo raro sin causa JDBC"));
 
         assertThat(problema.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
+    }
+
+    /*
+     * La base no contesta o no quedan conexiones (ADR 041): es del momento, no
+     * un fallo del programa. En la prueba de carga, las entradas que se rendían
+     * tras 45 segundos esperando una conexión salían como «error inesperado».
+     */
+    @Test
+    @DisplayName("Sin conexiones libres: 503 con Retry-After, no un 500")
+    void sinConexiones_503() {
+        ResponseEntity<ProblemDetail> respuesta = handler.handleBaseNoDisponible(new DataAccessResourceFailureException(
+                "Unable to acquire JDBC Connection [HikariPool-1 - Connection is not available]"));
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(respuesta.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("5");
+        assertThat(respuesta.getBody().getDetail()).contains("ocupado");
+        // Lo que se le dice a quien está delante no lleva nada de dentro.
+        assertThat(respuesta.getBody().getDetail()).doesNotContain("Hikari").doesNotContain("JDBC");
+    }
+
+    @Test
+    @DisplayName("Si no se puede ni abrir la transacción, lo mismo")
+    void sinTransaccion_503() {
+        ResponseEntity<ProblemDetail> respuesta = handler.handleBaseNoDisponible(
+                new CannotCreateTransactionException("Could not open JPA EntityManager for transaction"));
+
+        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

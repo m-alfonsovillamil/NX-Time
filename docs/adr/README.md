@@ -50,3 +50,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [038](038-sso-lo-que-faltaba.md) | SSO, lo que faltaba: vincular desde la app, registrar una empresa y la exportación; exigir el SSO, aplazado |
 | [039](039-limites-a-lo-caro.md) | Límites a lo caro: que lo más pesado no sirva para tumbar el servicio |
 | [040](040-panel-de-plataforma.md) | El panel de plataforma: ver la instalación entera sin ser de ninguna empresa |
+| [041](041-el-acceso-bajo-carga.md) | El acceso bajo carga: que entrar no tumbe lo demás |

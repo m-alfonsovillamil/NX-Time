@@ -35,6 +35,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.security.OperadoresDePlataforma;
+import com.nxtime.nxtime.security.TurnoDeContrasena;
 import com.nxtime.nxtime.service.AccessCodeService;
 import java.time.Instant;
 import java.util.Optional;
@@ -45,11 +46,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.mockito.ArgumentCaptor;
 
 /**
@@ -94,7 +98,8 @@ class AuthServiceImplTest {
         service = new AuthServiceImpl(
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
                 authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta,
-                new OperadoresDePlataforma(""));
+                new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
+                new TurnoDeContrasena(0));
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
@@ -181,7 +186,8 @@ class AuthServiceImplTest {
         AuthServiceImpl nuevo = new AuthServiceImpl(usuarios, empresas, refreshTokenRepository, passwordEncoder,
                 jwtService, authenticationManager, org.mockito.Mockito.mock(ApplicationEventPublisher.class),
                 org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta,
-                new OperadoresDePlataforma(""));
+                new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
+                new TurnoDeContrasena(0));
         return nuevo.registerManager(
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null));
     }
@@ -291,6 +297,54 @@ class AuthServiceImplTest {
                 .hasMessageContaining("Demasiados intentos");
         // Y se corta ANTES de comprobar la contraseña: diez llamadas, no once.
         verify(authenticationManager, times(10)).authenticate(any());
+    }
+
+    /*
+     * Si al entrar no se puede leer a la persona (la base no contesta, no
+     * quedan conexiones), Spring Security lo envuelve en una excepción de
+     * autenticación. Dejarla pasar la convertía en «credenciales incorrectas»
+     * y en un intento fallido contra esa cuenta: a quien entraba con la
+     * contraseña buena, en el peor momento, se le decía que estaba mal (ADR 041).
+     */
+    @Test
+    @DisplayName("Si la base no responde al entrar, sale como un fallo de la base y no como contraseña incorrecta")
+    void login_siLaBaseNoResponde_noEsUnaContrasenaMal() {
+        Company empresa = Company.builder().id(1L).nombre("Empresa").build();
+        User user = User.builder().id(1L).email("gestor@nxtime.test").rol(Role.GESTOR).empresa(empresa).build();
+        LoginRequest request = new LoginRequest(user.getEmail(), "password123");
+        lenient().when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        DataAccessResourceFailureException sinConexion =
+                new DataAccessResourceFailureException("Unable to acquire JDBC Connection");
+        when(authenticationManager.authenticate(any()))
+                .thenThrow(new InternalAuthenticationServiceException("no se ha podido leer", sinConexion))
+                .thenThrow(new InternalAuthenticationServiceException("no se ha podido leer", sinConexion))
+                .thenThrow(new InternalAuthenticationServiceException("no se ha podido leer", sinConexion))
+                .thenThrow(new InternalAuthenticationServiceException("no se ha podido leer", sinConexion))
+                .thenThrow(new InternalAuthenticationServiceException("no se ha podido leer", sinConexion))
+                .thenReturn(null);
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> service.login(request)).isSameAs(sinConexion);
+        }
+
+        // Cinco contraseñas mal seguidas obligan a esperar antes de la sexta
+        // (ADR 034). Cinco fallos de la base, no: cuando vuelve, se entra.
+        assertThat(service.login(request).token()).isEqualTo("access-token");
+    }
+
+    @Test
+    @DisplayName("Y cinco contraseñas mal de verdad sí hacen esperar: la diferencia es esa")
+    void login_cincoContrasenasMal_siHacenEsperar() {
+        LoginRequest request = new LoginRequest("gestor@nxtime.test", "mala");
+        when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("no"));
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> service.login(request)).isInstanceOf(BadCredentialsException.class);
+        }
+
+        assertThatThrownBy(() -> service.login(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Demasiados intentos fallidos");
     }
 
     // ---- refreshAccessToken (rotacion, Fase A11) ----
@@ -422,7 +476,7 @@ class AuthServiceImplTest {
     }
 
     @Test
-    @DisplayName("Un login desde la web da un refresh de 12 horas, no de 30 dias")
+    @DisplayName("Un login desde la web da un refresh de siete dias, no de 30 (ADR 041)")
     void login_desdeWeb_duraMenos() {
         User user = User.builder().id(1L).email("empleado@nxtime.test").rol(Role.EMPLEADO).build();
         when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
@@ -432,10 +486,12 @@ class AuthServiceImplTest {
         ArgumentCaptor<RefreshToken> emitido = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(emitido.capture());
         assertThat(emitido.getValue().getOrigen()).isEqualTo(RefreshToken.Origen.WEB);
-        // Un navegador es una maquina que carga codigo de terceros y que a
-        // menudo se comparte.
+        // Un navegador es una maquina que a menudo se comparte: menos que el
+        // movil. Pero no doce horas: con doce, todo el mundo entraba con
+        // contrasena cada manana.
         assertThat(emitido.getValue().getExpiraEn())
-                .isBefore(Instant.now().plus(java.time.Duration.ofHours(13)));
+                .isAfter(Instant.now().plus(java.time.Duration.ofDays(6)))
+                .isBefore(Instant.now().plus(java.time.Duration.ofDays(8)));
     }
 
     // ---- logout ----

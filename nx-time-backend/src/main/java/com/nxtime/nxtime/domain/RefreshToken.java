@@ -58,15 +58,28 @@ public class RefreshToken {
     /**
      * De dónde salió el token, y cuánto dura por eso.
      *
-     * Un navegador no merece treinta días: el token vive en una máquina que
-     * carga código de terceros y que a menudo es compartida. Un móvil con la
-     * app instalada es otra cosa, y obligar a entrar cada doce horas ahí sería
-     * castigar al usuario sin ganar nada.
+     * Un navegador no merece treinta días: es una máquina que a menudo se
+     * comparte. Un móvil con la app instalada es otra cosa.
+     *
+     * <b>Siete días en la web desde octubre de 2026 (ADR 041); antes, doce
+     * horas.</b> Con doce, toda la plantilla entraba con contraseña cada
+     * mañana, y comprobar una contraseña es lo más caro que hace el servicio:
+     * en la prueba de carga, cien personas entrando en un minuto lo hundían, y
+     * las mismas con la sesión abierta fichaban sin un fallo
+     * (docs/PRUEBA-DE-CARGA.md). Para quien usa la web desde el iPhone, además,
+     * era teclear la contraseña cada día.
+     *
+     * Lo que justificaba las doce horas ha cambiado: el token ya no vive donde
+     * lo alcanza un script (va en una cookie HttpOnly desde el ADR 030), se
+     * rota en cada uso y reutilizar uno viejo cierra la sesión entera. Queda
+     * el ordenador compartido, y para eso están «Cerrar sesión» y la propiedad
+     * {@code application.security.web-session.duracion}, que es la que manda:
+     * lo de aquí es solo su valor por defecto.
      */
     public enum Origen {
         ANDROID(Duration.ofDays(30)),
         IOS(Duration.ofDays(30)),
-        WEB(Duration.ofHours(12));
+        WEB(Duration.ofDays(7));
 
         private final Duration duracion;
 

@@ -4,6 +4,9 @@ Qué aguanta NX Time y qué se rompe primero. Medido el 9 y 10 de octubre de 202
 sobre `main` (`e57610b`), antes de optimizar nada: es de donde sale el orden de
 lo que viene después.
 
+Lo primero que se arregló con esto está en el [ADR 041](adr/041-el-acceso-bajo-carga.md),
+y lo que cambió al repetir las mediciones, al final: [Después](#después).
+
 ## Lo que ha salido
 
 1. **Una oficina de más de diez personas no puede entrar a la vez.** El límite
@@ -180,7 +183,8 @@ la pasada completa periódica que se quería añadir.
 
 ## Qué se hace con esto
 
-Por orden, y casi todo es poco código:
+Por orden, y casi todo es poco código. Los cinco primeros están hechos (ADR
+041):
 
 1. **El límite de entradas por IP.** Que una oficina pueda entrar: subirlo y
    apoyarse en el límite por cuenta, que ya existe y es el que de verdad frena
@@ -202,6 +206,56 @@ Y dos que no son código:
 - **0,1 de CPU no da para una plantilla entrando a las nueve.** Con 0,5 entran
   trescientas personas en un minuto sin problema.
 - **El almacenamiento**: 1,3 GB por año y tres mil personas, casi todo traza.
+
+## Después
+
+Los mismos escenarios, con los cambios del ADR 041: un cupo propio para entrar
+(60 por minuto e IP), la contraseña comprobada sin conexión y por turnos, 503
+en vez de 401 cuando falla la base, y el recorrido de la traza en una consulta
+por bloque. Cada uno, una vez.
+
+**Sin límite de CPU**
+
+| | Antes | Después |
+|---|---|---|
+| Comprobar la traza entera (1,5 M de movimientos) | 46 minutos | 18 segundos |
+| Oficina: entran, desde una sola IP | 10 de 40 | 68 de 70 |
+| 100 a la vez con contraseña: fichar, mediana / p95 | 910 / 1.318 ms | 368 / 512 ms |
+| 300 a la vez con contraseña: fichar, mediana / p95 | 1.658 / 2.546 ms | 785 / 1.300 ms |
+| 1.000 en diez segundos con sesión: fichar, mediana / p95 | 159 / 266 ms | 117 / 193 ms |
+
+**Con la CPU limitada**, entrando con contraseña a lo largo de un minuto:
+
+| CPU | Personas | | Entran | Entrar: mediana | Fichar: mediana | Fichar: p95 | Fallos |
+|---:|---:|---|---:|---:|---:|---:|---|
+| 0,5 | 100 | antes | 100 | 132 | 49 | 178 | 0 |
+| | | después | 100 | 139 | 83 | 203 | 0 |
+| 0,5 | 300 | antes | 300 | 527 | 206 | 617 | 0 |
+| | | después | 300 | 2.277 | 106 | 197 | 0 |
+| 0,5 | 600 | antes | 600 | 15.328 | 8.002 | 35.502 | 0, con esperas de hasta 54 s |
+| | | después | 436 | 20.010 | 99 | 899 | 164 con 503 |
+| 0,1 | 100 | antes | 89 | 31.628 | 20.599 | 51.100 | 11 con 500; después 401 y esperas agotadas |
+| | | después | 92 | 18.087 | 311 | 709 | 8 con 503 |
+
+Lo que dicen:
+
+- **Quien ya está dentro deja de notar a los que entran.** Es lo que cambia de
+  verdad: con el servicio desbordado, fichar pasa de decenas de segundos a
+  décimas.
+- **Entrar no es más rápido, y con cola es más lento.** A 0,5 de CPU y
+  trescientas personas en un minuto, de medio segundo a dos. Las contraseñas
+  van ahora por turnos, y antes se llevaban la CPU por delante de todo lo
+  demás.
+- **Cuando llega más gente de la que cabe, se le dice.** Un 503 a los veinte
+  segundos, y no un 401, un 500 o una espera que se agota.
+- **La CPU sigue siendo la que es.** Con 0,1 no caben cien personas entrando
+  con contraseña en un minuto, ni antes ni ahora. Lo que evita esa cola es no
+  tener que entrar: la sesión de la web dura ahora siete días.
+
+Dos fallos de estos mismos cambios salieron al repetir la prueba, con los tests
+en verde, y están contados en el ADR 041: una conexión que se quedaba cogida
+(con trescientas personas a la vez no entró nadie) y el tope de contraseñas a
+la vez, que hasta entonces existía por casualidad.
 
 ## Repetirlo
 
@@ -226,7 +280,9 @@ java -Xmx384m -jar nx-time-backend/build/libs/nx-time-backend-0.0.1-SNAPSHOT.jar
   --spring.datasource.hikari.connection-timeout=45000 \
   --application.security.rate-limit.trusted-proxies=1 \
   --application.security.rate-limit.peticiones-por-minuto=10 \
-  --application.security.rate-limit.caro-por-minuto=30
+  --application.security.rate-limit.entradas-por-minuto=60 \
+  --application.security.rate-limit.caro-por-minuto=30 \
+  --spring.datasource.hikari.leak-detection-threshold=5000
 
 # 5. Los escenarios:
 node scripts/carga/carga.mjs entrada --personas 500 --rampa 60
@@ -236,5 +292,12 @@ node scripts/carga/carga.mjs mixto --personas 300 --duracion 60
 node scripts/carga/carga.mjs integridad --personas 300 --duracion 60
 ```
 
+La última línea no es de producción: hace que el pool avise en el log de
+cualquier conexión que lleve más de cinco segundos cogida, con la traza de
+quién la pidió. Es lo que destapó dos de los fallos de arriba.
+
 Para limitar la CPU, el mismo jar dentro de un contenedor con
-`docker run --cpus=0.1 -m 512m`, apuntando a `host.docker.internal:5433`.
+`docker run --cpus=1 -m 512m`, apuntando a `host.docker.internal:5433`, y
+después `docker update --cpus 0.5` (o `0.1`) antes de medir. Arrancarlo ya
+limitado a 0,1 tarda seis minutos; con más de una CPU al arrancar, la JVM se
+configura para dos procesadores y las cifras dejan de ser comparables.

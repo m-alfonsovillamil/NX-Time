@@ -9,12 +9,17 @@ import org.postgresql.util.PSQLException;
 import org.postgresql.util.ServerErrorMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.nxtime.nxtime.security.ServicioOcupado;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -136,6 +141,25 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleTenantAccess(TenantAccessException ex) {
         log.warn("Acceso entre empresas bloqueado: {}", ex.getMessage());
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    /**
+     * La base no contesta o no queda ninguna conexión libre: 503, no 500.
+     *
+     * No es un fallo del programa sino del momento, y lo correcto es decirle
+     * al cliente que vuelva a intentarlo. En la prueba de carga, con el pool
+     * agotado, las entradas que se rendían tras esperar una conexión salían
+     * como «error inesperado» (docs/PRUEBA-DE-CARGA.md, ADR 041).
+     *
+     * Solo las dos excepciones que significan eso. Un error de SQL o de datos
+     * sigue siendo un 500: ese sí es nuestro.
+     */
+    @ExceptionHandler({DataAccessResourceFailureException.class, CannotCreateTransactionException.class})
+    public ResponseEntity<ProblemDetail> handleBaseNoDisponible(RuntimeException ex) {
+        log.warn("La base no responde o no quedan conexiones: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ServicioOcupado.REINTENTAR_EN_SEGUNDOS))
+                .body(ServicioOcupado.problema());
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -106,11 +106,16 @@ class VerificacionManualConcurrenteIT {
         assertThat(jdbc.queryForObject("SELECT 1", Integer.class)).isEqualTo(1);
     }
 
-    /** Una empresa con sus jornadas: cuatro movimientos de auditoría por jornada. */
-    private long empresaConJornadas(String nombre, int jornadas) {
+    /**
+     * Una empresa con sus jornadas: cuatro movimientos de auditoría por jornada.
+     *
+     * @return el correo de alguien suyo, que es con lo que pregunta la web
+     */
+    private String empresaConJornadas(String nombre, int jornadas) {
         Company empresa = companyRepository.save(Company.builder().nombre(nombre + " " + System.nanoTime()).build());
+        String email = null;
         for (int i = 0; i < jornadas; i++) {
-            String email = nombre + i + "-" + System.nanoTime() + "@nxtime.test";
+            email = nombre + i + "-" + System.nanoTime() + "@nxtime.test";
             userRepository.save(User.builder().email(email).nombre("Empleado").contrasena("hash")
                     .rol(Role.EMPLEADO).empresa(empresa).activo(true).build());
             timeEntryService.registerTimeEntry(email, new TimeEntryRequest(TimeEntryAction.INICIO));
@@ -118,14 +123,19 @@ class VerificacionManualConcurrenteIT {
             timeEntryService.registerTimeEntry(email, new TimeEntryRequest(TimeEntryAction.PAUSA_FIN));
             timeEntryService.registerTimeEntry(email, new TimeEntryRequest(TimeEntryAction.FIN));
         }
-        return empresa.getId();
+        return email;
     }
 
     @Test
     @DisplayName("Doce comprobaciones a la vez son un solo recorrido, cada empresa recibe lo suyo y las que esperan no ocupan conexión")
     void muchasALaVez_unSoloRecorrido() throws Exception {
-        long a = empresaConJornadas("a", 60);
-        long b = empresaConJornadas("b", 40);
+        // Por el correo de quien pregunta, que es como lo pide la pantalla
+        // (AuditController). Hasta octubre de 2026 este test preguntaba por el
+        // id de la empresa, y por ese camino no se ve lo que pasaba por el
+        // otro: averiguar la empresa dejaba una conexión cogida durante toda
+        // la espera. Lo destapó la detección de fugas del pool (ADR 041).
+        String a = empresaConJornadas("a", 60);
+        String b = empresaConJornadas("b", 40);
         long recorridosAntes = verificador.recorridosCompletos();
         var pool = ((HikariDataSource) dataSource).getHikariPoolMXBean();
 
@@ -134,10 +144,18 @@ class VerificacionManualConcurrenteIT {
         AtomicInteger maximoDeConexiones = new AtomicInteger();
         AtomicInteger maximoEsperando = new AtomicInteger();
         AtomicBoolean vigilando = new AtomicBoolean(true);
+        AtomicBoolean todasEsperando = new AtomicBoolean(false);
         Thread vigilante = new Thread(() -> {
             while (vigilando.get()) {
-                maximoDeConexiones.accumulateAndGet(pool.getActiveConnections(), Math::max);
-                maximoEsperando.accumulateAndGet(verificador.esperandoTurno(), Math::max);
+                int esperando = verificador.esperandoTurno();
+                maximoEsperando.accumulateAndGet(esperando, Math::max);
+                // Las conexiones se miran cuando TODAS las demás ya esperan su
+                // turno: antes de eso, cada petición coge una un instante para
+                // saber de qué empresa es quien pregunta, y eso no es esperar.
+                if (esperando == PETICIONES - 1) {
+                    maximoDeConexiones.accumulateAndGet(pool.getActiveConnections(), Math::max);
+                    todasEsperando.set(true);
+                }
                 Thread.onSpinWait();
             }
         });
@@ -149,10 +167,10 @@ class VerificacionManualConcurrenteIT {
         List<Future<AuditIntegrityResponse>> deB = new ArrayList<>();
         try {
             for (int i = 0; i < PETICIONES; i++) {
-                long empresa = i % 2 == 0 ? a : b;
+                String quien = i % 2 == 0 ? a : b;
                 (i % 2 == 0 ? deA : deB).add(hilos.submit(() -> {
                     salida.await();
-                    return verificador.verificarPara(empresa);
+                    return verificador.verificarParaLaEmpresaDe(quien);
                 }));
             }
             salida.countDown();
@@ -175,11 +193,15 @@ class VerificacionManualConcurrenteIT {
         assertThat(verificador.recorridosCompletos() - recorridosAntes).isEqualTo(1);
         // La prueba vale porque de verdad coincidieron: hubo peticiones esperando.
         assertThat(maximoEsperando.get()).as("peticiones esperando a la vez").isGreaterThanOrEqualTo(2);
-        // Y esperar no ocupa una conexión: en uso, la de quien recorre.
-        assertThat(maximoDeConexiones.get()).as("conexiones del pool en uso a la vez").isLessThanOrEqualTo(2);
+        assertThat(todasEsperando.get()).as("llegaron a estar las once esperando a la vez").isTrue();
+        // Y esperar no ocupa una conexión: en uso, como mucho la de quien
+        // recorre, que la coge para cada bloque y la suelta.
+        assertThat(maximoDeConexiones.get()).as("conexiones del pool en uso con once esperando").isLessThanOrEqualTo(1);
 
         // Pedirlo otra vez dentro del medio minuto tampoco vuelve a recorrer.
-        assertThat(verificador.verificarPara(a).movimientos()).isEqualTo(240);
+        assertThat(verificador.verificarParaLaEmpresaDe(a).movimientos()).isEqualTo(240);
+        // Y al acabar no queda ninguna cogida.
+        assertThat(pool.getActiveConnections()).isZero();
         assertThat(verificador.recorridosCompletos() - recorridosAntes).isEqualTo(1);
     }
 }

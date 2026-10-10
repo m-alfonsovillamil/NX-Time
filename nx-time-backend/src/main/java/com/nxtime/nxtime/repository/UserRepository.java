@@ -11,10 +11,27 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
+
+    /**
+     * De qué empresa es una cuenta, sin cargar a la persona.
+     *
+     * <b>{@code @Transactional} a propósito</b>, y es por lo que existe: una
+     * consulta declarada aquí no abre transacción por sí sola, y sin una la
+     * conexión se queda cogida hasta que termina el método que la rodea. Quien
+     * pide comprobar la traza pregunta primero de qué empresa es y después
+     * espera su turno, que pueden ser veinte segundos: con {@link #findByEmail}
+     * esperaba con una conexión cogida, que es justo lo que el ADR 039 decía
+     * evitar. Se vio en octubre de 2026 con la detección de fugas del pool
+     * puesta (ADR 041).
+     */
+    @Transactional(readOnly = true)
+    @Query("select u.empresa.id from usuarios u where u.email = :email")
+    Optional<Long> findEmpresaIdByEmail(@Param("email") String email);
 
     boolean existsByEmail(String email);
 

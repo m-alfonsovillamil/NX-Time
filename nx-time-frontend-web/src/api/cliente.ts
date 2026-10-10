@@ -432,7 +432,7 @@ export function clienteDeKiosco(token: () => string | null) {
  *
  * Se avisa al servidor para que revoque la familia entera y borre las
  * cookies, pero no se espera: la sesión local se cierra igual. Si la petición
- * falla, el token caduca solo en 12 horas; dejar a alguien «dentro» porque el
+ * falla, el token caduca solo a los siete días sin usarse; dejar a alguien «dentro» porque el
  * logout no llegó sería peor.
  */
 export function salir(): void {

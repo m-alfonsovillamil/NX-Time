@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -35,10 +38,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final ObjectMapper objectMapper;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService, UserDetailsService userDetailsService, ObjectMapper objectMapper) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -114,6 +120,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.warn("Token JWT inválido o caducado para {}", userEmail);
                 }
             }
+        } catch (DataAccessException | TransactionException e) {
+            // No es el token: es que no se ha podido leer a la persona (la base
+            // no contesta, o las conexiones están todas cogidas). Hasta
+            // octubre de 2026 esto caía en el catch de abajo y la petición
+            // seguía sin autenticar, así que se respondía 401. Para un cliente
+            // un 401 es «tu sesión no vale, vuelve a entrar», y entrar es lo
+            // más caro que hay: en la prueba de carga, cuando el servicio iba
+            // justo, echaba a gente con la sesión en regla y la mandaba a
+            // empeorarlo (docs/PRUEBA-DE-CARGA.md, ADR 041).
+            log.warn("No se ha podido comprobar la sesión: la base no responde ({}).", e.getClass().getSimpleName());
+            ServicioOcupado.responder(response, objectMapper);
+            return;
         } catch (RuntimeException e) {
             // Token corrupto, mal formado, con firma inválida o caducado
             // (jjwt lanza ExpiredJwtException, MalformedJwtException,

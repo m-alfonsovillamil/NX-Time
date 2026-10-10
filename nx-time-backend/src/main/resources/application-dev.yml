@@ -54,6 +54,8 @@ application:
       # Solo en local: la suite de Playwright entra una veintena de veces en
       # medio minuto desde la misma IP. Producción sigue con las 10 de siempre.
       peticiones-por-minuto: 200
+      # Y lo mismo para el cupo de entrar, que en producción es de 60.
+      entradas-por-minuto: 200
       # Lo mismo para el tope de lo caro (LimiteDeLoCaro): la suite recorre
       # informes y analítica con las mismas cuatro cuentas una y otra vez.
       caro-por-minuto: 600

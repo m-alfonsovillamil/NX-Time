@@ -217,6 +217,13 @@ application:
       # subdominio. Vacío = cookie del propio host, que es lo que hace falta en
       # local, donde la web habla con la API por el proxy de Vite.
       cookie-domain: ""
+      # Cuánto dura la sesión de un navegador sin usarse (ADR 041). Se renueva
+      # con cada uso, así que solo caduca la de quien deja de entrar. Siete
+      # días: con las doce horas de antes, toda la plantilla entraba con
+      # contraseña cada mañana, que es lo más caro que hace el servicio. La
+      # app no pasa por aquí: sus sesiones duran treinta días. En una
+      # instalación con ordenadores compartidos tiene sentido bajarla (12h).
+      duracion: "${WEB_SESSION_DURACION:7d}"
 
     # Entrar con Google o con Microsoft (ADR 036). APAGADO mientras falte
     # algo: un proveedor solo existe con sus dos credenciales y las dos URL.

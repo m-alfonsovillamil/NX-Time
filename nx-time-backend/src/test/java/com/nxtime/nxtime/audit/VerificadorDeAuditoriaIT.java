@@ -13,10 +13,13 @@ import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
+import jakarta.persistence.EntityManagerFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.List;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +42,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * justo el escenario contra el que la cadena existe: alguien con acceso a la
  * base por debajo de la aplicación.
  */
-@SpringBootTest
+@SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 class VerificadorDeAuditoriaIT {
 
     private static final String ADMIN_URL = "jdbc:postgresql://localhost:5433/nxtime";
@@ -82,6 +85,8 @@ class VerificadorDeAuditoriaIT {
     private CompanyRepository companyRepository;
     @Autowired
     private VerificadorDeAuditoria verificador;
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     /**
      * Cada test arranca con la traza vacía.
@@ -159,6 +164,55 @@ class VerificadorDeAuditoriaIT {
         assertThat(resultado.comprobados()).isEqualTo(resultado.movimientos());
         assertThat(resultado.soloEnlace()).isZero();
         assertThat(resultado.primerFallo()).isNull();
+    }
+
+    /*
+     * Lo que midió la prueba de carga (docs/PRUEBA-DE-CARGA.md): el recorrido
+     * cargaba cada movimiento como entidad, y cada uno traía detrás su fichaje
+     * y su persona con una consulta aparte. Millón y medio de movimientos, 46
+     * minutos. Ahora un bloque es una consulta, haya en él los fichajes y las
+     * personas que haya.
+     */
+    @Test
+    @DisplayName("Recorrer la traza cuesta una consulta por bloque, no una por movimiento")
+    void elRecorridoNoPideNadaPorMovimiento() {
+        jornadaCompleta("consultas-a@nxtime.test");
+        jornadaCompleta("consultas-b@nxtime.test");
+        jornadaCompleta("consultas-c@nxtime.test");
+        long movimientos = auditRepository.count();
+        assertThat(movimientos).isEqualTo(12);
+
+        Statistics estadisticas = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        estadisticas.clear();
+        AuditIntegrityResponse resultado = verificador.verificar();
+        long consultas = estadisticas.getPrepareStatementCount();
+
+        assertThat(resultado.intacta()).isTrue();
+        assertThat(resultado.movimientos()).isEqualTo(movimientos);
+        // Bloques de dos (ver arriba): seis con filas y el último, vacío, que
+        // es el que dice que se ha acabado. Con entidades eran más de treinta.
+        assertThat(consultas).isEqualTo(movimientos / 2 + 1);
+    }
+
+    /*
+     * Las acciones automáticas (el cierre de las 3:00) no tienen autor. La
+     * consulta del recorrido cruza con el autor, y un cruce que se dejara
+     * fuera esas filas sería, para la cadena, como si las hubieran borrado: el
+     * fallo saldría en la fila SIGUIENTE y como un enlace roto.
+     */
+    @Test
+    @DisplayName("Un movimiento sin autor no desaparece del recorrido: quitárselo se detecta en esa fila")
+    void unMovimientoSinAutorSigueEnLaCadena() throws Exception {
+        jornadaCompleta("sin-autor@nxtime.test");
+        long id = todasLasFilas().get(1).getId();
+
+        manipularSaltandoseElTrigger("UPDATE auditoria_fichaje SET modificado_por_id = NULL WHERE id = " + id);
+
+        AuditIntegrityResponse resultado = verificador.verificar();
+
+        assertThat(resultado.intacta()).isFalse();
+        assertThat(resultado.primerFallo()).as("la fila tocada, no la de después").isEqualTo(id);
+        assertThat(resultado.motivo()).contains("no coincide con su hash");
     }
 
     @Test
