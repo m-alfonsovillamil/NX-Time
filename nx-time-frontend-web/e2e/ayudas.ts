@@ -22,6 +22,27 @@ export async function irASeccion(page: Page, nombre: string): Promise<void> {
   await enlace.click();
 }
 
+/**
+ * Lo que falta tras pulsar «Fichar entrada» si hoy no es laborable.
+ *
+ * Un festivo (o con una ausencia aprobada) la web no ficha sin preguntar: abre
+ * un diálogo, y la jornada no empieza hasta confirmarlo. Las specs que fichan
+ * no lo tenían en cuenta y la suite entera se ponía en rojo cada festivo
+ * nacional; se vio el 12/10/2026. Un día normal esto no hace nada.
+ *
+ * `pulsar` es cómo se pulsa en esa spec: con el ratón, con el dedo o con el
+ * teclado.
+ */
+export async function iniciarAunqueNoSeaLaborable(
+  page: Page,
+  pulsar: (boton: Locator) => Promise<void> = (boton) => boton.click(),
+): Promise<void> {
+  const dialogo = page.getByRole('dialog', { name: 'Hoy no es un día laborable' });
+  const enMarcha = page.getByRole('button', { name: 'Fichar salida' });
+  await expect(dialogo.or(enMarcha)).toBeVisible();
+  if (await dialogo.isVisible()) await pulsar(dialogo.getByRole('button', { name: 'Iniciar igualmente' }));
+}
+
 /** Abre todos los apartados de un menú, para las specs que recorren todos sus enlaces. */
 export async function desplegarMenu(menu: Locator): Promise<void> {
   const cerrados = menu.locator('button[aria-expanded="false"]');
