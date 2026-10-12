@@ -54,3 +54,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [042](042-las-tareas-de-madrugada.md) | Las tareas de madrugada: una vez por turno, jornada a jornada y la traza entera cada semana |
 | [043](043-jackson-3.md) | Jackson 3: un solo serializador en el código propio, y lo que se firma escrito igual que antes |
 | [044](044-registrar-empresa-con-sso-desde-la-app.md) | Registrar una empresa con Google o Microsoft también desde la app |
+| [045](045-la-sesion-de-la-app-cifrada.md) | La sesión de la app, cifrada en el disco |

@@ -11,6 +11,27 @@ group = "com.nxtime"
 version = "0.0.1-SNAPSHOT"
 description = "nx-time-backend"
 
+/*
+ * Parches de seguridad que Spring Boot 4.1.1 todavia no trae (octubre de 2026).
+ *
+ * Salieron el dia que Dependabot empezo a ver las dependencias de Gradle (ver
+ * el job "dependencias" de ci.yml). Las versiones las fija el BOM de Spring
+ * Boot, y estas propiedades son la forma de adelantarse a el sin dejar de
+ * usarlo: solo se sube el ultimo numero, dentro de la misma linea.
+ *
+ * - Tomcat 11.0.24 -> 11.0.27: tres avisos criticos (CVE-2026-65182, -65905 y
+ *   -68525). Son de la autenticacion del propio Tomcat (FORM, DIGEST y las
+ *   restricciones de web.xml), que aqui no se usa: autentica Spring Security.
+ * - Jackson 3.1.5 -> 3.1.7 y 2.21.5 -> 2.21.7: denegacion de servicio al leer
+ *   numeros y tipos en un JSON que manda cualquiera.
+ *
+ * QUITAR cada linea cuando la version de Spring Boot que haya ya traiga una
+ * igual o posterior: fijada aqui, dejaria de subir sola.
+ */
+extra["tomcat.version"] = "11.0.27"
+extra["jackson-bom.version"] = "3.1.7"
+extra["jackson-2-bom.version"] = "2.21.7"
+
 
 java {
     toolchain {

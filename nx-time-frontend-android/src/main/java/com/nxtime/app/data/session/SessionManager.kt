@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class SessionManager(
     context: Context,
+    /** Con qué se cifran los tokens antes de escribirlos. Ver [CifradoConElAlmacenDeClaves]. */
+    private val cifrado: CifradoDeLaSesion = CifradoConElAlmacenDeClaves(),
     /**
      * Lo que hay que deshacer fuera de estas preferencias al cerrar sesión.
      *
@@ -28,6 +30,18 @@ class SessionManager(
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("NXTIME_PREFS", Context.MODE_PRIVATE)
+
+    /**
+     * Los dos tokens, ya descifrados. Descifrar es una llamada al almacén de
+     * claves del sistema y el de acceso se pide en cada petición: se hace una
+     * vez, al arrancar, y después se leen de aquí. Los escriben el hilo
+     * principal (al entrar) y los de la red (al renovar).
+     */
+    @Volatile
+    private var token: String? = null
+
+    @Volatile
+    private var refreshToken: String? = null
 
     private val senalDeCaducidad = SenalDeSesionCaducada()
 
@@ -56,6 +70,12 @@ class SessionManager(
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_AUTHORITIES = "user_authorities"
         private const val KEY_ZONA = "empresa_zona_horaria"
+
+        /**
+         * Lo que distingue un token cifrado de uno escrito tal cual por una
+         * versión anterior. Ni un JWT ni un refresh token llevan dos puntos.
+         */
+        private const val CIFRADO = "c1:"
     }
 
     init {
@@ -63,6 +83,37 @@ class SessionManager(
         // en la zona de su empresa (ADR 032). Sin la clave (una versión
         // anterior de la app), la de por defecto hasta el próximo refresco.
         DateFormats.fijarZona(prefs.getString(KEY_ZONA, null))
+
+        val guardados = listOf(KEY_AUTH_TOKEN, KEY_REFRESH_TOKEN).associateWith { prefs.getString(it, null) }
+        token = leido(guardados[KEY_AUTH_TOKEN])
+        refreshToken = leido(guardados[KEY_REFRESH_TOKEN])
+        // Quien actualiza desde la 1.15 o anterior trae los tokens sin cifrar:
+        // se reescriben cifrados aquí, sin que tenga que volver a entrar.
+        if (guardados.values.any { it != null && !it.startsWith(CIFRADO) }) {
+            prefs.edit()
+                .putString(KEY_AUTH_TOKEN, token?.let(::paraGuardar))
+                .putString(KEY_REFRESH_TOKEN, refreshToken?.let(::paraGuardar))
+                .apply()
+        }
+    }
+
+    /**
+     * Lo que se escribe en el disco en lugar del token.
+     *
+     * Si el dispositivo no puede cifrar (un almacén de claves estropeado, que
+     * pasa en algún teléfono), se guarda como hasta la 1.15: una app que no
+     * deja entrar es peor que una que guarda la sesión como siempre lo hizo.
+     */
+    private fun paraGuardar(valor: String): String = cifrado.cifrar(valor)?.let { CIFRADO + it } ?: valor
+
+    /**
+     * El token que hay detrás de lo guardado. Uno cifrado que ya no se puede
+     * leer (la clave se ha perdido) es como no tener sesión: se vuelve a entrar.
+     */
+    private fun leido(guardado: String?): String? = when {
+        guardado == null -> null
+        guardado.startsWith(CIFRADO) -> cifrado.descifrar(guardado.removePrefix(CIFRADO))
+        else -> guardado
     }
 
     /**
@@ -83,8 +134,10 @@ class SessionManager(
     ) {
         val editor = prefs.edit()
         editor.putString(KEY_ZONA, zonaHoraria)
-        editor.putString(KEY_AUTH_TOKEN, token)
-        editor.putString(KEY_REFRESH_TOKEN, refreshToken)
+        editor.putString(KEY_AUTH_TOKEN, paraGuardar(token))
+        editor.putString(KEY_REFRESH_TOKEN, paraGuardar(refreshToken))
+        this.token = token
+        this.refreshToken = refreshToken
         editor.putString(KEY_USER_NAME, nombre)
         editor.putStringSet(KEY_AUTHORITIES, authorities.toSet())
         // apply() y no commit(): esto se llama al entrar, desde el hilo
@@ -111,14 +164,14 @@ class SessionManager(
      * Obtiene el token JWT de acceso guardado.
      */
     fun fetchAuthToken(): String? {
-        return prefs.getString(KEY_AUTH_TOKEN, null)
+        return token
     }
 
     /**
      * Obtiene el refresh token guardado.
      */
     fun fetchRefreshToken(): String? {
-        return prefs.getString(KEY_REFRESH_TOKEN, null)
+        return refreshToken
     }
 
     /**
@@ -126,7 +179,8 @@ class SessionManager(
      * (el refresh token no cambia).
      */
     fun updateAccessToken(token: String) {
-        prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
+        this.token = token
+        prefs.edit().putString(KEY_AUTH_TOKEN, paraGuardar(token)).apply()
     }
 
     /**
@@ -138,9 +192,11 @@ class SessionManager(
      * interpretarse como una reutilización.
      */
     fun actualizarTokens(token: String, refreshToken: String) {
+        this.token = token
+        this.refreshToken = refreshToken
         prefs.edit()
-            .putString(KEY_AUTH_TOKEN, token)
-            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .putString(KEY_AUTH_TOKEN, paraGuardar(token))
+            .putString(KEY_REFRESH_TOKEN, paraGuardar(refreshToken))
             .apply()
     }
 
@@ -196,6 +252,8 @@ class SessionManager(
         // seguirían escritos y quien cogiera el móvil después entraría solo.
         // Es una operación única y bloquear unos milisegundos sale barato.
         editor.commit()
+        token = null
+        refreshToken = null
         DateFormats.fijarZona(null)
 
         alCerrarSesion()

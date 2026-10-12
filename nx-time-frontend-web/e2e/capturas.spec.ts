@@ -123,6 +123,9 @@ test.describe('escritorio', () => {
     // Más alta que las demás: fichar va arriba y el resumen debajo, y a 900 px
     // la captura cortaba las cifras y el gráfico por la mitad.
     await page.setViewportSize({ width: 1440, height: 1060 });
+    // La captura no puede depender del día en que se saca: en un festivo la
+    // página avisa arriba de que hoy no es laborable.
+    await page.route('**/api/v1/fichaje/hoy', (ruta) => ruta.fulfill({ json: { laborable: true, motivo: null } }));
     await entrar(page, 'javier.lopez@techcorp.demo');
     const entrada = page.getByRole('button', { name: 'Fichar entrada' });
     const salida = page.getByRole('button', { name: 'Fichar salida' });
@@ -139,6 +142,15 @@ test.describe('escritorio', () => {
     await salida.click();
     await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
     await expect(entrada).toBeVisible();
+  });
+
+  // Quien presta el servicio ve la instalación entera sin ser de ninguna
+  // empresa (ADR 040). En la demo es Lucía, que en su empresa es una empleada.
+  test('operadora: el panel de plataforma', async ({ page }) => {
+    await entrar(page, 'lucia.moreno@techcorp.demo');
+    await ir(page, '/plataforma');
+    await page.mouse.move(1400, 880);
+    await capturar(page, 'web-13-plataforma');
   });
 
   test('ADMIN: el menú por apartados plegables', async ({ page }) => {
