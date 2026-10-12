@@ -2,7 +2,6 @@ package com.nxtime.nxtime.security.sso;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.SsoProvider;
 import com.nxtime.nxtime.security.sso.SsoState.Estado;
 import com.nxtime.nxtime.security.sso.SsoState.Modo;
@@ -15,6 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Las piezas sueltas del SSO (ADR 036), en lo que {@code SsoIT} no alcanza

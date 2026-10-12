@@ -25,15 +25,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     /*
-     * Jackson 2, con el puente que trae Spring Boot 4. La 4 usa Jackson 3 por
-     * defecto (otro paquete, `tools.jackson`, y otros valores por defecto) y
-     * ya no publica el ObjectMapper de siempre. Aqui no se cambia a proposito:
-     * el JSON de la API es un contrato, y las instantaneas de la auditoria de
-     * fichajes se firman con un hash sobre su texto. Subir de Spring Boot y
-     * cambiar de serializador a la vez seria no saber cual de los dos ha
-     * movido una coma. El paso a Jackson 3 va aparte.
+     * Jackson 3 (`tools.jackson`), que es el que trae el starter de arriba.
+     * Hasta octubre de 2026 iba ademas `spring-boot-jackson2`, el puente con
+     * el que Spring Boot 4 sigue publicando el ObjectMapper de Jackson 2: las
+     * respuestas de la API ya salian por Jackson 3, pero el codigo propio
+     * (filtros, instantaneas de auditoria, la forma canonica de lo que se
+     * firma) seguia inyectando el de la 2. Ver el ADR 043.
+     *
+     * Jackson 2 sigue en el classpath porque lo traen otros (jjwt-jackson,
+     * swagger, el cliente de Google); el codigo de `src/main` ya no lo usa.
      */
-    implementation("org.springframework.boot:spring-boot-jackson2")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
@@ -136,6 +137,11 @@ dependencies {
     // para el TestExecutionListener que limpia las bases de datos que deja
     // la suite (ver LimpiezaDeBasesDeTest).
     testImplementation("org.junit.platform:junit-platform-launcher")
+    // Jackson 2, solo para CanonicoFrenteAJackson2Test: la definicion con la
+    // que se firmo la auditoria hasta octubre de 2026, guardada como
+    // referencia para comprobar que la de Jackson 3 escribe lo mismo.
+    testImplementation("com.fasterxml.jackson.core:jackson-databind")
+    testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     // Testcontainers: PROBADO en la Fase 3 y aparcado por ahora (ver
     // ApiContractTest). Con Docker Desktop 4.87 en Windows, los tres

@@ -1,6 +1,5 @@
 package com.nxtime.nxtime.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
@@ -20,6 +19,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Limita los intentos a /auth/login, /auth/register-manager y los códigos

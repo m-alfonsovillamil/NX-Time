@@ -6,7 +6,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
@@ -14,6 +13,7 @@ import com.nxtime.nxtime.service.MonthlySignatureService;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Lo que el listener decide antes de preguntar al servicio (Fase B3). Que la

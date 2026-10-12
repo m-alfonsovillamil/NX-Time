@@ -1,7 +1,5 @@
 package com.nxtime.nxtime.audit;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
@@ -14,6 +12,8 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * La corrección invalida la firma, en la misma transacción (Fase B3, ADR 025).

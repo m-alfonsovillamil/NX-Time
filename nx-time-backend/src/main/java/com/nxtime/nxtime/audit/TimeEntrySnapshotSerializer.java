@@ -1,10 +1,10 @@
 package com.nxtime.nxtime.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.TimeEntry;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Serializa un {@link TimeEntry} a la instantánea JSON que guardan
@@ -42,7 +42,7 @@ public class TimeEntrySnapshotSerializer {
                     entry.getSegundosPausaAcumulados(),
                     entry.isAnulado(),
                     entry.isJornadaIncompleta()));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             // TimeEntrySnapshot es un record de tipos simples (long,
             // Instant, boolean): no hay forma realista de que esto falle.
             throw new IllegalStateException("No se pudo serializar el fichaje para la auditoría", e);

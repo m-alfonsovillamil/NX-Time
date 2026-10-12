@@ -3,9 +3,6 @@ package com.nxtime.nxtime.contract;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,6 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@code docs/openapi.json} es lo que dice el backend, no lo que alguien copió
@@ -89,9 +90,10 @@ class OpenApiSnapshotTest {
      * {@code git diff} dejaría de servir para ver qué se ha tocado de verdad.
      */
     private String normalizar(String json) throws IOException {
-        ObjectMapper mapper = new ObjectMapper()
-                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
-                .enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectMapper mapper = JsonMapper.builder()
+                .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .build();
         JsonNode arbol = mapper.readTree(json);
         return mapper.writeValueAsString(arbol) + "\n";
     }

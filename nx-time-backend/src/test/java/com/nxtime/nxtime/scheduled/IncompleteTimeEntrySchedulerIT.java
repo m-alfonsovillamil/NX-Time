@@ -3,8 +3,6 @@ package com.nxtime.nxtime.scheduled;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
@@ -34,6 +32,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Test de INTEGRACIÓN del cierre automático de jornadas olvidadas

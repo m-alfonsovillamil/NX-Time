@@ -3,8 +3,6 @@ package com.nxtime.nxtime.web;
 import com.nxtime.nxtime.web.support.CodigosEnviados;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
@@ -35,6 +33,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * El kiosco de fichaje de punta a punta, con la cadena de seguridad de verdad
