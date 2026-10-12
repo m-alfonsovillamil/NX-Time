@@ -2,8 +2,6 @@ package com.nxtime.nxtime.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
@@ -38,6 +36,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Entrar con Google o con Microsoft (ADR 036), de punta a punta: el servidor

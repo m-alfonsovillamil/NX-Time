@@ -13,8 +13,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
 import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
 import com.nxtime.nxtime.domain.AuditAction;
@@ -46,6 +44,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unitarios (Mockito) de la máquina de estados del fichaje: los 4
@@ -79,12 +78,9 @@ class TimeEntryServiceImplTest {
     void setUp() {
         // ObjectMapper real (no mockeado): construir a mano el JSON
         // esperado para cada snapshot sería tan frágil como el propio
-        // código a probar. JavaTimeModule hace falta a mano aquí porque,
-        // a diferencia del ObjectMapper que autoconfigura Spring Boot en
-        // la app real, uno construido con "new" en un test no lo trae
-        // registrado por defecto -- y los snapshots serializan Instant.
-        var snapshotSerializer = new TimeEntrySnapshotSerializer(
-                new ObjectMapper().registerModule(new JavaTimeModule()));
+        // código a probar. Con Jackson 3 basta uno construido con "new":
+        // ya sabe escribir un Instant sin registrarle nada.
+        var snapshotSerializer = new TimeEntrySnapshotSerializer(new ObjectMapper());
         var proyectos = org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class);
         service = new TimeEntryServiceImpl(
                 timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,

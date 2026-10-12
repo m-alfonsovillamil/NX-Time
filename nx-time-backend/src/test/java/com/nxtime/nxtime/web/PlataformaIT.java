@@ -2,8 +2,6 @@ package com.nxtime.nxtime.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Role;
@@ -42,6 +40,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * El panel de plataforma de punta a punta (ADR 040): la cadena de seguridad de

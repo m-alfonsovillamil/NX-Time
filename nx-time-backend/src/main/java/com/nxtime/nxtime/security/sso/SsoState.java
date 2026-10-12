@@ -1,6 +1,5 @@
 package com.nxtime.nxtime.security.sso;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.SsoProvider;
 import io.jsonwebtoken.io.Decoders;
 import jakarta.servlet.http.Cookie;
@@ -19,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Lo que hay que recordar entre mandar a alguien al proveedor y verlo volver.

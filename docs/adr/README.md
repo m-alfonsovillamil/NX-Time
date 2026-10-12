@@ -52,3 +52,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [040](040-panel-de-plataforma.md) | El panel de plataforma: ver la instalación entera sin ser de ninguna empresa |
 | [041](041-el-acceso-bajo-carga.md) | El acceso bajo carga: que entrar no tumbe lo demás |
 | [042](042-las-tareas-de-madrugada.md) | Las tareas de madrugada: una vez por turno, jornada a jornada y la traza entera cada semana |
+| [043](043-jackson-3.md) | Jackson 3: un solo serializador en el código propio, y lo que se firma escrito igual que antes |

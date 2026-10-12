@@ -1,12 +1,12 @@
 package com.nxtime.nxtime.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * La respuesta de «ahora no puedo, vuelve en un momento» (503), para cuando la

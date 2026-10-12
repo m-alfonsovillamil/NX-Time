@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.CannotCreateTransactionException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Qué responde el filtro del token cuando no puede comprobar una sesión (ADR 041).

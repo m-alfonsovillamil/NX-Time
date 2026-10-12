@@ -1,13 +1,15 @@
 package com.nxtime.nxtime.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * La forma canónica de lo que se firma, y su SHA-256: una sola definición para
@@ -23,16 +25,26 @@ import java.util.HexFormat;
  * propio. Lo que se firma no puede depender de cómo esté configurado el de
  * Spring hoy; si alguien le cambia una opción al de la aplicación, los hashes
  * de mañana dejarían de cuadrar con los de ayer sin que nadie lo note.
+ *
+ * Tampoco puede depender de la versión de Jackson. Desde octubre de 2026 es la
+ * 3; {@code CanonicoFrenteAJackson2Test} guarda la definición de la 2 y
+ * compara las dos texto a texto. Subir de versión mayor pide repetir eso.
  */
 public final class Canonico {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+    private static final JsonMapper MAPPER = JsonMapper.builder()
+            .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
             // Los objetos (no los mapas) también, por nombre de propiedad: un
             // record que reordene sus componentes no puede cambiar la huella.
-            .configure(com.fasterxml.jackson.databind.MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
-            .registerModule(new JavaTimeModule())
-            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+            .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+            .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+            // Lo único en que Jackson 3 se separaba de Jackson 2, con el que se
+            // firmó hasta octubre de 2026: por defecto rechaza lo que sobre
+            // detrás de un JSON completo, y el 2 lo ignoraba. De una columna
+            // jsonb no puede venir, pero la definición tiene que ser la misma
+            // (ver CanonicoFrenteAJackson2Test y el ADR 043).
+            .disable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+            .build();
 
     private Canonico() {
     }
@@ -51,7 +63,7 @@ public final class Canonico {
         }
         try {
             return MAPPER.writeValueAsString(MAPPER.readValue(json, Object.class));
-        } catch (JsonProcessingException noEsJson) {
+        } catch (JacksonException noEsJson) {
             return json;
         }
     }
@@ -60,7 +72,7 @@ public final class Canonico {
     public static String deObjeto(Object objeto) {
         try {
             return json(MAPPER.writeValueAsString(objeto));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("No se pudo serializar para firmar", e);
         }
     }

@@ -9,8 +9,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nxtime.nxtime.audit.TimeEntryAuditEvent;
 import com.nxtime.nxtime.audit.TimeEntrySnapshotSerializer;
 import com.nxtime.nxtime.domain.AuditAction;
@@ -35,6 +33,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Unitarios del cierre automático de jornadas olvidadas (Fase 9).
@@ -61,7 +60,7 @@ class IncompleteTimeEntrySchedulerTest {
     @BeforeEach
     void setUp() {
         TimeEntrySnapshotSerializer serializer = new TimeEntrySnapshotSerializer(
-                new ObjectMapper().registerModule(new JavaTimeModule()));
+                new ObjectMapper());
         // El registro de la ejecución se prueba en TaskMonitorServiceImplTest
         // y ScheduledTaskMonitorIT: aquí solo tiene que dejar correr el trabajo.
         doAnswer(invocacion -> invocacion.<Supplier<String>>getArgument(1).get())
