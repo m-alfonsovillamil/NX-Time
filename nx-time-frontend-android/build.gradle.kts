@@ -71,9 +71,11 @@ android {
          * la analítica completa de la web («Ver el detalle», ADR 026 y W7), y
          * el texto de asignar proyecto dice la regla de verdad (ADR 017: se
          * puede estar en varios a la vez, no dos veces en el mismo).
+         * 16 = 12/10/2026: registrar una empresa con una cuenta de Google o de
+         * Microsoft también desde la app (ADR 044), sin contraseña ni código.
          */
-        versionCode = 15
-        versionName = "1.14"
+        versionCode = 16
+        versionName = "1.15"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

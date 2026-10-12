@@ -50,6 +50,12 @@ class AuthRepositoryImpl(
     override suspend fun canjearSso(codigo: String, verificador: String): Response<RespuestaAutenticacion> =
         apiService.canjearSso(PeticionCanjeSso(codigo, verificador))
 
+    override suspend fun canjearRegistroSso(codigo: String, verificador: String): Response<RegistroPendienteSsoDTO> =
+        apiService.canjearRegistroSso(PeticionCanjeSso(codigo, verificador))
+
+    override suspend fun registrarEmpresaConSso(peticion: PeticionRegistroSso): Response<RespuestaAutenticacion> =
+        apiService.registrarEmpresaConSso(peticion)
+
     override suspend fun getIdentidadesVinculadas(): Response<List<IdentidadVinculadaDTO>> =
         apiService.getIdentidadesVinculadas()
 

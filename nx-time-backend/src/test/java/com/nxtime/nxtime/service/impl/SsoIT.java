@@ -1044,6 +1044,206 @@ class SsoIT {
     }
 
     // ------------------------------------------------------------------
+    // Registrar una empresa desde la app (ADR 044)
+    // ------------------------------------------------------------------
+
+    private Ida iniciarRegistroDesdeLaApp(String proveedor) throws Exception {
+        return iniciar(proveedor, "?cliente=app&registro=1&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+    }
+
+    /** La app empieza a registrar y el navegador vuelve sin que haya cuenta: el código de registro. */
+    private String codigoDeRegistro(String proveedor, Map<String, Object> token, Ida ida) throws Exception {
+        PROVEEDOR.proximoToken(token);
+        HttpResponse<String> vuelta = volver(proveedor, ida);
+        assertThat(destino(vuelta)).startsWith("nxtime://sso?alta=");
+        // Ni sesión ni cookie de alta: a la app no le llegan cookies.
+        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+        return parametros(destino(vuelta)).get("alta");
+    }
+
+    private HttpResponse<String> canjearRegistro(String codigo, String verificador) throws Exception {
+        return post("/auth/sso/registro/canjear", Map.of("codigo", codigo, "verificador", verificador));
+    }
+
+    /** El pase de quien ha vuelto del proveedor desde la app sin tener cuenta. */
+    private String paseDe(String correo) throws Exception {
+        Ida ida = iniciarRegistroDesdeLaApp("google");
+        HttpResponse<String> canjeado =
+                canjearRegistro(codigoDeRegistro("google", deGoogle(ida, sujeto(), correo), ida), VERIFICADOR);
+        assertThat(canjeado.statusCode()).isEqualTo(200);
+        return json.readTree(canjeado.body()).get("pase").asText();
+    }
+
+    private HttpResponse<String> registrarDesdeLaApp(String pase, String empresaNueva) throws Exception {
+        return post("/auth/sso/registro/app",
+                Map.of("pase", pase, "nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora"));
+    }
+
+    @Test
+    @DisplayName("La app registra: vuelve con un código, lo cambia por un pase, manda el nombre y nace la empresa con la sesión de la app")
+    void laAppRegistraUnaEmpresa() throws Exception {
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        String sujeto = sujeto();
+        String empresaNueva = "Talleres " + System.nanoTime();
+        Ida ida = iniciarRegistroDesdeLaApp("google");
+        String codigo = codigoDeRegistro("google", deGoogle(ida, sujeto, correo), ida);
+
+        HttpResponse<String> canjeado = canjearRegistro(codigo, VERIFICADOR);
+
+        assertThat(canjeado.statusCode()).isEqualTo(200);
+        JsonNode pendiente = json.readTree(canjeado.body());
+        assertThat(pendiente.get("correo").asText()).isEqualTo(correo);
+        assertThat(pendiente.get("proveedor").asText()).isEqualTo("google");
+        assertThat(pendiente.get("nombre").asText()).isEqualTo("Google");
+        assertThat(userRepository.findByEmail(correo)).as("recoger el pase no crea nada").isEmpty();
+        // El código no vale dos veces.
+        assertThat(canjearRegistro(codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        HttpResponse<String> registrada = registrarDesdeLaApp(pendiente.get("pase").asText(), empresaNueva);
+
+        assertThat(registrada.statusCode()).isEqualTo(200);
+        JsonNode sesion = json.readTree(registrada.body());
+        assertThat(sesion.get("rol").asText()).isEqualTo("ADMIN");
+        assertThat(sesion.get("token").asText()).isNotBlank();
+        // Como un login desde la app: el refresh va en el cuerpo y no hay cookie.
+        assertThat(sesion.get("refreshToken").asText()).isNotBlank();
+        assertThat(cookie(registrada, "nx_refresh")).isNull();
+
+        User admin = userRepository.findByEmail(correo).orElseThrow();
+        assertThat(admin.getRol()).isEqualTo(Role.ADMIN);
+        assertThat(admin.getEmpresa().getNombre()).isEqualTo(empresaNueva);
+        assertThat(admin.correoPendienteDeConfirmar()).isFalse();
+        assertThat(identidadesDe(admin)).isEqualTo(1);
+
+        // La sesión es de verdad, y el refresh del cuerpo la renueva.
+        assertThat(conToken("GET", "/api/v1/perfil/identidades", sesion.get("token").asText()).statusCode())
+                .isEqualTo(200);
+        assertThat(post("/auth/refresh", Map.of("refreshToken", sesion.get("refreshToken").asText())).statusCode())
+                .isEqualTo(200);
+        // Y desde ahora entra con Google desde la app, como cualquiera.
+        Ida entrada = iniciar("google", "?cliente=app&reto=" + AppExchangeCodes.retoDe(VERIFICADOR), null);
+        PROVEEDOR.proximoToken(deGoogle(entrada, sujeto, correo));
+        assertThat(destino(volver("google", entrada))).startsWith("nxtime://sso?codigo=");
+    }
+
+    @Test
+    @DisplayName("La app registra: quien ya tiene cuenta vuelve con un código de entrar, y entra")
+    void laAppRegistraTeniendoCuentaEntra() throws Exception {
+        User ana = persona("Ana");
+        String sujeto = sujeto();
+        Ida ida = iniciarRegistroDesdeLaApp("google");
+        PROVEEDOR.proximoToken(deGoogle(ida, sujeto, ana.getEmail()));
+
+        HttpResponse<String> vuelta = volver("google", ida);
+
+        assertThat(destino(vuelta)).startsWith("nxtime://sso?codigo=");
+        String codigo = parametros(destino(vuelta)).get("codigo");
+        // No es un código de registro...
+        assertThat(canjearRegistro(codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+        // ...y como se ha quemado al probarlo, hace falta otro para entrar.
+        ida = iniciarRegistroDesdeLaApp("google");
+        PROVEEDOR.proximoToken(deGoogle(ida, sujeto, ana.getEmail()));
+        codigo = parametros(destino(volver("google", ida))).get("codigo");
+        HttpResponse<String> sesion = post("/auth/sso/canjear", Map.of("codigo", codigo, "verificador", VERIFICADOR));
+        assertThat(sesion.statusCode()).isEqualTo(200);
+        assertThat(json.readTree(sesion.body()).get("nombre").asText()).isEqualTo("Ana");
+    }
+
+    /**
+     * Lo mismo que protege el vínculo desde la app: lo que vuelve por la URL
+     * solo le sirve a quien empezó, y cada código vale para lo suyo.
+     */
+    @Test
+    @DisplayName("La app registra: sin reto, sin el verificador, con el correo sin garantizar o con un código de otra cosa no hay pase")
+    void laAppRegistraLoQueNoSePuede() throws Exception {
+        // Sin reto no empieza, y el error vuelve a la app.
+        assertThat(destino(get("/auth/sso/google/iniciar?cliente=app&registro=1", null)))
+                .isEqualTo("nxtime://sso?error=fallo");
+
+        // Con el correo sin garantizar no hay código de registro.
+        Ida ida = iniciarRegistroDesdeLaApp("microsoft");
+        PROVEEDOR.proximoToken(
+                deMicrosoft(ida, sujeto(), "alguien-" + System.nanoTime() + "@empresa.example", INQUILINO));
+        assertThat(destino(volver("microsoft", ida))).isEqualTo("nxtime://sso?error=correo-sin-verificar");
+
+        // Sin el verificador de esa ida: 400, y el código se quema.
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        ida = iniciarRegistroDesdeLaApp("google");
+        String codigo = codigoDeRegistro("google", deGoogle(ida, sujeto(), correo), ida);
+        assertThat(canjearRegistro(codigo, "otro-verificador").statusCode()).isEqualTo(400);
+        assertThat(canjearRegistro(codigo, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // Un código de REGISTRO no abre una sesión ni vincula nada...
+        User ana = persona("Ana");
+        String token = entrarDesdeLaApp(ana);
+        ida = iniciarRegistroDesdeLaApp("google");
+        String deRegistro = codigoDeRegistro("google", deGoogle(ida, sujeto(), correo), ida);
+        assertThat(post("/auth/sso/canjear", Map.of("codigo", deRegistro, "verificador", VERIFICADOR)).statusCode())
+                .isEqualTo(400);
+        ida = iniciarRegistroDesdeLaApp("google");
+        deRegistro = codigoDeRegistro("google", deGoogle(ida, sujeto(), correo), ida);
+        assertThat(confirmarVinculo(token, deRegistro, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        // ...ni uno de VINCULAR da un pase.
+        ida = iniciarVinculoDesdeLaApp("google");
+        String deVincular = codigoDeVinculo("google", deGoogle(ida, sujeto(), correo), ida);
+        assertThat(canjearRegistro(deVincular, VERIFICADOR).statusCode()).isEqualTo(400);
+
+        assertThat(userRepository.findByEmail(correo)).isEmpty();
+        assertThat(identidadesDe(ana)).isZero();
+    }
+
+    /**
+     * El pase vale por «este correo es mío», como la cookie de alta de la web:
+     * lo que no puede pasar es que se consiga sin haber vuelto del proveedor.
+     */
+    @Test
+    @DisplayName("La app registra: sin pase, con uno retocado o con una cookie de estado no se registra nada")
+    void laAppRegistraSinElPase() throws Exception {
+        String empresaNueva = "Fantasma " + System.nanoTime();
+        assertThat(post("/auth/sso/registro/app",
+                Map.of("nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora")).statusCode())
+                .isEqualTo(400);
+        assertThat(registrarDesdeLaApp("no-es-un-pase", empresaNueva).statusCode()).isEqualTo(404);
+
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        String pase = paseDe(correo);
+        int punto = pase.lastIndexOf('.');
+        // El mismo contenido con otro correo dentro: la firma ya no cuadra.
+        String cuerpo = new String(java.util.Base64.getUrlDecoder().decode(pase.substring(0, punto)),
+                java.nio.charset.StandardCharsets.UTF_8).replace(correo, "victima@sso.test");
+        String retocado = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(cuerpo.getBytes(java.nio.charset.StandardCharsets.UTF_8)) + pase.substring(punto);
+        assertThat(registrarDesdeLaApp(retocado, empresaNueva).statusCode()).isEqualTo(404);
+
+        // Una cookie de ESTADO, que se consigue con solo empezar, no es un pase.
+        Ida otra = iniciarRegistroDesdeLaApp("google");
+        assertThat(registrarDesdeLaApp(otra.cookie(), empresaNueva).statusCode()).isEqualTo(404);
+
+        assertThat(companyRepository.findByNombre(empresaNueva)).isEmpty();
+        assertThat(userRepository.findByEmail("victima@sso.test")).isEmpty();
+        assertThat(userRepository.findByEmail(correo)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("La app registra: si el nombre de la empresa está cogido se dice, y el mismo pase sirve para probar con otro")
+    void laAppRegistraConElNombreCogido() throws Exception {
+        String correo = "eva-" + System.nanoTime() + "@sso.test";
+        String pase = paseDe(correo);
+
+        HttpResponse<String> cogido = registrarDesdeLaApp(pase, empresa.getNombre());
+
+        assertThat(cogido.statusCode()).isEqualTo(409);
+        assertThat(json.readTree(cogido.body()).get("detail").asText()).contains("La empresa ya existe");
+        assertThat(userRepository.findByEmail(correo)).isEmpty();
+
+        assertThat(registrarDesdeLaApp(pase, "Otra " + System.nanoTime()).statusCode()).isEqualTo(200);
+        // Y ya no vale: esa cuenta tiene dueño.
+        assertThat(registrarDesdeLaApp(pase, "Tercera " + System.nanoTime()).statusCode()).isEqualTo(409);
+    }
+
+    // ------------------------------------------------------------------
     // Borrado de datos
     // ------------------------------------------------------------------
 

@@ -46,9 +46,11 @@ public class AppExchangeCodes {
 
     /**
      * Lo que espera a que la app lo recoja: la persona a la que abrirle la
-     * sesión, o la cuenta del proveedor que quiere vincular. Nunca las dos.
+     * sesión, la cuenta del proveedor que quiere vincular, o la cuenta con la
+     * que va a registrar una empresa. Nunca más de una.
      */
-    private record Pendiente(Long usuarioId, VerifiedIdentity paraVincular, String reto, Instant caduca) {
+    private record Pendiente(
+            Long usuarioId, VerifiedIdentity paraVincular, VerifiedIdentity paraRegistrar, String reto, Instant caduca) {
     }
 
     private final Map<String, Pendiente> pendientes = new ConcurrentHashMap<>();
@@ -65,7 +67,7 @@ public class AppExchangeCodes {
 
     /** Un código para esta persona, atado al reto que mandó la app al empezar. */
     public String emitir(long usuarioId, String reto) {
-        return guardar(usuarioId, null, reto);
+        return guardar(usuarioId, null, null, reto);
     }
 
     /**
@@ -76,10 +78,21 @@ public class AppExchangeCodes {
      * app de la víctima, que no tiene el verificador de esa ida.
      */
     public String emitirParaVincular(VerifiedIdentity identidad, String reto) {
-        return guardar(null, identidad, reto);
+        return guardar(null, identidad, null, reto);
     }
 
-    private String guardar(Long usuarioId, VerifiedIdentity paraVincular, String reto) {
+    /**
+     * Un código para <b>registrar una empresa</b> con esa cuenta del proveedor
+     * (ADR 044). No crea nada: la app lo cambia por un pase con el que mandar
+     * después el nombre de la empresa. Es otro tipo de código que el de
+     * vincular aunque lleve lo mismo dentro: quien empezó a vincular no ha
+     * pedido registrar nada, ni al revés.
+     */
+    public String emitirParaRegistrar(VerifiedIdentity identidad, String reto) {
+        return guardar(null, null, identidad, reto);
+    }
+
+    private String guardar(Long usuarioId, VerifiedIdentity paraVincular, VerifiedIdentity paraRegistrar, String reto) {
         Instant ahora = reloj.instant();
         pendientes.values().removeIf(pendiente -> !pendiente.caduca().isAfter(ahora));
         if (pendientes.size() >= MAXIMO) {
@@ -89,7 +102,8 @@ public class AppExchangeCodes {
         azar.nextBytes(bytes);
         String codigo = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         // Se guarda su resumen, no el código: un volcado de memoria no lo regala.
-        pendientes.put(sha256Hex(codigo), new Pendiente(usuarioId, paraVincular, reto, ahora.plus(VIDA)));
+        pendientes.put(sha256Hex(codigo),
+                new Pendiente(usuarioId, paraVincular, paraRegistrar, reto, ahora.plus(VIDA)));
         return codigo;
     }
 
@@ -108,6 +122,11 @@ public class AppExchangeCodes {
      */
     public Optional<VerifiedIdentity> canjearParaVincular(String codigo, String verificador) {
         return recoger(codigo, verificador).map(Pendiente::paraVincular);
+    }
+
+    /** La cuenta del proveedor con la que ese código deja registrar una empresa. Se gasta igual. */
+    public Optional<VerifiedIdentity> canjearParaRegistrar(String codigo, String verificador) {
+        return recoger(codigo, verificador).map(Pendiente::paraRegistrar);
     }
 
     private Optional<Pendiente> recoger(String codigo, String verificador) {

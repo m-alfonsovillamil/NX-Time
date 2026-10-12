@@ -487,7 +487,7 @@ decide qué se enseña.
 
 ### Backend
 
-**1241 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1808 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**442 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**463 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -560,7 +560,7 @@ Dos detalles del despliegue que no son evidentes y están declarados en
   conexión directa, porque PgBouncer en modo transacción no soporta `SET`, que
   las herramientas de migración necesitan.
 
-El CI ejecuta los 1241 tests contra un PostgreSQL real en cada push, con la misma
+El CI ejecuta los 1808 tests contra un PostgreSQL real en cada push, con la misma
 versión mayor que producción.
 
 ---
@@ -611,6 +611,8 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 40. [El panel de plataforma: ver la instalación entera sin ser de ninguna empresa](docs/adr/040-panel-de-plataforma.md)
 41. [El acceso bajo carga: que entrar no tumbe lo demás](docs/adr/041-el-acceso-bajo-carga.md)
 42. [Las tareas de madrugada: una vez por turno, jornada a jornada y la traza entera cada semana](docs/adr/042-las-tareas-de-madrugada.md)
+43. [Jackson 3: un solo serializador en el código propio, y lo que se firma escrito igual que antes](docs/adr/043-jackson-3.md)
+44. [Registrar una empresa con Google o Microsoft también desde la app](docs/adr/044-registrar-empresa-con-sso-desde-la-app.md)
 
 ---
 
@@ -631,7 +633,7 @@ recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
 ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Se puede instalar como
 app y avisa con notificaciones push, igual que la app Android; en el iPhone es
 la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene dos workflows:
-`web.yml` (tipos, 385 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+`web.yml` (tipos, 406 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).

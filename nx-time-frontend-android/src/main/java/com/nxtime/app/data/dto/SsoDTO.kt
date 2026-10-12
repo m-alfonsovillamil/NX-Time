@@ -39,3 +39,23 @@ data class IdentidadVinculadaDTO(
     val vinculadaEn: String? = null,
     val ultimoAcceso: String? = null
 )
+
+/**
+ * Lo que devuelve el servidor al cambiar el código de registro (ADR 044): con
+ * qué cuenta se está registrando la empresa y el pase para mandar el
+ * formulario, que vale un cuarto de hora.
+ */
+data class RegistroPendienteSsoDTO(
+    val proveedor: String,
+    val nombre: String,
+    val correo: String,
+    val pase: String
+)
+
+/** Registrar la empresa con esa cuenta: ni correo ni contraseña, que es lo que ahorra. */
+data class PeticionRegistroSso(
+    val pase: String,
+    val nombreEmpresa: String,
+    val nombre: String,
+    val apellidos: String
+)

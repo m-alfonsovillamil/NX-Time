@@ -918,6 +918,96 @@
         }
       }
     },
+    "/auth/sso/registro/canjear" : {
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "La app recoge su pase para registrar una empresa",
+        "description" : "Canjea el código con el que el navegador volvió a la app (nxtime://sso?alta=…): vale una vez y un minuto, y solo con el verificador con el que se empezó. Devuelve la cuenta con la que se registra y un pase de quince minutos para mandar el formulario.",
+        "operationId" : "canjearRegistro",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoExchangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "La cuenta y el pase",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SsoAppPendingSignupDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El código no vale, ha caducado o ya se usó",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/sso/registro/app" : {
+      "post" : {
+        "tags" : [ "SSO" ],
+        "summary" : "Registrar la empresa desde la app",
+        "description" : "Como POST /auth/sso/registro, para quien no tiene cookies: quién es lo dice el pase. Abre la sesión como un login desde la app, con su refresh en el cuerpo.",
+        "operationId" : "registrarDesdeLaApp",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SsoAppSignupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Registrada: la sesión",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "El pase no vale o ha caducado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/sso/canjear" : {
       "post" : {
         "tags" : [ "SSO" ],
@@ -6117,7 +6207,7 @@
         }, {
           "name" : "registro",
           "in" : "query",
-          "description" : "'1' para registrar una empresa con esa cuenta. Solo desde la web",
+          "description" : "'1' para registrar una empresa con esa cuenta, desde la web o desde la app",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -10282,6 +10372,49 @@
           }
         },
         "required" : [ "codigo", "verificador" ]
+      },
+      "SsoAppPendingSignupDTO" : {
+        "type" : "object",
+        "properties" : {
+          "proveedor" : {
+            "type" : "string"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "string"
+          },
+          "pase" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SsoAppSignupRequest" : {
+        "type" : "object",
+        "properties" : {
+          "pase" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          },
+          "nombreEmpresa" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "nombre" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          },
+          "apellidos" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "apellidos", "nombre", "nombreEmpresa", "pase" ]
       },
       "ConfirmRegistrationRequest" : {
         "type" : "object",

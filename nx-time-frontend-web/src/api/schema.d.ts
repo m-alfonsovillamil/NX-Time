@@ -225,6 +225,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/sso/registro/canjear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * La app recoge su pase para registrar una empresa
+         * @description Canjea el código con el que el navegador volvió a la app (nxtime://sso?alta=…): vale una vez y un minuto, y solo con el verificador con el que se empezó. Devuelve la cuenta con la que se registra y un pase de quince minutos para mandar el formulario.
+         */
+        post: operations["canjearRegistro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sso/registro/app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar la empresa desde la app
+         * @description Como POST /auth/sso/registro, para quien no tiene cookies: quién es lo dice el pase. Abre la sesión como un login desde la app, con su refresh en el cuerpo.
+         */
+        post: operations["registrarDesdeLaApp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/sso/canjear": {
         parameters: {
             query?: never;
@@ -3273,6 +3313,18 @@ export interface components {
             codigo: string;
             verificador: string;
         };
+        SsoAppPendingSignupDTO: {
+            proveedor?: string;
+            nombre?: string;
+            correo?: string;
+            pase?: string;
+        };
+        SsoAppSignupRequest: {
+            pase: string;
+            nombreEmpresa: string;
+            nombre: string;
+            apellidos: string;
+        };
         ConfirmRegistrationRequest: {
             /** Format: email */
             email: string;
@@ -5559,6 +5611,81 @@ export interface operations {
                 };
             };
             /** @description No hay ningún registro a medias, o ha caducado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description El nombre de la empresa está cogido, o ya hay cuenta con ese correo */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    canjearRegistro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoExchangeRequest"];
+            };
+        };
+        responses: {
+            /** @description La cuenta y el pase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SsoAppPendingSignupDTO"];
+                };
+            };
+            /** @description El código no vale, ha caducado o ya se usó */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    registrarDesdeLaApp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoAppSignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Registrada: la sesión */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthenticationResponse"];
+                };
+            };
+            /** @description El pase no vale o ha caducado */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -9729,7 +9856,7 @@ export interface operations {
                 reto?: string;
                 /** @description '1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app */
                 vincular?: string;
-                /** @description '1' para registrar una empresa con esa cuenta. Solo desde la web */
+                /** @description '1' para registrar una empresa con esa cuenta, desde la web o desde la app */
                 registro?: string;
             };
             header?: never;

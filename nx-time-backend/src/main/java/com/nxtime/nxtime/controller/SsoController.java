@@ -5,6 +5,8 @@ import com.nxtime.nxtime.domain.SsoProvider;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AuthenticationResponse;
 import com.nxtime.nxtime.dto.LinkedIdentityDTO;
+import com.nxtime.nxtime.dto.SsoAppPendingSignupDTO;
+import com.nxtime.nxtime.dto.SsoAppSignupRequest;
 import com.nxtime.nxtime.dto.SsoExchangeRequest;
 import com.nxtime.nxtime.dto.SsoPendingSignupDTO;
 import com.nxtime.nxtime.dto.SsoSignupRequest;
@@ -79,7 +81,10 @@ import org.springframework.web.bind.annotation.RestController;
  *           ella canjea en {@code /canjear} ({@link AppExchangeCodes});</li>
  *       <li><b>vincular</b>: se añade esa cuenta a la sesión que ya había. Desde
  *           la app, en dos pasos: vuelve con un código y lo confirma ella con su
- *           sesión, en {@code POST /api/v1/perfil/identidades}.</li>
+ *           sesión, en {@code POST /api/v1/perfil/identidades};</li>
+ *       <li><b>registrar una empresa</b>: no se crea nada todavía. Queda apuntado
+ *           quién es, en una cookie (la web) o en un pase que la app recoge con
+ *           un código (ADR 044), y se pide el nombre de la empresa y el propio.</li>
  *     </ul>
  *   </li>
  * </ol>
@@ -145,15 +150,16 @@ public class SsoController {
             @RequestParam(required = false) String reto,
             @Parameter(description = "'1' para añadir la cuenta a la sesión que ya hay abierta, en la web o en la app")
             @RequestParam(required = false) String vincular,
-            @Parameter(description = "'1' para registrar una empresa con esa cuenta. Solo desde la web")
+            @Parameter(description = "'1' para registrar una empresa con esa cuenta, desde la web o desde la app")
             @RequestParam(required = false) String registro,
             HttpServletRequest peticion,
             HttpServletResponse respuesta) {
         boolean paraVincular = "1".equals(vincular);
+        boolean paraRegistrar = "1".equals(registro);
         Modo modo = "app".equals(cliente)
-                ? (paraVincular ? Modo.VINCULAR_APP : Modo.APP)
-                : paraVincular ? Modo.VINCULAR : "1".equals(registro) ? Modo.REGISTRO : Modo.WEB;
-        boolean desdeLaApp = modo == Modo.APP || modo == Modo.VINCULAR_APP;
+                ? (paraVincular ? Modo.VINCULAR_APP : paraRegistrar ? Modo.REGISTRO_APP : Modo.APP)
+                : paraVincular ? Modo.VINCULAR : paraRegistrar ? Modo.REGISTRO : Modo.WEB;
+        boolean desdeLaApp = modo == Modo.APP || modo == Modo.VINCULAR_APP || modo == Modo.REGISTRO_APP;
         try {
             SsoProvider elegido = SsoProvider.deId(proveedor)
                     .filter(config::activo)
@@ -242,6 +248,7 @@ public class SsoController {
                 case VINCULAR_APP -> redirigir(VUELTA_A_LA_APP + "?vinculo="
                         + codigos.emitirParaVincular(identidad, estado.retoDeLaApp()));
                 case REGISTRO -> alVolverParaRegistrar(identidad, respuesta);
+                case REGISTRO_APP -> alVolverParaRegistrarEnLaApp(identidad, estado.retoDeLaApp());
             };
         } catch (SsoException e) {
             return volverConError(modo, e);
@@ -269,6 +276,23 @@ public class SsoController {
         }
         estados.guardarAlta(respuesta, identidad);
         return redirigir(config.urlWeb() + "/registro?sso=continuar");
+    }
+
+    /**
+     * Lo mismo, cuando empezó la app. Quien ya tiene cuenta vuelve con un
+     * código de sesión, como si hubiera pulsado «Entrar». Quien no, con uno de
+     * registro: la app lo cambia por el pase en {@code /registro/canjear}.
+     */
+    private ResponseEntity<Void> alVolverParaRegistrarEnLaApp(VerifiedIdentity identidad, String reto) {
+        try {
+            User usuario = sso.identificar(identidad);
+            return redirigir(VUELTA_A_LA_APP + "?codigo=" + codigos.emitir(usuario.getId(), reto));
+        } catch (SsoException e) {
+            if (e.motivo() != Motivo.SIN_CUENTA) {
+                throw e;
+            }
+        }
+        return redirigir(VUELTA_A_LA_APP + "?alta=" + codigos.emitirParaRegistrar(identidad, reto));
     }
 
     @Operation(summary = "Con qué cuenta estoy registrando una empresa",
@@ -307,6 +331,45 @@ public class SsoController {
         AuthenticationResponse sesion = authService.abrirSesion(admin.getId(), RefreshToken.Origen.WEB);
         sesionWeb.emitir(respuesta, sesion.refreshToken());
         return ResponseEntity.ok(sesion.sinRefreshToken());
+    }
+
+    @Operation(summary = "La app recoge su pase para registrar una empresa",
+            description = "Canjea el código con el que el navegador volvió a la app (nxtime://sso?alta=…): vale una "
+                    + "vez y un minuto, y solo con el verificador con el que se empezó. Devuelve la cuenta con la "
+                    + "que se registra y un pase de quince minutos para mandar el formulario.")
+    @ApiResponse(responseCode = "200", description = "La cuenta y el pase",
+            content = @Content(schema = @Schema(implementation = SsoAppPendingSignupDTO.class)))
+    @ApiResponse(responseCode = "400", description = "El código no vale, ha caducado o ya se usó",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/auth/sso/registro/canjear")
+    public ResponseEntity<SsoAppPendingSignupDTO> canjearRegistro(@Valid @RequestBody SsoExchangeRequest request) {
+        VerifiedIdentity identidad = codigos.canjearParaRegistrar(request.codigo(), request.verificador())
+                .orElseThrow(() -> new BusinessException(
+                        "No se ha podido seguir con el registro. Vuelve a intentarlo.", HttpStatus.BAD_REQUEST));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SsoAppPendingSignupDTO(identidad.proveedor().id(), identidad.proveedor().nombre(),
+                        identidad.correo(), estados.sellarAlta(identidad)));
+    }
+
+    @Operation(summary = "Registrar la empresa desde la app",
+            description = "Como POST /auth/sso/registro, para quien no tiene cookies: quién es lo dice el pase. "
+                    + "Abre la sesión como un login desde la app, con su refresh en el cuerpo.")
+    @ApiResponse(responseCode = "200", description = "Registrada: la sesión",
+            content = @Content(schema = @Schema(implementation = AuthenticationResponse.class)))
+    @ApiResponse(responseCode = "404", description = "El pase no vale o ha caducado",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "409", description = "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @PostMapping("/auth/sso/registro/app")
+    public ResponseEntity<AuthenticationResponse> registrarDesdeLaApp(@Valid @RequestBody SsoAppSignupRequest request) {
+        SsoState.Alta alta = estados.abrirAlta(request.pase()).orElseThrow(SsoController::sinRegistroAMedias);
+        // El pase no se gasta: si el nombre estaba cogido se ha lanzado aquí y
+        // sirve para probar con otro. Una vez registrada, repetirlo da 409:
+        // ya hay cuenta con ese correo.
+        User admin = sso.registrarEmpresa(alta.proveedor(), alta.sujeto(), alta.correo(),
+                request.nombreEmpresa(), request.nombre(), request.apellidos());
+        return ResponseEntity.ok(authService.abrirSesion(admin.getId(), RefreshToken.Origen.ANDROID));
     }
 
     private static BusinessException sinRegistroAMedias() {
@@ -400,7 +463,7 @@ public class SsoController {
         // Sin URL de la web no hay adónde volver: es que el SSO no está montado.
         String web = config.urlWeb().isEmpty() ? "/" : config.urlWeb() + "/";
         return redirigir(switch (modo) {
-            case APP, VINCULAR_APP -> VUELTA_A_LA_APP + "?error=" + motivo;
+            case APP, VINCULAR_APP, REGISTRO_APP -> VUELTA_A_LA_APP + "?error=" + motivo;
             case VINCULAR -> web + "ajustes?sso=" + motivo;
             case REGISTRO -> web + "registro?sso=" + motivo;
             case WEB -> web + "?sso=" + motivo;

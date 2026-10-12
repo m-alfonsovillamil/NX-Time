@@ -12,6 +12,13 @@ import java.security.SecureRandom
 /** Con lo que el navegador vuelve a la app: un código que canjear, o por qué no. */
 data class VueltaDeSso(val codigo: String?, val error: String?)
 
+/**
+ * Con lo que vuelve quien estaba registrando una empresa (ADR 044): un código
+ * de registro ([alta]) si esa cuenta no tiene cuenta de NX Time, uno de sesión
+ * ([codigo]) si ya la tiene y por tanto entra, o por qué no.
+ */
+data class VueltaDeRegistro(val alta: String?, val codigo: String?, val error: String?)
+
 /** Dónde se guarda el verificador mientras la persona está en el navegador. */
 interface GuardaDelVerificador {
     var verificador: String?
@@ -22,6 +29,9 @@ interface GuardaDelVerificador {
      * volver, la app puede haber arrancado de cero.
      */
     var paraVincular: Boolean
+
+    /** Si la ida pendiente era para registrar una empresa (ADR 044). */
+    var paraRegistrar: Boolean
 }
 
 /**
@@ -46,9 +56,16 @@ class VerificadorEnPreferencias(context: Context) : GuardaDelVerificador {
             prefs.edit().putBoolean(CLAVE_VINCULAR, valor).commit()
         }
 
+    override var paraRegistrar: Boolean
+        get() = prefs.getBoolean(CLAVE_REGISTRAR, false)
+        set(valor) {
+            prefs.edit().putBoolean(CLAVE_REGISTRAR, valor).commit()
+        }
+
     private companion object {
         const val CLAVE = "verificador"
         const val CLAVE_VINCULAR = "para_vincular"
+        const val CLAVE_REGISTRAR = "para_registrar"
     }
 }
 
@@ -89,42 +106,72 @@ class AccesoSso(
      */
     val vueltaDeVinculo: StateFlow<VueltaDeSso?> = _vueltaDeVinculo.asStateFlow()
 
+    private val _vueltaDeRegistro = MutableStateFlow<VueltaDeRegistro?>(null)
+
+    /**
+     * La vuelta de una ida para REGISTRAR una empresa, también aparte: la
+     * atiende la pantalla de registro. Si el sistema cerró la app mientras la
+     * persona estaba en el navegador, quien arranca es el acceso, que al verla
+     * lleva al registro.
+     */
+    val vueltaDeRegistro: StateFlow<VueltaDeRegistro?> = _vueltaDeRegistro.asStateFlow()
+
     /**
      * Prepara una ida para entrar y devuelve la URL que hay que abrir en el
      * navegador. Empezar otra vez descarta la anterior: solo vale la última.
      */
-    fun empezar(inicio: String): String = preparar(inicio, paraVincular = false)
+    fun empezar(inicio: String): String = preparar(inicio, Para.ENTRAR)
 
     /**
      * Lo mismo, para añadir una cuenta a la sesión que ya hay abierta. El
      * navegador volverá con un código de vínculo, que no vincula nada por sí
      * solo: lo confirma la app con su sesión.
      */
-    fun empezarAVincular(inicio: String): String = preparar(inicio, paraVincular = true)
+    fun empezarAVincular(inicio: String): String = preparar(inicio, Para.VINCULAR)
 
-    private fun preparar(inicio: String, paraVincular: Boolean): String {
+    /**
+     * Lo mismo, para registrar una empresa con esa cuenta. El navegador
+     * volverá con un código de registro, que no crea nada: la app lo cambia
+     * por un pase y manda con él el nombre de la empresa.
+     */
+    fun empezarARegistrar(inicio: String): String = preparar(inicio, Para.REGISTRAR)
+
+    private enum class Para(val parametro: String) {
+        ENTRAR(""), VINCULAR("&vincular=1"), REGISTRAR("&registro=1")
+    }
+
+    private fun preparar(inicio: String, para: Para): String {
         val verificador = base64Url(aleatorio().toByteString())
         guarda.verificador = verificador
-        guarda.paraVincular = paraVincular
+        guarda.paraVincular = para == Para.VINCULAR
+        guarda.paraRegistrar = para == Para.REGISTRAR
         _vuelta.value = null
         _vueltaDeVinculo.value = null
+        _vueltaDeRegistro.value = null
         val union = if (inicio.contains('?')) '&' else '?'
-        val vincular = if (paraVincular) "&vincular=1" else ""
-        return "$inicio${union}cliente=app$vincular&reto=${retoDe(verificador)}"
+        return "$inicio${union}cliente=app${para.parametro}&reto=${retoDe(verificador)}"
     }
 
     /**
      * Lo llama quien recibe `nxtime://sso?…`, con sus parámetros. Sin una ida
-     * pendiente, se ignora. De los dos códigos solo se mira el de la ida que
+     * pendiente, se ignora. De los códigos solo se miran los de la ida que
      * había: uno de entrar no sirve a quien estaba vinculando, ni al revés.
+     * Quien registraba puede volver con dos: el de registro o, si ya tenía
+     * cuenta, el de entrar.
      */
-    fun recibir(codigo: String?, error: String?, vinculo: String? = null) {
+    fun recibir(codigo: String?, error: String?, vinculo: String? = null, alta: String? = null) {
         if (guarda.verificador == null) return
         val motivo = error?.takeIf { it.isNotBlank() }
-        if (guarda.paraVincular) {
-            _vueltaDeVinculo.value = VueltaDeSso(codigo = vinculo?.takeIf { it.isNotBlank() }, error = motivo)
-        } else {
-            _vuelta.value = VueltaDeSso(codigo = codigo?.takeIf { it.isNotBlank() }, error = motivo)
+        when {
+            guarda.paraVincular ->
+                _vueltaDeVinculo.value = VueltaDeSso(codigo = vinculo?.takeIf { it.isNotBlank() }, error = motivo)
+            guarda.paraRegistrar ->
+                _vueltaDeRegistro.value = VueltaDeRegistro(
+                    alta = alta?.takeIf { it.isNotBlank() },
+                    codigo = codigo?.takeIf { it.isNotBlank() },
+                    error = motivo
+                )
+            else -> _vuelta.value = VueltaDeSso(codigo = codigo?.takeIf { it.isNotBlank() }, error = motivo)
         }
     }
 
@@ -136,8 +183,10 @@ class AccesoSso(
         val verificador = guarda.verificador
         guarda.verificador = null
         guarda.paraVincular = false
+        guarda.paraRegistrar = false
         _vuelta.value = null
         _vueltaDeVinculo.value = null
+        _vueltaDeRegistro.value = null
         return verificador
     }
 

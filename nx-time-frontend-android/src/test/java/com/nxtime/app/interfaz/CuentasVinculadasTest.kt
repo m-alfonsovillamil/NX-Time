@@ -46,6 +46,7 @@ class CuentasVinculadasTest {
     private val guarda = object : GuardaDelVerificador {
         override var verificador: String? = null
         override var paraVincular: Boolean = false
+        override var paraRegistrar: Boolean = false
     }
 
     private val google = ProveedorSsoDTO("google", "Google", "https://api.nxtime-web.com/auth/sso/google/iniciar")

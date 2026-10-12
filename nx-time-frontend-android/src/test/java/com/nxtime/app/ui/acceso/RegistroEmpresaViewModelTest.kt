@@ -4,6 +4,8 @@ import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.RegistroPendienteDTO
 import com.nxtime.app.data.dto.RespuestaAutenticacion
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.data.sso.AccesoSso
+import com.nxtime.app.data.sso.GuardaDelVerificador
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -27,7 +29,13 @@ class RegistroEmpresaViewModelTest {
     val reglaDispatcher = ReglaDispatcherPrincipal()
 
     private val repositorio: AuthRepository = mock()
-    private val viewModel by lazy { RegistroEmpresaViewModel(repositorio) }
+    // Registrar con una cuenta de Google o de Microsoft lo prueba RegistroConSsoTest.
+    private val sso = AccesoSso(object : GuardaDelVerificador {
+        override var verificador: String? = null
+        override var paraVincular: Boolean = false
+        override var paraRegistrar: Boolean = false
+    })
+    private val viewModel by lazy { RegistroEmpresaViewModel(repositorio, sso) }
 
     private val sesion = RespuestaAutenticacion(token = "jwt", refreshToken = "refresh", nombre = "Eva", rol = "ADMIN")
 

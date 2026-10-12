@@ -173,3 +173,38 @@ jobs:
             nx-time-frontend-android/build/reports/tests/
             nx-time-frontend-android/build/reports/lint-results-devDebug.html
           retention-days: 7
+
+  # Las dependencias de Gradle, para las alertas de Dependabot (octubre de 2026).
+  #
+  # GitHub lee solo las de npm: de un build.gradle.kts no saca nada, porque las
+  # versiones las pone el BOM de Spring Boot al resolver. Sin esto, activar las
+  # alertas cubría la web y dejaba fuera el backend y la app, que es justo lo
+  # más expuesto. Este job resuelve las dependencias de verdad y se las manda a
+  # GitHub.
+  #
+  # Solo lo que acaba en producción: el classpath de ejecución del backend y el
+  # de la app publicada. Lo de los tests y los plugins del build no llega a
+  # nadie, y sus avisos taparían los que importan.
+  #
+  # Solo al llegar a main: es lo desplegado lo que hay que vigilar, y no hace
+  # falta repetirlo en cada pull request.
+  dependencias:
+    name: Dependencias para Dependabot
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Enviar el grafo de dependencias
+        uses: gradle/actions/dependency-submission@v4
+        env:
+          DEPENDENCY_GRAPH_INCLUDE_CONFIGURATIONS: 'runtimeClasspath|prodReleaseRuntimeClasspath'
