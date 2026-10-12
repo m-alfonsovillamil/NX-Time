@@ -1,9 +1,9 @@
 # nx-time-frontend-web
 
 Cliente web de NX Time. **Está fuera del build de Gradle a propósito**: no
-aparece en `settings.gradle.kts` ni en `settings-docker.gradle.kts`, tiene su
-propio `npm` y sus propios workflows de CI (`web.yml` y `e2e.yml`). Quien solo
-toque el backend no necesita Node instalado.
+aparece en `settings.gradle.kts`, tiene su propio `npm` y sus propios workflows
+de CI (`web.yml` y `e2e.yml`). Quien solo toque el backend no necesita Node
+instalado.
 
 Hace **todo lo que hace la app Android**, más las tres pantallas que son solo de
 la web: el **editor de cuadrantes**, la **analítica** completa y el **visado de

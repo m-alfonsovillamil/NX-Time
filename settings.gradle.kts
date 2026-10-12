@@ -1,7 +1,26 @@
+// El ÚNICO fichero de configuración de Gradle del monorepo.
+//
+// Hasta octubre de 2026 había dos: este y settings-docker.gradle.kts, que
+// declaraba solo el backend y se copiaba encima de este en el Dockerfile y en
+// el CI. Los dos repetían las versiones de los plugins, y con Spring Boot 3
+// estuvieron meses desalineados (3.5.6 allí, 3.5.16 aquí): la imagen
+// desplegada llevaba un Spring Boot que el CI no probaba.
+//
+// Ahora las versiones están escritas una sola vez, y quien solo quiere el
+// backend lo pide con la variable de entorno NXTIME_SOLO_BACKEND=true (la
+// ponen el Dockerfile, ci.yml y e2e.yml). Hace falta pedirlo: Gradle configura
+// todo proyecto declarado aquí aunque no participe en la tarea, y el módulo de
+// Android necesita el SDK de Android, que en la imagen del backend no está (ni
+// siquiera se copia su carpeta).
+//
+// La variable se lee dos veces, aquí abajo y más abajo, porque Gradle evalúa
+// el bloque pluginManagement aparte y antes que el resto del fichero: no ve
+// nada declarado fuera de él.
 pluginManagement {
     repositories {
-        // Le dice a Gradle dónde buscar los plugins de Android y Spring
-        google()
+        // Le dice a Gradle dónde buscar los plugins de Android y Spring.
+        // google() solo sirve los de Android.
+        if (System.getenv("NXTIME_SOLO_BACKEND") != "true") google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -28,7 +47,7 @@ pluginManagement {
     // mismo PR haría imposible saber cuál de las dos rompió qué.
     plugins {
         id("com.android.application") version "9.4.1"
-        id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
         // Push (Fase B5): lee google-services.json y genera la configuración
         // de Firebase de cada variante.
         id("com.google.gms.google-services") version "4.5.0"
@@ -45,11 +64,13 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention")
 }
 
+val soloBackend = System.getenv("NXTIME_SOLO_BACKEND") == "true"
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         // Define dónde buscar las dependencias (librerías)
-        google()
+        if (!soloBackend) google()
         mavenCentral()
         maven { url = uri("https://repo.spring.io/milestone") }
         maven { url = uri("https://repo.spring.io/snapshot") }
@@ -59,6 +80,7 @@ dependencyResolutionManagement {
 // Nombre del proyecto raíz
 rootProject.name = "NX-Time"
 
-// Incluye ambos módulos, usando los nombres exactos de las carpetas
+// Los módulos, con los nombres exactos de las carpetas. La web no es un
+// proyecto de Gradle (ADR 021).
 include(":nx-time-backend")
-include(":nx-time-frontend-android")
+if (!soloBackend) include(":nx-time-frontend-android")

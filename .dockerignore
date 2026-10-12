@@ -1,9 +1,9 @@
 # El Dockerfile solo hace COPY explícito de lo que necesita (gradlew,
-# settings-docker.gradle.kts, nx-time-backend/build.gradle.kts,
+# settings.gradle.kts, nx-time-backend/build.gradle.kts,
 # nx-time-backend/src), así que esto es defensa en profundidad: si
 # algún día alguien cambia el Dockerfile a un "COPY . ." más simple,
 # que no arrastre basura ni, sobre todo, el módulo Android (necesita el
-# SDK, ajeno a esta imagen -- ver settings-docker.gradle.kts).
+# SDK, ajeno a esta imagen -- ver settings.gradle.kts).
 .git
 .gradle
 build
