@@ -8,7 +8,7 @@
 
 import { expect, test } from '@playwright/test';
 
-import { irASeccion } from './ayudas';
+import { iniciarAunqueNoSeaLaborable, irASeccion } from './ayudas';
 
 test('historial del equipo con filtro por persona y la traza de auditoría', async ({ page }) => {
   // Javier ficha primero. Las jornadas que siembra la demo no tienen traza (se
@@ -29,6 +29,7 @@ test('historial del equipo con filtro por persona y la traza de auditoría', asy
     await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
   }
   await page.getByRole('button', { name: 'Fichar entrada' }).click();
+  await iniciarAunqueNoSeaLaborable(page);
   await page.getByRole('button', { name: 'Fichar salida' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Terminar' }).click();
   await expect(page.getByRole('button', { name: 'Fichar entrada' })).toBeVisible();

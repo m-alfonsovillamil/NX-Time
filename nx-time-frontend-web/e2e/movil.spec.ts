@@ -26,7 +26,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { CUENTAS, desplegarMenu, entrar, paginaLista } from './ayudas';
+import { CUENTAS, desplegarMenu, entrar, iniciarAunqueNoSeaLaborable, paginaLista } from './ayudas';
 
 /** Lo que se sale por la derecha: la página, o algo que se desplaza de lado. */
 async function desbordes(page: Page): Promise<string[]> {
@@ -84,6 +84,7 @@ test('una jornada entera con el dedo', async ({ page }) => {
   }
 
   await entrada.tap();
+  await iniciarAunqueNoSeaLaborable(page, (boton) => boton.tap());
   await expect(page.getByText('Trabajando')).toBeVisible();
   await page.getByRole('button', { name: 'Pausar' }).tap();
   await expect(page.getByText('En pausa', { exact: true })).toBeVisible();

@@ -4,6 +4,7 @@
 
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -452,5 +453,25 @@ describe('cuentas vinculadas', () => {
 
     expect((await screen.findByText(V.motivos['ya-vinculada'])).getAttribute('role')).toBe('alert');
     await waitFor(() => expect(window.location.search).toBe(''));
+  });
+
+  /*
+   * En desarrollo React monta, desmonta y vuelve a montar cada componente (modo
+   * estricto), y repite sus efectos: el aviso salía dos veces.
+   */
+  it('al volver con la cuenta vinculada lo dice una sola vez, también en modo estricto', async () => {
+    window.history.replaceState({}, '', '/ajustes?sso=vinculada');
+    api();
+    pintar(
+      <StrictMode>
+        <Ajustes />
+        <Notificaciones />
+      </StrictMode>,
+      { sesion: sesionDe('EMPLEADO') },
+    );
+
+    expect(await screen.findByText(V.hecho)).toBeTruthy();
+    await waitFor(() => expect(window.location.search).toBe(''));
+    expect(screen.getAllByText(V.hecho)).toHaveLength(1);
   });
 });

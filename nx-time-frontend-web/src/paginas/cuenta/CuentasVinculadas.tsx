@@ -17,7 +17,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
@@ -65,13 +65,19 @@ export function useCuentasVinculadas(): DatosDeCuentasVinculadas {
 export function CuentasVinculadas({ proveedores, identidades }: DatosDeCuentasVinculadas) {
   const vuelta = useVueltaDeSso();
   const [quitando, setQuitando] = useState<Identidad | null>(null);
+  const dicho = useRef(false);
 
   // Al volver del proveedor: a la vista, y dicho.
   useEffect(() => {
     if (vuelta === null) return;
     // Con «?.()»: jsdom, donde corren los tests, no tiene scrollIntoView.
     document.getElementById(ID)?.scrollIntoView?.();
-    if (vuelta === 'vinculada') notificar(V.hecho);
+    // Una sola vez: en desarrollo React repite los efectos (modo estricto) y
+    // el aviso salía dos veces.
+    if (vuelta === 'vinculada' && !dicho.current) {
+      dicho.current = true;
+      notificar(V.hecho);
+    }
   }, [vuelta]);
 
   const desvincular = useMutacion(
