@@ -57,6 +57,18 @@ interface ApiService {
         @Body peticion: PeticionCanjeSso
     ): Response<RespuestaAutenticacion>
 
+    /** Registrar una empresa con esa cuenta (ADR 044): el código de registro, por el pase. */
+    @POST("auth/sso/registro/canjear")
+    suspend fun canjearRegistroSso(
+        @Body peticion: PeticionCanjeSso
+    ): Response<RegistroPendienteSsoDTO>
+
+    /** Y con el pase, la empresa: responde con la sesión, como un login. */
+    @POST("auth/sso/registro/app")
+    suspend fun registrarEmpresaConSso(
+        @Body peticion: PeticionRegistroSso
+    ): Response<RespuestaAutenticacion>
+
     /* Mis cuentas vinculadas: verlas, añadir una (confirmando el código con el
        que volvió el navegador) y quitarla. */
     @GET("api/v1/perfil/identidades")

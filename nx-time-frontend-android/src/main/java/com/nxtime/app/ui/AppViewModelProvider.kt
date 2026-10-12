@@ -61,7 +61,7 @@ object AppViewModelProvider {
     val Factory: ViewModelProvider.Factory = viewModelFactory {
         initializer { LoginViewModel(app().authRepository, app().accesoSso) }
         initializer { RecuperarAccesoViewModel(app().authRepository) }
-        initializer { RegistroEmpresaViewModel(app().authRepository) }
+        initializer { RegistroEmpresaViewModel(app().authRepository, app().accesoSso) }
         initializer { FicharViewModel(app().authRepository, app().sessionManager) }
         initializer { HistorialViewModel(app().authRepository) }
         initializer { com.nxtime.app.ui.fichar.DetalleDeTiempoViewModel(app().authRepository) }

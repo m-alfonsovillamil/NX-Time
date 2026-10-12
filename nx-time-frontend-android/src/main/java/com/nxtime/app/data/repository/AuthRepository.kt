@@ -25,6 +25,12 @@ interface AuthRepository {
     /** Canjea el código con el que el navegador volvió a la app. Si vale, la respuesta es la sesión. */
     suspend fun canjearSso(codigo: String, verificador: String): Response<RespuestaAutenticacion>
 
+    /** Cambia el código de registro por la cuenta con la que se registra y su pase (ADR 044). */
+    suspend fun canjearRegistroSso(codigo: String, verificador: String): Response<RegistroPendienteSsoDTO>
+
+    /** Registra la empresa con esa cuenta. Si va bien, devuelve la sesión: falta guardarla. */
+    suspend fun registrarEmpresaConSso(peticion: PeticionRegistroSso): Response<RespuestaAutenticacion>
+
     suspend fun getIdentidadesVinculadas(): Response<List<IdentidadVinculadaDTO>>
 
     /** Añade a mi cuenta la del proveedor con la que acabo de entrar en el navegador. Devuelve las que tengo. */

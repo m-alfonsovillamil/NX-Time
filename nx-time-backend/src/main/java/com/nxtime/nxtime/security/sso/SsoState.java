@@ -94,7 +94,12 @@ public class SsoState {
          * Registrar una empresa (ADR 038). Al volver no se crea nada: queda
          * apuntado quién es ({@link Alta}) y la web pide lo que falta.
          */
-        REGISTRO
+        REGISTRO,
+        /**
+         * Lo mismo, empezado en la app (ADR 044). No hay cookie donde apuntar
+         * quién es: vuelve con un código, y ella lo cambia por un pase.
+         */
+        REGISTRO_APP
     }
 
     /**
@@ -125,10 +130,27 @@ public class SsoState {
     }
 
     public void guardarAlta(HttpServletResponse respuesta, VerifiedIdentity identidad) {
+        respuesta.addHeader(HttpHeaders.SET_COOKIE,
+                cookie(COOKIE_DE_ALTA, sellarAlta(identidad), VIDA_DEL_ALTA).toString());
+    }
+
+    /**
+     * El alta, firmada: lo que la web lleva en su cookie y lo que la app, que
+     * no tiene cookies, recibe como «pase» y devuelve con el formulario (ADR
+     * 044). Vale lo mismo en los dos sitios: «este correo es mío», un cuarto
+     * de hora.
+     */
+    public String sellarAlta(VerifiedIdentity identidad) {
         Alta alta = new Alta(identidad.proveedor(), identidad.sujeto(), identidad.correo(),
                 Instant.now().plus(VIDA_DEL_ALTA).getEpochSecond());
-        respuesta.addHeader(HttpHeaders.SET_COOKIE,
-                cookie(COOKIE_DE_ALTA, sellar(alta, claveDelAlta), VIDA_DEL_ALTA).toString());
+        return sellar(alta, claveDelAlta);
+    }
+
+    /** El alta de un pase, si la firma es buena y no ha caducado. */
+    public Optional<Alta> abrirAlta(String pase) {
+        return Optional.ofNullable(pase)
+                .flatMap(sellado -> abrir(sellado, Alta.class, claveDelAlta))
+                .filter(alta -> alta.expira() > Instant.now().getEpochSecond());
     }
 
     public void borrarAlta(HttpServletResponse respuesta) {
@@ -137,9 +159,7 @@ public class SsoState {
 
     /** El alta pendiente de la cookie, si la hay, la firma es buena y no ha caducado. */
     public Optional<Alta> leerAlta(HttpServletRequest peticion) {
-        return deLaCookie(peticion, COOKIE_DE_ALTA)
-                .flatMap(sellado -> abrir(sellado, Alta.class, claveDelAlta))
-                .filter(alta -> alta.expira() > Instant.now().getEpochSecond());
+        return deLaCookie(peticion, COOKIE_DE_ALTA).flatMap(this::abrirAlta);
     }
 
     public void guardar(HttpServletResponse respuesta, Estado estado) {

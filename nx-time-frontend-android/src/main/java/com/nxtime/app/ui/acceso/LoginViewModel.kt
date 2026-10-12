@@ -47,6 +47,14 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    /**
+     * La vuelta de quien estaba registrando una empresa (ADR 044), que no es
+     * de esta pantalla. Solo la ve si el sistema cerró la app mientras la
+     * persona estaba en el navegador: al volver arranca aquí, y hay que
+     * llevarla al registro, que es quien la atiende.
+     */
+    val vueltaDeRegistro = accesoSso.vueltaDeRegistro
+
     init {
         cargarProveedoresSso()
         // La vuelta del navegador puede llegar con esta pantalla ya abierta

@@ -98,8 +98,9 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             // con un secreto de 256 bits que no se puede adivinar a base de probar.
             "/kiosco/emparejar",
             // Registrar una empresa con una cuenta de fuera (ADR 038) crea una
-            // empresa, como /auth/register-manager.
-            "/auth/sso/registro");
+            // empresa, como /auth/register-manager. Las dos de la app (ADR 044)
+            // son lo mismo en dos pasos.
+            "/auth/sso/registro", "/auth/sso/registro/canjear", "/auth/sso/registro/app");
     static final int PETICIONES_POR_MINUTO = 10;
     static final int ENTRADAS_POR_MINUTO = 60;
 

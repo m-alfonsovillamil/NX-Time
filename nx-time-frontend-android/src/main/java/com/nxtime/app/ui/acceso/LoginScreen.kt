@@ -72,6 +72,11 @@ fun LoginScreen(
      * ya abiertas sus cuentas. Al terminar, el servidor la devuelve a la app
      * por nxtime://sso (ver VueltaDeSsoActivity).
      */
+    val vueltaDeRegistro by viewModel.vueltaDeRegistro.collectAsStateWithLifecycle()
+    LaunchedEffect(vueltaDeRegistro) {
+        if (vueltaDeRegistro != null) onIrRegistroEmpresa()
+    }
+
     val contexto = LocalContext.current
     LaunchedEffect(estado.abrirEnNavegador) {
         val url = estado.abrirEnNavegador ?: return@LaunchedEffect

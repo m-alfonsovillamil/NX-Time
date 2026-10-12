@@ -45,6 +45,7 @@ class SsoEnElAccesoTest {
     private val guarda = object : GuardaDelVerificador {
         override var verificador: String? = null
         override var paraVincular: Boolean = false
+        override var paraRegistrar: Boolean = false
     }
     private val sso = AccesoSso(guarda)
     private val viewModel by lazy { LoginViewModel(repositorio, sso) }
