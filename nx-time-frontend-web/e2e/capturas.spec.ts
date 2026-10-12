@@ -10,7 +10,7 @@
 
 import { chromium, devices, expect, test, type Page } from '@playwright/test';
 
-import { entrar, irASeccion, paginaLista } from './ayudas';
+import { entrar, iniciarAunqueNoSeaLaborable, irASeccion, paginaLista } from './ayudas';
 
 const DESTINO = '../docs/capturas/web';
 
@@ -127,7 +127,10 @@ test.describe('escritorio', () => {
     const entrada = page.getByRole('button', { name: 'Fichar entrada' });
     const salida = page.getByRole('button', { name: 'Fichar salida' });
     await expect(entrada.or(salida)).toBeVisible();
-    if (await entrada.isVisible()) await entrada.click();
+    if (await entrada.isVisible()) {
+      await entrada.click();
+      await iniciarAunqueNoSeaLaborable(page);
+    }
     await expect(page.getByText('Trabajando')).toBeVisible();
     await page.waitForTimeout(1500);
     await capturar(page, 'web-01-mi-jornada');

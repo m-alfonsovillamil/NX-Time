@@ -77,11 +77,12 @@ jobs:
           psql -h localhost -p 5433 -U nxtime -d nxtime \
             -c "GRANT CONNECT ON DATABASE nxtime TO nxtime_app;"
 
+      # Solo el backend: ver settings.gradle.kts.
       - name: Compilar el backend
+        env:
+          NXTIME_SOLO_BACKEND: 'true'
         run: |
           chmod +x gradlew
-          # Solo el backend: ver ci.yml (Gradle 9 ya no tiene la opción -c).
-          cp settings-docker.gradle.kts settings.gradle.kts
           ./gradlew :nx-time-backend:bootJar --no-daemon
 
       # El jar y no bootRun: es lo que se despliega, y no deja un Gradle

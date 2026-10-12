@@ -10,6 +10,8 @@
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+import { iniciarAunqueNoSeaLaborable } from './ayudas';
+
 /** Tabula hasta que el foco llega a `destino`, como haría una persona. */
 async function tabularHasta(page: Page, destino: Locator, maximo = 40): Promise<void> {
   for (let i = 0; i < maximo; i++) {
@@ -59,6 +61,10 @@ test('entrar, saltar el menú, fichar y usar un diálogo solo con el teclado', a
   await test.step('fichar con el teclado', async () => {
     await tabularHasta(page, entrada);
     await page.keyboard.press('Enter');
+    await iniciarAunqueNoSeaLaborable(page, async (boton) => {
+      await tabularHasta(page, boton);
+      await page.keyboard.press('Enter');
+    });
     await expect(salida).toBeVisible();
   });
 

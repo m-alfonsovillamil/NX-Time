@@ -17,6 +17,8 @@
 
 import { expect, test } from '@playwright/test';
 
+import { iniciarAunqueNoSeaLaborable } from './ayudas';
+
 const EMPLEADO = { email: 'javier.lopez@techcorp.demo', contrasena: 'demo1234' };
 
 test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ page }) => {
@@ -42,6 +44,7 @@ test('una jornada completa: entrar, fichar, pausar, reanudar y salir', async ({ 
 
   await test.step('fichar la entrada arranca el cronómetro', async () => {
     await page.getByRole('button', { name: 'Fichar entrada' }).click();
+    await iniciarAunqueNoSeaLaborable(page);
     await expect(page.getByText('Trabajando')).toBeVisible();
     // El cronómetro pinta algo con forma de duración, no un guion.
     await expect(page.locator('.nx-jornada__cronometro')).toHaveText(/^\d+[hm]/);

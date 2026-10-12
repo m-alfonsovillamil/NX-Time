@@ -4,25 +4,22 @@
 # Multi-stage: la etapa de build (JDK completo + Gradle) no llega a la
 # imagen final -- solo el JRE y el jar en capas.
 #
-# Usa settings-docker.gradle.kts (raíz del monorepo) en vez del
-# settings.gradle.kts normal: ese incluye también el módulo Android, que
-# necesita el SDK de Android para configurarse y no tiene sentido dentro
-# de esta imagen (ver el propio settings-docker.gradle.kts).
+# Construye solo el backend: NXTIME_SOLO_BACKEND=true hace que
+# settings.gradle.kts no declare el módulo Android, que necesita el SDK
+# de Android para configurarse y no tiene sentido dentro de esta imagen
+# (ver el propio settings.gradle.kts).
 
 # ---- Etapa 1: build ---------------------------------------------------
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
+ENV NXTIME_SOLO_BACKEND=true
 
 # Copiados por separado del código fuente a propósito: Docker cachea
 # cada capa por separado, así que mientras no cambien el wrapper ni las
 # dependencias declaradas, "gradlew dependencies" reutiliza la capa
 # entera aunque el código (nx-time-backend/src) cambie constantemente.
-#
-# settings-docker.gradle.kts se copia CON EL NOMBRE settings.gradle.kts: hasta
-# Gradle 8 se elegía con la opción -c, que Gradle 9 ha quitado. Dentro de la
-# imagen no hay otro settings, así que basta con llamarlo como Gradle espera.
 COPY gradlew ./
-COPY settings-docker.gradle.kts settings.gradle.kts
+COPY settings.gradle.kts ./
 COPY gradle gradle
 COPY nx-time-backend/build.gradle.kts nx-time-backend/build.gradle.kts
 RUN chmod +x gradlew && \
