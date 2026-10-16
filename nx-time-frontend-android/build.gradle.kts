@@ -73,9 +73,11 @@ android {
          * puede estar en varios a la vez, no dos veces en el mismo).
          * 16 = 12/10/2026: registrar una empresa con una cuenta de Google o de
          * Microsoft también desde la app (ADR 044), sin contraseña ni código.
+         * 17 = 12/10/2026: los tokens de la sesión se guardan cifrados con una
+         * clave del almacén de claves de Android (ver CifradoDeLaSesion).
          */
-        versionCode = 16
-        versionName = "1.15"
+        versionCode = 17
+        versionName = "1.16"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

@@ -227,10 +227,10 @@ solo tiene sentido con pantalla grande y teclado:
 | ![Mi jornada en la web](docs/capturas/web/web-01-mi-jornada.png) | ![Analítica](docs/capturas/web/web-04-analitica.png) | ![Editor de cuadrantes](docs/capturas/web/web-05-editor-cuadrantes.png) |
 | Lo mismo que en la app, con las horas de la semana contra la jornada esperada | Absentismo y puntualidad por mes, trimestre o año: solo en la web | Plantillas semanales con tramos, turno partido o de noche: solo en la web |
 
-| Kiosco de fichaje | Menú por apartados |
-|---|---|
-| ![Kiosco en una tablet](docs/capturas/web/web-09-kiosco.png) | ![Menú por apartados](docs/capturas/web/web-08-menu-por-apartados.png) |
-| Una tablet en la entrada: tarjeta QR por la cámara, o nombre y PIN | Siete apartados plegables, cada uno con su icono y con lo que espera una decisión |
+| Kiosco de fichaje | Menú por apartados | Panel de plataforma |
+|---|---|---|
+| ![Kiosco en una tablet](docs/capturas/web/web-09-kiosco.png) | ![Menú por apartados](docs/capturas/web/web-08-menu-por-apartados.png) | ![Panel de plataforma](docs/capturas/web/web-13-plataforma.png) |
+| Una tablet en la entrada: tarjeta QR por la cámara, o nombre y PIN | Siete apartados plegables, cada uno con su icono y con lo que espera una decisión | Para quien presta el servicio: las empresas dadas de alta y cuánto lo usan, solo en cifras |
 
 | Integridad de la auditoría | Calendario laboral | Acceso |
 |---|---|---|
@@ -510,7 +510,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**463 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**471 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -613,6 +613,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 42. [Las tareas de madrugada: una vez por turno, jornada a jornada y la traza entera cada semana](docs/adr/042-las-tareas-de-madrugada.md)
 43. [Jackson 3: un solo serializador en el código propio, y lo que se firma escrito igual que antes](docs/adr/043-jackson-3.md)
 44. [Registrar una empresa con Google o Microsoft también desde la app](docs/adr/044-registrar-empresa-con-sso-desde-la-app.md)
+45. [La sesión de la app, cifrada en el disco](docs/adr/045-la-sesion-de-la-app-cifrada.md)
 
 ---
 
