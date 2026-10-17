@@ -1,0 +1,56 @@
+# Análisis de código de CodeQL (revisión de seguridad del 17/10/2026, plan J).
+#
+# Busca fallos de seguridad conocidos (inyecciones, rutas manipulables,
+# deserialización, XSS...) en el backend y en la web. Los resultados salen en
+# la pestaña «Security» del repositorio. Es gratis en un repositorio público y
+# no despliega nada.
+#
+# Sin compilar (build-mode: none): el proyecto de Gradle incluye la app
+# Android, que necesita su SDK para configurarse, y compilar solo para esto
+# costaría minutos sin aportar mucho. Lo que se pierde: el Kotlin de la app,
+# que CodeQL solo analiza compilando. El Java del backend y el TypeScript de
+# la web se analizan enteros.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Los lunes de madrugada: así salen también las reglas nuevas de CodeQL
+    # aunque no se toque el código.
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analizar:
+    name: Analizar (${{ matrix.lenguaje }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lenguaje: [java-kotlin, javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Preparar CodeQL
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: none
+          # Todas las reglas de seguridad, también las de menos precisión: con
+          # un repositorio de este tamaño, revisar algún falso positivo cuesta poco.
+          queries: security-extended
+
+      - name: Analizar
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:${{ matrix.lenguaje }}

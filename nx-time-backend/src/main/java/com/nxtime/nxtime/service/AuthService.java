@@ -24,6 +24,17 @@ public interface AuthService {
 
     AuthenticationResponse login(LoginRequest request);
 
+    /**
+     * Comprueba la contraseña de quien ya tiene sesión, sin abrir otra (lo
+     * usa la app para activar la huella).
+     *
+     * Con el mismo límite de intentos por cuenta que el login: quien tenga un
+     * access token robado no puede usar esto para probar contraseñas sin freno.
+     *
+     * @throws org.springframework.security.authentication.BadCredentialsException si no es la suya
+     */
+    void verificarContrasena(User usuario, String contrasena);
+
     /** Cambia el access token expirado por uno nuevo, sin pedir contraseña otra vez. */
     AuthenticationResponse refreshAccessToken(String refreshToken);
 

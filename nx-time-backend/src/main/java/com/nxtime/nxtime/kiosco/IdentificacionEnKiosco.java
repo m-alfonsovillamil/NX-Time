@@ -38,6 +38,12 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Cada kiosco tiene un tope de identificaciones por minuto: más de las
  *       que caben en una cola de gente fichando, menos que las de alguien
  *       probando PIN de todos los nombres de la lista.</li>
+ *   <li>Y uno de PIN <b>fallidos</b> por kiosco, por hora y por día (revisión
+ *       de seguridad del 17/10/2026, plan J). Sin él, desde un kiosco robado se
+ *       podía anular el PIN de toda la plantilla en una tarde: quince fallos
+ *       por persona, a cuarenta por minuto. Pasado el tope, ese kiosco no
+ *       admite PIN (la tarjeta sí) y lo que se teclee ya no cuenta contra
+ *       nadie.</li>
  * </ul>
  *
  * Los mensajes no distinguen más de lo necesario: una tarjeta que no vale no
@@ -53,6 +59,9 @@ public class IdentificacionEnKiosco {
     /** Al tercer bloqueo, el PIN se anula (V38, ADR 034). */
     static final int BLOQUEOS_HASTA_ANULAR = 3;
     static final int IDENTIFICACIONES_POR_MINUTO = 40;
+    /** Una plantilla que se equivoca al teclear no llega ni de lejos; alguien probando, enseguida. */
+    static final int PIN_FALLIDOS_POR_HORA = 20;
+    static final int PIN_FALLIDOS_POR_DIA = 60;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -62,6 +71,10 @@ public class IdentificacionEnKiosco {
     private final Cache<Long, Bucket> porKiosco = Caffeine.newBuilder()
             .maximumSize(10_000)
             .expireAfterAccess(Duration.ofMinutes(5))
+            .build();
+    private final Cache<Long, Bucket> fallosPorKiosco = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterAccess(Duration.ofDays(1))
             .build();
 
     @Autowired
@@ -116,10 +129,28 @@ public class IdentificacionEnKiosco {
         return persona;
     }
 
+    private Bucket fallosDe(Kiosk kiosco) {
+        return fallosPorKiosco.get(kiosco.getId(), id -> Bucket.builder()
+                .addLimit(Bandwidth.builder().capacity(PIN_FALLIDOS_POR_HORA)
+                        .refillGreedy(PIN_FALLIDOS_POR_HORA, Duration.ofHours(1)).build())
+                .addLimit(Bandwidth.builder().capacity(PIN_FALLIDOS_POR_DIA)
+                        .refillGreedy(PIN_FALLIDOS_POR_DIA, Duration.ofDays(1)).build())
+                .build());
+    }
+
     private User porPin(Kiosk kiosco, long usuarioId, String pin) {
         User persona = userRepository.findById(usuarioId)
                 .filter(p -> esDeAqui(p, kiosco) && p.getKioscoPinHash() != null)
                 .orElseThrow(KioscoNoVale::persona);
+
+        // Antes de mirar el PIN: si este kiosco ya ha gastado sus fallos, lo
+        // que se teclee no se comprueba, y así no suma contra esta persona.
+        Bucket fallos = fallosDe(kiosco);
+        if (fallos.getAvailableTokens() <= 0) {
+            log.warn("Kiosco {}: demasiados PIN fallidos; no admite PIN por ahora.", kiosco.getId());
+            throw new BusinessException("Este kiosco no admite PIN ahora mismo por demasiados intentos fallidos. "
+                    + "Ficha con tu tarjeta o desde la app.", HttpStatus.TOO_MANY_REQUESTS);
+        }
 
         Instant ahora = clock.instant();
         if (persona.getKioscoPinBloqueadoHasta() != null && ahora.isBefore(persona.getKioscoPinBloqueadoHasta())) {
@@ -128,9 +159,10 @@ public class IdentificacionEnKiosco {
         }
 
         if (!passwordEncoder.matches(pin, persona.getKioscoPinHash())) {
-            int fallos = persona.getKioscoPinFallos() + 1;
-            if (fallos < FALLOS_HASTA_BLOQUEAR) {
-                persona.setKioscoPinFallos(fallos);
+            fallos.tryConsume(1);
+            int seguidos = persona.getKioscoPinFallos() + 1;
+            if (seguidos < FALLOS_HASTA_BLOQUEAR) {
+                persona.setKioscoPinFallos(seguidos);
                 userRepository.save(persona);
                 throw new BusinessException("PIN incorrecto.", HttpStatus.FORBIDDEN);
             }

@@ -10,7 +10,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -29,11 +32,43 @@ public class JwtServiceImpl implements JwtService {
     /** La familia del refresh con el que se emitió: la sesión (ADR 034). */
     static final String CLAIM_SESION = "sid";
 
-    @Value("${application.security.jwt.secret-key}")
-    private String secretKey;
+    /**
+     * Quién emite el token y para quién es (revisión de seguridad del
+     * 17/10/2026, plan J). Con la misma clave no se firma nada más hoy, pero
+     * si un día se firmara otra cosa --un enlace, un token de otro servicio--,
+     * no podría pasar por un access token.
+     */
+    static final String EMISOR = "nxtime";
+    static final String DESTINO = "nxtime-api";
 
-    @Value("${application.security.jwt.expiration}")
-    private long jwtExpiration;
+    /**
+     * La clave de desarrollo que trae application.yml. Está en el repositorio,
+     * así que la conoce cualquiera: con ella se fabrica un token de quien se
+     * quiera. Producción no tiene valor por defecto, pero nada impedía poner
+     * esta en JWT_SECRET; ahora el servidor no arranca.
+     */
+    static final String CLAVE_DE_DESARROLLO =
+            "PXPGUXRppB7TpSN+W65Sl9qIKhKIOS6vxftZBZLCI4iIuCPt4CzTchUL4BFScNcgXWhlQess0tQaSOy8PABnRQ==";
+
+    private final SecretKey clave;
+    private final long jwtExpiration;
+
+    @Autowired
+    public JwtServiceImpl(
+            @Value("${application.security.jwt.secret-key}") String secretKey,
+            @Value("${application.security.jwt.expiration}") long jwtExpiration,
+            Environment entorno) {
+        this(secretKey, jwtExpiration, entorno.acceptsProfiles(Profiles.of("prod")));
+    }
+
+    JwtServiceImpl(String secretKey, long jwtExpiration, boolean produccion) {
+        if (produccion && CLAVE_DE_DESARROLLO.equals(secretKey.strip())) {
+            throw new IllegalStateException("JWT_SECRET es la clave de desarrollo, que está publicada en el "
+                    + "repositorio: con ella cualquiera firma tokens. Genera otra (openssl rand -base64 64).");
+        }
+        this.clave = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        this.jwtExpiration = jwtExpiration;
+    }
 
     @Override
     public String extractUsername(String token) {
@@ -73,9 +108,11 @@ public class JwtServiceImpl implements JwtService {
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())
+                .issuer(EMISOR)
+                .audience().add(DESTINO).and()
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + jwtExpiration))
-                .signWith(getSignInKey())
+                .signWith(clave)
                 .compact();
     }
 
@@ -94,14 +131,11 @@ public class JwtServiceImpl implements JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSignInKey())
+                .verifyWith(clave)
+                .requireIssuer(EMISOR)
+                .requireAudience(DESTINO)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -1,0 +1,55 @@
+# Actualizaciones de dependencias (revisión de seguridad del 17/10/2026, plan J).
+#
+# Una vez al MES y agrupadas, a propósito: cada PR gasta minutos de CI, y al
+# mergearlo, de build en Render (500 al mes en el plan gratuito). Lo urgente no
+# espera al mes: las alertas de seguridad abren su propio PR en cuanto salen,
+# que es otra cosa que esto.
+#
+# Las subidas de versión mayor van aparte de las menores y los parches: suelen
+# romper algo, y mezcladas no se sabe cuál ha sido.
+version: 2
+updates:
+  # Las acciones de los workflows, fijadas por commit: esto es lo que las sube.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      acciones:
+        patterns: ["*"]
+
+  # Backend y app (un solo proyecto de Gradle).
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      gradle-menores:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      gradle-mayores:
+        patterns: ["*"]
+        update-types: [major]
+
+  - package-ecosystem: npm
+    directory: /nx-time-frontend-web
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      npm-menores:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      npm-mayores:
+        patterns: ["*"]
+        update-types: [major]
+
+  # Las imágenes del Dockerfile, fijadas por digest.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      imagenes:
+        patterns: ["*"]

@@ -29,6 +29,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
 
     private static final String HEADER_NAME = "X-Request-Id";
     private static final String MDC_KEY = "requestId";
+    private static final java.util.regex.Pattern ID_ACEPTABLE = java.util.regex.Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
     @Override
     protected void doFilterInternal(
@@ -37,7 +38,11 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String requestId = request.getHeader(HEADER_NAME);
-        if (requestId == null || requestId.isBlank()) {
+        // Solo uno con pinta de identificador (revisión de seguridad del
+        // 17/10/2026): lo escribe quien llama, va en cada línea de registro y
+        // vuelve en la respuesta, y antes se aceptaba cualquier cosa, saltos de
+        // línea y megas incluidos.
+        if (requestId == null || !ID_ACEPTABLE.matcher(requestId).matches()) {
             requestId = UUID.randomUUID().toString();
         }
 

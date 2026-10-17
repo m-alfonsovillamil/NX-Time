@@ -5,6 +5,7 @@ import com.nxtime.nxtime.dto.SignMonthRequest;
 import com.nxtime.nxtime.dto.SignableMonthResponse;
 import com.nxtime.nxtime.dto.SignatureVerificationResponse;
 import com.nxtime.nxtime.dto.TeamSignatureResponse;
+import com.nxtime.nxtime.security.IpDelCliente;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.MonthlySignatureService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.YearMonth;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -51,9 +53,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class MonthlySignatureController {
 
     private final MonthlySignatureService signatureService;
+    private final int proxiesDeConfianza;
 
-    public MonthlySignatureController(MonthlySignatureService signatureService) {
+    public MonthlySignatureController(MonthlySignatureService signatureService,
+            @Value(IpDelCliente.PROXIES_DE_CONFIANZA) int proxiesDeConfianza) {
         this.signatureService = signatureService;
+        this.proxiesDeConfianza = Math.max(0, proxiesDeConfianza);
     }
 
     @Operation(summary = "Mis meses por firmar",
@@ -91,7 +96,11 @@ public class MonthlySignatureController {
             @AuthenticationPrincipal SecurityUser usuario,
             HttpServletRequest peticion) {
         return ResponseEntity.status(HttpStatus.CREATED).body(signatureService.firmar(
-                usuario.getUser(), YearMonth.of(request.anio(), request.mes()), peticion.getRemoteAddr()));
+                usuario.getUser(), YearMonth.of(request.anio(), request.mes()),
+                // La del cliente, como en la auditoría de los fichajes. Hasta el
+                // 17/10/2026 se guardaba getRemoteAddr(), que detrás del
+                // balanceador de Render es siempre la del balanceador (plan J).
+                IpDelCliente.de(peticion, proxiesDeConfianza)));
     }
 
     @Operation(summary = "Comprobar una firma",

@@ -67,6 +67,10 @@ import tools.jackson.databind.ObjectMapper;
  *   <li><b>Lo demás</b> (registrar una empresa, pedir y canjear códigos,
  *       emparejar un kiosco): las diez de siempre. Varias mandan correos, y
  *       nadie legítimo las repite.</li>
+ *   <li><b>Consultas públicas</b> ({@link #RUTAS_DE_CONSULTA}, desde la
+ *       revisión de seguridad del 17/10/2026): ciento veinte. No mandan nada,
+ *       pero cada una lee la base y sin límite despertaban Neon a cualquier
+ *       hora.</li>
  * </ul>
  *
  * Contra una cuenta concreta sigue frenando {@link LimitadorDeIntentosPorCuenta},
@@ -93,16 +97,26 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private static final Set<String> RUTAS_LIMITADAS = Set.of(
             "/auth/register-manager", "/auth/registro/confirmar", "/auth/recuperar",
             "/auth/recuperar/confirmar",
-            // Pedir un código para emparejar un kiosco es público (ADR 033). Preguntar
-            // por su estado no se limita: la tablet lo hace cada pocos segundos, y va
-            // con un secreto de 256 bits que no se puede adivinar a base de probar.
+            // Pedir un código para emparejar un kiosco es público (ADR 033).
+            // Preguntar por su estado va en las consultas: ver RUTAS_DE_CONSULTA.
             "/kiosco/emparejar",
             // Registrar una empresa con una cuenta de fuera (ADR 038) crea una
             // empresa, como /auth/register-manager. Las dos de la app (ADR 044)
             // son lo mismo en dos pasos.
             "/auth/sso/registro", "/auth/sso/registro/canjear", "/auth/sso/registro/app");
+
+    /**
+     * Públicas, sin efectos y que la gente legítima repite: la tablet que
+     * espera a que la emparejen pregunta cada cuatro segundos (quince por
+     * minuto; el cupo da para ocho a la vez desde una oficina), y el estado
+     * de las tareas lo mira un workflow. El secreto de la tablet tiene 256
+     * bits y no se adivina probando: el límite es por la base, no por eso.
+     */
+    private static final Set<String> RUTAS_DE_CONSULTA = Set.of("/kiosco/emparejar/estado", "/estado/tareas");
+
     static final int PETICIONES_POR_MINUTO = 10;
     static final int ENTRADAS_POR_MINUTO = 60;
+    static final int CONSULTAS_POR_MINUTO = 120;
 
     /**
      * Acotado a propósito: era un Map que crecía sin límite, con una entrada
@@ -160,15 +174,25 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        boolean esEntrar = RUTAS_DE_ENTRADA.contains(request.getServletPath());
-        if (!esEntrar && !RUTAS_LIMITADAS.contains(request.getServletPath())) {
+        String ruta = request.getServletPath();
+        String cupo;
+        int porMinuto;
+        if (RUTAS_DE_ENTRADA.contains(ruta)) {
+            cupo = "entrar:";
+            porMinuto = entradasPorMinuto;
+        } else if (RUTAS_LIMITADAS.contains(ruta)) {
+            cupo = "resto:";
+            porMinuto = peticionesPorMinuto;
+        } else if (RUTAS_DE_CONSULTA.contains(ruta)) {
+            cupo = "consultar:";
+            porMinuto = CONSULTAS_POR_MINUTO;
+        } else {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Un cupo por IP para entrar y otro para lo demás: la clave los separa.
-        int porMinuto = esEntrar ? entradasPorMinuto : peticionesPorMinuto;
-        Bucket bucket = buckets.get((esEntrar ? "entrar:" : "resto:") + clientIp(request), clave -> nuevoBucket(porMinuto));
+        // Un cupo por IP para cada grupo de rutas: la clave los separa.
+        Bucket bucket = buckets.get(cupo + clientIp(request), clave -> nuevoBucket(porMinuto));
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);

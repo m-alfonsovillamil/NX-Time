@@ -160,6 +160,26 @@ class UnconfirmedRegistrationCleanerIT {
     }
 
     @Test
+    @DisplayName("Descartar borra ya un registro a medias, aunque sea de hace un minuto, y nada que esté confirmado")
+    void descartarNoEsperaAlPlazo() {
+        String empresa = nombre("Recién");
+        User admin = registroDeHace(empresa, 0);
+
+        assertThat(limpieza.descartar(admin.getId())).isTrue();
+
+        assertThat(userRepository.findById(admin.getId())).isEmpty();
+        assertThat(companyRepository.findByNombre(empresa)).isEmpty();
+        assertThat(codigosDe(admin)).isZero();
+
+        String confirmada = nombre("Confirmada");
+        User suya = registroDeHace(confirmada, 0);
+        jdbc.update("UPDATE usuarios SET correo_sin_confirmar_desde = NULL WHERE id = ?", suya.getId());
+        assertThat(limpieza.descartar(suya.getId())).isFalse();
+        assertThat(userRepository.findById(suya.getId())).isPresent();
+        assertThat(companyRepository.findByNombre(confirmada)).isPresent();
+    }
+
+    @Test
     @DisplayName("Uno que no se puede borrar se deja como estaba y no impide borrar los demás")
     void unoQueNoSePuedeBorrarNoParaElResto() {
         // Una cuenta sin confirmar no debería tener fichajes; si los tuviera,

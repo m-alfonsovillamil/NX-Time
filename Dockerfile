@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 #
 # Imagen del backend de NX Time (Fase 7 del plan de profesionalización).
 # Multi-stage: la etapa de build (JDK completo + Gradle) no llega a la
@@ -8,9 +8,14 @@
 # settings.gradle.kts no declare el módulo Android, que necesita el SDK
 # de Android para configurarse y no tiene sentido dentro de esta imagen
 # (ver el propio settings.gradle.kts).
+#
+# Las imágenes van fijadas por su digest además de por la etiqueta
+# (revisión de seguridad del 17/10/2026, plan J): una etiqueta como
+# 21-jre-alpine la puede mover quien publica la imagen, y el digest no.
+# Dependabot propone las actualizaciones (.github/dependabot.yml).
 
 # ---- Etapa 1: build ---------------------------------------------------
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk-alpine@sha256:0bfc69a4758a86710e5c474032d28400a8bd00874766f9e8b1642ac2fd293159 AS build
 WORKDIR /workspace
 ENV NXTIME_SOLO_BACKEND=true
 
@@ -44,7 +49,7 @@ RUN ./gradlew :nx-time-backend:bootJar -x test --no-daemon
 RUN java -Djarmode=tools -jar nx-time-backend/build/libs/*.jar extract --layers --launcher --destination extracted
 
 # ---- Etapa 2: runtime ---------------------------------------------------
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555 AS runtime
 WORKDIR /app
 
 # Usuario no-root: si el proceso Java se ve comprometido, no hereda

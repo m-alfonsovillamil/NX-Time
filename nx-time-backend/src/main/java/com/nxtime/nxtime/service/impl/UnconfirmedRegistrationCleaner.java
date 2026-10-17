@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -48,9 +49,14 @@ public class UnconfirmedRegistrationCleaner {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaccion;
 
+    /** Para {@link #descartar}: su propia transacción, que no se deshaga con la de quien llama. */
+    private final TransactionTemplate aparte;
+
     public UnconfirmedRegistrationCleaner(JdbcTemplate jdbc, TransactionTemplate transaccion) {
         this.jdbc = jdbc;
         this.transaccion = transaccion;
+        this.aparte = new TransactionTemplate(transaccion.getTransactionManager());
+        this.aparte.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     private record Pendiente(long usuarioId, long empresaId) {
@@ -86,6 +92,45 @@ public class UnconfirmedRegistrationCleaner {
             log.info("Borrados {} registros de empresa sin confirmar tras {} horas.", borrados, PLAZO.toHours());
         }
         return borrados;
+    }
+
+    /**
+     * Borra ya el registro sin confirmar de esa cuenta, sin esperar al plazo
+     * (revisión de seguridad del 17/10/2026, plan J).
+     *
+     * Es para cuando el dueño del correo aparece por otro camino --entra o se
+     * registra con Google o Microsoft, que garantizan que el correo es suyo--
+     * y lo que hay a medias con su correo lo puede haber dejado otro, con una
+     * contraseña que el dueño no conoce. Darlo por confirmado, que es lo que se
+     * hacía hasta entonces, le regalaba la empresa a quien lo dejó.
+     *
+     * Va en su propia transacción: quien llama suele lanzar después («no
+     * tienes cuenta») y el borrado tiene que quedarse. Las mismas condiciones
+     * que el borrado por plazo: la cuenta sigue sin confirmar y es la única de
+     * su empresa; si no, o si tiene algo que no debería tener, no se toca.
+     *
+     * @return si lo ha borrado
+     */
+    public boolean descartar(long usuarioId) {
+        try {
+            return Boolean.TRUE.equals(aparte.execute(estado -> {
+                List<Pendiente> pendiente = jdbc.query("""
+                        SELECT u.id, u.empresa_id
+                          FROM usuarios u
+                         WHERE u.id = ?
+                           AND u.correo_sin_confirmar_desde IS NOT NULL
+                           AND NOT EXISTS (SELECT 1 FROM usuarios otro
+                                            WHERE otro.empresa_id = u.empresa_id AND otro.id <> u.id)
+                        """,
+                        (fila, n) -> new Pendiente(fila.getLong("id"), fila.getLong("empresa_id")), usuarioId);
+                // Sin plazo: cualquier fecha de «sin confirmar desde» vale.
+                return !pendiente.isEmpty() && borrar(pendiente.getFirst(), Timestamp.valueOf("9999-12-31 00:00:00"));
+            }));
+        } catch (DataIntegrityViolationException e) {
+            log.warn("El registro sin confirmar del usuario {} no se ha podido descartar: {}",
+                    usuarioId, e.getMostSpecificCause().getMessage());
+            return false;
+        }
     }
 
     private boolean borrar(Pendiente pendiente, Timestamp limite) {

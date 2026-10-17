@@ -32,6 +32,8 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @NxTimeWebMvcTest(SystemStatusController.class)
 @Import(WebMvcTestSecurityConfig.class)
+// Sin reutilizar respuestas: cada test simula un estado distinto.
+@org.springframework.test.context.TestPropertySource(properties = "application.estado.cache=PT0S")
 class SystemStatusControllerTest {
 
     private static final Instant ANOCHE = Instant.parse("2026-09-12T01:00:00Z");
@@ -71,6 +73,18 @@ class SystemStatusControllerTest {
                 .andExpect(jsonPath("$.ok").value(false))
                 .andExpect(jsonPath("$.tareas[1].ok").value(false))
                 .andExpect(jsonPath("$.tareas[1].ultimoResultado").value("ERROR"));
+    }
+
+    @Test
+    @DisplayName("Con la caché puesta, dos consultas seguidas leen la base una vez")
+    void tareas_seReutilizaLaRespuesta() {
+        when(taskMonitorService.estado()).thenReturn(new SystemStatusResponse(true, List.of(tarea(CIERRE_JORNADAS, true))));
+        SystemStatusController conCache = new SystemStatusController(taskMonitorService, java.time.Duration.ofMinutes(2));
+
+        conCache.tareas();
+        conCache.tareas();
+
+        org.mockito.Mockito.verify(taskMonitorService, org.mockito.Mockito.times(1)).estado();
     }
 
     @Test

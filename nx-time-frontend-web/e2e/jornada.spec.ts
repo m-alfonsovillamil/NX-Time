@@ -127,8 +127,8 @@ test('recargar la pagina mantiene la sesion', async ({ page }) => {
 
   // El refresh no está al alcance del JavaScript de la página: es HttpOnly.
   const cookies = await page.context().cookies();
-  expect(cookies.find((c) => c.name === 'nx_refresh')?.httpOnly).toBe(true);
-  expect(await page.evaluate(() => document.cookie)).not.toContain('nx_refresh');
+  expect(cookies.find((c) => c.name === '__Secure-nx_refresh')?.httpOnly).toBe(true);
+  expect(await page.evaluate(() => document.cookie)).not.toContain('__Secure-nx_refresh');
 });
 
 test('cerrar sesion y recargar deja fuera', async ({ page }) => {

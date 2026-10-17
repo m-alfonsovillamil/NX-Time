@@ -114,7 +114,13 @@ let refrescoEnVuelo: Promise<string | null> | null = null;
 /* La cookie de la sesión y su CSRF (ADR 030)                           */
 /* ------------------------------------------------------------------ */
 
-const COOKIE_CSRF = 'nx_csrf';
+/**
+ * Con el prefijo `__Secure-` desde el 17/10/2026 (plan J): el navegador no
+ * acepta una cookie con ese nombre si no llega por HTTPS. La de antes se sigue
+ * leyendo mientras quede alguna sesión que la tenga (una sesión web dura siete
+ * días); después, fuera.
+ */
+const COOKIES_CSRF = ['__Secure-nx_csrf', 'nx_csrf'];
 const CABECERA_CSRF = 'X-CSRF-Token';
 
 /**
@@ -126,12 +132,14 @@ const CABECERA_CSRF = 'X-CSRF-Token';
  */
 export function valorCsrf(): string | null {
   if (typeof document === 'undefined') return null;
+  const valores = new Map<string, string>();
   for (const trozo of document.cookie.split(';')) {
     const [nombre, ...valor] = trozo.trim().split('=');
-    if (nombre === COOKIE_CSRF) {
-      const texto = valor.join('=');
-      return texto === '' ? null : decodeURIComponent(texto);
-    }
+    if (nombre !== undefined) valores.set(nombre, valor.join('='));
+  }
+  for (const nombre of COOKIES_CSRF) {
+    const texto = valores.get(nombre);
+    if (texto !== undefined && texto !== '') return decodeURIComponent(texto);
   }
   return null;
 }

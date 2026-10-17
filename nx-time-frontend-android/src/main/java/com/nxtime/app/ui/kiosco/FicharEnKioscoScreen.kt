@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
@@ -197,7 +198,14 @@ private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
     }
 }
 
-/** La tarjeta sobre blanco, a todo el ancho, con el brillo al máximo mientras se ve. */
+/**
+ * La tarjeta sobre blanco, a todo el ancho, con el brillo al máximo mientras se ve.
+ *
+ * Sin capturas de pantalla ni miniatura en «Recientes» (revisión de seguridad
+ * del 17/10/2026, plan J): con una foto de este QR se ficha en nombre de su
+ * dueño en cualquier kiosco de la empresa. Va en el diálogo y no en la
+ * actividad porque el diálogo es otra ventana.
+ */
 @Composable
 private fun TarjetaAPantallaCompleta(tarjeta: TarjetaKioscoDTO, onCerrar: () -> Unit) {
     val actividad = LocalContext.current.actividad()
@@ -221,7 +229,10 @@ private fun TarjetaAPantallaCompleta(tarjeta: TarjetaKioscoDTO, onCerrar: () -> 
     val modulos = remember(tarjeta.codigo) { CodigoQr.modulos(tarjeta.codigo) }
     val descripcion = stringResource(R.string.kiosco_tarjeta_descripcion)
 
-    Dialog(onDismissRequest = onCerrar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onCerrar,
+        properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn)
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()

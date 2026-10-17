@@ -291,6 +291,38 @@ class KioscoIT {
                 .isEqualTo(1);
     }
 
+    /**
+     * Revisión de seguridad del 17/10/2026 (plan J): sin un tope de fallos por
+     * kiosco, desde uno robado se podía anular el PIN de toda la plantilla.
+     */
+    @Test
+    @DisplayName("Un kiosco que acumula veinte PIN fallidos en una hora deja de admitir PIN, y lo que se teclee no cuenta contra nadie")
+    void unKioscoNoAnulaLosPinDeTodos() throws Exception {
+        String kiosco = kioscoEmparejado();
+        java.util.List<User> plantilla = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            User persona = empleada(lucia.getEmpresa(), "Persona" + i);
+            perfilDeKiosco.fijarPin(persona, "4827");
+            plantilla.add(persona);
+        }
+        // Cuatro fallos a cada una: ninguna llega a bloquearse, y van veinte.
+        for (User persona : plantilla) {
+            for (int i = 0; i < 4; i++) {
+                assertThat(post("/kiosco/identificar", "{\"usuarioId\":%d,\"pin\":\"0000\"}".formatted(persona.getId()),
+                        kioscoAuth(kiosco)).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+            }
+        }
+
+        User otra = plantilla.getFirst();
+        assertThat(post("/kiosco/identificar", "{\"usuarioId\":%d,\"pin\":\"0000\"}".formatted(otra.getId()),
+                kioscoAuth(kiosco)).getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        // Ese intento no se ha comprobado: no suma ni bloquea a nadie.
+        assertThat(userRepository.findById(otra.getId()).orElseThrow().getKioscoPinFallos()).isEqualTo(4);
+        // En otro kiosco de la misma empresa, el PIN sigue valiendo.
+        assertThat(post("/kiosco/identificar", "{\"usuarioId\":%d,\"pin\":\"4827\"}".formatted(otra.getId()),
+                kioscoAuth(kioscoEmparejado())).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
     @Test
     @DisplayName("Las tarjetas de toda la plantilla son un POST del ADMIN; con un GET o sin empresa:configurar, no")
     void tarjetasDeLaPlantilla() throws Exception {

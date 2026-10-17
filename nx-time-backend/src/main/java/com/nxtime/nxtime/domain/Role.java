@@ -11,6 +11,10 @@ package com.nxtime.nxtime.domain;
  *
  * Jerarquía (cada uno hereda los permisos del anterior):
  * EMPLEADO &lt; GESTOR &lt; RRHH &lt; ADMIN.
+ *
+ * <b>El orden de las constantes es esa jerarquía</b> y se usa: dar de baja a
+ * alguien exige no tener un rol por debajo del suyo ({@code ordinal()}, en
+ * {@code AuthServiceImpl#setEmployeeActive}). Un rol nuevo va en su sitio.
  */
 public enum Role {
     EMPLEADO,

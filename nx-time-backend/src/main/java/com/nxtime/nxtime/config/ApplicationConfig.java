@@ -5,6 +5,7 @@ import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -38,7 +39,9 @@ public class ApplicationConfig {
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
                 .map(operadores::principalDe)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con email: " + email));
+                // Sin el correo: el mensaje acaba en los registros, y serían
+                // una lista de qué direcciones se están probando.
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado."));
     }
 
     // Spring Security 7 le ha dado la vuelta: el constructor recibe el
@@ -68,6 +71,14 @@ public class ApplicationConfig {
 
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(alEntrar);
         authProvider.setPasswordEncoder(passwordEncoder());
+        // Si la cuenta está de baja se mira DESPUÉS de la contraseña, no antes
+        // como hace Spring por defecto (revisión de seguridad del 17/10/2026,
+        // plan J). Antes, una cuenta de baja respondía sin hacer el BCrypt, en
+        // un milisegundo, y cronometrando se sabía qué correos tienen cuenta
+        // aunque esté de baja. Ahora cuesta lo mismo que cualquier otra, y
+        // «está de baja» solo se lo encuentra quien sabe la contraseña.
+        authProvider.setPreAuthenticationChecks(usuario -> { });
+        authProvider.setPostAuthenticationChecks(new AccountStatusUserDetailsChecker());
         return authProvider;
     }
 

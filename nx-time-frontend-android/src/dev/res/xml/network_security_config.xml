@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Solo en el sabor dev: el backend local del emulador (10.0.2.2) va por http.
+  Hasta el 17/10/2026 esto estaba en main y también lo llevaba la app publicada
+  (plan J); ahora la de producción usa la de src/main, sin tráfico en claro.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

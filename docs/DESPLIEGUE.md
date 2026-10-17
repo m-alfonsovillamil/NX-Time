@@ -201,7 +201,7 @@ solo vale la web en su dominio. Abierta por `nxtime-web.onrender.com`, la web
 redirige sola a `https://nxtime-web.com`.
 
 `COOKIE_DOMAIN` es el dominio común de la web y la API. Sin él, la cookie
-`nx_csrf` sería solo de `api.nxtime-web.com`, la web no podría leerla y no
+`__Secure-nx_csrf` sería solo de `api.nxtime-web.com`, la web no podría leerla y no
 podría renovar la sesión: se entraría y a los 15 minutos, fuera.
 
 ### Push (Firebase)

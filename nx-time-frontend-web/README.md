@@ -134,7 +134,7 @@ pasaría sin que nadie lo viera, porque es justamente un `.d.ts`.
 `nxtime-web.com` y la API en `api.nxtime-web.com`: el mismo sitio, así que el
 servidor pone el refresh en una cookie `HttpOnly` y la sesión sobrevive a
 recargar. El access sigue solo en memoria. Renovar y salir mandan la cabecera
-`X-CSRF-Token`, copiada de la cookie `nx_csrf` (doble envío), y varias pestañas
+`X-CSRF-Token`, copiada de la cookie `__Secure-nx_csrf` (doble envío), y varias pestañas
 renuevan de una en una con `navigator.locks`, porque el servidor rota el
 refresh. **No hay `localStorage` para nada de la sesión.**
 

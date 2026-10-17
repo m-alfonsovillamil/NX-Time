@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!--/* Se ha vinculado una cuenta de Google o de Microsoft (revisión de seguridad del 17/10/2026, plan J). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Cuenta vinculada', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Se ha vinculado una cuenta de <strong th:text="${proveedor}">Google</strong>
+        (<span th:text="${correoExterno}">correo@ejemplo.com</span>) a tu cuenta de NX Time
+        (<span th:text="${email}">correo@ejemplo.com</span>). Desde ahora puedes entrar con ella sin
+        contraseña.</p>
+
+    <!--/*
+      Lo que importa de este correo es el párrafo de abajo: entrar con una
+      cuenta de fuera vale tanto como la contraseña, y su dueño tiene que
+      enterarse si no ha sido él.
+    */-->
+    <p>Si no has sido tú, entra en NX Time, quítala en <strong>Ajustes → Cuentas vinculadas</strong> y
+        cambia tu contraseña. Si no puedes entrar, pulsa <strong>«¿Has olvidado tu contraseña o es tu
+        primera vez?»</strong> en la pantalla de acceso.</p>
+
+    <p style="color: #6a737d;">Si has sido tú, no tienes que hacer nada.</p>
+</div>
+</body>
+</html>

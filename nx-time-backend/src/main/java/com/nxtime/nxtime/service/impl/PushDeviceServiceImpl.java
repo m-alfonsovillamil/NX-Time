@@ -38,6 +38,14 @@ public class PushDeviceServiceImpl implements PushDeviceService {
     @Override
     public void registrar(User actor, String token, PushPlatform plataforma) {
         String limpio = token.strip();
+        // Un token que ya era de otro pasa a quien lo registra, y es a
+        // propósito: el token es de una instalación de la app o de un
+        // navegador, y si lo trae otra persona es que ha entrado en ese mismo
+        // aparato (un móvil o un ordenador compartido). Se valoró en la
+        // revisión de seguridad del 17/10/2026 (plan J) no dejar que cambie de
+        // dueño, y se descartó: para conseguir el token de otro hace falta su
+        // aparato, y prohibirlo dejaría sin avisos al segundo que entra en él.
+        //
         // Solo para el log: quién lo tenía. Lo que decide de quién es el token
         // es la sentencia de abajo, no esta lectura.
         deviceRepository.findByToken(limpio)

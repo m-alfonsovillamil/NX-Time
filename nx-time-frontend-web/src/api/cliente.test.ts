@@ -1,3 +1,5 @@
+// @vitest-environment-options {"url": "https://nxtime-web.test/"}
+// HTTPS: la cookie CSRF lleva el prefijo __Secure-, y jsdom, como un navegador, no la acepta por http.
 /**
  * El refresco del 401, que es la pieza con riesgo real de este cliente.
  *
@@ -17,12 +19,20 @@
  * Desde la fase W1 (ADR 030) el refresh no está en la página: es una cookie
  * `HttpOnly` que el navegador manda solo. Lo que se comprueba aquí es lo que
  * sí hace la página: pedir con `credentials: 'include'`, sin cuerpo, y con la
- * cabecera CSRF copiada de la cookie `nx_csrf`.
+ * cabecera CSRF copiada de la cookie `__Secure-nx_csrf`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { cliente, reiniciarEstadoDeRed, restaurarSesion, salir, servidorDespertando, tokenParaReintentar } from './cliente';
+import {
+  cliente,
+  reiniciarEstadoDeRed,
+  restaurarSesion,
+  salir,
+  servidorDespertando,
+  tokenParaReintentar,
+  valorCsrf,
+} from './cliente';
 import { abrirSesion, cerrarSesion, haySesion, sesionActual } from './sesion';
 
 const VIEJO = 'access-viejo';
@@ -89,7 +99,7 @@ function servidor({ refrescoFalla = false } = {}) {
 
 /** La cookie CSRF que pone el servidor al entrar; `null` la quita. */
 function cookieCsrf(valor: string | null) {
-  document.cookie = valor === null ? 'nx_csrf=; max-age=0' : `nx_csrf=${valor}`;
+  document.cookie = valor === null ? '__Secure-nx_csrf=; max-age=0; Secure' : `__Secure-nx_csrf=${valor}; Secure`;
 }
 
 beforeEach(() => {
@@ -287,5 +297,19 @@ describe('el aviso de «el servidor está despertando»', () => {
     await Promise.all([primera, segunda]);
 
     expect(servidorDespertando()).toBe(false);
+  });
+});
+
+describe('la cookie CSRF', () => {
+  it('se lee con el nombre nuevo y, si no está, con el de antes del 17/10/2026', () => {
+    expect(valorCsrf()).toBe(CSRF);
+
+    cookieCsrf(null);
+    document.cookie = 'nx_csrf=de-antes';
+    expect(valorCsrf()).toBe('de-antes');
+
+    cookieCsrf('la-nueva');
+    expect(valorCsrf()).toBe('la-nueva');
+    document.cookie = 'nx_csrf=; max-age=0';
   });
 });
