@@ -15,7 +15,7 @@
 # Dependabot propone las actualizaciones (.github/dependabot.yml).
 
 # ---- Etapa 1: build ---------------------------------------------------
-FROM eclipse-temurin:21-jdk-alpine@sha256:0bfc69a4758a86710e5c474032d28400a8bd00874766f9e8b1642ac2fd293159 AS build
+FROM eclipse-temurin:25-jdk-alpine@sha256:3fd2d245c4e0eba615fe366a71b8bd25f5db7104f53e4026b24bf508b880bd2a AS build
 WORKDIR /workspace
 ENV NXTIME_SOLO_BACKEND=true
 
@@ -49,7 +49,7 @@ RUN ./gradlew :nx-time-backend:bootJar -x test --no-daemon
 RUN java -Djarmode=tools -jar nx-time-backend/build/libs/*.jar extract --layers --launcher --destination extracted
 
 # ---- Etapa 2: runtime ---------------------------------------------------
-FROM eclipse-temurin:21-jre-alpine@sha256:51ab5e3302e7141ce665ca3ea85e8b5cd648eafbc3c0c90dd79d6537684e4555 AS runtime
+FROM eclipse-temurin:25-jre-alpine@sha256:3c0a9084927a221ccd1d007fcaf614465672c0af37aaa834c5184483afe56d61 AS runtime
 WORKDIR /app
 
 # Usuario no-root: si el proceso Java se ve comprometido, no hereda
