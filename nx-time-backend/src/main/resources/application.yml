@@ -87,9 +87,15 @@ spring:
 # Cada línea de log lleva el requestId de CorrelationIdFilter, para
 # poder seguir todas las líneas de una misma petición aunque pasen por
 # varias clases.
+#
+# Los saltos de línea del mensaje se cambian por « ⏎ » (revisión de
+# seguridad del 17/10/2026): muchos mensajes llevan texto que escribe la
+# gente (el nombre de una empresa, el motivo de una ausencia), y con un
+# salto dentro se podían fabricar líneas que parecieran del servidor. Las
+# trazas de las excepciones van aparte (%ex) y salen como siempre.
 logging:
   pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId}] %logger{36} - %replace(%msg){'[\\r\\n]+', ' ⏎ '}%n"
 
 # Sentry (paso 5 del piloto): los errores, a un sitio que sobreviva a los
 # 7 días de logs de Render. Sin SENTRY_DSN -- en local, en los tests y en
@@ -212,7 +218,7 @@ application:
       # sobreescribe este valor -- ver application-dev.yml / application-prod.yml.
       allowed-origins: ""
     web-session:
-      # El dominio común de la web y la API (ADR 030), para la cookie nx_csrf:
+      # El dominio común de la web y la API (ADR 030), para la cookie __Secure-nx_csrf:
       # la pone la API y la tiene que leer la web, que está en otro
       # subdominio. Vacío = cookie del propio host, que es lo que hace falta en
       # local, donde la web habla con la API por el proxy de Vite.

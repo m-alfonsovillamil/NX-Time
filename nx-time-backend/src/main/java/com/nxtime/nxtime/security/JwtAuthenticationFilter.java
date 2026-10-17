@@ -117,7 +117,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // PASO 7: Guardamos la autenticación en la memoria de Spring para esta petición.
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    log.warn("Token JWT inválido o caducado para {}", userEmail);
+                    log.warn("Token JWT inválido o caducado, o de una cuenta de baja.");
                 }
             }
         } catch (DataAccessException | TransactionException e) {

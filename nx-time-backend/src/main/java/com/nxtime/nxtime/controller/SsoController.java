@@ -297,7 +297,7 @@ public class SsoController {
 
     @Operation(summary = "Con qué cuenta estoy registrando una empresa",
             description = "Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para "
-                    + "enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.")
+                    + "enseñarla encima del formulario. La dice la cookie __Secure-nx_sso_alta, que dura quince minutos.")
     @ApiResponse(responseCode = "200", description = "La cuenta",
             content = @Content(schema = @Schema(implementation = SsoPendingSignupDTO.class)))
     @ApiResponse(responseCode = "404", description = "No hay ningún registro a medias, o ha caducado",

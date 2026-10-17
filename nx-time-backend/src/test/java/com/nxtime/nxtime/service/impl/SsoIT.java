@@ -119,6 +119,17 @@ class SsoIT {
     @Autowired
     private ObjectMapper json;
 
+    /** Aquí no sale ningún correo; se mira cuáles habrían salido. */
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.nxtime.nxtime.notification.EmailSender emailSender;
+
+    /** Que a su dueño le ha llegado (o le va a llegar: sale en otro hilo) el aviso de cuenta vinculada. */
+    private void avisadoDeLaVinculacion(User usuario) {
+        org.mockito.Mockito.verify(emailSender, org.mockito.Mockito.timeout(5_000)).enviar(
+                org.mockito.ArgumentMatchers.eq(usuario.getEmail()), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.eq("sso-linked"), org.mockito.ArgumentMatchers.anyMap());
+    }
+
     private final HttpClient navegador = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
     /** Cada petición, desde «otra IP»: el límite de intentos por IP no es lo que se prueba aquí. */
     private static final AtomicInteger IP = new AtomicInteger(1);
@@ -209,11 +220,11 @@ class SsoIT {
     private Ida iniciar(String proveedor, String consulta, String cookies) throws Exception {
         HttpResponse<String> respuesta = get("/auth/sso/" + proveedor + "/iniciar" + consulta, cookies);
         assertThat(respuesta.statusCode()).isEqualTo(302);
-        return new Ida(cookie(respuesta, "nx_sso"), parametros(destino(respuesta)), destino(respuesta));
+        return new Ida(cookie(respuesta, "__Secure-nx_sso"), parametros(destino(respuesta)), destino(respuesta));
     }
 
     private HttpResponse<String> volver(String proveedor, Ida ida) throws Exception {
-        return get("/auth/sso/" + proveedor + "/vuelta?code=un-codigo&state=" + ida.state(), "nx_sso=" + ida.cookie());
+        return get("/auth/sso/" + proveedor + "/vuelta?code=un-codigo&state=" + ida.state(), "__Secure-nx_sso=" + ida.cookie());
     }
 
     /** Un ID token de Google como los buenos, para la ida dada. Cada test tuerce lo que le interesa. */
@@ -259,7 +270,7 @@ class SsoIT {
     private void noHaEntrado(HttpResponse<String> respuesta, String motivo) {
         assertThat(respuesta.statusCode()).isEqualTo(302);
         assertThat(destino(respuesta)).isEqualTo(WEB + "/?sso=" + motivo);
-        assertThat(cookie(respuesta, "nx_refresh")).as("sin sesión").isNull();
+        assertThat(cookie(respuesta, "__Secure-nx_refresh")).as("sin sesión").isNull();
     }
 
     // ------------------------------------------------------------------
@@ -309,7 +320,7 @@ class SsoIT {
         assertThat(alProveedor.get("nonce")).hasSize(43).isNotEqualTo(alProveedor.get("state"));
         assertThat(alProveedor.get("code_challenge")).hasSize(43);
         // Lax y no Strict: la vuelta empieza en el proveedor, y con Strict no viajaría.
-        assertThat(atributos(respuesta, "nx_sso"))
+        assertThat(atributos(respuesta, "__Secure-nx_sso"))
                 .contains("HttpOnly").contains("Secure").contains("SameSite=Lax").contains("Path=/auth/sso");
         assertThat(respuesta.headers().firstValue("Cache-Control").orElse("")).contains("no-store");
     }
@@ -327,13 +338,15 @@ class SsoIT {
         assertThat(vuelta.statusCode()).isEqualTo(302);
         assertThat(destino(vuelta)).isEqualTo(WEB + "/");
         // Las mismas cookies que tras un login con contraseña.
-        String refresh = cookie(vuelta, "nx_refresh");
-        String csrf = cookie(vuelta, "nx_csrf");
+        String refresh = cookie(vuelta, "__Secure-nx_refresh");
+        String csrf = cookie(vuelta, "__Secure-nx_csrf");
         assertThat(refresh).isNotBlank();
-        assertThat(atributos(vuelta, "nx_refresh")).contains("HttpOnly").contains("SameSite=Strict");
+        assertThat(atributos(vuelta, "__Secure-nx_refresh")).contains("HttpOnly").contains("SameSite=Strict");
         // La de estado se ha gastado.
-        assertThat(cookie(vuelta, "nx_sso")).isEmpty();
+        assertThat(cookie(vuelta, "__Secure-nx_sso")).isEmpty();
         assertThat(identidadesDe(ana)).isEqualTo(1);
+        // Se ha vinculado sola, por el correo: su dueña tiene que enterarse.
+        avisadoDeLaVinculacion(ana);
 
         // Al proveedor se le canjeó con el secreto, la URL de vuelta y el
         // verificador que corresponde al reto que se le mandó en la ida.
@@ -348,7 +361,7 @@ class SsoIT {
 
         // Y con esas cookies la web recupera la sesión, como al recargar.
         HttpResponse<String> sesion = post("/auth/refresh", Map.of(),
-                "Cookie", "nx_refresh=" + refresh + "; nx_csrf=" + csrf, "X-CSRF-Token", csrf);
+                "Cookie", "__Secure-nx_refresh=" + refresh + "; __Secure-nx_csrf=" + csrf, "X-CSRF-Token", csrf);
         assertThat(sesion.statusCode()).isEqualTo(200);
         JsonNode cuerpo = json.readTree(sesion.body());
         assertThat(cuerpo.get("token").asText()).isNotBlank();
@@ -360,7 +373,7 @@ class SsoIT {
     void laSegundaVezPorElSujeto() throws Exception {
         User ana = persona("Ana");
         String sujeto = sujeto();
-        assertThat(cookie(entrarConGoogle(sujeto, ana.getEmail()), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(sujeto, ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
 
         Ida ida = iniciar("google", "", null);
         Map<String, Object> claims = deGoogle(ida, sujeto, "otro-correo-" + System.nanoTime() + "@sso.test");
@@ -369,7 +382,7 @@ class SsoIT {
         HttpResponse<String> vuelta = volver("google", ida);
 
         assertThat(destino(vuelta)).isEqualTo(WEB + "/");
-        assertThat(cookie(vuelta, "nx_refresh")).isNotBlank();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNotBlank();
         assertThat(identidadesDe(ana)).isEqualTo(1);
     }
 
@@ -377,7 +390,7 @@ class SsoIT {
     @DisplayName("Quien hereda el correo de otro en el proveedor NO entra en su cuenta: ya tiene vinculada otra")
     void elCorreoHeredadoNoAbreLaCuentaDeOtro() throws Exception {
         User ana = persona("Ana");
-        assertThat(cookie(entrarConGoogle(sujeto(), ana.getEmail()), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(sujeto(), ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
 
         // Otra cuenta de Google, distinta, que ahora tiene ese mismo correo.
         HttpResponse<String> vuelta = entrarConGoogle(sujeto(), ana.getEmail());
@@ -415,7 +428,7 @@ class SsoIT {
     void cuentaInactiva() throws Exception {
         User ana = persona("Ana");
         String sujeto = sujeto();
-        assertThat(cookie(entrarConGoogle(sujeto, ana.getEmail()), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(sujeto, ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
         jdbc.update("UPDATE usuarios SET activo = FALSE WHERE id = ?", ana.getId());
 
         noHaEntrado(entrarConGoogle(sujeto, ana.getEmail()), "cuenta-inactiva");
@@ -426,16 +439,58 @@ class SsoIT {
         assertThat(identidadesDe(javi)).isZero();
     }
 
+    /** Lo que hace quien se adelanta: registrar una empresa con el correo de otro y una contraseña suya. */
+    private String registroAjeno(String correo) throws Exception {
+        String suya = "Trampa " + System.nanoTime();
+        assertThat(post("/auth/register-manager", Map.of("nombreEmpresa", suya, "nombre", "Mallory",
+                "apellidos", "Atacante", "email", correo, "contrasena", "la-del-atacante")).statusCode())
+                .isEqualTo(202);
+        assertThat(userRepository.findByEmail(correo).orElseThrow().correoPendienteDeConfirmar()).isTrue();
+        return suya;
+    }
+
+    private int entrarConContrasena(String correo, String contrasena) throws Exception {
+        return post("/auth/login", Map.of("email", correo, "contrasena", contrasena)).statusCode();
+    }
+
+    /**
+     * El fallo grave de la revisión del 17/10/2026 (plan J). Hasta entonces,
+     * entrar con Google daba por confirmado el registro a medias, y quien lo
+     * había dejado entraba después con su contraseña en la empresa de otro.
+     */
     @Test
-    @DisplayName("Quien registró su empresa y no había confirmado el correo lo confirma entrando con esa cuenta")
-    void confirmaElCorreoPendiente() throws Exception {
-        User ana = persona("Ana");
-        jdbc.update("UPDATE usuarios SET correo_sin_confirmar_desde = NOW() WHERE id = ?", ana.getId());
+    @DisplayName("Un registro a medias con el correo de otro no le da la cuenta a quien lo dejó: al entrar el dueño con Google se descarta")
+    void elRegistroAMediasDeOtroSeDescartaAlEntrar() throws Exception {
+        String correo = "victima-" + System.nanoTime() + "@sso.test";
+        String suya = registroAjeno(correo);
 
-        HttpResponse<String> vuelta = entrarConGoogle(sujeto(), ana.getEmail());
+        noHaEntrado(entrarConGoogle(sujeto(), correo), "sin-cuenta");
 
-        assertThat(cookie(vuelta, "nx_refresh")).isNotBlank();
-        assertThat(userRepository.findById(ana.getId()).orElseThrow().correoPendienteDeConfirmar()).isFalse();
+        assertThat(userRepository.findByEmail(correo)).isEmpty();
+        assertThat(companyRepository.findByNombre(suya)).isEmpty();
+        assertThat(entrarConContrasena(correo, "la-del-atacante")).isEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("Registrar con Google encima de un registro a medias ajeno: nace la empresa del dueño del correo, y la contraseña del otro no abre nada")
+    void registrarEncimaDeUnRegistroAMediasAjeno() throws Exception {
+        String correo = "victima-" + System.nanoTime() + "@sso.test";
+        String sujeto = sujeto();
+        String suya = registroAjeno(correo);
+
+        Ida ida = iniciar("google", "?registro=1", null);
+        String alta = altaCon("google", deGoogle(ida, sujeto, correo), ida);
+        // Y si se adelanta otra vez mientras el dueño rellena el formulario, tampoco.
+        registroAjeno(correo);
+        String laBuena = "La de verdad " + System.nanoTime();
+        assertThat(registrar(alta, laBuena).statusCode()).isEqualTo(200);
+
+        User admin = userRepository.findByEmail(correo).orElseThrow();
+        assertThat(admin.getEmpresa().getNombre()).isEqualTo(laBuena);
+        assertThat(admin.getNombre()).isEqualTo("Eva");
+        assertThat(companyRepository.findByNombre(suya)).isEmpty();
+        assertThat(entrarConContrasena(correo, "la-del-atacante")).isEqualTo(401);
+        assertThat(cookie(entrarConGoogle(sujeto, correo), "__Secure-nx_refresh")).isNotBlank();
     }
 
     @Test
@@ -444,7 +499,7 @@ class SsoIT {
         Ida ida = iniciar("google", "", null);
 
         HttpResponse<String> vuelta = get(
-                "/auth/sso/google/vuelta?error=access_denied&state=" + ida.state(), "nx_sso=" + ida.cookie());
+                "/auth/sso/google/vuelta?error=access_denied&state=" + ida.state(), "__Secure-nx_sso=" + ida.cookie());
 
         noHaEntrado(vuelta, "cancelado");
         assertThat(PROVEEDOR.canjes()).isEmpty();
@@ -461,9 +516,9 @@ class SsoIT {
         PROVEEDOR.proximoToken(deGoogle(ida, sujeto(), persona("Ana").getEmail()));
 
         noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=" + ida.state(), null), "fallo");
-        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=otro", "nx_sso=" + ida.cookie()), "fallo");
-        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo", "nx_sso=" + ida.cookie()), "fallo");
-        noHaEntrado(get("/auth/sso/microsoft/vuelta?code=un-codigo&state=" + ida.state(), "nx_sso=" + ida.cookie()), "fallo");
+        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=otro", "__Secure-nx_sso=" + ida.cookie()), "fallo");
+        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo", "__Secure-nx_sso=" + ida.cookie()), "fallo");
+        noHaEntrado(get("/auth/sso/microsoft/vuelta?code=un-codigo&state=" + ida.state(), "__Secure-nx_sso=" + ida.cookie()), "fallo");
 
         assertThat(PROVEEDOR.canjes()).isEmpty();
     }
@@ -478,8 +533,8 @@ class SsoIT {
         // El mismo contenido con otra letra, y la firma de siempre.
         String retocada = (cuerpo.charAt(0) == 'A' ? 'B' : 'A') + cuerpo.substring(1) + "." + firma;
 
-        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=" + ida.state(), "nx_sso=" + retocada), "fallo");
-        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=" + ida.state(), "nx_sso=" + cuerpo + "."), "fallo");
+        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=" + ida.state(), "__Secure-nx_sso=" + retocada), "fallo");
+        noHaEntrado(get("/auth/sso/google/vuelta?code=un-codigo&state=" + ida.state(), "__Secure-nx_sso=" + cuerpo + "."), "fallo");
         assertThat(PROVEEDOR.canjes()).isEmpty();
     }
 
@@ -555,11 +610,11 @@ class SsoIT {
         Ida ida = iniciar("google", "", null);
         PROVEEDOR.proximoToken(deGoogle(ida, sujeto(), ana.getEmail()));
         HttpResponse<String> primera = volver("google", ida);
-        assertThat(cookie(primera, "nx_refresh")).isNotBlank();
+        assertThat(cookie(primera, "__Secure-nx_refresh")).isNotBlank();
 
         // El servidor manda borrarla; un navegador que obedece ya no la tiene.
-        assertThat(cookie(primera, "nx_sso")).isEmpty();
-        assertThat(atributos(primera, "nx_sso")).contains("Max-Age=0");
+        assertThat(cookie(primera, "__Secure-nx_sso")).isEmpty();
+        assertThat(atributos(primera, "__Secure-nx_sso")).contains("Max-Age=0");
     }
 
     // ------------------------------------------------------------------
@@ -583,7 +638,7 @@ class SsoIT {
         HttpResponse<String> vuelta = volver("microsoft", ida);
 
         assertThat(destino(vuelta)).isEqualTo(WEB + "/");
-        assertThat(cookie(vuelta, "nx_refresh")).isNotBlank();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNotBlank();
         assertThat(PROVEEDOR.canjes().get(1)).containsEntry("client_id", ID_MICROSOFT);
     }
 
@@ -594,7 +649,7 @@ class SsoIT {
         Ida ida = iniciar("microsoft", "", null);
         PROVEEDOR.proximoToken(deMicrosoft(ida, sujeto(), ana.getEmail(), INQUILINO_PERSONAL));
 
-        assertThat(cookie(volver("microsoft", ida), "nx_refresh")).isNotBlank();
+        assertThat(cookie(volver("microsoft", ida), "__Secure-nx_refresh")).isNotBlank();
     }
 
     @Test
@@ -640,7 +695,7 @@ class SsoIT {
 
         assertThat(destino(vuelta)).startsWith("nxtime://sso?codigo=");
         // A la app no se le ponen cookies: la sesión se la lleva canjeando.
-        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNull();
         String codigo = parametros(destino(vuelta)).get("codigo");
 
         HttpResponse<String> sesion = post("/auth/sso/canjear", Map.of("codigo", codigo, "verificador", verificador));
@@ -697,7 +752,7 @@ class SsoIT {
                 Map.of("email", usuario.getEmail(), "contrasena", "password123", "origen", "WEB"));
         assertThat(login.statusCode()).isEqualTo(200);
         return new String[] {
-                cookie(login, "nx_refresh"), cookie(login, "nx_csrf"), json.readTree(login.body()).get("token").asText()};
+                cookie(login, "__Secure-nx_refresh"), cookie(login, "__Secure-nx_csrf"), json.readTree(login.body()).get("token").asText()};
     }
 
     private HttpResponse<String> conToken(String metodo, String ruta, String token) throws Exception {
@@ -712,7 +767,7 @@ class SsoIT {
         String[] sesion = entrarConContrasena(ana);
         String sujeto = sujeto();
 
-        Ida ida = iniciar("microsoft", "?vincular=1", "nx_refresh=" + sesion[0]);
+        Ida ida = iniciar("microsoft", "?vincular=1", "__Secure-nx_refresh=" + sesion[0]);
         // Una cuenta de trabajo con OTRO correo y sin xms_edov: por el botón de
         // entrar no habría pasado. Aquí sí: controla las dos cuentas.
         PROVEEDOR.proximoToken(deMicrosoft(ida, sujeto, "ana.trabajo@empresa.example", INQUILINO));
@@ -720,7 +775,9 @@ class SsoIT {
 
         assertThat(destino(vuelta)).isEqualTo(WEB + "/ajustes?sso=vinculada");
         // Vincular no abre otra sesión.
-        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNull();
+        // Y se avisa también: con una sesión robada se podría vincular la cuenta del ladrón.
+        avisadoDeLaVinculacion(ana);
 
         JsonNode lista = json.readTree(conToken("GET", "/api/v1/perfil/identidades", sesion[2]).body());
         assertThat(lista).hasSize(1);
@@ -731,7 +788,7 @@ class SsoIT {
         // Y ya entra con ella, por el sujeto.
         Ida entrada = iniciar("microsoft", "", null);
         PROVEEDOR.proximoToken(deMicrosoft(entrada, sujeto, "ana.trabajo@empresa.example", INQUILINO));
-        assertThat(cookie(volver("microsoft", entrada), "nx_refresh")).isNotBlank();
+        assertThat(cookie(volver("microsoft", entrada), "__Secure-nx_refresh")).isNotBlank();
 
         assertThat(conToken("DELETE", "/api/v1/perfil/identidades/microsoft", sesion[2]).statusCode()).isEqualTo(204);
         assertThat(identidadesDe(ana)).isZero();
@@ -747,16 +804,16 @@ class SsoIT {
     @DisplayName("Vincular: sin sesión no empieza, y una cuenta que ya es de otra persona no se puede vincular")
     void vincularLoQueNoSePuede() throws Exception {
         assertThat(destino(get("/auth/sso/google/iniciar?vincular=1", null))).isEqualTo(WEB + "/ajustes?sso=sin-sesion");
-        assertThat(destino(get("/auth/sso/google/iniciar?vincular=1", "nx_refresh=inventado")))
+        assertThat(destino(get("/auth/sso/google/iniciar?vincular=1", "__Secure-nx_refresh=inventado")))
                 .isEqualTo(WEB + "/ajustes?sso=sin-sesion");
 
         User ana = persona("Ana");
         String deAna = sujeto();
-        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
 
         User javi = persona("Javi");
         String[] sesion = entrarConContrasena(javi);
-        Ida ida = iniciar("google", "?vincular=1", "nx_refresh=" + sesion[0]);
+        Ida ida = iniciar("google", "?vincular=1", "__Secure-nx_refresh=" + sesion[0]);
         PROVEEDOR.proximoToken(deGoogle(ida, deAna, ana.getEmail()));
 
         assertThat(destino(volver("google", ida))).isEqualTo(WEB + "/ajustes?sso=ya-vinculada");
@@ -790,7 +847,7 @@ class SsoIT {
         HttpResponse<String> vuelta = volver(proveedor, ida);
         assertThat(destino(vuelta)).startsWith("nxtime://sso?vinculo=");
         // Ni sesión ni nada vinculado todavía: eso lo hace la app al confirmar.
-        assertThat(cookie(vuelta, "nx_refresh")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNull();
         return parametros(destino(vuelta)).get("vinculo");
     }
 
@@ -879,7 +936,7 @@ class SsoIT {
     void laAppVinculaUnaCuentaAjena() throws Exception {
         User ana = persona("Ana");
         String deAna = sujeto();
-        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(deAna, ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
 
         User javi = persona("Javi");
         String token = entrarDesdeLaApp(javi);
@@ -904,16 +961,16 @@ class SsoIT {
         HttpResponse<String> vuelta = volver(proveedor, ida);
         assertThat(destino(vuelta)).isEqualTo(WEB + "/registro?sso=continuar");
         // Todavía no hay cuenta ni sesión: falta saber cómo se llama la empresa.
-        assertThat(cookie(vuelta, "nx_refresh")).isNull();
-        assertThat(atributos(vuelta, "nx_sso_alta")).contains("HttpOnly", "Secure", "SameSite=Lax", "Path=/auth/sso");
-        return cookie(vuelta, "nx_sso_alta");
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNull();
+        assertThat(atributos(vuelta, "__Secure-nx_sso_alta")).contains("HttpOnly", "Secure", "SameSite=Lax", "Path=/auth/sso");
+        return cookie(vuelta, "__Secure-nx_sso_alta");
     }
 
     private HttpResponse<String> registrar(String alta, String empresaNueva) throws Exception {
         Map<String, String> cuerpo = Map.of("nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora");
         return alta == null
                 ? post("/auth/sso/registro", cuerpo)
-                : post("/auth/sso/registro", cuerpo, "Cookie", "nx_sso_alta=" + alta);
+                : post("/auth/sso/registro", cuerpo, "Cookie", "__Secure-nx_sso_alta=" + alta);
     }
 
     @Test
@@ -927,7 +984,7 @@ class SsoIT {
         assertThat(userRepository.findByEmail(correo)).as("volver del proveedor no crea nada").isEmpty();
 
         // La web pregunta con qué cuenta se está registrando, para decirlo.
-        HttpResponse<String> pendiente = get("/auth/sso/registro", "nx_sso_alta=" + alta);
+        HttpResponse<String> pendiente = get("/auth/sso/registro", "__Secure-nx_sso_alta=" + alta);
         assertThat(pendiente.statusCode()).isEqualTo(200);
         assertThat(json.readTree(pendiente.body()).get("correo").asText()).isEqualTo(correo);
         assertThat(json.readTree(pendiente.body()).get("nombre").asText()).isEqualTo("Google");
@@ -940,9 +997,9 @@ class SsoIT {
         assertThat(sesion.get("token").asText()).isNotBlank();
         // Como un login desde la web: el refresh va en la cookie, no en el cuerpo.
         assertThat(sesion.hasNonNull("refreshToken")).isFalse();
-        assertThat(cookie(registrada, "nx_refresh")).isNotBlank();
+        assertThat(cookie(registrada, "__Secure-nx_refresh")).isNotBlank();
         // La cookie de alta se gasta.
-        assertThat(cookie(registrada, "nx_sso_alta")).isEmpty();
+        assertThat(cookie(registrada, "__Secure-nx_sso_alta")).isEmpty();
 
         User admin = userRepository.findByEmail(correo).orElseThrow();
         assertThat(admin.getRol()).isEqualTo(Role.ADMIN);
@@ -956,7 +1013,7 @@ class SsoIT {
         assertThat(conToken("GET", "/api/v1/perfil/identidades", sesion.get("token").asText()).statusCode())
                 .isEqualTo(200);
         // ...y desde ahora entra con Google como cualquiera.
-        assertThat(cookie(entrarConGoogle(sujeto, correo), "nx_refresh")).isNotBlank();
+        assertThat(cookie(entrarConGoogle(sujeto, correo), "__Secure-nx_refresh")).isNotBlank();
         // La contraseña no existe: nadie la ha elegido.
         assertThat(post("/auth/login", Map.of("email", correo, "contrasena", "password123")).statusCode())
                 .isEqualTo(401);
@@ -972,8 +1029,8 @@ class SsoIT {
         HttpResponse<String> vuelta = volver("google", ida);
 
         assertThat(destino(vuelta)).isEqualTo(WEB + "/");
-        assertThat(cookie(vuelta, "nx_refresh")).isNotBlank();
-        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNotBlank();
+        assertThat(cookie(vuelta, "__Secure-nx_sso_alta")).isNull();
     }
 
     @Test
@@ -987,7 +1044,7 @@ class SsoIT {
         HttpResponse<String> vuelta = volver("microsoft", ida);
 
         assertThat(destino(vuelta)).isEqualTo(WEB + "/registro?sso=correo-sin-verificar");
-        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_sso_alta")).isNull();
         assertThat(destino(get("/auth/sso/nadie/iniciar?registro=1", null)))
                 .isEqualTo(WEB + "/registro?sso=no-disponible");
     }
@@ -1036,7 +1093,7 @@ class SsoIT {
         assertThat(json.readTree(cogido.body()).get("detail").asText()).contains("La empresa ya existe");
         assertThat(userRepository.findByEmail(correo)).isEmpty();
         // La cookie sigue valiendo: no se ha gastado.
-        assertThat(cookie(cogido, "nx_sso_alta")).isNull();
+        assertThat(cookie(cogido, "__Secure-nx_sso_alta")).isNull();
 
         assertThat(registrar(alta, "Otra " + System.nanoTime()).statusCode()).isEqualTo(200);
         // Y ya no vale: esa cuenta tiene dueño.
@@ -1057,8 +1114,8 @@ class SsoIT {
         HttpResponse<String> vuelta = volver(proveedor, ida);
         assertThat(destino(vuelta)).startsWith("nxtime://sso?alta=");
         // Ni sesión ni cookie de alta: a la app no le llegan cookies.
-        assertThat(cookie(vuelta, "nx_refresh")).isNull();
-        assertThat(cookie(vuelta, "nx_sso_alta")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_refresh")).isNull();
+        assertThat(cookie(vuelta, "__Secure-nx_sso_alta")).isNull();
         return parametros(destino(vuelta)).get("alta");
     }
 
@@ -1108,7 +1165,7 @@ class SsoIT {
         assertThat(sesion.get("token").asText()).isNotBlank();
         // Como un login desde la app: el refresh va en el cuerpo y no hay cookie.
         assertThat(sesion.get("refreshToken").asText()).isNotBlank();
-        assertThat(cookie(registrada, "nx_refresh")).isNull();
+        assertThat(cookie(registrada, "__Secure-nx_refresh")).isNull();
 
         User admin = userRepository.findByEmail(correo).orElseThrow();
         assertThat(admin.getRol()).isEqualTo(Role.ADMIN);

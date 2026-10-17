@@ -161,6 +161,23 @@ class LoginRateLimitFilterTest {
     }
 
     @Test
+    @DisplayName("Las consultas públicas que leen la base tienen su cupo, generoso, y no gastan los otros")
+    void lasConsultasPublicasTienenSuCupo() throws Exception {
+        LoginRateLimitFilter filtro = new LoginRateLimitFilter(new ObjectMapper(), 1);
+
+        for (int i = 0; i < LoginRateLimitFilter.CONSULTAS_POR_MINUTO; i++) {
+            String ruta = i % 2 == 0 ? "/kiosco/emparejar/estado" : "/estado/tareas";
+            assertThat(intentar(filtro, ruta, "198.51.100.7").getStatus()).as("consulta %d", i + 1)
+                    .isEqualTo(HttpStatus.OK.value());
+        }
+        assertThat(intentar(filtro, "/estado/tareas", "198.51.100.7").getStatus())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS.value());
+        // Las otras puertas siguen abiertas para esa IP.
+        assertThat(intentar(filtro, "/auth/login", "198.51.100.7").getStatus()).isEqualTo(HttpStatus.OK.value());
+        assertThat(intentar(filtro, OTRA_RUTA, "198.51.100.7").getStatus()).isEqualTo(HttpStatus.OK.value());
+    }
+
+    @Test
     @DisplayName("Las rutas que no son de autenticación no pasan por el límite")
     void otrasRutas_noSeLimitan() throws Exception {
         LoginRateLimitFilter filtro = new LoginRateLimitFilter(new ObjectMapper(), 1);

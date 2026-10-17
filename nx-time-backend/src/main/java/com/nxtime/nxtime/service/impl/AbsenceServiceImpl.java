@@ -298,7 +298,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         // se habría avisado de una aprobación que no existe.
         eventPublisher.publishEvent(new NotificationEvents.AbsenceResolved(saved));
 
-        log.info("Petición de ausencia {} cambiada a {} por {}", requestId, request.estado(), managerEmail);
+        log.info("Petición de ausencia {} cambiada a {}", requestId, request.estado());
         return toResponse(saved);
     }
 

@@ -17,7 +17,7 @@
  * **Lo que aquí NO se puede probar: que en WebKit recargar mantiene la
  * sesión.** Las cookies de la sesión son `Secure` (ADR 030). Sobre
  * `http://localhost`, que es como corren estos tests, WebKit las guarda pero ni
- * las envía ni deja que la página lea `nx_csrf`, así que tras recargar la web
+ * las envía ni deja que la página lea `__Secure-nx_csrf`, así que tras recargar la web
  * no intenta renovar y vuelve al login. Chrome sí hace la excepción de
  * localhost, y `jornada.spec.ts` lo prueba ahí. En producción todo va por
  * https y esto no aplica, pero en Safari solo se ha comprobado a mano, en un

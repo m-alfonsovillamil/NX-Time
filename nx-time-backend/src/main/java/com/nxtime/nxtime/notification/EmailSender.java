@@ -56,8 +56,9 @@ public class EmailSender {
             enviarObligatorio(destinatario, asunto, plantilla, variables);
         } catch (EmailNotSentException e) {
             // A propósito no se relanza: ver el Javadoc de la clase.
-            log.error("No se pudo enviar el correo '{}' a {}: {}",
-                    plantilla, destinatario, e.getCause().getMessage());
+            // Sin el destinatario (revisión de seguridad del 17/10/2026): los
+            // registros acaban en Render y en Sentry, y no son sitio para correos.
+            log.error("No se pudo enviar el correo '{}': {}", plantilla, e.getCause().getMessage());
         }
     }
 
@@ -82,7 +83,7 @@ public class EmailSender {
             helper.setText(cuerpo, true); // true = HTML
 
             mailSender.send(mensaje);
-            log.info("Correo '{}' enviado a {}", plantilla, destinatario);
+            log.info("Correo '{}' enviado", plantilla);
         } catch (MailException | jakarta.mail.MessagingException e) {
             throw new EmailNotSentException("No se pudo enviar el correo '" + plantilla + "'", e);
         }

@@ -47,7 +47,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class SsoState {
 
-    public static final String COOKIE = "nx_sso";
+    public static final String COOKIE = "__Secure-nx_sso";
 
     /** Diez minutos para ir al proveedor, elegir cuenta y volver. */
     public static final Duration VIDA = Duration.ofMinutes(10);
@@ -58,7 +58,7 @@ public class SsoState {
     private static final String CONTEXTO_DE_LA_CLAVE = "nx-time/sso/estado/v1";
 
     /** La cookie de quien ha vuelto del proveedor para registrar una empresa. */
-    public static final String COOKIE_DE_ALTA = "nx_sso_alta";
+    public static final String COOKIE_DE_ALTA = "__Secure-nx_sso_alta";
 
     /** Un cuarto de hora para escribir el nombre de la empresa y el propio. */
     public static final Duration VIDA_DEL_ALTA = Duration.ofMinutes(15);

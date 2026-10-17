@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,14 +36,41 @@ public class SystemStatusController {
 
     private final TaskMonitorService taskMonitorService;
 
-    public SystemStatusController(TaskMonitorService taskMonitorService) {
+    /**
+     * Cuánto se reutiliza una respuesta (revisión de seguridad del 17/10/2026,
+     * plan J). La ruta es pública y sin límite, y cada consulta son dieciocho
+     * lecturas a la base: sin esto, cualquiera podía tenerla ocupada, y
+     * despertar Neon a cualquier hora, solo con pedirla. El workflow la mira
+     * una vez al día; dos minutos de retraso no le cambian nada.
+     */
+    private final Duration vida;
+
+    private record Foto(SystemStatusResponse estado, long hastaNanos) {
+    }
+
+    private volatile Foto ultima;
+
+    public SystemStatusController(TaskMonitorService taskMonitorService,
+            @Value("${application.estado.cache:PT2M}") Duration vida) {
         this.taskMonitorService = taskMonitorService;
+        this.vida = vida;
+    }
+
+    /** La última respuesta, si sigue valiendo; si no, una nueva. Dos a la vez pueden calcularla las dos: no importa. */
+    private SystemStatusResponse estado() {
+        Foto foto = ultima;
+        if (foto != null && System.nanoTime() - foto.hastaNanos() < 0) {
+            return foto.estado();
+        }
+        SystemStatusResponse estado = taskMonitorService.estado();
+        ultima = new Foto(estado, System.nanoTime() + vida.toNanos());
+        return estado;
     }
 
     @Operation(summary = "¿Han corrido las tareas nocturnas?",
             description = "200 si cada tarea programada terminó bien después de la última vez que le tocaba, "
                     + "503 si alguna no. Lo consulta a diario el workflow tareas-nocturnas.yml: un 503 lo pone "
-                    + "en rojo y GitHub avisa por correo.")
+                    + "en rojo y GitHub avisa por correo. La respuesta puede tener hasta dos minutos.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Todas corrieron y terminaron bien",
                     content = @Content(schema = @Schema(implementation = SystemStatusResponse.class))),
@@ -50,7 +79,7 @@ public class SystemStatusController {
     })
     @GetMapping("/tareas")
     public ResponseEntity<SystemStatusResponse> tareas() {
-        SystemStatusResponse estado = taskMonitorService.estado();
+        SystemStatusResponse estado = estado();
         return ResponseEntity.status(estado.ok() ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE).body(estado);
     }
 }

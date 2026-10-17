@@ -6,6 +6,7 @@ import com.nxtime.nxtime.report.PersonalDataPdfGenerator;
 import com.nxtime.nxtime.dto.UpdateProfileRequest;
 import com.nxtime.nxtime.dto.VerifyPasswordRequest;
 import com.nxtime.nxtime.security.SecurityUser;
+import com.nxtime.nxtime.service.AuthService;
 import com.nxtime.nxtime.service.EmployeeProfileService;
 import com.nxtime.nxtime.service.PersonalDataExportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,8 +32,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.authentication.BadCredentialsException;
 
 /**
  * El perfil propio y el de los compañeros (Fase B).
@@ -53,17 +52,17 @@ public class ProfileController {
     private final EmployeeProfileService employeeProfileService;
     private final PersonalDataExportService exportService;
     private final PersonalDataPdfGenerator exportPdfGenerator;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthService authService;
 
     public ProfileController(
             EmployeeProfileService employeeProfileService,
             PersonalDataExportService exportService,
             PersonalDataPdfGenerator exportPdfGenerator,
-            PasswordEncoder passwordEncoder) {
+            AuthService authService) {
         this.employeeProfileService = employeeProfileService;
         this.exportService = exportService;
         this.exportPdfGenerator = exportPdfGenerator;
-        this.passwordEncoder = passwordEncoder;
+        this.authService = authService;
     }
 
     @Operation(summary = "Mi perfil",
@@ -108,7 +107,7 @@ public class ProfileController {
 
     @Operation(summary = "Comprobar mi propia contraseña",
             description = "Responde 204 si es correcta y 401 si no, y no hace nada más: no emite "
-                    + "tokens, no abre sesión y no consume el límite de intentos del login. Lo usa "
+                    + "tokens ni abre sesión. Comparte con el login el límite de intentos de la cuenta (429). Lo usa "
                     + "la app para activar la huella, que antes hacía un /auth/login completo -- y "
                     + "eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.")
     @ApiResponses({
@@ -116,6 +115,8 @@ public class ProfileController {
             @ApiResponse(responseCode = "400", description = "Contraseña vacía",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No autenticado, o la contraseña no es correcta",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos con esta cuenta",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/verificar-contrasena")
@@ -125,10 +126,8 @@ public class ProfileController {
             @AuthenticationPrincipal SecurityUser usuario) {
         // La comprobación es contra el hash de ESTA persona, la que trae el
         // token: no se acepta un email, así que esto no sirve para probar
-        // contraseñas de nadie más.
-        if (!passwordEncoder.matches(request.contrasena(), usuario.getUser().getContrasena())) {
-            throw new BadCredentialsException("Credenciales incorrectas.");
-        }
+        // contraseñas de nadie más. Y con el límite de intentos de su cuenta.
+        authService.verificarContrasena(usuario.getUser(), request.contrasena());
         return ResponseEntity.noContent().build();
     }
 

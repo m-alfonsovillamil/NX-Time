@@ -210,7 +210,7 @@ export interface paths {
         };
         /**
          * Con qué cuenta estoy registrando una empresa
-         * @description Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para enseñarla encima del formulario. La dice la cookie nx_sso_alta, que dura quince minutos.
+         * @description Tras volver del proveedor con «registrar»: la cuenta que ha quedado apuntada, para enseñarla encima del formulario. La dice la cookie __Secure-nx_sso_alta, que dura quince minutos.
          */
         get: operations["registroPendiente"];
         put?: never;
@@ -336,7 +336,7 @@ export interface paths {
         put?: never;
         /**
          * Renovar el access token
-         * @description Emite un access token nuevo a partir de un refresh token vivo, y **rota el refresh**: el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin necesidad de volver a entrar. Sin cuerpo, lo lee de la cookie nx_refresh (el navegador), y entonces exige la cabecera X-CSRF-Token igual a la cookie nx_csrf y un Origin permitido; la respuesta trae las cookies nuevas y ningún refresh en el cuerpo.
+         * @description Emite un access token nuevo a partir de un refresh token vivo, y **rota el refresh**: el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin necesidad de volver a entrar. Sin cuerpo, lo lee de la cookie __Secure-nx_refresh (el navegador), y entonces exige la cabecera X-CSRF-Token igual a la cookie __Secure-nx_csrf y un Origin permitido; la respuesta trae las cookies nuevas y ningún refresh en el cuerpo.
          */
         post: operations["refresh"];
         delete?: never;
@@ -396,7 +396,7 @@ export interface paths {
         put?: never;
         /**
          * Cerrar sesión
-         * @description Revoca el refresh token indicado. Idempotente: si el token no existe, no lanza error ni revela nada. Sin cuerpo, lo lee de la cookie nx_refresh (con el mismo CSRF que /auth/refresh) y borra las cookies de la sesión web.
+         * @description Revoca el refresh token indicado. Idempotente: si el token no existe, no lanza error ni revela nada. Sin cuerpo, lo lee de la cookie __Secure-nx_refresh (con el mismo CSRF que /auth/refresh) y borra las cookies de la sesión web.
          */
         post: operations["logout"];
         delete?: never;
@@ -416,7 +416,7 @@ export interface paths {
         put?: never;
         /**
          * Iniciar sesión
-         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 7 días desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va en la cookie HttpOnly nx_refresh, junto con la cookie nx_csrf (ADR 030).
+         * @description Devuelve un access token (15 min) y un refresh token, cuya duración depende de 'origen': 30 días desde ANDROID o IOS, 7 días desde WEB. Devuelve también 'authorities', lo que esta persona puede hacer, para que el cliente arme su menú sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va en la cookie HttpOnly __Secure-nx_refresh, junto con la cookie __Secure-nx_csrf (ADR 030).
          */
         post: operations["login"];
         delete?: never;
@@ -517,7 +517,7 @@ export interface paths {
         put?: never;
         /**
          * Comprobar mi propia contraseña
-         * @description Responde 204 si es correcta y 401 si no, y no hace nada más: no emite tokens, no abre sesión y no consume el límite de intentos del login. Lo usa la app para activar la huella, que antes hacía un /auth/login completo -- y eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.
+         * @description Responde 204 si es correcta y 401 si no, y no hace nada más: no emite tokens ni abre sesión. Comparte con el login el límite de intentos de la cuenta (429). Lo usa la app para activar la huella, que antes hacía un /auth/login completo -- y eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.
          */
         post: operations["verificarContrasena"];
         delete?: never;
@@ -1720,7 +1720,7 @@ export interface paths {
         };
         /**
          * ¿Han corrido las tareas nocturnas?
-         * @description 200 si cada tarea programada terminó bien después de la última vez que le tocaba, 503 si alguna no. Lo consulta a diario el workflow tareas-nocturnas.yml: un 503 lo pone en rojo y GitHub avisa por correo.
+         * @description 200 si cada tarea programada terminó bien después de la última vez que le tocaba, 503 si alguna no. Lo consulta a diario el workflow tareas-nocturnas.yml: un 503 lo pone en rojo y GitHub avisa por correo. La respuesta puede tener hasta dos minutos.
          */
         get: operations["tareas"];
         put?: never;
@@ -3345,7 +3345,7 @@ export interface components {
             mensaje?: string;
         };
         RefreshTokenRequest: {
-            /** @description El refresh token. Lo manda la app; el navegador lo lleva en la cookie nx_refresh y no manda cuerpo. */
+            /** @description El refresh token. Lo manda la app; el navegador lo lleva en la cookie __Secure-nx_refresh y no manda cuerpo. */
             refreshToken?: string;
         };
         PasswordRecoveryRequest: {
@@ -5844,7 +5844,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthenticationResponse"];
                 };
             };
-            /** @description Sin refreshToken en el cuerpo ni cookie nx_refresh */
+            /** @description Sin refreshToken en el cuerpo ni cookie __Secure-nx_refresh */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5973,7 +5973,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Sin refreshToken en el cuerpo ni cookie nx_refresh */
+            /** @description Sin refreshToken en el cuerpo ni cookie __Secure-nx_refresh */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -6302,6 +6302,15 @@ export interface operations {
             };
             /** @description No autenticado, o la contraseña no es correcta */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos con esta cuenta */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

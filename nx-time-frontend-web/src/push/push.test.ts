@@ -25,8 +25,8 @@ const firebase = vi.hoisted(() => ({
   deleteToken: vi.fn(async () => true),
   isSupported: vi.fn(async () => true),
 }));
-vi.mock('firebase/app', () => ({ getApps: () => [], initializeApp: () => ({}) }));
-vi.mock('firebase/messaging', () => ({ getMessaging: () => ({}), ...firebase }));
+vi.mock('@firebase/app', () => ({ getApps: () => [], initializeApp: () => ({}) }));
+vi.mock('@firebase/messaging', () => ({ getMessaging: () => ({}), ...firebase }));
 
 /** Un `Notification` de mentira cuyo permiso cambia al contestar, como el de verdad. */
 function simularPermiso(inicial: NotificationPermission, respuesta: NotificationPermission = 'granted') {

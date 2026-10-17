@@ -219,8 +219,8 @@ async function firebase() {
   const config = configuracion();
   if (config === null) throw new FalloDePush('sdk', 'Sin configuración de Firebase.');
   const [{ getApps, initializeApp }, mensajeria] = await Promise.all([
-    import('firebase/app'),
-    import('firebase/messaging'),
+    import('@firebase/app'),
+    import('@firebase/messaging'),
   ]);
   if (!(await mensajeria.isSupported())) throw new FalloDePush('sdk', 'Este navegador no admite notificaciones push.');
   const { vapidKey, ...opciones } = config;

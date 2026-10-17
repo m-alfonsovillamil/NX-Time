@@ -155,7 +155,7 @@ class SesionWebIT {
     private ResponseEntity<String> conCookies(String ruta, String refresh, String csrf, String cabeceraCsrf,
                                               String origen) {
         HttpHeaders cabeceras = new HttpHeaders();
-        cabeceras.add(HttpHeaders.COOKIE, "nx_refresh=" + refresh + "; nx_csrf=" + csrf);
+        cabeceras.add(HttpHeaders.COOKIE, "__Secure-nx_refresh=" + refresh + "; __Secure-nx_csrf=" + csrf);
         if (cabeceraCsrf != null) {
             cabeceras.set("X-CSRF-Token", cabeceraCsrf);
         }
@@ -172,6 +172,32 @@ class SesionWebIT {
     /* ---------------------------------------------------------------- */
 
     @Nested
+    @DisplayName("Las cookies con los nombres de antes del prefijo __Secure- (17/10/2026)")
+    class NombresDeAntes {
+
+        @Test
+        @DisplayName("siguen renovando la sesión, y la respuesta las cambia por las nuevas y borra las viejas")
+        void siguenValiendoYSeCambian() throws Exception {
+            ResponseEntity<String> entrada = login("WEB");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
+
+            // Lo que mandaría un navegador que entró antes del cambio.
+            HttpHeaders cabeceras = new HttpHeaders();
+            cabeceras.add(HttpHeaders.COOKIE, "nx_refresh=" + refresh + "; nx_csrf=" + csrf);
+            cabeceras.set("X-CSRF-Token", csrf);
+            cabeceras.set(HttpHeaders.ORIGIN, ORIGEN_WEB);
+            ResponseEntity<String> renovada =
+                    rest.exchange("/auth/refresh", HttpMethod.POST, new HttpEntity<>(cabeceras), String.class);
+
+            assertThat(renovada.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(valor(renovada, "__Secure-nx_refresh")).isNotBlank();
+            assertThat(setCookie(renovada, "nx_refresh").orElseThrow()).contains("Max-Age=0");
+            assertThat(setCookie(renovada, "nx_csrf").orElseThrow()).contains("Max-Age=0");
+        }
+    }
+
+    @Nested
     @DisplayName("El login desde la web")
     class Login {
 
@@ -185,7 +211,7 @@ class SesionWebIT {
             assertThat(cuerpo(respuesta).path("refreshToken").isNull()).isTrue();
             assertThat(cuerpo(respuesta).path("token").asText()).isNotBlank();
 
-            String refresh = setCookie(respuesta, "nx_refresh").orElseThrow();
+            String refresh = setCookie(respuesta, "__Secure-nx_refresh").orElseThrow();
             assertThat(refresh).contains("HttpOnly", "Secure", "SameSite=Strict", "Path=/auth");
             assertThat(refresh).doesNotContain("Domain=");
         }
@@ -193,7 +219,7 @@ class SesionWebIT {
         @Test
         @DisplayName("pone una cookie CSRF legible y del dominio común, para que la web la vea")
         void cookieCsrfLegibleEnElDominioComun() {
-            String csrf = setCookie(login("WEB"), "nx_csrf").orElseThrow();
+            String csrf = setCookie(login("WEB"), "__Secure-nx_csrf").orElseThrow();
 
             assertThat(csrf).contains("Secure", "SameSite=Strict", "Domain=nxtime-web.com", "Path=/");
             assertThat(csrf).doesNotContain("HttpOnly");
@@ -218,9 +244,9 @@ class SesionWebIT {
             assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(cuerpo(alta).path("token").asText()).isNotBlank();
             assertThat(cuerpo(alta).path("refreshToken").isNull()).isTrue();
-            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("HttpOnly");
+            assertThat(setCookie(alta, "__Secure-nx_refresh").orElseThrow()).contains("HttpOnly");
             // Siete días, los del navegador (ADR 041), y no los 30 de la app.
-            assertThat(setCookie(alta, "nx_refresh").orElseThrow()).contains("Max-Age=604800");
+            assertThat(setCookie(alta, "__Secure-nx_refresh").orElseThrow()).contains("Max-Age=604800");
         }
 
         @Test
@@ -241,16 +267,16 @@ class SesionWebIT {
         @DisplayName("con el CSRF correcto renueva, rota la cookie y no pone el refresh en el cuerpo")
         void conCsrf_renuevaYRota() throws Exception {
             ResponseEntity<String> entrada = login("WEB");
-            String refresh = valor(entrada, "nx_refresh");
-            String csrf = valor(entrada, "nx_csrf");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
 
             ResponseEntity<String> renovada = conCookies("/auth/refresh", refresh, csrf, csrf, ORIGEN_WEB);
 
             assertThat(renovada.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(cuerpo(renovada).path("token").asText()).isNotBlank();
             assertThat(cuerpo(renovada).path("refreshToken").isNull()).isTrue();
-            assertThat(valor(renovada, "nx_refresh")).isNotEqualTo(refresh);
-            assertThat(valor(renovada, "nx_csrf")).isNotEqualTo(csrf);
+            assertThat(valor(renovada, "__Secure-nx_refresh")).isNotEqualTo(refresh);
+            assertThat(valor(renovada, "__Secure-nx_csrf")).isNotEqualTo(csrf);
         }
 
         /* La rotación del ADR 019 sigue valiendo con la cookie: reutilizarla revoca la sesión. */
@@ -258,16 +284,16 @@ class SesionWebIT {
         @DisplayName("reutilizar la cookie ya rotada se trata como un robo")
         void reutilizarLaCookie_revoca() {
             ResponseEntity<String> entrada = login("WEB");
-            String refresh = valor(entrada, "nx_refresh");
-            String csrf = valor(entrada, "nx_csrf");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
             ResponseEntity<String> renovada = conCookies("/auth/refresh", refresh, csrf, csrf, ORIGEN_WEB);
 
             ResponseEntity<String> reutilizada = conCookies("/auth/refresh", refresh, csrf, csrf, ORIGEN_WEB);
             assertThat(reutilizada.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
             // Y la buena también ha caído: se revocó la familia entera.
-            String nueva = valor(renovada, "nx_refresh");
-            String nuevoCsrf = valor(renovada, "nx_csrf");
+            String nueva = valor(renovada, "__Secure-nx_refresh");
+            String nuevoCsrf = valor(renovada, "__Secure-nx_csrf");
             assertThat(conCookies("/auth/refresh", nueva, nuevoCsrf, nuevoCsrf, ORIGEN_WEB).getStatusCode())
                     .isEqualTo(HttpStatus.UNAUTHORIZED);
         }
@@ -276,8 +302,8 @@ class SesionWebIT {
         @DisplayName("sin la cabecera CSRF, 403, y el refresh sigue vivo")
         void sinCabecera_403() {
             ResponseEntity<String> entrada = login("WEB");
-            String refresh = valor(entrada, "nx_refresh");
-            String csrf = valor(entrada, "nx_csrf");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
 
             assertThat(conCookies("/auth/refresh", refresh, csrf, null, ORIGEN_WEB).getStatusCode())
                     .isEqualTo(HttpStatus.FORBIDDEN);
@@ -292,8 +318,8 @@ class SesionWebIT {
         void cabeceraDistinta_403() {
             ResponseEntity<String> entrada = login("WEB");
 
-            ResponseEntity<String> respuesta = conCookies("/auth/refresh", valor(entrada, "nx_refresh"),
-                    valor(entrada, "nx_csrf"), "otro-valor", ORIGEN_WEB);
+            ResponseEntity<String> respuesta = conCookies("/auth/refresh", valor(entrada, "__Secure-nx_refresh"),
+                    valor(entrada, "__Secure-nx_csrf"), "otro-valor", ORIGEN_WEB);
 
             assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         }
@@ -302,9 +328,9 @@ class SesionWebIT {
         @DisplayName("desde otro origen, aunque el CSRF cuadre, 403")
         void otroOrigen_403() {
             ResponseEntity<String> entrada = login("WEB");
-            String csrf = valor(entrada, "nx_csrf");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
 
-            ResponseEntity<String> respuesta = conCookies("/auth/refresh", valor(entrada, "nx_refresh"),
+            ResponseEntity<String> respuesta = conCookies("/auth/refresh", valor(entrada, "__Secure-nx_refresh"),
                     csrf, csrf, ORIGEN_AJENO);
 
             assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
@@ -341,14 +367,14 @@ class SesionWebIT {
         @DisplayName("revoca el refresh y borra las dos cookies")
         void revocaYBorra() {
             ResponseEntity<String> entrada = login("WEB");
-            String refresh = valor(entrada, "nx_refresh");
-            String csrf = valor(entrada, "nx_csrf");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
 
             ResponseEntity<String> salida = conCookies("/auth/logout", refresh, csrf, csrf, ORIGEN_WEB);
 
             assertThat(salida.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(setCookie(salida, "nx_refresh").orElseThrow()).contains("Max-Age=0");
-            assertThat(setCookie(salida, "nx_csrf").orElseThrow()).contains("Max-Age=0");
+            assertThat(setCookie(salida, "__Secure-nx_refresh").orElseThrow()).contains("Max-Age=0");
+            assertThat(setCookie(salida, "__Secure-nx_csrf").orElseThrow()).contains("Max-Age=0");
             assertThat(conCookies("/auth/refresh", refresh, csrf, csrf, ORIGEN_WEB).getStatusCode())
                     .isEqualTo(HttpStatus.UNAUTHORIZED);
         }
@@ -358,8 +384,8 @@ class SesionWebIT {
         @DisplayName("sin CSRF, 403, y la sesión sigue abierta")
         void sinCsrf_403() {
             ResponseEntity<String> entrada = login("WEB");
-            String refresh = valor(entrada, "nx_refresh");
-            String csrf = valor(entrada, "nx_csrf");
+            String refresh = valor(entrada, "__Secure-nx_refresh");
+            String csrf = valor(entrada, "__Secure-nx_csrf");
 
             assertThat(conCookies("/auth/logout", refresh, csrf, null, ORIGEN_WEB).getStatusCode())
                     .isEqualTo(HttpStatus.FORBIDDEN);

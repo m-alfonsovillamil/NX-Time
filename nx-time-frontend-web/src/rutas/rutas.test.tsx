@@ -1,3 +1,5 @@
+// @vitest-environment-options {"url": "https://nxtime-web.test/"}
+// HTTPS: la cookie CSRF lleva el prefijo __Secure-, y jsdom, como un navegador, no la acepta por http.
 /**
  * La aplicación entera, sin servidor: rutas, marco, menú por authorities y campana.
  */
@@ -114,11 +116,11 @@ describe('sin sesión', () => {
 /* Lo que cambia con la fase W1 (ADR 030): recargar ya no echa a nadie. */
 describe('al recargar', () => {
   afterEach(() => {
-    document.cookie = 'nx_csrf=; max-age=0';
+    document.cookie = '__Secure-nx_csrf=; max-age=0; Secure';
   });
 
   it('con la sesión en la cookie, vuelve a la página sin pasar por el login', async () => {
-    document.cookie = 'nx_csrf=valor-csrf';
+    document.cookie = '__Secure-nx_csrf=valor-csrf; Secure';
     const api = apiBasica({
       'POST /auth/refresh': () => ({ token: 't', nombre: 'Ana', authorities: ['fichaje:leer'] }),
     });
@@ -169,7 +171,7 @@ describe('con sesión', () => {
 
   it('cerrar sesión desde el menú de usuario avisa al servidor y vuelve al login', async () => {
     const api = apiBasica({ 'POST /auth/logout': () => sinContenido() });
-    document.cookie = 'nx_csrf=valor-csrf';
+    document.cookie = '__Secure-nx_csrf=valor-csrf; Secure';
     pintar(<App />, { ruta: '/fichar', sesion: sesionDe('EMPLEADO') });
 
     await userEvent.click(await screen.findByLabelText(N.usuario.menu('Ana')));
@@ -179,7 +181,7 @@ describe('con sesión', () => {
     expect(sesionActual()).toBeNull();
     // Sin cuerpo: el refresh va en la cookie (ADR 030).
     await waitFor(() => expect(api.a('POST', '/auth/logout').map((l) => l.cuerpo)).toEqual([undefined]));
-    document.cookie = 'nx_csrf=; max-age=0';
+    document.cookie = '__Secure-nx_csrf=; max-age=0; Secure';
   });
 });
 

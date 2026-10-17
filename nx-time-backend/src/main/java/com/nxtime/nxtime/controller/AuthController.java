@@ -122,7 +122,7 @@ public class AuthController {
                     + "sin copiarse el reparto de permisos del servidor. Viaja aquí y no solo en "
                     + "GET /api/v1/perfil porque si no habría un hueco, el primero tras entrar, en el que "
                     + "la aplicación no sabría qué ofrecer. Con 'origen' WEB el refresh NO viaja en el cuerpo: va "
-                    + "en la cookie HttpOnly nx_refresh, junto con la cookie nx_csrf (ADR 030).")
+                    + "en la cookie HttpOnly __Secure-nx_refresh, junto con la cookie __Secure-nx_csrf (ADR 030).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login correcto",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
@@ -163,13 +163,13 @@ public class AuthController {
                     + "el que se envía deja de valer y la respuesta trae uno distinto, que el cliente debe "
                     + "guardar. Reenviar uno ya rotado se interpreta como una copia robada y revoca la "
                     + "sesión entera. Devuelve también 'authorities', así que un cambio de rol llega sin "
-                    + "necesidad de volver a entrar. Sin cuerpo, lo lee de la cookie nx_refresh (el navegador), y "
-                    + "entonces exige la cabecera X-CSRF-Token igual a la cookie nx_csrf y un Origin permitido; la "
+                    + "necesidad de volver a entrar. Sin cuerpo, lo lee de la cookie __Secure-nx_refresh (el navegador), y "
+                    + "entonces exige la cabecera X-CSRF-Token igual a la cookie __Secure-nx_csrf y un Origin permitido; la "
                     + "respuesta trae las cookies nuevas y ningún refresh en el cuerpo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Access token renovado",
                     content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Sin refreshToken en el cuerpo ni cookie nx_refresh",
+            @ApiResponse(responseCode = "400", description = "Sin refreshToken en el cuerpo ni cookie __Secure-nx_refresh",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "Refresh token inexistente, revocado o caducado",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
@@ -197,11 +197,11 @@ public class AuthController {
     }
 
     @Operation(summary = "Cerrar sesión", description = "Revoca el refresh token indicado. Idempotente: "
-            + "si el token no existe, no lanza error ni revela nada. Sin cuerpo, lo lee de la cookie nx_refresh "
+            + "si el token no existe, no lanza error ni revela nada. Sin cuerpo, lo lee de la cookie __Secure-nx_refresh "
             + "(con el mismo CSRF que /auth/refresh) y borra las cookies de la sesión web.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Sesión cerrada (o ya lo estaba)"),
-            @ApiResponse(responseCode = "400", description = "Sin refreshToken en el cuerpo ni cookie nx_refresh",
+            @ApiResponse(responseCode = "400", description = "Sin refreshToken en el cuerpo ni cookie __Secure-nx_refresh",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "403", description = "Con la cookie, sin el CSRF correcto o desde un origen "
                     + "no permitido",

@@ -3,6 +3,7 @@ package com.nxtime.nxtime.dto;
 import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * La app envía esto al backend al pulsar el botón de login.
@@ -14,6 +15,9 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "La contraseña es obligatoria.")
+        // Un techo holgado y no los 72 bytes de las nuevas: aquí no se elige
+        // nada, y lo que se evita es mandarle textos enormes a BCrypt.
+        @Size(max = 256, message = "La contraseña es demasiado larga.")
         String contrasena,
 
         /**

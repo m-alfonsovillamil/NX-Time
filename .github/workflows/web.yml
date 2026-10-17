@@ -38,6 +38,13 @@ on:
   pull_request:
     paths: *rutas
 
+# Por defecto, cada job solo puede leer el repositorio (revisión de seguridad
+# del 17/10/2026, plan J). El que necesite más lo pide él mismo. Y cada acción
+# va fijada por su commit, no por una etiqueta que su dueño puede mover:
+# Dependabot propone las subidas (.github/dependabot.yml).
+permissions:
+  contents: read
+
 jobs:
   web:
     name: Build y tests de la web
@@ -49,10 +56,10 @@ jobs:
 
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           # La misma versión que en local y en Render: las tres leen este
           # fichero, así que no pueden divergir sin que se vea en un diff.

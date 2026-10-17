@@ -2,6 +2,7 @@ package com.nxtime.nxtime.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 /**
  * Comprobar la contraseña de quien ya está dentro, sin abrir sesión (Fase A11).
@@ -26,6 +27,7 @@ public record VerifyPasswordRequest(
 
         @Schema(description = "La contraseña actual de quien hace la petición")
         @NotBlank(message = "La contraseña es obligatoria.")
+        @Size(max = 256, message = "La contraseña es demasiado larga.")
         String contrasena
 ) {
 }

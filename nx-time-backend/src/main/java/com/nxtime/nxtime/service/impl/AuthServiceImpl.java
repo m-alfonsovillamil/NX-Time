@@ -179,7 +179,21 @@ public class AuthServiceImpl implements AuthService {
             }
             usuario.setNombre(request.nombre());
             usuario.setApellidos(request.apellidos());
-            usuario.setContrasena(contrasena);
+            // Con la MISMA contraseña es su dueño repitiendo porque el código no
+            // llegó. Con otra, no hay forma de saber cuál de los dos es el dueño
+            // del correo, y hasta el 17/10/2026 ganaba la última: quien
+            // registraba encima de un alta a medias ajena se quedaba la cuenta
+            // en cuanto el dueño canjeaba el código, que le llega a él (plan J).
+            // Guardar cada contraseña con su código no lo arregla: «solo vale
+            // el último código», y el último sería el del otro. Así que, si
+            // hay dos, no gana ninguna: el dueño entra al canjear el código,
+            // como siempre, y elige contraseña con «He olvidado mi contraseña».
+            boolean laMisma = passwordEncoder.matches(request.contrasena(), usuario.getContrasena());
+            if (!laMisma) {
+                log.warn("Registro a medias del usuario {} repetido con otra contraseña: se queda sin ninguna.",
+                        usuario.getId());
+            }
+            usuario.setContrasena(laMisma ? contrasena : contrasenaInutilizable());
             usuario.setCorreoSinConfirmarDesde(Instant.now());
             usuario = userRepository.save(usuario);
         } else {
@@ -349,7 +363,11 @@ public class AuthServiceImpl implements AuthService {
         try {
             return RefreshToken.Origen.valueOf(declarado.trim().toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException desconocido) {
-            log.warn("Origen de login desconocido: '{}'. Se trata como ANDROID.", declarado);
+            // Limpio y corto: lo escribe quien llama, y con un salto de línea
+            // dentro podría fabricar líneas de registro que parezcan nuestras.
+            String limpio = declarado.replaceAll("\\p{Cntrl}", "?");
+            log.warn("Origen de login desconocido: '{}'. Se trata como ANDROID.",
+                    limpio.length() > 40 ? limpio.substring(0, 40) + "…" : limpio);
             return RefreshToken.Origen.ANDROID;
         }
     }
@@ -400,6 +418,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = stored.getUsuario();
+        // Hasta el 17/10/2026 se renovaba sin mirarlo, y a quien daban de baja
+        // le seguían saliendo access tokens durante los treinta días de su
+        // refresh (plan J). Los filtros lo paraban en cada petición, pero un
+        // token emitido para una cuenta de baja no debería existir.
+        if (!user.isActivo()) {
+            throw new BadCredentialsException("Refresh token inválido o caducado.");
+        }
         // El sucesor conserva familia y origen: es la misma sesión, con otro
         // token.
         TokenEmitido sucesor = issueRefreshToken(user, stored.getOrigen(), stored.getFamilia());
@@ -501,25 +526,57 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void verificarContrasena(User usuario, String contrasena) {
+        if (!contrasenaCorrecta(usuario, contrasena)) {
+            throw new BadCredentialsException("Credenciales incorrectas.");
+        }
+    }
+
+    /**
+     * La contraseña de quien ya tiene sesión, con el límite de intentos de su
+     * cuenta y por turnos, como el login (revisión de seguridad del
+     * 17/10/2026, plan J). Hasta entonces, quien tuviera un access token
+     * ajeno --vive quince minutos-- podía probar contraseñas de esa persona
+     * aquí sin ningún freno, y cada prueba era un BCrypt fuera de turno.
+     *
+     * Sin transacción, por lo del login: ver {@link #login}.
+     */
+    private boolean contrasenaCorrecta(User usuario, String contrasena) {
+        limitadorPorCuenta.comprobar(usuario.getEmail());
+        boolean correcta = turnoDeContrasena.conTurno(
+                () -> passwordEncoder.matches(contrasena, usuario.getContrasena()));
+        if (correcta) {
+            limitadorPorCuenta.acierto(usuario.getEmail());
+        } else {
+            limitadorPorCuenta.fallo(usuario.getEmail());
+        }
+        return correcta;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void changePassword(ChangePasswordRequest request, User user, Optional<UUID> sesionActual) {
-        if (!passwordEncoder.matches(request.contrasenaAntigua(), user.getContrasena())) {
+        if (!contrasenaCorrecta(user, request.contrasenaAntigua())) {
             log.warn("Intento de cambio de contraseña con contraseña antigua incorrecta: {}", user.getId());
             throw new BusinessException("La contraseña antigua no es correcta.", HttpStatus.BAD_REQUEST);
         }
+        String nueva = turnoDeContrasena.conTurno(() -> passwordEncoder.encode(request.contrasenaNueva()));
 
-        user.setContrasena(passwordEncoder.encode(request.contrasenaNueva()));
-        userRepository.save(user);
+        int cerradas = escritura.execute(estado -> {
+            user.setContrasena(nueva);
+            userRepository.save(user);
 
-        // Las demás sesiones se cierran, como al elegir contraseña con un
-        // código (revisión de seguridad del 1/10/2026, ADR 034): quien cambia
-        // la contraseña porque sospecha que se la han robado tiene que poder
-        // echar al que entró con ella. La suya sigue abierta. Un access token
-        // de antes del ADR 034 no dice su sesión: entonces se cierran todas.
-        Instant ahora = Instant.now();
-        int cerradas = sesionActual
-                .map(familia -> refreshTokenRepository.revocarTodasLasDeMenos(user, familia, ahora))
-                .orElseGet(() -> refreshTokenRepository.revocarTodasLasDe(user, ahora));
+            // Las demás sesiones se cierran, como al elegir contraseña con un
+            // código (revisión de seguridad del 1/10/2026, ADR 034): quien cambia
+            // la contraseña porque sospecha que se la han robado tiene que poder
+            // echar al que entró con ella. La suya sigue abierta. Un access token
+            // de antes del ADR 034 no dice su sesión: entonces se cierran todas.
+            Instant ahora = Instant.now();
+            return sesionActual
+                    .map(familia -> refreshTokenRepository.revocarTodasLasDeMenos(user, familia, ahora))
+                    .orElseGet(() -> refreshTokenRepository.revocarTodasLasDe(user, ahora));
+        });
         log.info("Contraseña cambiada: {} ({} sesiones cerradas)", user.getId(), cerradas);
     }
 
@@ -544,10 +601,28 @@ public class AuthServiceImpl implements AuthService {
         if (employee.getEmpresa().getId() != actingManager.getEmpresa().getId()) {
             throw new TenantAccessException("No puedes gestionar empleados de otra empresa.");
         }
+        // Revisión de seguridad del 17/10/2026 (plan J). Hasta entonces RRHH
+        // podía dar de baja a un ADMIN, y un ADMIN a sí mismo: con uno solo, la
+        // empresa se quedaba sin nadie que la administrara y sin forma de
+        // arreglarlo desde dentro. A uno mismo no se le da de baja (que lo haga
+        // otro ADMIN), así que siempre queda al menos el que actúa.
+        if (employee.getId() == actingManager.getId()) {
+            throw new BusinessException("No puedes darte de baja ni de alta a ti mismo. Pídeselo a otro administrador.",
+                    HttpStatus.FORBIDDEN);
+        }
+        if (employee.getRol().ordinal() > actingManager.getRol().ordinal()) {
+            throw new BusinessException("No puedes dar de baja ni de alta a alguien con un rol por encima del tuyo.",
+                    HttpStatus.FORBIDDEN);
+        }
 
         employee.setActivo(activo);
         employee.setFechaBaja(activo ? null : Instant.now());
         userRepository.save(employee);
+        if (!activo) {
+            // Sus sesiones también: renovar ya lo impide (refreshAccessToken),
+            // pero un refresh vivo de alguien de baja no tiene por qué existir.
+            refreshTokenRepository.revocarTodasLasDe(employee, Instant.now());
+        }
         log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getId(), actingManager.getId());
     }
 

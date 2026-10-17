@@ -8,6 +8,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.LinkedIdentityDTO;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
+import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.ExternalIdentityRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -16,11 +17,14 @@ import com.nxtime.nxtime.security.sso.SsoException.Motivo;
 import com.nxtime.nxtime.security.sso.VerifiedIdentity;
 import com.nxtime.nxtime.service.SsoService;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -60,13 +64,38 @@ public class SsoServiceImpl implements SsoService {
     private final UserRepository usuarios;
     private final CompanyRepository empresas;
     private final PasswordEncoder passwordEncoder;
+    private final UnconfirmedRegistrationCleaner registrosSinConfirmar;
+    private final ApplicationEventPublisher eventos;
 
     public SsoServiceImpl(ExternalIdentityRepository identidades, UserRepository usuarios,
-            CompanyRepository empresas, PasswordEncoder passwordEncoder) {
+            CompanyRepository empresas, PasswordEncoder passwordEncoder,
+            UnconfirmedRegistrationCleaner registrosSinConfirmar, ApplicationEventPublisher eventos) {
         this.identidades = identidades;
         this.usuarios = usuarios;
         this.empresas = empresas;
         this.passwordEncoder = passwordEncoder;
+        this.registrosSinConfirmar = registrosSinConfirmar;
+        this.eventos = eventos;
+    }
+
+    /**
+     * Un correo a su dueño cada vez que se le vincula una cuenta de fuera
+     * (revisión de seguridad del 17/10/2026, plan J). Entrar con ella vale
+     * tanto como la contraseña, y hasta entonces podía pasar sin que se
+     * enterara: la primera vez se vincula sola, por el correo. Sale después
+     * del commit (el evento es AFTER_COMMIT): si al final no se vincula, no
+     * sale.
+     */
+    private void avisarDeLaVinculacion(User usuario, VerifiedIdentity identidad) {
+        Map<String, Object> variables = new LinkedHashMap<>();
+        variables.put("nombre", usuario.getNombre());
+        variables.put("email", usuario.getEmail());
+        variables.put("proveedor", identidad.proveedor().nombre());
+        variables.put("correoExterno", identidad.correo() == null || identidad.correo().isBlank()
+                ? "sin correo" : identidad.correo());
+        eventos.publishEvent(new NotificationEvents.AccessCodeRequested(
+                usuario.getEmail(), variables, "sso-linked",
+                "Has vinculado una cuenta de " + identidad.proveedor().nombre() + " a NX Time"));
     }
 
     @Override
@@ -74,7 +103,11 @@ public class SsoServiceImpl implements SsoService {
     public User registrarEmpresa(
             SsoProvider proveedor, String sujeto, String correo, String nombreEmpresa, String nombre, String apellidos) {
         // Entre volver del proveedor y mandar el formulario ha podido pasar un
-        // cuarto de hora: se vuelve a mirar todo.
+        // cuarto de hora: se vuelve a mirar todo. Un registro con contraseña
+        // que se ha quedado a medias con este correo no cuenta como cuenta:
+        // se descarta, como al volver del proveedor (ver identificar).
+        usuarios.findByEmail(correo).filter(User::correoPendienteDeConfirmar)
+                .ifPresent(pendiente -> registrosSinConfirmar.descartar(pendiente.getId()));
         if (usuarios.findByEmail(correo).isPresent()
                 || identidades.findByProveedorAndSujeto(proveedor, sujeto).isPresent()) {
             throw new BusinessException(
@@ -139,6 +172,18 @@ public class SsoServiceImpl implements SsoService {
                         log.info("SSO {}: correo verificado sin cuenta en NX Time.", identidad.proveedor().id());
                         return new SsoException(Motivo.SIN_CUENTA);
                     });
+            if (usuario.correoPendienteDeConfirmar()) {
+                // Un registro a medias con su correo, que puede haber dejado
+                // otro con una contraseña suya. Hasta el 17/10/2026 se daba por
+                // confirmado aquí, y quien lo dejó entraba después con esa
+                // contraseña en la empresa del dueño del correo (plan J). Se
+                // descarta, y el dueño sigue como quien no tiene cuenta: desde
+                // «Registrar con Google» va al alta con sus propios datos.
+                registrosSinConfirmar.descartar(usuario.getId());
+                log.info("SSO {}: el correo tenía un registro sin confirmar (usuario {}); se descarta.",
+                        identidad.proveedor().id(), usuario.getId());
+                throw new SsoException(Motivo.SIN_CUENTA);
+            }
             exigirActiva(usuario, identidad);
             if (identidades.findByUsuarioAndProveedor(usuario, identidad.proveedor()).isPresent()) {
                 // Ya entra con OTRA cuenta de este proveedor. Cambiársela sin
@@ -154,17 +199,13 @@ public class SsoServiceImpl implements SsoService {
                     .correo(identidad.correo())
                     .ultimoAcceso(Instant.now())
                     .build());
+            avisarDeLaVinculacion(usuario, identidad);
             log.info("SSO {}: vinculada por el correo al usuario {}.", identidad.proveedor().id(), usuario.getId());
         }
 
-        // Quien registró su empresa y aún no había canjeado el código del
-        // correo (V37): entrar con una cuenta de ese correo, garantizado por el
-        // proveedor, demuestra lo mismo que el código.
-        if (usuario.correoPendienteDeConfirmar() && identidad.correoVerificado()
-                && usuario.getEmail().equals(identidad.correo())) {
-            usuario.setCorreoSinConfirmarDesde(null);
-            usuarios.save(usuario);
-        }
+        // Por el sujeto no debería llegar nunca una cuenta sin confirmar (solo
+        // se vincula una cuenta con sesión, o al registrar con el proveedor),
+        // pero si llega no entra.
         if (usuario.correoPendienteDeConfirmar()) {
             throw new SsoException(Motivo.CORREO_SIN_VERIFICAR);
         }
@@ -207,6 +248,7 @@ public class SsoServiceImpl implements SsoService {
                 .sujeto(identidad.sujeto())
                 .correo(identidad.correo() == null ? "" : identidad.correo())
                 .build());
+        avisarDeLaVinculacion(usuario, identidad);
         log.info("SSO {}: vinculada a mano por el usuario {}.", identidad.proveedor().id(), usuario.getId());
     }
 

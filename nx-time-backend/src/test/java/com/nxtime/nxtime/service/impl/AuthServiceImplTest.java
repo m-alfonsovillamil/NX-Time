@@ -200,9 +200,11 @@ class AuthServiceImplTest {
                 .empresa(suya).correoSinConfirmarDesde(java.time.Instant.parse("2026-10-01T10:00:00Z")).build();
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Nueva SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+        pendiente.setContrasena("hash-viejo");
         when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(pendiente));
         when(companyRepository.findByNombre("Nueva SL")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password123")).thenReturn("hash-nuevo");
+        when(passwordEncoder.matches("password123", "hash-viejo")).thenReturn(true);
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.registerManager(request);
@@ -211,6 +213,27 @@ class AuthServiceImplTest {
         assertThat(pendiente.getNombre()).isEqualTo("Ada");
         assertThat(pendiente.getContrasena()).isEqualTo("hash-nuevo");
         assertThat(pendiente.correoPendienteDeConfirmar()).isTrue();
+        verify(accessCodeService).emitirCodigoDeConfirmacion(pendiente);
+    }
+
+    @Test
+    @DisplayName("registerManager con un registro a medias y OTRA contraseña lo deja sin ninguna: no se sabe cuál es la del dueño")
+    void registerManager_registroAMediasConOtraContrasena_noGanaNinguna() {
+        Company suya = Company.builder().id(3L).nombre("Vieja SL").build();
+        User pendiente = User.builder().id(8L).email("ada@nxtime.test").nombre("A").rol(Role.ADMIN)
+                .empresa(suya).contrasena("hash-viejo")
+                .correoSinConfirmarDesde(java.time.Instant.parse("2026-10-01T10:00:00Z")).build();
+        when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(pendiente));
+        when(passwordEncoder.encode(any())).thenAnswer(inv -> "hash-de-" + inv.getArgument(0));
+        when(passwordEncoder.matches("otra-contrasena", "hash-viejo")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.registerManager(
+                new RegisterManagerRequest("Vieja SL", "Ada", "Lovelace", "ada@nxtime.test", "otra-contrasena", null));
+
+        assertThat(pendiente.getContrasena())
+                .isNotEqualTo("hash-viejo")
+                .isNotEqualTo("hash-de-otra-contrasena");
         verify(accessCodeService).emitirCodigoDeConfirmacion(pendiente);
     }
 
@@ -665,14 +688,32 @@ class AuthServiceImplTest {
     @DisplayName("setEmployeeActive(false) da de baja a un empleado de la misma empresa")
     void setEmployeeActive_false_daDeBajaAlEmpleado() {
         Company empresa = Company.builder().id(1L).build();
-        User manager = User.builder().id(1L).empresa(empresa).build();
-        User employee = User.builder().id(2L).empresa(empresa).activo(true).build();
+        User manager = User.builder().id(1L).empresa(empresa).rol(Role.RRHH).build();
+        User employee = User.builder().id(2L).empresa(empresa).rol(Role.EMPLEADO).activo(true).build();
         when(userRepository.findById(2L)).thenReturn(Optional.of(employee));
 
         service.setEmployeeActive(2L, false, manager);
 
         assertThat(employee.isActivo()).isFalse();
         assertThat(employee.getFechaBaja()).isNotNull();
+        // Y sus sesiones, fuera.
+        verify(refreshTokenRepository).revocarTodasLasDe(eq(employee), any());
+    }
+
+    @Test
+    @DisplayName("verificarContrasena comparte el límite del login: tras fallar aquí, entrar también espera")
+    void verificarContrasena_compartElLimiteDelLogin() {
+        User ana = User.builder().id(1L).email("ana@nxtime.test").contrasena("hash").build();
+        when(passwordEncoder.matches(any(), eq("hash"))).thenReturn(false);
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> service.verificarContrasena(ana, "no-es"))
+                    .isInstanceOf(org.springframework.security.authentication.BadCredentialsException.class);
+        }
+
+        assertThatThrownBy(() -> service.login(new LoginRequest("ana@nxtime.test", "la-buena")))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
+        verify(authenticationManager, never()).authenticate(any());
     }
 
     @Test
