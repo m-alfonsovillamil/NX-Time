@@ -61,6 +61,9 @@
     "name" : "Canal de denuncias",
     "description" : "Canal interno de información de la Ley 2/2023, con anonimato opcional."
   }, {
+    "name" : "Plataforma",
+    "description" : "La instalación entera, para quien la mantiene: cifras y el alta de las empresas. No la abre ningún rol de empresa."
+  }, {
     "name" : "Calendario",
     "description" : "Festivos del calendario laboral y ausencias del mes."
   }, {
@@ -94,14 +97,14 @@
     "name" : "Ofertas internas",
     "description" : "Vacantes internas y candidaturas de la plantilla."
   }, {
+    "name" : "Empresa",
+    "description" : "La configuración de la empresa"
+  }, {
     "name" : "SSO",
     "description" : "Entrar con una cuenta de Google o de Microsoft. Solo para quien ya tiene cuenta."
   }, {
     "name" : "Avisos",
     "description" : "Avisos in-app del usuario autenticado: listado, contador de no leídos y marcado como leído. Se generan desde los mismos eventos que envían los correos."
-  }, {
-    "name" : "Plataforma",
-    "description" : "La instalación entera, para quien la mantiene. Solo lectura; no la abre ningún rol de empresa."
   } ],
   "paths" : {
     "/api/v1/perfil/kiosco/pin" : {
@@ -914,6 +917,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1004,6 +1017,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1037,6 +1060,16 @@
           },
           "400" : {
             "description" : "El código no vale, ha caducado o ya se usó",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1087,6 +1120,16 @@
           },
           "429" : {
             "description" : "Demasiados intentos desde esta IP",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1401,6 +1444,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1651,6 +1704,244 @@
           },
           "409" : {
             "description" : "Ya está asignado a otro proyecto en esas fechas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/suspender" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Suspender una empresa activa",
+        "description" : "Nadie de ella puede entrar ni fichar, tampoco en sus kioscos, y se cierran todas sus sesiones. Sus datos se quedan. Se avisa a sus ADMIN, con el motivo si se da.",
+        "operationId" : "suspender",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlatformActionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Suspendida"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está activa, o es la del propio operador",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/rechazar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Rechazar una empresa pendiente",
+        "description" : "Se avisa a quien la registró, con el motivo si se da, y se borra entera: nadie de ella llegó a entrar. Queda en el historial con su nombre.",
+        "operationId" : "rechazar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlatformActionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Rechazada y borrada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está pendiente, o tiene datos y no se puede borrar",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/reactivar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Reactivar una empresa suspendida",
+        "description" : "Su gente vuelve a poder entrar. Se avisa a sus ADMIN.",
+        "operationId" : "reactivar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Reactivada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está suspendida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/aprobar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Aprobar una empresa pendiente",
+        "description" : "Desde ese momento su gente puede entrar. Se avisa por correo a sus ADMIN, y queda en el historial de la empresa.",
+        "operationId" : "aprobar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Aprobada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está pendiente",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -3213,6 +3504,39 @@
         } ]
       }
     },
+    "/api/v1/empresa/condiciones/aceptar" : {
+      "post" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Aceptar las condiciones en vigor",
+        "description" : "En nombre de la empresa. Queda la versión, la fecha y quién.",
+        "operationId" : "aceptar",
+        "responses" : {
+          "200" : {
+            "description" : "Aceptadas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyTermsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/dispositivos-push" : {
       "post" : {
         "tags" : [ "Push" ],
@@ -4216,7 +4540,7 @@
         "tags" : [ "Borrado de datos" ],
         "summary" : "Rechazar un borrado",
         "description" : "Con comentario obligatorio: se le manda a la persona para que sepa por qué y qué tiene que resolver antes de volver a pedirlo.",
-        "operationId" : "rechazar",
+        "operationId" : "rechazar_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6529,7 +6853,7 @@
       "get" : {
         "tags" : [ "Plataforma" ],
         "summary" : "Una empresa",
-        "description" : "Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda apuntada en el log del servidor, con quién la hizo.",
+        "description" : "Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda en su historial, con quién la hizo (ADR 046).",
         "operationId" : "empresa",
         "parameters" : [ {
           "name" : "id",
@@ -7885,6 +8209,39 @@
           },
           "403" : {
             "description" : "Sin la authority 'fichaje:leer'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/condiciones" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Las condiciones de mi empresa",
+        "description" : "La versión en vigor, la que tiene aceptada la empresa, cuándo y quién.",
+        "operationId" : "condiciones",
+        "responses" : {
+          "200" : {
+            "description" : "Las condiciones",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyTermsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -10336,9 +10693,12 @@
             "type" : "string",
             "maxLength" : 150,
             "minLength" : 0
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "nombre", "nombreEmpresa" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "nombre", "nombreEmpresa" ]
       },
       "AuthenticationResponse" : {
         "type" : "object",
@@ -10364,6 +10724,9 @@
           },
           "zonaHoraria" : {
             "type" : "string"
+          },
+          "condicionesPorAceptar" : {
+            "type" : "boolean"
           }
         }
       },
@@ -10422,9 +10785,12 @@
             "type" : "string",
             "maxLength" : 150,
             "minLength" : 0
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "nombre", "nombreEmpresa", "pase" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "nombre", "nombreEmpresa", "pase" ]
       },
       "ConfirmRegistrationRequest" : {
         "type" : "object",
@@ -10474,9 +10840,12 @@
           },
           "origen" : {
             "type" : "string"
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]
       },
       "RegistrationPendingResponse" : {
         "type" : "object",
@@ -10679,6 +11048,16 @@
           },
           "vigente" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "PlatformActionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
           }
         }
       },
@@ -11267,6 +11646,33 @@
           },
           "activo" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "CompanyTermsResponse" : {
+        "type" : "object",
+        "description" : "Qué versión de las condiciones está en vigor y cuál tiene aceptada la empresa",
+        "properties" : {
+          "versionVigente" : {
+            "type" : "string",
+            "description" : "La versión en vigor",
+            "example" : "2026-10-17"
+          },
+          "versionAceptada" : {
+            "type" : "string",
+            "description" : "La que tiene aceptada la empresa. Null si ninguna"
+          },
+          "aceptadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "aceptadaPor" : {
+            "type" : "string",
+            "description" : "Quién las aceptó en nombre de la empresa. Null si ninguna, o si ya no está"
+          },
+          "porAceptar" : {
+            "type" : "boolean",
+            "description" : "Si falta aceptar la versión en vigor"
           }
         }
       },
@@ -12280,6 +12686,11 @@
             "format" : "int64",
             "description" : "Registros de empresa que se quedaron sin confirmar el correo"
           },
+          "empresasPendientes" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Empresas con el correo confirmado que esperan a que el operador las apruebe (ADR 046)"
+          },
           "fichajesHoy" : {
             "type" : "integer",
             "format" : "int64",
@@ -12386,6 +12797,11 @@
           "nombre" : {
             "type" : "string"
           },
+          "estado" : {
+            "type" : "string",
+            "description" : "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046). Las pendientes salen las primeras",
+            "enum" : [ "PENDIENTE", "ACTIVA", "SUSPENDIDA" ]
+          },
           "zonaHoraria" : {
             "type" : "string",
             "description" : "Nombre IANA de su zona horaria",
@@ -12489,6 +12905,25 @@
           }
         }
       },
+      "PlatformActionDTO" : {
+        "type" : "object",
+        "properties" : {
+          "en" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "operador" : {
+            "type" : "string"
+          },
+          "accion" : {
+            "type" : "string",
+            "enum" : [ "CONSULTAR", "APROBAR", "RECHAZAR", "SUSPENDER", "REACTIVAR" ]
+          },
+          "motivo" : {
+            "type" : "string"
+          }
+        }
+      },
       "PlatformCompanyDetailResponse" : {
         "type" : "object",
         "description" : "El detalle de una empresa de la instalación: cifras de uso y el contacto de sus administradores",
@@ -12499,6 +12934,31 @@
           },
           "nombre" : {
             "type" : "string"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046)",
+            "enum" : [ "PENDIENTE", "ACTIVA", "SUSPENDIDA" ]
+          },
+          "aprobadaEn" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Cuándo la aprobó el operador. Null si no lo ha hecho, o si es de antes de la V43"
+          },
+          "condicionesVersion" : {
+            "type" : "string",
+            "description" : "La versión de las condiciones que tiene aceptada. Null si ninguna"
+          },
+          "condicionesAceptadasEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "historial" : {
+            "type" : "array",
+            "description" : "Lo que ha hecho y mirado el operador con ella, lo más reciente primero (hasta 50)",
+            "items" : {
+              "$ref" : "#/components/schemas/PlatformActionDTO"
+            }
           },
           "zonaHoraria" : {
             "type" : "string",

@@ -78,6 +78,7 @@ export function Login() {
         nombre: data.nombre ?? '',
         authorities: data.authorities ?? [],
         zonaHoraria: data.zonaHoraria,
+        condicionesPorAceptar: data.condicionesPorAceptar,
       });
       navegar(desde, { replace: true });
     } catch (fallo) {

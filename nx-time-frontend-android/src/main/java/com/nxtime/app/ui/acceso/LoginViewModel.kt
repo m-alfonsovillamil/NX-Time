@@ -199,6 +199,8 @@ internal fun mensajeDeSso(motivo: String): Int = when (motivo) {
     "sin-cuenta" -> R.string.sso_error_sin_cuenta
     "correo-sin-verificar" -> R.string.sso_error_correo_sin_verificar
     "cuenta-inactiva" -> R.string.sso_error_cuenta_inactiva
+    "empresa-pendiente" -> R.string.sso_error_empresa_pendiente
+    "empresa-suspendida" -> R.string.sso_error_empresa_suspendida
     "ya-tiene-otra" -> R.string.sso_error_ya_tiene_otra
     "no-disponible" -> R.string.sso_error_no_disponible
     else -> R.string.sso_error_fallo

@@ -73,6 +73,7 @@ class RegistroConSsoTest {
         viewModel.onEmpresaCambia(" Talleres Eva SL ")
         viewModel.onNombreCambia(" Eva ")
         viewModel.onApellidosCambia("Martín ")
+        viewModel.onAceptaCambia(true)
     }
 
     // ------------------------------------------------------------------
@@ -250,7 +251,7 @@ class RegistroConSsoTest {
         viewModel.registrar()
         advanceUntilIdle()
 
-        verify(repositorio).registrarEmpresaConSso(PeticionRegistroSso("el-pase", "Talleres Eva SL", "Eva", "Martín"))
+        verify(repositorio).registrarEmpresaConSso(PeticionRegistroSso("el-pase", "Talleres Eva SL", "Eva", "Martín", true))
         verify(repositorio).procesarLoginExitoso(sesion)
         assertTrue(viewModel.uiState.value.registrado)
         // Ni el registro con contraseña ni su código: esto es otra cosa.

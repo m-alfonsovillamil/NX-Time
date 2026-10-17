@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<!--/* A los ADMIN: su empresa vuelve a tener acceso (ADR 046). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu empresa vuelve a tener acceso', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p><strong th:text="${nombreEmpresa}">Tu empresa</strong> vuelve a tener acceso a
+        <span th:text="${producto}">NX Time</span>. Todos podéis entrar de nuevo como siempre.</p>
+
+    <p><a th:href="${web}" href="#" th:text="${web}">la web</a></p>
+</div>
+</body>
+</html>

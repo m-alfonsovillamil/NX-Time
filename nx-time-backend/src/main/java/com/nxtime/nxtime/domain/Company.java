@@ -2,6 +2,8 @@ package com.nxtime.nxtime.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -59,6 +61,36 @@ public class Company {
      */
     @Column(name = "creada_en")
     private Instant creadaEn;
+
+    /** V43, ADR 046: solo una empresa ACTIVA deja entrar a su gente. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    @Builder.Default
+    private CompanyStatus estado = CompanyStatus.ACTIVA;
+
+    @Column(name = "aprobada_en")
+    private Instant aprobadaEn;
+
+    /** La versión de las condiciones y del contrato de encargo que aceptó, cuándo y quién (V43). */
+    @Column(name = "condiciones_version", length = 32)
+    private String condicionesVersion;
+
+    @Column(name = "condiciones_aceptadas_en")
+    private Instant condicionesAceptadasEn;
+
+    @Column(name = "condiciones_aceptadas_por")
+    private Long condicionesAceptadasPor;
+
+    public boolean estaActiva() {
+        return estado == CompanyStatus.ACTIVA;
+    }
+
+    /** Lo que acepta quien la registra, o el ADMIN que acepta una versión nueva. */
+    public void aceptarCondiciones(String version, User quien, Instant cuando) {
+        this.condicionesVersion = version;
+        this.condicionesAceptadasPor = quien.getId() == 0 ? null : quien.getId();
+        this.condicionesAceptadasEn = cuando;
+    }
 
     @Version
     private long version;

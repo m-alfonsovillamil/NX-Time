@@ -28,6 +28,8 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { entrar } from './ayudas';
+
 const JAVIER = 'javier.lopez@techcorp.demo';
 
 test.beforeEach(async ({ request }) => {
@@ -102,10 +104,14 @@ test('quien no tiene cuenta en NX Time vuelve al acceso sabiendo por qué, y sin
 /**
  * Registrar una empresa con una cuenta de fuera (ADR 038). Lo que solo se ve
  * con un navegador: que la cookie del alta a medias —que pone el servidor al
- * volver del proveedor— viaja después en la petición del formulario, y que de
- * ahí se sale con la sesión hecha.
+ * volver del proveedor— viaja después en la petición del formulario.
+ *
+ * Y desde el ADR 046, el alta con aprobación de punta a punta: la empresa queda
+ * pendiente, la aprueba la operadora de la demo desde el panel de plataforma, y
+ * solo entonces se entra.
  */
-test('registrar una empresa con Google: sin contraseña ni código, del registro a «Mi jornada»', async ({ page }) => {
+test('registrar una empresa con Google, que la apruebe el operador y entrar en «Mi jornada»', async ({ page }) => {
+  const nombre = `Empresa de Eva ${Date.now()}`;
   await page.goto('/registro');
   await page.getByRole('link', { name: 'Registrar con Google' }).click();
   await elegir(page, /registrar su empresa/);
@@ -115,11 +121,29 @@ test('registrar una empresa con Google: sin contraseña ni código, del registro
   await expect(page.getByLabel('Contraseña')).toHaveCount(0);
   await expect(page).toHaveURL(/\/registro$/);
 
-  await page.getByLabel('Nombre de la empresa').fill(`Empresa de Eva ${Date.now()}`);
+  await page.getByLabel('Nombre de la empresa', { exact: true }).fill(nombre);
   await page.getByLabel('Tu nombre').fill('Eva');
   await page.getByLabel('Tus apellidos').fill('Fundadora');
+  // Sin la casilla no se registra nada.
   await page.getByRole('button', { name: 'Crear empresa' }).click();
+  await expect(page.getByRole('alert')).toContainText('aceptar las condiciones');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Crear empresa' }).click();
+  await expect(page.getByRole('heading', { name: 'Empresa registrada' })).toBeVisible();
 
+  // La operadora la aprueba (la demo la tiene en PLATAFORMA_OPERADORES).
+  await entrar(page, 'lucia.moreno@techcorp.demo');
+  await page.goto('/plataforma');
+  await page.getByRole('link', { name: nombre }).click();
+  await expect(page.getByRole('heading', { level: 1, name: nombre })).toBeVisible();
+  await page.getByRole('button', { name: 'Aprobar' }).click();
+  await page.getByRole('button', { name: 'Confirmar' }).click();
+  await expect(page.getByText('Activa', { exact: true })).toBeVisible();
+  await cerrarSesion(page);
+
+  // Ya aprobada, entra con su cuenta de Google.
+  await page.getByRole('link', { name: 'Entrar con Google' }).click();
+  await elegir(page, /registrar su empresa/);
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
   // La sesión está en las cookies, como tras un login: recargar la retoma.
   await page.reload();

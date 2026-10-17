@@ -59,6 +59,8 @@ public class KioskAuthenticationFilter extends OncePerRequestFilter {
             String token = cabecera.substring(ESQUEMA.length()).trim();
             kioskRepository.findByTokenHash(Canonico.sha256(token))
                     .filter(kiosco -> kiosco.activo())
+                    // Ni el de una empresa suspendida (ADR 046).
+                    .filter(kiosco -> kiosco.getEmpresa() != null && kiosco.getEmpresa().estaActiva())
                     .ifPresent(kiosco -> SecurityContextHolder.getContext().setAuthentication(
                             new UsernamePasswordAuthenticationToken(new KioskPrincipal(kiosco), null,
                                     List.of(new SimpleGrantedAuthority(KioskPrincipal.AUTHORITY)))));

@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.BuildConfig
 import com.nxtime.app.R
+import com.nxtime.app.ui.acceso.abrirEnElNavegador
 import com.nxtime.app.data.dto.SolicitudBorradoDTO
 import com.nxtime.app.data.session.Tema
 import com.nxtime.app.ui.util.DateFormats
@@ -696,6 +697,12 @@ private fun AcercaDe() {
         )
         Dato(stringResource(R.string.ajustes_servidor), BuildConfig.BASE_URL)
         Dato(stringResource(R.string.ajustes_repositorio), REPOSITORIO)
+        // Los textos legales están en la web (plan J): aviso legal,
+        // privacidad, condiciones, contrato de encargo y subencargados.
+        val contexto = LocalContext.current
+        TextButton(onClick = { abrirEnElNavegador(contexto, BuildConfig.WEB_URL + "legal") }) {
+            Text(stringResource(R.string.ajustes_informacion_legal))
+        }
     }
 }
 

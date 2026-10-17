@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -25,6 +27,11 @@ public record SsoAppSignupRequest(
 
         @NotBlank(message = "Los apellidos son obligatorios.")
         @Size(max = 150, message = "Los apellidos no pueden pasar de 150 caracteres.")
-        String apellidos
+        String apellidos,
+
+        /** La casilla del formulario, como en el registro con contraseña (ADR 046). */
+        @NotNull(message = "Tienes que aceptar las condiciones del servicio y el contrato de encargo.")
+        @AssertTrue(message = "Tienes que aceptar las condiciones del servicio y el contrato de encargo.")
+        Boolean aceptaCondiciones
 ) {
 }

@@ -319,6 +319,8 @@ public class SsoController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "423", description = "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/auth/sso/registro")
     public ResponseEntity<AuthenticationResponse> registrar(
             @Valid @RequestBody SsoSignupRequest request, HttpServletRequest peticion, HttpServletResponse respuesta) {
@@ -361,6 +363,8 @@ public class SsoController {
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @ApiResponse(responseCode = "409", description = "El nombre de la empresa está cogido, o ya hay cuenta con ese correo",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "423", description = "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/auth/sso/registro/app")
     public ResponseEntity<AuthenticationResponse> registrarDesdeLaApp(@Valid @RequestBody SsoAppSignupRequest request) {
         SsoState.Alta alta = estados.abrirAlta(request.pase()).orElseThrow(SsoController::sinRegistroAMedias);
@@ -384,6 +388,8 @@ public class SsoController {
     @ApiResponse(responseCode = "200", description = "La sesión, como la de un login",
             content = @Content(schema = @Schema(implementation = AuthenticationResponse.class)))
     @ApiResponse(responseCode = "400", description = "El código no vale, ha caducado o ya se usó",
+            content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    @ApiResponse(responseCode = "423", description = "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
             content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     @PostMapping("/auth/sso/canjear")
     public ResponseEntity<AuthenticationResponse> canjear(@Valid @RequestBody SsoExchangeRequest request) {

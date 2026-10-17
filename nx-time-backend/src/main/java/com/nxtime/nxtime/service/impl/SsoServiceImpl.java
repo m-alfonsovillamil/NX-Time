@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.CompanyStatus;
 import com.nxtime.nxtime.domain.ExternalIdentity;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.SsoProvider;
@@ -15,6 +17,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.sso.SsoException;
 import com.nxtime.nxtime.security.sso.SsoException.Motivo;
 import com.nxtime.nxtime.security.sso.VerifiedIdentity;
+import com.nxtime.nxtime.service.CompanyLifecycleService;
 import com.nxtime.nxtime.service.SsoService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -66,16 +69,21 @@ public class SsoServiceImpl implements SsoService {
     private final PasswordEncoder passwordEncoder;
     private final UnconfirmedRegistrationCleaner registrosSinConfirmar;
     private final ApplicationEventPublisher eventos;
+    private final CondicionesDelServicio servicio;
+    private final CompanyLifecycleService cicloDeLaEmpresa;
 
     public SsoServiceImpl(ExternalIdentityRepository identidades, UserRepository usuarios,
             CompanyRepository empresas, PasswordEncoder passwordEncoder,
-            UnconfirmedRegistrationCleaner registrosSinConfirmar, ApplicationEventPublisher eventos) {
+            UnconfirmedRegistrationCleaner registrosSinConfirmar, ApplicationEventPublisher eventos,
+            CondicionesDelServicio servicio, CompanyLifecycleService cicloDeLaEmpresa) {
         this.identidades = identidades;
         this.usuarios = usuarios;
         this.empresas = empresas;
         this.passwordEncoder = passwordEncoder;
         this.registrosSinConfirmar = registrosSinConfirmar;
         this.eventos = eventos;
+        this.servicio = servicio;
+        this.cicloDeLaEmpresa = cicloDeLaEmpresa;
     }
 
     /**
@@ -93,9 +101,8 @@ public class SsoServiceImpl implements SsoService {
         variables.put("proveedor", identidad.proveedor().nombre());
         variables.put("correoExterno", identidad.correo() == null || identidad.correo().isBlank()
                 ? "sin correo" : identidad.correo());
-        eventos.publishEvent(new NotificationEvents.AccessCodeRequested(
-                usuario.getEmail(), variables, "sso-linked",
-                "Has vinculado una cuenta de " + identidad.proveedor().nombre() + " a NX Time"));
+        eventos.publishEvent(new NotificationEvents.CorreoDirecto(usuario.getEmail(), "sso-linked",
+                "Has vinculado una cuenta de " + identidad.proveedor().nombre() + " a NX Time", variables));
     }
 
     @Override
@@ -119,7 +126,11 @@ public class SsoServiceImpl implements SsoService {
             throw new BusinessException("La empresa ya existe. Solicita acceso al administrador.");
         }
 
-        Company empresa = empresas.save(Company.builder().nombre(nombreEmpresa.strip()).build());
+        // Pendiente de aprobar (ADR 046). Aquí el correo ya está confirmado
+        // (lo garantiza el proveedor), así que se avisa al operador ya.
+        Company empresa = empresas.save(Company.builder().nombre(nombreEmpresa.strip())
+                .estado(servicio.requiereAprobacion() ? CompanyStatus.PENDIENTE : CompanyStatus.ACTIVA)
+                .build());
         User admin = usuarios.save(User.builder()
                 .nombre(nombre.strip())
                 .apellidos(apellidos.strip())
@@ -140,6 +151,12 @@ public class SsoServiceImpl implements SsoService {
                 .correo(correo)
                 .ultimoAcceso(Instant.now())
                 .build());
+        // Quien llega hasta aquí ha marcado la casilla: el DTO la exige.
+        empresa.aceptarCondiciones(servicio.version(), admin, Instant.now());
+        empresas.save(empresa);
+        if (empresa.getEstado() == CompanyStatus.PENDIENTE) {
+            cicloDeLaEmpresa.avisarDeQueEspera(empresa, admin);
+        }
         log.info("Empresa '{}' registrada con {}; su ADMIN es el usuario {}.",
                 empresa.getNombre(), proveedor.id(), admin.getId());
         return admin;
@@ -218,6 +235,15 @@ public class SsoServiceImpl implements SsoService {
         if (!usuario.isActivo()) {
             log.info("SSO {}: la cuenta {} está dada de baja.", identidad.proveedor().id(), usuario.getId());
             throw new SsoException(Motivo.CUENTA_INACTIVA);
+        }
+        // Y su empresa (ADR 046). Después de la cuenta: a quien está de baja
+        // no hay por qué contarle cómo está su empresa.
+        Company empresa = usuario.getEmpresa();
+        if (empresa != null && empresa.getEstado() == CompanyStatus.PENDIENTE) {
+            throw new SsoException(Motivo.EMPRESA_PENDIENTE);
+        }
+        if (empresa != null && empresa.getEstado() == CompanyStatus.SUSPENDIDA) {
+            throw new SsoException(Motivo.EMPRESA_SUSPENDIDA);
         }
     }
 

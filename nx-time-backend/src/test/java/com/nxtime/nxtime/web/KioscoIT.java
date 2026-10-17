@@ -91,7 +91,7 @@ class KioscoIT {
         ip = "203.0.113." + SIGUIENTE_IP.getAndIncrement();
         String email = "admin." + System.nanoTime() + "@nxtime.test";
         ResponseEntity<String> alta = post("/auth/register-manager", """
-                {"nombreEmpresa":"Almacenes %s","nombre":"Raúl","apellidos":"Admin","email":"%s","contrasena":"%s"}
+                {"aceptaCondiciones":true,"nombreEmpresa":"Almacenes %s","nombre":"Raúl","apellidos":"Admin","email":"%s","contrasena":"%s"}
                 """.formatted(System.nanoTime(), email, CONTRASENA), null);
         assertThat(alta.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         // Desde la V37, el correo se confirma antes de entrar.

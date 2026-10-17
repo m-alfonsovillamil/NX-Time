@@ -985,6 +985,13 @@ public class NotificationListener {
         emailSender.enviar(evento.email(), evento.asunto(), evento.plantilla(), evento.variables());
     }
 
+    /** Ver {@link NotificationEvents.CorreoDirecto}: igual que el de arriba. */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCorreoDirecto(NotificationEvents.CorreoDirecto evento) {
+        emailSender.enviar(evento.email(), evento.asunto(), evento.plantilla(), evento.variables());
+    }
+
     /**
      * "el martes 3 de marzo" o "la semana del 2 al 8 de marzo".
      *

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--/* A los ADMIN: su empresa está aprobada (ADR 046). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Tu empresa ya está dada de alta', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p><strong th:text="${nombreEmpresa}">Tu empresa</strong> ya está dada de alta en
+        <span th:text="${producto}">NX Time</span>. Ya puedes entrar con tu correo, en la web o en la app:</p>
+
+    <p><a th:href="${web}" href="#" th:text="${web}">la web</a></p>
+
+    <p>Lo primero que te conviene hacer: dar de alta a tu equipo desde «Plantilla» y revisar los ajustes de la
+        empresa (la zona horaria y el calendario laboral).</p>
+
+    <p style="color: #6a737d;">Recuerda que la responsable de cumplir el registro de jornada, y de informar a tu
+        plantilla de cómo se tratan sus datos, es tu empresa: <span th:text="${producto}">NX Time</span> te da la
+        herramienta. Lo tienes explicado en las condiciones del servicio.</p>
+</div>
+</body>
+</html>

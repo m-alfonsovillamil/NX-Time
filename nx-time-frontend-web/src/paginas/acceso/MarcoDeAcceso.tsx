@@ -15,6 +15,7 @@
 import type { ReactNode } from 'react';
 
 import { Puntos } from '../../componentes/Basicos';
+import { PieLegal } from '../../componentes/PieLegal';
 import { T } from '../../i18n/es';
 
 export function MarcoDeAcceso({ children }: { children: ReactNode }) {
@@ -28,7 +29,10 @@ export function MarcoDeAcceso({ children }: { children: ReactNode }) {
         <p className="nx-acceso-marca__lema">{T.marca.lema}</p>
         <Puntos puntos={T.marca.puntos} />
       </aside>
-      <div className="nx-centrado">{children}</div>
+      <div className="nx-acceso-lado">
+        <div className="nx-centrado">{children}</div>
+        <PieLegal />
+      </div>
     </main>
   );
 }

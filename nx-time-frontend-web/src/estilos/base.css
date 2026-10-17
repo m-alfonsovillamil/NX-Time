@@ -3484,3 +3484,220 @@ h2 {
     background: #fff !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Las páginas legales y su pie (plan J, ADR 046)                      */
+/* ------------------------------------------------------------------ */
+
+.nx-legal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.nx-legal__cabecera {
+  padding: 16px;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-legal__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-large);
+  color: var(--nx-on-surface);
+  text-decoration: none;
+}
+
+.nx-legal__cuerpo {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  display: grid;
+  gap: 24px;
+}
+
+.nx-legal__indice ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.nx-legal__indice a {
+  color: var(--nx-primary);
+}
+
+.nx-legal__indice a[aria-current='page'] {
+  font-weight: 600;
+  color: var(--nx-on-surface);
+}
+
+/* El texto, a un ancho que se lee sin perder la línea. */
+.nx-legal__texto {
+  min-width: 0;
+  max-width: 72ch;
+  line-height: 1.6;
+}
+
+.nx-legal__texto h1 {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-headline-medium);
+  line-height: var(--nx-lh-headline-medium);
+  margin: 0 0 8px;
+}
+
+.nx-legal__texto h2 {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-large);
+  margin: 32px 0 8px;
+}
+
+.nx-legal__texto h3 {
+  font-size: var(--nx-fs-title-medium);
+  margin: 20px 0 6px;
+}
+
+.nx-legal__texto a {
+  color: var(--nx-primary);
+}
+
+.nx-legal__texto p,
+.nx-legal__texto li {
+  overflow-wrap: anywhere;
+}
+
+.nx-legal__texto li + li {
+  margin-top: 6px;
+}
+
+.nx-legal__datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 12px 0;
+}
+
+.nx-legal__datos dt {
+  font-weight: 600;
+}
+
+.nx-legal__datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Las tablas se desplazan dentro de su caja: la página no se ensancha. */
+.nx-legal__tabla {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.nx-legal__tabla table {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: var(--nx-fs-label-large);
+}
+
+.nx-legal__tabla th,
+.nx-legal__tabla td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--nx-outline-variant);
+}
+
+.nx-legal__lista-de-textos {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.nx-legal__lista-de-textos li {
+  display: grid;
+  gap: 2px;
+}
+
+@media (min-width: 900px) {
+  .nx-legal__cuerpo {
+    grid-template-columns: 240px 1fr;
+    gap: 48px;
+  }
+
+  .nx-legal__indice ul {
+    flex-direction: column;
+    position: sticky;
+    top: 24px;
+  }
+}
+
+.nx-pie-legal {
+  padding: 16px;
+  text-align: center;
+  font-size: var(--nx-fs-label-large);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-pie-legal nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+}
+
+.nx-pie-legal a {
+  color: inherit;
+}
+
+.nx-pie-legal p {
+  margin: 6px 0 0;
+}
+
+/* La columna del formulario en las pantallas de acceso, con el pie debajo. */
+.nx-acceso-lado {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* La casilla de las condiciones en el registro. */
+.nx-casilla {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+
+.nx-casilla input {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* El aviso de condiciones nuevas al ADMIN, encima de la página (ADR 046). */
+.nx-aviso-condiciones {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: var(--nx-radio-xs);
+  border-left: 3px solid var(--nx-primary);
+  background: var(--nx-surface-container-high);
+  display: grid;
+  gap: 10px;
+}
+
+.nx-aviso-condiciones p {
+  margin: 0;
+}
+
+.nx-aviso-condiciones__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

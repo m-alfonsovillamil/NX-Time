@@ -1,5 +1,10 @@
 package com.nxtime.nxtime.controller;
 
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PostMapping;
+import jakarta.validation.Valid;
+import com.nxtime.nxtime.service.CompanyLifecycleService;
+import com.nxtime.nxtime.dto.PlatformActionRequest;
 import com.nxtime.nxtime.audit.VerificadorDeAuditoria;
 import com.nxtime.nxtime.domain.PlatformOrder;
 import com.nxtime.nxtime.dto.PaginaDTO;
@@ -36,14 +41,16 @@ import org.springframework.web.bind.annotation.RestController;
  * ADMIN de cualquier empresa recibe 403 en todas estas rutas. La tienen las
  * cuentas de {@code PLATAFORMA_OPERADORES}; ver {@code OperadoresDePlataforma}.
  *
- * <b>Solo lectura, y solo cifras</b>, más el contacto de los ADMIN de cada
- * empresa. Suspender o borrar una empresa no se hace desde aquí.
+ * <b>Solo cifras</b>, más el contacto de los ADMIN de cada empresa. Desde el
+ * ADR 046 también se aprueban, rechazan, suspenden y reactivan empresas, con
+ * {@code plataforma:gestionar}; cada acción y cada consulta del detalle queda
+ * en {@code acciones_de_plataforma}.
  */
 @RestController
 @RequestMapping("/api/v1/plataforma")
 @SecurityRequirement(name = "bearerAuth")
-@Tag(name = "Plataforma", description = "La instalación entera, para quien la mantiene. Solo lectura; "
-        + "no la abre ningún rol de empresa.")
+@Tag(name = "Plataforma", description = "La instalación entera, para quien la mantiene: cifras y el alta de "
+        + "las empresas. No la abre ningún rol de empresa.")
 public class PlatformController {
 
     /** Menos que en el resto de listas: cada fila lleva sus cifras y la pantalla es una tabla. */
@@ -51,10 +58,13 @@ public class PlatformController {
 
     private final PlatformService platformService;
     private final VerificadorDeAuditoria verificador;
+    private final CompanyLifecycleService cicloDeLaEmpresa;
 
-    public PlatformController(PlatformService platformService, VerificadorDeAuditoria verificador) {
+    public PlatformController(PlatformService platformService, VerificadorDeAuditoria verificador,
+            CompanyLifecycleService cicloDeLaEmpresa) {
         this.platformService = platformService;
         this.verificador = verificador;
+        this.cicloDeLaEmpresa = cicloDeLaEmpresa;
     }
 
     @Operation(summary = "La instalación de un vistazo",
@@ -95,7 +105,7 @@ public class PlatformController {
 
     @Operation(summary = "Una empresa",
             description = "Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. "
-                    + "Cada consulta queda apuntada en el log del servidor, con quién la hizo.")
+                    + "Cada consulta queda en su historial, con quién la hizo (ADR 046).")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "La empresa",
                     content = @Content(schema = @Schema(implementation = PlatformCompanyDetailResponse.class))),
@@ -109,6 +119,89 @@ public class PlatformController {
     public ResponseEntity<PlatformCompanyDetailResponse> empresa(
             @PathVariable long id, @AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(platformService.empresa(id, usuario.getUser()));
+    }
+
+    // ------------------------------------------------------------------
+    // Aprobar, rechazar, suspender y reactivar (ADR 046)
+    // ------------------------------------------------------------------
+
+    @Operation(summary = "Aprobar una empresa pendiente",
+            description = "Desde ese momento su gente puede entrar. Se avisa por correo a sus ADMIN, y queda en "
+                    + "el historial de la empresa.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Aprobada"),
+            @ApiResponse(responseCode = "403", description = "Sin 'plataforma:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No está pendiente",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/empresas/{id}/aprobar")
+    @PreAuthorize("hasAuthority('plataforma:gestionar')")
+    public ResponseEntity<Void> aprobar(@PathVariable long id, @AuthenticationPrincipal SecurityUser usuario) {
+        cicloDeLaEmpresa.aprobar(id, usuario.getUser());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Rechazar una empresa pendiente",
+            description = "Se avisa a quien la registró, con el motivo si se da, y se borra entera: nadie de ella "
+                    + "llegó a entrar. Queda en el historial con su nombre.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Rechazada y borrada"),
+            @ApiResponse(responseCode = "403", description = "Sin 'plataforma:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No está pendiente, o tiene datos y no se puede borrar",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/empresas/{id}/rechazar")
+    @PreAuthorize("hasAuthority('plataforma:gestionar')")
+    public ResponseEntity<Void> rechazar(@PathVariable long id,
+            @Valid @RequestBody(required = false) PlatformActionRequest peticion,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        cicloDeLaEmpresa.rechazar(id, usuario.getUser(), peticion == null ? null : peticion.motivo());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Suspender una empresa activa",
+            description = "Nadie de ella puede entrar ni fichar, tampoco en sus kioscos, y se cierran todas sus "
+                    + "sesiones. Sus datos se quedan. Se avisa a sus ADMIN, con el motivo si se da.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Suspendida"),
+            @ApiResponse(responseCode = "403", description = "Sin 'plataforma:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No está activa, o es la del propio operador",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/empresas/{id}/suspender")
+    @PreAuthorize("hasAuthority('plataforma:gestionar')")
+    public ResponseEntity<Void> suspender(@PathVariable long id,
+            @Valid @RequestBody(required = false) PlatformActionRequest peticion,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        cicloDeLaEmpresa.suspender(id, usuario.getUser(), peticion == null ? null : peticion.motivo());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Reactivar una empresa suspendida",
+            description = "Su gente vuelve a poder entrar. Se avisa a sus ADMIN.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Reactivada"),
+            @ApiResponse(responseCode = "403", description = "Sin 'plataforma:gestionar'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No está suspendida",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/empresas/{id}/reactivar")
+    @PreAuthorize("hasAuthority('plataforma:gestionar')")
+    public ResponseEntity<Void> reactivar(@PathVariable long id, @AuthenticationPrincipal SecurityUser usuario) {
+        cicloDeLaEmpresa.reactivar(id, usuario.getUser());
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Comprobar la traza de auditoría entera",

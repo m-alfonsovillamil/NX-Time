@@ -46,6 +46,7 @@ public interface PlatformRepository extends Repository<Company, Long> {
     @Query(value = """
             SELECT e.id AS id,
                    e.nombre AS nombre,
+                   e.estado AS estado,
                    e.zona_horaria AS zonaHoraria,
                    e.creada_en AS creadaEn,
                    COALESCE(p.activos, 0) AS empleadosActivos,
@@ -69,7 +70,8 @@ public interface PlatformRepository extends Repository<Company, Long> {
                 LIMIT 1
             ) f ON TRUE
             WHERE :busqueda = '' OR strpos(LOWER(e.nombre), LOWER(:busqueda)) > 0
-            ORDER BY CASE WHEN :orden = 'ALTA' THEN e.creada_en END DESC NULLS LAST,
+            ORDER BY CASE WHEN e.estado = 'PENDIENTE' THEN 0 ELSE 1 END,
+                     CASE WHEN :orden = 'ALTA' THEN e.creada_en END DESC NULLS LAST,
                      CASE WHEN :orden = 'EMPLEADOS' THEN COALESCE(p.activos, 0) END DESC NULLS LAST,
                      CASE WHEN :orden = 'ACTIVIDAD' THEN f.ultimo END DESC NULLS LAST,
                      LOWER(e.nombre), e.id
@@ -247,6 +249,8 @@ public interface PlatformRepository extends Repository<Company, Long> {
         long getId();
 
         String getNombre();
+
+        String getEstado();
 
         String getZonaHoraria();
 

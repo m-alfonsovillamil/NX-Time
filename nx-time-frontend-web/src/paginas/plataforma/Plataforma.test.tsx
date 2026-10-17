@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { plataforma } from '../../i18n/es/plataforma';
-import { pintar, problema, sesionDeOperadora, simularApi } from '../../pruebas/api';
+import { pintar, problema, sesionDeOperadora, simularApi, sinContenido } from '../../pruebas/api';
 import { tamano } from './DetalleDeEmpresa';
 import { Plataforma, diaDe, empresaElegida } from './Plataforma';
 
@@ -332,5 +332,63 @@ describe('el detalle de una empresa', () => {
 
     expect(await screen.findByText('Esa empresa no existe.')).toBeTruthy();
     expect(screen.getByRole('link', { name: P.detalle.volver })).toBeTruthy();
+  });
+});
+
+describe('el alta de las empresas (ADR 046)', () => {
+  const S = P.detalle.servicio;
+  const PENDIENTE = { ...DETALLE, estado: 'PENDIENTE', historial: [] };
+
+  it('una pendiente se aprueba: se confirma y se manda', async () => {
+    const api = simularApi({
+      'GET /api/v1/plataforma/empresas/{id}': () => PENDIENTE,
+      'POST /api/v1/plataforma/empresas/{id}/aprobar': () => sinContenido(),
+    });
+    pintar(<Plataforma />, { ruta: '/plataforma?empresa=1', sesion: sesionDeOperadora() });
+
+    expect(await screen.findByText(S.estados['PENDIENTE'] ?? '')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: S.suspender })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: S.aprobar }));
+    await userEvent.click(await screen.findByRole('button', { name: S.confirmar }));
+
+    await waitFor(() => expect(api.a('POST', '/api/v1/plataforma/empresas/1/aprobar')).toHaveLength(1));
+  });
+
+  it('rechazar pide el motivo, que es lo que le llega a la empresa', async () => {
+    const api = simularApi({
+      'GET /api/v1/plataforma/empresas/{id}': () => PENDIENTE,
+      'GET /api/v1/plataforma/resumen': () => problema(500, 'no hace falta'),
+      'GET /api/v1/plataforma/empresas': () => ({ elementos: [], total: 0, pagina: 0, tamano: 25 }),
+      'POST /api/v1/plataforma/empresas/{id}/rechazar': () => sinContenido(),
+    });
+    pintar(<Plataforma />, { ruta: '/plataforma?empresa=1', sesion: sesionDeOperadora() });
+
+    await userEvent.click(await screen.findByRole('button', { name: S.rechazar }));
+    await userEvent.type(await screen.findByLabelText(S.motivo), 'No es una empresa');
+    const dialogo = screen.getByRole('dialog');
+    await userEvent.click(within(dialogo).getByRole('button', { name: S.rechazar }));
+
+    await waitFor(() =>
+      expect(api.a('POST', '/api/v1/plataforma/empresas/1/rechazar').map((l) => l.cuerpo)).toEqual([
+        { motivo: 'No es una empresa' },
+      ]),
+    );
+  });
+
+  it('una activa solo se puede suspender, y su historial dice quién hizo qué', async () => {
+    simularApi({
+      'GET /api/v1/plataforma/empresas/{id}': () => ({
+        ...DETALLE,
+        estado: 'ACTIVA',
+        historial: [{ en: '2026-10-17T10:00:00Z', operador: 'olga@nxtime.test', accion: 'APROBAR' }],
+      }),
+    });
+    pintar(<Plataforma />, { ruta: '/plataforma?empresa=1', sesion: sesionDeOperadora() });
+
+    expect(await screen.findByRole('button', { name: S.suspender })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: S.aprobar })).toBeNull();
+    const historial = screen.getByRole('table', { name: P.detalle.historial.tabla });
+    expect(within(historial).getByText('olga@nxtime.test')).toBeTruthy();
+    expect(within(historial).getByText(P.detalle.historial.acciones['APROBAR'] ?? '')).toBeTruthy();
   });
 });

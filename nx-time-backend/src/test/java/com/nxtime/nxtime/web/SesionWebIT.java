@@ -97,7 +97,7 @@ class SesionWebIT {
         ip = "198.51.100." + SIGUIENTE_IP.getAndIncrement();
         email = "ana." + System.nanoTime() + "@nxtime.test";
         String cuerpo = """
-                {"nombreEmpresa":"Empresa %s","nombre":"Ana","apellidos":"Web","email":"%s","contrasena":"%s"}
+                {"aceptaCondiciones":true,"nombreEmpresa":"Empresa %s","nombre":"Ana","apellidos":"Web","email":"%s","contrasena":"%s"}
                 """.formatted(System.nanoTime(), email, CONTRASENA);
         ResponseEntity<String> alta = rest.exchange("/auth/register-manager", HttpMethod.POST,
                 new HttpEntity<>(cuerpo, conIp(jsonHeaders())), String.class);
@@ -230,7 +230,7 @@ class SesionWebIT {
         void registroDesdeLaWeb() throws Exception {
             String eva = "eva." + System.nanoTime() + "@nxtime.test";
             String cuerpo = """
-                    {"nombreEmpresa":"Web %s","nombre":"Eva","apellidos":"Web","email":"%s",
+                    {"aceptaCondiciones":true,"nombreEmpresa":"Web %s","nombre":"Eva","apellidos":"Web","email":"%s",
                      "contrasena":"%s","origen":"WEB"}
                     """.formatted(System.nanoTime(), eva, CONTRASENA);
             ResponseEntity<String> registro = rest.exchange("/auth/register-manager", HttpMethod.POST,

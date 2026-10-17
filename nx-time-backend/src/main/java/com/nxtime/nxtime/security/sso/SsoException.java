@@ -27,6 +27,12 @@ public class SsoException extends RuntimeException {
 
         CUENTA_INACTIVA("cuenta-inactiva"),
 
+        /** Su empresa está esperando a que la aprueben (ADR 046). */
+        EMPRESA_PENDIENTE("empresa-pendiente"),
+
+        /** Su empresa está suspendida (ADR 046). */
+        EMPRESA_SUSPENDIDA("empresa-suspendida"),
+
         /** Al vincular: esa cuenta del proveedor ya es de otra persona. */
         YA_VINCULADA("ya-vinculada"),
 

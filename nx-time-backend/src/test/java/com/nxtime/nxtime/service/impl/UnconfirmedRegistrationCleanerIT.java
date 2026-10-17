@@ -78,7 +78,7 @@ class UnconfirmedRegistrationCleanerIT {
     /** Registra una empresa y la deja sin confirmar desde hace {@code horas}. */
     private User registroDeHace(String empresa, int horas) {
         String email = "admin" + System.nanoTime() + "@test.example";
-        authService.registerManager(new RegisterManagerRequest(empresa, "Alba", "Pruebas", email, "contrasena-de-prueba", "WEB"));
+        authService.registerManager(new RegisterManagerRequest(empresa, "Alba", "Pruebas", email, "contrasena-de-prueba", "WEB", true));
         jdbc.update("UPDATE usuarios SET correo_sin_confirmar_desde = ? WHERE email = ?",
                 Timestamp.from(Instant.now().minus(horas, ChronoUnit.HOURS)), email);
         return userRepository.findByEmail(email).orElseThrow();
@@ -102,7 +102,7 @@ class UnconfirmedRegistrationCleanerIT {
         assertThat(codigosDe(admin)).isEqualTo(1);
         // Mientras existe, el nombre está cogido: es el problema que esto arregla.
         assertThatThrownBy(() -> authService.registerManager(new RegisterManagerRequest(
-                empresa, "Otra", "Persona", "otra" + System.nanoTime() + "@test.example", "contrasena-de-prueba", "WEB")))
+                empresa, "Otra", "Persona", "otra" + System.nanoTime() + "@test.example", "contrasena-de-prueba", "WEB", true)))
                 .isInstanceOf(BusinessException.class);
 
         int borrados = limpieza.borrarCaducados(Instant.now());
@@ -113,7 +113,7 @@ class UnconfirmedRegistrationCleanerIT {
         assertThat(codigosDe(admin)).isZero();
         // Y ahora sí se puede registrar.
         authService.registerManager(new RegisterManagerRequest(
-                empresa, "Otra", "Persona", "otra" + System.nanoTime() + "@test.example", "contrasena-de-prueba", "WEB"));
+                empresa, "Otra", "Persona", "otra" + System.nanoTime() + "@test.example", "contrasena-de-prueba", "WEB", true));
         assertThat(companyRepository.findByNombre(empresa)).isPresent();
     }
 

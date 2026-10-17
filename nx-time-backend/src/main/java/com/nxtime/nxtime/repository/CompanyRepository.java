@@ -10,6 +10,8 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     Optional<Company> findByNombre(String nombre);
 
+    long countByEstado(com.nxtime.nxtime.domain.CompanyStatus estado);
+
     /**
      * Las zonas horarias que usa alguna empresa (ADR 032). Las tareas que
      * recorren todas las empresas a la vez van zona por zona: "el mes pasado"

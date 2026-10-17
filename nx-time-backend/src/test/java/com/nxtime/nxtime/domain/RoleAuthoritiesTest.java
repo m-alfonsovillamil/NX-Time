@@ -121,9 +121,11 @@ class RoleAuthoritiesTest {
     @EnumSource(Role.class)
     @DisplayName("Ningún rol trae lo que está fuera de los roles")
     void loDeFueraDeLosRolesNoLoTraeNingunRol(Role rol) {
-        assertThat(RoleAuthorities.FUERA_DE_LOS_ROLES).containsExactly(RoleAuthorities.PLATAFORMA_VER);
+        assertThat(RoleAuthorities.FUERA_DE_LOS_ROLES)
+                .containsExactlyInAnyOrder(RoleAuthorities.PLATAFORMA_VER, RoleAuthorities.PLATAFORMA_GESTIONAR);
         assertThat(RoleAuthorities.forRole(rol)).doesNotContainAnyElementsOf(RoleAuthorities.FUERA_DE_LOS_ROLES);
         assertThat(RoleAuthorities.rolesCon(RoleAuthorities.PLATAFORMA_VER)).isEmpty();
+        assertThat(RoleAuthorities.rolesCon(RoleAuthorities.PLATAFORMA_GESTIONAR)).isEmpty();
     }
 
     private static Set<String> authoritiesExigidasEnElFuente() throws IOException {

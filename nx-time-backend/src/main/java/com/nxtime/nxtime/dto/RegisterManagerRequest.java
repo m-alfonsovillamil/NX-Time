@@ -2,8 +2,10 @@ package com.nxtime.nxtime.dto;
 
 import com.nxtime.nxtime.dto.validacion.CabeEnBcrypt;
 import com.nxtime.nxtime.domain.Emails;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -50,7 +52,17 @@ public record RegisterManagerRequest(
          * el cuerpo. Sin esto, quien registrara su empresa desde el navegador
          * se quedaba con un refresh de un mes al alcance del JavaScript.
          */
-        String origen
+        String origen,
+
+        /**
+         * La casilla del formulario (plan J, ADR 046): «he leído y acepto las
+         * condiciones del servicio y el contrato de encargo del tratamiento, y
+         * soy mayor de edad». Sin ella no se registra nada. Se guarda la
+         * versión que estaba en vigor, cuándo y quién.
+         */
+        @NotNull(message = "Tienes que aceptar las condiciones del servicio y el contrato de encargo.")
+        @AssertTrue(message = "Tienes que aceptar las condiciones del servicio y el contrato de encargo.")
+        Boolean aceptaCondiciones
 ) {
 
     /** Ver {@link Emails}: la cuenta nace ya con el correo en minúsculas. */

@@ -190,6 +190,33 @@ application:
     # cosa. No es un rol y no se concede desde ninguna pantalla: solo aquí.
     operadores: "${PLATAFORMA_OPERADORES:}"
 
+  # Quién presta el servicio (plan J, ADR 046). Es lo que dicen el aviso legal,
+  # la política de privacidad, el contrato de encargo y security.txt, y es el
+  # ÚNICO sitio donde está: la web lo copia de aquí con `npm run titular` (y su
+  # CI comprueba que la copia no se ha quedado atrás). Para cambiar el nombre
+  # del producto, el titular o los correos, se cambia aquí y se sube
+  # `legal.version`: las empresas tienen que aceptar las condiciones nuevas.
+  #
+  # No son secretos: la LSSI (art. 10) obliga a publicarlos.
+  titular:
+    producto: "NX Time"
+    nombre: "Miguel Alfonso Villamil"
+    nif: "35478413Q"
+    domicilio: "El Campo, 8, 36620 Vilanova de Arousa (Pontevedra), España"
+    correo-privacidad: "privacidad@nxtime-web.com"
+    correo-seguridad: "seguridad@nxtime-web.com"
+    web: "https://nxtime-web.com"
+  legal:
+    # La versión de las condiciones del servicio y del contrato de encargo que
+    # se acepta al registrar una empresa. Cambiarla pide a los ADMIN de cada
+    # empresa que acepten la nueva la próxima vez que entren.
+    version: "2026-10-17"
+  alta:
+    # Las empresas que se registran esperan a que un operador del panel de
+    # plataforma las apruebe (ADR 046). En una instalación propia, para una
+    # sola empresa, se puede apagar con ALTA_REQUIERE_APROBACION=false.
+    requiere-aprobacion: ${ALTA_REQUIERE_APROBACION:true}
+
   security:
     jwt:
       # Clave secreta HMAC. Se lee de la variable de entorno JWT_SECRET.

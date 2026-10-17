@@ -13,7 +13,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 
 import { cliente, salir } from '../../api/cliente';
 import { pedir, pedirOpcional, useMutacion } from '../../api/consultas';
@@ -36,6 +36,7 @@ import {
   type PasoPush,
 } from '../../push/push';
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
+import { DOCUMENTOS } from '../legal/documentos';
 import { CuentasVinculadas, useCuentasVinculadas } from './CuentasVinculadas';
 
 const J = cuenta.ajustes;
@@ -377,6 +378,7 @@ const INDICE: readonly { id: string; icono: NombreIcono; texto: string; soloConS
   { id: 'ajustes-vinculadas', icono: 'enlace', texto: J.vinculadas.titulo, soloConSso: true },
   { id: 'ajustes-privacidad', icono: 'candado', texto: J.privacidad },
   { id: 'ajustes-app', icono: 'movil', texto: J.enLaApp },
+  { id: 'ajustes-legal', icono: 'info', texto: J.legal.titulo },
 ];
 
 export function Ajustes() {
@@ -420,6 +422,18 @@ export function Ajustes() {
           </Tarjeta>
           <Tarjeta id="ajustes-app" icono="movil" titulo={J.enLaApp}>
             <p className="nx-sutil">{J.enLaAppDetalle}</p>
+          </Tarjeta>
+          {/* Los textos legales, también desde dentro (plan J). */}
+          <Tarjeta id="ajustes-legal" icono="info" titulo={J.legal.titulo} descripcion={J.legal.descripcion}>
+            <ul className="nx-lista-simple">
+              {DOCUMENTOS.map((doc) => (
+                <li key={doc.ruta}>
+                  <Link className="nx-enlace" to={`/legal/${doc.ruta}`}>
+                    {doc.titulo}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </Tarjeta>
         </div>
       </div>

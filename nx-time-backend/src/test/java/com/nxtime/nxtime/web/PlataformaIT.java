@@ -153,7 +153,7 @@ class PlataformaIT {
 
         // Gamma: alguien la registró y nunca confirmó el correo.
         assertThat(post("/auth/register-manager", """
-                {"nombreEmpresa":"Gamma a medias","nombre":"Nadie","apellidos":"Todavía",
+                {"aceptaCondiciones":true,"nombreEmpresa":"Gamma a medias","nombre":"Nadie","apellidos":"Todavía",
                  "email":"admin.gamma@plataforma.test","contrasena":"%s"}
                 """.formatted(CONTRASENA), null).getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         gammaId = companyRepository.findByNombre("Gamma a medias").orElseThrow().getId();

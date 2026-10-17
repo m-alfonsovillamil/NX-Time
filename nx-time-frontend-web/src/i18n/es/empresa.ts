@@ -113,8 +113,8 @@ export const empresa = {
       },
       {
         icono: 'verificado',
-        titulo: 'Es lo que pide la ley',
-        texto: 'El RD-ley 8/2019 exige conservar el registro de jornada cuatro años y que sea fiable. Esta comprobación es lo que lo demuestra ante una inspección.',
+        titulo: 'Por qué importa',
+        texto: 'El RD-ley 8/2019 exige conservar el registro de jornada cuatro años y que sea fiable. Esta comprobación te ayuda a demostrar ante una inspección que nadie lo ha cambiado sin dejar rastro.',
       },
     ],
   },

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--/* A los ADMIN: su empresa está suspendida (ADR 046). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('El acceso de tu empresa está suspendido', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Hemos suspendido el acceso de <strong th:text="${nombreEmpresa}">tu empresa</strong> a
+        <span th:text="${producto}">NX Time</span>. Mientras dure, nadie de ella puede entrar ni fichar, tampoco
+        desde los kioscos.</p>
+
+    <p th:if="${motivo}">El motivo: <span th:text="${motivo}">motivo</span></p>
+
+    <p><strong>Tus datos siguen guardados</strong>: no se ha borrado nada. Tu empresa sigue obligada a llevar el
+        registro de jornada, así que mientras tanto tendrá que hacerlo por otro medio.</p>
+
+    <p>Para saber más o pedir que se reactive, escríbenos a
+        <a th:href="'mailto:' + ${correoContacto}" href="#" th:text="${correoContacto}">correo</a>.</p>
+</div>
+</body>
+</html>

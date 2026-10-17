@@ -249,6 +249,7 @@ class ApiContractTest {
     void registrarGestor_datosValidos_devuelve202YAlConfirmarTokenNombreYRol() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA,
+                "aceptaCondiciones", true,
                 "nombre", "Gestor",
                 "apellidos", "Contract",
                 "email", EMAIL_GESTOR,
@@ -301,6 +302,7 @@ class ApiContractTest {
         // tal cual, con un cuerpo ProblemDetail real.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA, // misma empresa que en el test anterior
+                "aceptaCondiciones", true,
                 "nombre", "Otro",
                 "apellidos", "Gestor",
                 "email", "otro.gestor@nxtime.test",
@@ -393,6 +395,7 @@ class ApiContractTest {
         // usuario tal cual.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", "",
+                "aceptaCondiciones", true,
                 "nombre", "",
                 "apellidos", "",
                 "email", "esto-no-es-un-email",
@@ -416,6 +419,7 @@ class ApiContractTest {
         // debe poder ver ni tocar nada de EMPRESA.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA_OTRA,
+                "aceptaCondiciones", true,
                 "nombre", "Gestor",
                 "apellidos", "Otra Empresa",
                 "email", EMAIL_GESTOR_OTRA_EMPRESA,
@@ -3344,6 +3348,7 @@ class ApiContractTest {
                 url("/auth/register-manager"),
                 new HttpEntity<>(toJson(mapOf(
                         "nombreEmpresa", "Recupera Contract SL",
+                        "aceptaCondiciones", true,
                         "nombre", "Rita",
                         "apellidos", "Levi",
                         "email", email,

@@ -28,10 +28,14 @@ import java.util.List;
  *   el cliente decide qué día es "hoy" y en qué hora enseña los fichajes, en
  *   vez de suponer Madrid. Viaja en el refresco por lo mismo que las
  *   authorities: un cambio de zona llega sin volver a entrar.
+ *
+ * @param condicionesPorAceptar si es un ADMIN y su empresa no ha aceptado la
+ *   versión en vigor de las condiciones del servicio y del contrato de encargo
+ *   (ADR 046): el cliente se lo pide. Siempre false para los demás roles.
  */
 public record AuthenticationResponse(
         String token, String refreshToken, String nombre, Role rol, List<String> authorities,
-        String zonaHoraria) {
+        String zonaHoraria, boolean condicionesPorAceptar) {
 
     /**
      * La misma respuesta sin el refresh, para el navegador (ADR 030): allí el
@@ -40,6 +44,6 @@ public record AuthenticationResponse(
      * quiere esconder.
      */
     public AuthenticationResponse sinRefreshToken() {
-        return new AuthenticationResponse(token, null, nombre, rol, authorities, zonaHoraria);
+        return new AuthenticationResponse(token, null, nombre, rol, authorities, zonaHoraria, condicionesPorAceptar);
     }
 }

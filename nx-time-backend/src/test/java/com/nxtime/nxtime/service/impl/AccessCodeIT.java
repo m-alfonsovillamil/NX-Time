@@ -282,7 +282,7 @@ class AccessCodeIT {
 
     private RegisterManagerRequest registroCon(String email) {
         return new RegisterManagerRequest(
-                "Empresa de " + System.nanoTime(), "Ada", "Lovelace", email, "contrasena-de-prueba", "WEB");
+                "Empresa de " + System.nanoTime(), "Ada", "Lovelace", email, "contrasena-de-prueba", "WEB", true);
     }
 
     @Test

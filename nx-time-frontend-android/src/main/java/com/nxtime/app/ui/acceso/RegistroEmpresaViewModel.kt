@@ -43,7 +43,14 @@ data class RegistroEmpresaUiState(
     /** La URL que hay que abrir en el navegador para empezar, hasta que se abre. */
     val abrirEnNavegador: String? = null,
     /** Con ella, el formulario no pide correo ni contraseña: quién es ya lo ha dicho el proveedor. */
-    val conCuenta: CuentaDelRegistro? = null
+    val conCuenta: CuentaDelRegistro? = null,
+    /** La casilla de las condiciones y el contrato de encargo (ADR 046). */
+    val aceptaCondiciones: Boolean = false,
+    /**
+     * Registrada, y esperando a que el operador la apruebe (423, ADR 046): lo
+     * que dice el servidor. Con ella, la pantalla solo enseña eso.
+     */
+    val empresaPendiente: MensajeUi? = null
 )
 
 class RegistroEmpresaViewModel(
@@ -81,6 +88,7 @@ class RegistroEmpresaViewModel(
     fun onEmailCambia(v: String) = _uiState.update { it.copy(email = v, error = null) }
     fun onContrasenaCambia(v: String) = _uiState.update { it.copy(contrasena = v, error = null) }
     fun onCodigoCambia(v: String) = _uiState.update { it.copy(codigo = v, error = null) }
+    fun onAceptaCambia(v: Boolean) = _uiState.update { it.copy(aceptaCondiciones = v, error = null) }
 
     /** Prepara la ida y pide a la pantalla que abra el navegador. */
     fun registrarCon(proveedor: ProveedorSsoDTO) {
@@ -166,6 +174,10 @@ class RegistroEmpresaViewModel(
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.contrasena_corta)) }
             return
         }
+        if (!e.aceptaCondiciones) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.registro_falta_aceptar)) }
+            return
+        }
 
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
@@ -176,7 +188,8 @@ class RegistroEmpresaViewModel(
                         nombre = e.nombre.trim(),
                         apellidos = e.apellidos.trim(),
                         email = e.email.trim(),
-                        contrasena = e.contrasena
+                        contrasena = e.contrasena,
+                        aceptaCondiciones = true
                     )
                 )
                 if (respuesta.isSuccessful) {
@@ -203,6 +216,10 @@ class RegistroEmpresaViewModel(
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.error_campos_obligatorios)) }
             return
         }
+        if (!e.aceptaCondiciones) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.registro_falta_aceptar)) }
+            return
+        }
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
@@ -211,13 +228,16 @@ class RegistroEmpresaViewModel(
                         pase = cuenta.pase,
                         nombreEmpresa = e.empresa.trim(),
                         nombre = e.nombre.trim(),
-                        apellidos = e.apellidos.trim()
+                        apellidos = e.apellidos.trim(),
+                        aceptaCondiciones = true
                     )
                 )
                 val sesion = respuesta.body()
                 if (respuesta.isSuccessful && sesion != null) {
                     authRepository.procesarLoginExitoso(sesion)
                     _uiState.update { it.copy(cargando = false, registrado = true) }
+                } else if (respuesta.code() == EMPRESA_NO_ACTIVA) {
+                    _uiState.update { it.copy(cargando = false, empresaPendiente = ApiErrorParser.mensajeDe(respuesta)) }
                 } else if (respuesta.code() == PASE_CADUCADO) {
                     // El pase ya no vale: se vuelve al formulario de siempre,
                     // con los botones para empezar otra vez.
@@ -255,6 +275,9 @@ class RegistroEmpresaViewModel(
                 if (respuesta.isSuccessful && cuerpo != null) {
                     authRepository.procesarLoginExitoso(cuerpo)
                     _uiState.update { it.copy(cargando = false, registrado = true) }
+                } else if (respuesta.code() == EMPRESA_NO_ACTIVA) {
+                    // El correo ya está confirmado; la empresa espera aprobación (ADR 046).
+                    _uiState.update { it.copy(cargando = false, empresaPendiente = ApiErrorParser.mensajeDe(respuesta)) }
                 } else {
                     _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
                 }
@@ -269,6 +292,9 @@ class RegistroEmpresaViewModel(
 
         /** Lo que responde el servidor a un pase que no vale o ha caducado. */
         private const val PASE_CADUCADO = 404
+
+        /** Lo que responde el servidor si la empresa espera aprobación o está suspendida (ADR 046). */
+        private const val EMPRESA_NO_ACTIVA = 423
     }
 }
 
@@ -281,6 +307,8 @@ internal fun mensajeDeRegistroConSso(motivo: String): Int = when (motivo) {
     "cancelado" -> R.string.registro_sso_error_cancelado
     "correo-sin-verificar" -> R.string.registro_sso_error_correo_sin_verificar
     "cuenta-inactiva" -> R.string.registro_sso_error_cuenta_inactiva
+    "empresa-pendiente" -> R.string.registro_sso_error_empresa_pendiente
+    "empresa-suspendida" -> R.string.registro_sso_error_empresa_suspendida
     "ya-tiene-otra" -> R.string.registro_sso_error_ya_tiene_otra
     "no-disponible" -> R.string.registro_sso_error_no_disponible
     else -> R.string.registro_sso_error_fallo

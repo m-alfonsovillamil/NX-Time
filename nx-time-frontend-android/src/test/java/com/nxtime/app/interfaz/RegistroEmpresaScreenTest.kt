@@ -1,6 +1,7 @@
 package com.nxtime.app.interfaz
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -130,11 +131,13 @@ class RegistroEmpresaScreenTest {
         pantalla.onNodeWithText(texto(R.string.registro_empresa)).performTextInput("Talleres Eva SL")
         pantalla.onNodeWithText(texto(R.string.registro_nombre)).performTextInput("Eva")
         pantalla.onNodeWithText(texto(R.string.registro_apellidos)).performTextInput("Martín")
+        // La casilla de las condiciones (ADR 046).
+        pantalla.onNode(isToggleable()).performScrollTo().performClick()
         pantalla.onNodeWithText(texto(R.string.registro_crear)).performScrollTo().performClick()
         pantalla.waitForIdle()
 
         verifyBlocking(repositorio) {
-            registrarEmpresaConSso(PeticionRegistroSso("el-pase", "Talleres Eva SL", "Eva", "Martín"))
+            registrarEmpresaConSso(PeticionRegistroSso("el-pase", "Talleres Eva SL", "Eva", "Martín", true))
         }
         verifyBlocking(repositorio) { procesarLoginExitoso(sesion) }
         verifyBlocking(repositorio, never()) { registrarEmpresaGestor(any()) }
