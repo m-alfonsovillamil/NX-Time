@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nxtime.app.BuildConfig
 import com.nxtime.app.R
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
@@ -74,6 +75,13 @@ fun RegistroEmpresaScreen(
         onVolver = onVolver
     ) { modifier ->
         ColumnaFormulario(modifier = modifier) {
+            // Registrada y esperando aprobación (ADR 046): solo eso.
+            val pendiente = estado.empresaPendiente
+            if (pendiente != null) {
+                EmpresaPendiente(mensaje = pendiente.resolver(), onVolver = onVolver)
+                return@ColumnaFormulario
+            }
+
             // Desde la V37 (ADR 034) registrar no abre sesión: se pide el
             // código que ha salido hacia el correo.
             val pendienteDe = estado.pendienteDe
@@ -134,6 +142,12 @@ fun RegistroEmpresaScreen(
                     ultimo = true
                 )
             }
+
+            CasillaDeCondiciones(
+                marcada = estado.aceptaCondiciones,
+                onCambia = viewModel::onAceptaCambia,
+                onAbrir = { ruta -> abrirEnElNavegador(contexto, BuildConfig.WEB_URL + ruta) }
+            )
 
             BotonPrincipal(
                 texto = stringResource(R.string.registro_crear),

@@ -506,6 +506,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plataforma/empresas/{id}/suspender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspender una empresa activa
+         * @description Nadie de ella puede entrar ni fichar, tampoco en sus kioscos, y se cierran todas sus sesiones. Sus datos se quedan. Se avisa a sus ADMIN, con el motivo si se da.
+         */
+        post: operations["suspender"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/rechazar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rechazar una empresa pendiente
+         * @description Se avisa a quien la registró, con el motivo si se da, y se borra entera: nadie de ella llegó a entrar. Queda en el historial con su nombre.
+         */
+        post: operations["rechazar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/reactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivar una empresa suspendida
+         * @description Su gente vuelve a poder entrar. Se avisa a sus ADMIN.
+         */
+        post: operations["reactivar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/aprobar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aprobar una empresa pendiente
+         * @description Desde ese momento su gente puede entrar. Se avisa por correo a sus ADMIN, y queda en el historial de la empresa.
+         */
+        post: operations["aprobar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/verificar-contrasena": {
         parameters: {
             query?: never;
@@ -953,6 +1033,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/condiciones/aceptar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar las condiciones en vigor
+         * @description En nombre de la empresa. Queda la versión, la fecha y quién.
+         */
+        post: operations["aceptar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispositivos-push": {
         parameters: {
             query?: never;
@@ -1252,7 +1352,7 @@ export interface paths {
          * Rechazar un borrado
          * @description Con comentario obligatorio: se le manda a la persona para que sepa por qué y qué tiene que resolver antes de volver a pedirlo.
          */
-        post: operations["rechazar"];
+        post: operations["rechazar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1900,7 +2000,7 @@ export interface paths {
         };
         /**
          * Una empresa
-         * @description Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda apuntada en el log del servidor, con quién la hizo.
+         * @description Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda en su historial, con quién la hizo (ADR 046).
          */
         get: operations["empresa"];
         put?: never;
@@ -2387,6 +2487,26 @@ export interface paths {
          * @description 204 si no hay ninguna jornada abierta.
          */
         get: operations["getActiveTimeEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/empresa/condiciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las condiciones de mi empresa
+         * @description La versión en vigor, la que tiene aceptada la empresa, cuándo y quién.
+         */
+        get: operations["condiciones"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3299,6 +3419,7 @@ export interface components {
             nombreEmpresa: string;
             nombre: string;
             apellidos: string;
+            aceptaCondiciones: boolean;
         };
         AuthenticationResponse: {
             token?: string;
@@ -3308,6 +3429,7 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
             zonaHoraria?: string;
+            condicionesPorAceptar?: boolean;
         };
         SsoExchangeRequest: {
             codigo: string;
@@ -3324,6 +3446,7 @@ export interface components {
             nombreEmpresa: string;
             nombre: string;
             apellidos: string;
+            aceptaCondiciones: boolean;
         };
         ConfirmRegistrationRequest: {
             /** Format: email */
@@ -3339,6 +3462,7 @@ export interface components {
             email: string;
             contrasena: string;
             origen?: string;
+            aceptaCondiciones: boolean;
         };
         RegistrationPendingResponse: {
             email?: string;
@@ -3414,6 +3538,9 @@ export interface components {
             /** Format: date */
             fechaFin?: string;
             vigente?: boolean;
+        };
+        PlatformActionRequest: {
+            motivo?: string;
         };
         /** @description Comprobar la contraseña propia, sin emitir tokens */
         VerifyPasswordRequest: {
@@ -3642,6 +3769,22 @@ export interface components {
             /** Format: date-time */
             ultimoUso?: string;
             activo?: boolean;
+        };
+        /** @description Qué versión de las condiciones está en vigor y cuál tiene aceptada la empresa */
+        CompanyTermsResponse: {
+            /**
+             * @description La versión en vigor
+             * @example 2026-10-17
+             */
+            versionVigente?: string;
+            /** @description La que tiene aceptada la empresa. Null si ninguna */
+            versionAceptada?: string;
+            /** Format: date-time */
+            aceptadaEn?: string;
+            /** @description Quién las aceptó en nombre de la empresa. Null si ninguna, o si ya no está */
+            aceptadaPor?: string;
+            /** @description Si falta aceptar la versión en vigor */
+            porAceptar?: boolean;
         };
         RegisterPushDeviceRequest: {
             token: string;
@@ -4043,6 +4186,11 @@ export interface components {
             registrosSinConfirmar?: number;
             /**
              * Format: int64
+             * @description Empresas con el correo confirmado que esperan a que el operador las apruebe (ADR 046)
+             */
+            empresasPendientes?: number;
+            /**
+             * Format: int64
              * @description Fichajes empezados hoy (día de Madrid), sin los anulados
              */
             fichajesHoy?: number;
@@ -4109,6 +4257,11 @@ export interface components {
             id?: number;
             nombre?: string;
             /**
+             * @description PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046). Las pendientes salen las primeras
+             * @enum {string}
+             */
+            estado?: "PENDIENTE" | "ACTIVA" | "SUSPENDIDA";
+            /**
              * @description Nombre IANA de su zona horaria
              * @example Europe/Madrid
              */
@@ -4169,11 +4322,35 @@ export interface components {
             /** Format: int64 */
             deBaja?: number;
         };
+        PlatformActionDTO: {
+            /** Format: date-time */
+            en?: string;
+            operador?: string;
+            /** @enum {string} */
+            accion?: "CONSULTAR" | "APROBAR" | "RECHAZAR" | "SUSPENDER" | "REACTIVAR";
+            motivo?: string;
+        };
         /** @description El detalle de una empresa de la instalación: cifras de uso y el contacto de sus administradores */
         PlatformCompanyDetailResponse: {
             /** Format: int64 */
             id?: number;
             nombre?: string;
+            /**
+             * @description PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046)
+             * @enum {string}
+             */
+            estado?: "PENDIENTE" | "ACTIVA" | "SUSPENDIDA";
+            /**
+             * Format: date-time
+             * @description Cuándo la aprobó el operador. Null si no lo ha hecho, o si es de antes de la V43
+             */
+            aprobadaEn?: string;
+            /** @description La versión de las condiciones que tiene aceptada. Null si ninguna */
+            condicionesVersion?: string;
+            /** Format: date-time */
+            condicionesAceptadasEn?: string;
+            /** @description Lo que ha hecho y mirado el operador con ella, lo más reciente primero (hasta 50) */
+            historial?: components["schemas"]["PlatformActionDTO"][];
             /**
              * @description Nombre IANA de su zona horaria
              * @example Europe/Madrid
@@ -5628,6 +5805,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     canjearRegistro: {
@@ -5703,6 +5889,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     canjear: {
@@ -5736,6 +5931,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     confirmarRegistro: {
@@ -5762,6 +5966,15 @@ export interface operations {
             };
             /** @description Datos inválidos, o un código incorrecto, caducado, usado o anulado. El mensaje es el mismo en todos los casos. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6042,6 +6255,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
             /** @description Demasiados intentos desde esta IP */
             429: {
                 headers: {
@@ -6261,6 +6483,202 @@ export interface operations {
                 };
             };
             /** @description Ya está asignado a otro proyecto en esas fechas */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    suspender: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlatformActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Suspendida */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está activa, o es la del propio operador */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    rechazar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlatformActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Rechazada y borrada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está pendiente, o tiene datos y no se puede borrar */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    reactivar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reactivada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está suspendida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    aprobar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aprobada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está pendiente */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7510,6 +7928,35 @@ export interface operations {
             };
         };
     };
+    aceptar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aceptadas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyTermsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     registrar_1: {
         parameters: {
             query?: never;
@@ -8313,7 +8760,7 @@ export interface operations {
             };
         };
     };
-    rechazar: {
+    rechazar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -11107,6 +11554,35 @@ export interface operations {
                 };
             };
             /** @description Sin la authority 'fichaje:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    condiciones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las condiciones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyTermsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
             403: {
                 headers: {
                     [name: string]: unknown;

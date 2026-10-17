@@ -32,6 +32,12 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
             + "WHERE r.usuario = :usuario AND r.revocado = false")
     int revocarTodasLasDe(@Param("usuario") User usuario, @Param("cuando") Instant cuando);
 
+    /** Las de toda una empresa: al suspenderla (ADR 046). */
+    @Modifying
+    @Query("UPDATE refresh_tokens r SET r.revocado = true, r.revocadoEn = :cuando "
+            + "WHERE r.usuario.id IN (SELECT u.id FROM usuarios u WHERE u.empresa.id = :empresaId) AND r.revocado = false")
+    int revocarLasDeLaEmpresa(@Param("empresaId") long empresaId, @Param("cuando") Instant cuando);
+
     /**
      * Todas las sesiones de una persona menos una: la de quien acaba de
      * cambiar la contraseña (ADR 034).

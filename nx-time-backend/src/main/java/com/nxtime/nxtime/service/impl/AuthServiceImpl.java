@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.CompanyStatus;
 import com.nxtime.nxtime.domain.RefreshToken;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
@@ -25,6 +27,7 @@ import com.nxtime.nxtime.security.OperadoresDePlataforma;
 import com.nxtime.nxtime.security.TurnoDeContrasena;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
+import com.nxtime.nxtime.service.CompanyLifecycleService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -43,6 +46,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -103,6 +107,8 @@ public class AuthServiceImpl implements AuthService {
     private final TransactionTemplate escritura;
 
     private final TurnoDeContrasena turnoDeContrasena;
+    private final CondicionesDelServicio servicio;
+    private final CompanyLifecycleService cicloDeLaEmpresa;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -128,7 +134,9 @@ public class AuthServiceImpl implements AuthService {
             LimitadorDeIntentosPorCuenta limitadorPorCuenta,
             OperadoresDePlataforma operadores,
             PlatformTransactionManager transacciones,
-            TurnoDeContrasena turnoDeContrasena
+            TurnoDeContrasena turnoDeContrasena,
+            CondicionesDelServicio servicio,
+            CompanyLifecycleService cicloDeLaEmpresa
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -142,6 +150,8 @@ public class AuthServiceImpl implements AuthService {
         this.operadores = operadores;
         this.escritura = new TransactionTemplate(transacciones);
         this.turnoDeContrasena = turnoDeContrasena;
+        this.servicio = servicio;
+        this.cicloDeLaEmpresa = cicloDeLaEmpresa;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -196,9 +206,15 @@ public class AuthServiceImpl implements AuthService {
             usuario.setContrasena(laMisma ? contrasena : contrasenaInutilizable());
             usuario.setCorreoSinConfirmarDesde(Instant.now());
             usuario = userRepository.save(usuario);
+            suya.aceptarCondiciones(servicio.version(), usuario, Instant.now());
+            companyRepository.save(suya);
         } else {
             exigirNombreLibre(request.nombreEmpresa());
-            Company company = companyRepository.save(Company.builder().nombre(request.nombreEmpresa()).build());
+            // Pendiente de aprobar desde el principio (ADR 046), aunque hasta
+            // confirmar el correo no se avisa a nadie: no se sabe si es suyo.
+            Company company = companyRepository.save(Company.builder().nombre(request.nombreEmpresa())
+                    .estado(servicio.requiereAprobacion() ? CompanyStatus.PENDIENTE : CompanyStatus.ACTIVA)
+                    .build());
             usuario = userRepository.save(User.builder()
                     .nombre(request.nombre())
                     .apellidos(request.apellidos())
@@ -208,6 +224,9 @@ public class AuthServiceImpl implements AuthService {
                     .empresa(company)
                     .correoSinConfirmarDesde(Instant.now())
                     .build());
+            // La casilla del formulario, que el DTO exige marcada.
+            company.aceptarCondiciones(servicio.version(), usuario, Instant.now());
+            companyRepository.save(company);
         }
 
         accessCodeService.emitirCodigoDeConfirmacion(usuario);
@@ -269,6 +288,13 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(noRollbackFor = BusinessException.class)
     public AuthenticationResponse confirmarRegistro(ConfirmRegistrationRequest request) {
         User usuario = accessCodeService.confirmarCorreo(request.email(), request.codigo());
+        if (usuario.getEmpresa().getEstado() == CompanyStatus.PENDIENTE) {
+            // Ahora sí se sabe que el correo es suyo: se avisa al operador, y
+            // a esta persona se le dice que espere (423). Lanzar no deshace el
+            // canje del código: ver el noRollbackFor de arriba.
+            cicloDeLaEmpresa.avisarDeQueEspera(usuario.getEmpresa(), usuario);
+            throw cicloDeLaEmpresa.noDisponible(usuario.getEmpresa());
+        }
         return buildAuthResponse(usuario, origenDe(request.origen()));
     }
 
@@ -302,6 +328,18 @@ public class AuthServiceImpl implements AuthService {
             // Por turnos, tantas a la vez como procesadores: ver TurnoDeContrasena.
             turnoDeContrasena.conTurno(() -> authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email(), request.contrasena())));
+        } catch (DisabledException e) {
+            // La contraseña era buena: el estado se mira después de ella (ver
+            // ApplicationConfig). O la cuenta está de baja, que sigue siendo un
+            // intento fallido como siempre, o es su empresa la que no está
+            // activa (ADR 046), y eso se le dice más abajo, con el correo
+            // pendiente de confirmar por delante si lo tiene.
+            Boolean deAlta = escritura.execute(estado -> userRepository.findByEmail(request.email())
+                    .map(User::isActivo).orElse(false));
+            if (!Boolean.TRUE.equals(deAlta)) {
+                limitadorPorCuenta.fallo(request.email());
+                throw e;
+            }
         } catch (InternalAuthenticationServiceException e) {
             // No es la contraseña: es que no se ha podido leer a la persona.
             // Spring lo envuelve en una excepción de autenticación, y dejarla
@@ -344,6 +382,8 @@ public class AuthServiceImpl implements AuthService {
             accessCodeService.emitirCodigoDeConfirmacion(user);
             return null;
         }
+        // Pendiente de aprobar o suspendida (ADR 046): 423 con lo que tiene que hacer.
+        cicloDeLaEmpresa.exigirActiva(user.getEmpresa());
 
         log.info("Login correcto: {}", user.getId());
         return buildAuthResponse(user, origenDe(request.origen()));
@@ -422,7 +462,9 @@ public class AuthServiceImpl implements AuthService {
         // le seguían saliendo access tokens durante los treinta días de su
         // refresh (plan J). Los filtros lo paraban en cada petición, pero un
         // token emitido para una cuenta de baja no debería existir.
-        if (!user.isActivo()) {
+        if (!user.isActivo() || (user.getEmpresa() != null && !user.getEmpresa().estaActiva())) {
+            // Ni si su empresa ya no está activa (ADR 046): al suspenderla se
+            // revocan sus sesiones, pero esto no depende de que se hiciera.
             throw new BadCredentialsException("Refresh token inválido o caducado.");
         }
         // El sucesor conserva familia y origen: es la misma sesión, con otro
@@ -436,7 +478,7 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtService.generateToken(operadores.principalDe(user), stored.getFamilia());
         log.info("Access token renovado para {}", user.getId());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
-                operadores.authoritiesDe(user), user.zona().getId());
+                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user));
     }
 
     @Override
@@ -460,6 +502,7 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(usuarioId)
                 .filter(User::isActivo)
                 .orElseThrow(() -> new BadCredentialsException("La cuenta no existe o está dada de baja."));
+        cicloDeLaEmpresa.exigirActiva(user.getEmpresa());
         return buildAuthResponse(user, origen);
     }
 
@@ -651,7 +694,18 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateToken(operadores.principalDe(user), familia);
         TokenEmitido refreshToken = issueRefreshToken(user, origen, familia);
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
-                operadores.authoritiesDe(user), user.zona().getId());
+                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user));
+    }
+
+    /**
+     * Si a esta persona hay que pedirle que acepte las condiciones en vigor
+     * (ADR 046): solo a un ADMIN, que es quien compromete a la empresa, y solo
+     * si su empresa aceptó otra versión o ninguna (las de antes de la V43).
+     */
+    private boolean condicionesPorAceptar(User user) {
+        return user.getRol() == Role.ADMIN
+                && user.getEmpresa() != null
+                && !servicio.version().equals(user.getEmpresa().getCondicionesVersion());
     }
 
     /**

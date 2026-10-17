@@ -623,9 +623,29 @@ Por eso hay dos capas:
 | Capa | Cubre | Dónde |
 |---|---|---|
 | Restauración instantánea de Neon | las últimas 6 horas | consola de Neon → *Branches* → `production` → *Restore* (sobrescribe la rama y guarda el estado anterior en una rama de respaldo) |
-| Copia diaria propia | 30 días, y nunca menos de 7 copias | `scripts/copia-neon.ps1` → `OneDrive\Copias NX Time` |
+| Copia diaria propia, cifrada | 30 días, y nunca menos de 7 copias | `scripts/copia-neon.ps1` → `OneDrive\Copias NX Time` |
 
 ### La copia diaria
+
+> **Cifrada desde el 17/10/2026** (plan J). La copia lleva los datos de todas las
+> empresas, y OneDrive es un proveedor más. `copia-neon.ps1` la cifra con `gpg`
+> (AES-256, el de Git para Windows) y una frase guardada **fuera de OneDrive**,
+> en `%LOCALAPPDATA%\NX Time\clave-de-las-copias.txt`. Sin ese fichero la copia
+> **falla** (y deja `ULTIMA-COPIA-FALLIDA.txt`), a propósito.
+>
+> Una sola vez, en el PC de las copias:
+>
+> ```powershell
+> New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\NX Time"
+> $b = New-Object byte[] 48
+> [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+> [Convert]::ToBase64String($b) | Set-Content "$env:LOCALAPPDATA\NX Time\clave-de-las-copias.txt" -NoNewline
+> ```
+>
+> Y **guarda esa frase también en tu gestor de contraseñas**: si se pierde el PC,
+> las copias de OneDrive no se pueden abrir sin ella. Después, borra a mano las
+> copias viejas sin cifrar (`nxtime-*.dump`; el registro avisa mientras queden).
+> Para restaurar una cifrada: `scripts/probar-restauracion.sh nxtime-....dump.gpg`.
 
 `scripts/copia-neon.ps1` hace un `pg_dump` en formato custom con la conexión
 **directa** (`DATABASE_URL_UNPOOLED` de `.env.local`: PgBouncer no admite el

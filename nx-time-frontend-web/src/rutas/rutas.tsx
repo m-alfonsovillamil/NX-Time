@@ -50,6 +50,7 @@ const RegistroEmpresa = lazy(() =>
  * navegador. Su propio trozo: nadie más se lo descarga.
  */
 const Kiosco = lazy(() => import('../paginas/kiosco/Kiosco').then((m) => ({ default: m.Kiosco })));
+const Legal = lazy(() => import('../paginas/legal/Legal').then((m) => ({ default: m.Legal })));
 
 /** Lo que el login lee para volver a donde se quería ir. */
 export interface EstadoDeVuelta {
@@ -153,8 +154,11 @@ export function App() {
   const restaurando = useRestaurandoSesion();
   useVaciarCacheAlSalir();
   const secciones = disponibles();
+  // Los textos legales no esperan a recuperar la sesión, que espera a la API:
+  // el aviso legal tiene que leerse siempre, también con el servidor dormido.
+  const enLegal = useLocation().pathname.startsWith('/legal');
 
-  if (restaurando) {
+  if (restaurando && !enLegal) {
     return (
       <div className="nx-fondo">
         <ServidorDespertando />
@@ -173,6 +177,8 @@ export function App() {
           <Route path="/recuperar-acceso" element={dentro ? <Navigate to="/fichar" replace /> : <RecuperarAcceso />} />
           <Route path="/registro" element={dentro ? <Navigate to="/fichar" replace /> : <RegistroEmpresa />} />
           <Route path="/kiosco" element={<Kiosco />} />
+          <Route path="/legal" element={<Legal />} />
+          <Route path="/legal/:ruta" element={<Legal />} />
           {dentro ? (
             <Route element={<Marco />}>
               {secciones.map(({ ruta, requiere, pagina: Pagina }) => (

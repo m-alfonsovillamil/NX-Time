@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<!--/* A quien registró la empresa: no se ha aprobado, y se ha borrado (ADR 046). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('No hemos podido dar de alta tu empresa', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>No hemos podido dar de alta <strong th:text="${nombreEmpresa}">tu empresa</strong> en
+        <span th:text="${producto}">NX Time</span>.</p>
+
+    <p th:if="${motivo}">El motivo: <span th:text="${motivo}">motivo</span></p>
+
+    <p>Hemos borrado el registro y los datos que dejaste al hacerlo. Si crees que es un error, escríbenos a
+        <a th:href="'mailto:' + ${correoContacto}" href="#" th:text="${correoContacto}">correo</a>.</p>
+</div>
+</body>
+</html>

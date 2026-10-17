@@ -123,6 +123,7 @@ function Instalacion() {
 
 function Totales({ resumen: r }: { resumen: Resumen }) {
   const sinConfirmar = r.registrosSinConfirmar ?? 0;
+  const pendientes = r.empresasPendientes ?? 0;
   return (
     <Cifras etiqueta={P.resumen.titulo}>
       <Cifra
@@ -130,6 +131,12 @@ function Totales({ resumen: r }: { resumen: Resumen }) {
         etiqueta={P.resumen.empresas}
         valor={r.empresas ?? 0}
         detalle={P.resumen.conActividad(r.empresasConActividad ?? 0)}
+      />
+      <Cifra
+        icono="verificado"
+        etiqueta={P.resumen.pendientes}
+        valor={pendientes}
+        {...(pendientes > 0 ? { tono: 'destacada' as const, detalle: P.resumen.pendientesDetalle } : {})}
       />
       <Cifra icono="grupo" etiqueta={P.resumen.cuentas} valor={r.empleadosActivos ?? 0} />
       <Cifra icono="reloj" etiqueta={P.resumen.fichajesHoy} valor={r.fichajesHoy ?? 0} />
@@ -156,6 +163,12 @@ const COLUMNAS: readonly Columna<Empresa>[] = [
         <Link className="nx-enlace" to={`/plataforma?empresa=${e.id ?? 0}`}>
           {e.nombre}
         </Link>
+        {e.estado !== undefined && e.estado !== 'ACTIVA' && (
+          <>
+            {' '}
+            <Insignia tono={e.estado === 'PENDIENTE' ? 'aviso' : 'error'}>{P.lista.estados[e.estado] ?? e.estado}</Insignia>
+          </>
+        )}
         {e.registroSinConfirmar === true && (
           <>
             {' '}

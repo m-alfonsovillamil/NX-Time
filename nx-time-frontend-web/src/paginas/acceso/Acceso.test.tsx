@@ -149,6 +149,7 @@ describe('registrar una empresa', () => {
     await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
     await userEvent.type(screen.getByLabelText(G.email), ' eva@talleres.test ');
     await userEvent.type(screen.getByLabelText(G.contrasena), 'unaBuena123');
+    await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: G.crear }));
 
     expect(await screen.findByRole('heading', { name: C.titulo })).toBeTruthy();
@@ -168,6 +169,7 @@ describe('registrar una empresa', () => {
         email: 'eva@talleres.test',
         contrasena: 'unaBuena123',
         origen: 'WEB',
+        aceptaCondiciones: true,
       },
     ]);
     await waitFor(() => expect(sesionActual()?.nombre).toBe('Eva'));
@@ -183,6 +185,46 @@ describe('registrar una empresa', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(G.faltan);
     // Lo único que sale es la pregunta por los proveedores, al cargar.
     expect(llamadas.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0);
+  });
+
+  it('sin marcar la casilla de las condiciones no se manda nada (ADR 046)', async () => {
+    const llamadas = simularApi({});
+    pintar(<RegistroEmpresa />);
+
+    await userEvent.type(screen.getByLabelText(G.empresa), 'Talleres Eva SL');
+    await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
+    await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.type(screen.getByLabelText(G.email), 'eva@talleres.test');
+    await userEvent.type(screen.getByLabelText(G.contrasena), 'unaBuena123');
+    await userEvent.click(screen.getByRole('button', { name: G.crear }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(G.faltaAceptar);
+    expect(llamadas.llamadas.filter((l) => l.metodo !== 'GET')).toHaveLength(0);
+    // Y los textos se pueden leer sin perder lo escrito: abren otra pestaña.
+    expect(screen.getByRole('link', { name: G.acepto.condiciones }).getAttribute('target')).toBe('_blank');
+  });
+
+  it('al confirmar el correo con la empresa pendiente de aprobar (423), lo dice y no abre sesión', async () => {
+    simularApi({
+      'POST /auth/register-manager': () => json({ email: 'eva@talleres.test', mensaje: 'Te hemos mandado un código' }, 202),
+      'POST /auth/registro/confirmar': () =>
+        problema(423, 'Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.'),
+    });
+    pintar(<RegistroEmpresa />);
+
+    await userEvent.type(screen.getByLabelText(G.empresa), 'Talleres Eva SL');
+    await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
+    await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.type(screen.getByLabelText(G.email), 'eva@talleres.test');
+    await userEvent.type(screen.getByLabelText(G.contrasena), 'unaBuena123');
+    await userEvent.click(screen.getByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: G.crear }));
+    await userEvent.type(await screen.findByLabelText(C.codigo), '123456');
+    await userEvent.click(screen.getByRole('button', { name: C.entrar }));
+
+    expect(await screen.findByRole('heading', { name: T.pendiente.titulo })).toBeTruthy();
+    expect(screen.getByText(/pendiente de aprobación/)).toBeTruthy();
+    expect(sesionActual()).toBeNull();
   });
 });
 
@@ -243,11 +285,12 @@ describe('registrar una empresa con Google o Microsoft', () => {
     await userEvent.type(screen.getByLabelText(G.empresa), ' Talleres Eva SL ');
     await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
     await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: G.crear }));
 
     expect(await screen.findByRole('heading', { name: 'Mi jornada' })).toBeTruthy();
     expect(llamadas.a('POST', '/auth/sso/registro').map((l) => l.cuerpo)).toEqual([
-      { nombreEmpresa: 'Talleres Eva SL', nombre: 'Eva', apellidos: 'Martín' },
+      { nombreEmpresa: 'Talleres Eva SL', nombre: 'Eva', apellidos: 'Martín', aceptaCondiciones: true },
     ]);
     expect(llamadas.a('POST', '/auth/register-manager')).toHaveLength(0);
     await waitFor(() => expect(sesionActual()?.nombre).toBe('Eva'));
@@ -265,6 +308,7 @@ describe('registrar una empresa con Google o Microsoft', () => {
     await userEvent.type(await screen.findByLabelText(G.empresa), 'TechCorp');
     await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
     await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: G.crear }));
 
     expect((await screen.findByRole('alert')).textContent).toBe(
@@ -273,6 +317,26 @@ describe('registrar una empresa con Google o Microsoft', () => {
     expect(sesionActual()).toBeNull();
     // Sigue en el formulario corto: no hay que volver al proveedor.
     expect(screen.queryByLabelText(G.contrasena)).toBeNull();
+  });
+
+  it('registrada con la cuenta de fuera y pendiente de aprobar (423): lo dice, sin sesión', async () => {
+    window.history.replaceState({}, '', '/registro?sso=continuar');
+    simularApi({
+      'GET /auth/sso/proveedores': () => json(proveedores),
+      'GET /auth/sso/registro': () => json({ proveedor: 'google', nombre: 'Google', correo: 'eva@gmail.test' }),
+      'POST /auth/sso/registro': () =>
+        problema(423, 'Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.'),
+    });
+    pintar(<RegistroEmpresa />);
+
+    await userEvent.type(await screen.findByLabelText(G.empresa), 'Talleres Eva SL');
+    await userEvent.type(screen.getByLabelText(G.nombre), 'Eva');
+    await userEvent.type(screen.getByLabelText(G.apellidos), 'Martín');
+    await userEvent.click(screen.getByRole('checkbox'));
+    await userEvent.click(screen.getByRole('button', { name: G.crear }));
+
+    expect(await screen.findByRole('heading', { name: T.pendiente.titulo })).toBeTruthy();
+    expect(sesionActual()).toBeNull();
   });
 
   it('si el registro a medias ha caducado lo dice y deja el formulario de siempre', async () => {

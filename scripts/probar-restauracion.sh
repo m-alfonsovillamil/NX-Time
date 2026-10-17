@@ -8,6 +8,7 @@
 #
 #   scripts/probar-restauracion.sh                  # copia NUEVA de producción
 #   scripts/probar-restauracion.sh copia.dump       # una copia ya hecha
+#   scripts/probar-restauracion.sh copia.dump.gpg   # una copia diaria, cifrada
 #
 # Sin argumento hace un pg_dump de producción en el momento (lee
 # DATABASE_URL_UNPOOLED de .env.local) y además compara las filas de cada
@@ -76,6 +77,15 @@ if [ -z "$DUMP" ]; then
     COMPARAR=true
 fi
 [ -f "$DUMP" ] || { echo "No existe $DUMP"; exit 2; }
+# Las copias diarias van cifradas desde el 17/10/2026 (plan J): se descifran a
+# la carpeta temporal con la misma frase que usa copia-neon.ps1.
+if [ "${DUMP%.gpg}" != "$DUMP" ]; then
+    CLAVE="${CLAVE_COPIAS:-$LOCALAPPDATA/NX Time/clave-de-las-copias.txt}"
+    [ -f "$CLAVE" ] || { echo "No existe $CLAVE (la frase de las copias; o pon su ruta en CLAVE_COPIAS)"; exit 2; }
+    gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-file "$CLAVE" \
+        --decrypt --output "$TMP/copia.dump" "$DUMP" || { echo "No se ha podido descifrar $DUMP"; exit 2; }
+    DUMP="$TMP/copia.dump"
+fi
 echo "Copia: $DUMP ($(wc -c < "$DUMP") bytes)"
 
 # --- PostgreSQL desechable -----------------------------------------------

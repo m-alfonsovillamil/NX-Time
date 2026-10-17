@@ -27,7 +27,9 @@ import { abrirSesion } from '../../api/sesion';
 import { useProveedoresSso, useVueltaDeSso } from '../../api/sso';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
+import { CasillaDeCondiciones } from './CasillaDeCondiciones';
 import { ConfirmarCorreo } from './ConfirmarCorreo';
+import { EmpresaPendiente, esEmpresaNoActiva } from './EmpresaPendiente';
 import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 const G = T.registro;
@@ -66,6 +68,8 @@ export function RegistroEmpresa() {
     contrasena: '',
   });
   const [error, setError] = useState<string | null>(mensajeDeVuelta(vuelta));
+  /** La casilla de las condiciones y el contrato de encargo (ADR 046). */
+  const [acepta, setAcepta] = useState(false);
   /** El correo al que ha salido el código: con él, se pasa a pedirlo. */
   const [pendiente, setPendiente] = useState<string | null>(null);
   /**
@@ -97,13 +101,13 @@ export function RegistroEmpresa() {
   }, [vuelta]);
 
   const registrar = useMutacion(
-    (cuerpo: DatosDelRegistro) => pedir(cliente.POST('/auth/register-manager', { body: { ...cuerpo, origen: 'WEB' } })),
+    (cuerpo: DatosDelRegistro) => pedir(cliente.POST('/auth/register-manager', { body: { ...cuerpo, origen: 'WEB', aceptaCondiciones: true } })),
     { alTerminar: (respuesta) => setPendiente(respuesta.email ?? datos.email.trim()) },
   );
 
   const registrarConSso = useMutacion(
     (cuerpo: Pick<DatosDelRegistro, 'nombreEmpresa' | 'nombre' | 'apellidos'>) =>
-      pedir(cliente.POST('/auth/sso/registro', { body: cuerpo })),
+      pedir(cliente.POST('/auth/sso/registro', { body: { ...cuerpo, aceptaCondiciones: true } })),
     {
       alTerminar: (sesion) => {
         abrirSesion({
@@ -111,6 +115,7 @@ export function RegistroEmpresa() {
           nombre: sesion.nombre ?? '',
           authorities: sesion.authorities ?? [],
           zonaHoraria: sesion.zonaHoraria,
+          condicionesPorAceptar: sesion.condicionesPorAceptar,
         });
         navegar('/fichar', { replace: true });
       },
@@ -130,6 +135,7 @@ export function RegistroEmpresa() {
     };
     if (deFuera) {
       if (Object.values(comunes).some((v) => v === '')) return setError(G.faltan);
+      if (!acepta) return setError(G.faltaAceptar);
       setError(null);
       return registrarConSso.mutate(comunes);
     }
@@ -137,6 +143,7 @@ export function RegistroEmpresa() {
     if (Object.values(limpio).some((v) => v === '')) return setError(G.faltan);
     if (limpio.contrasena.length < 8) return setError(T.contrasenas.corta);
     if (limpio.contrasena.length > 72) return setError(T.contrasenas.larga);
+    if (!acepta) return setError(G.faltaAceptar);
     setError(null);
     registrar.mutate(limpio);
   }
@@ -144,6 +151,8 @@ export function RegistroEmpresa() {
   const mensaje = error ?? registrar.error?.message ?? registrarConSso.error?.message ?? null;
 
   if (pendiente !== null) return <ConfirmarCorreo email={pendiente} />;
+  // Registrada con Google o Microsoft: la empresa existe, y espera aprobación (ADR 046).
+  if (esEmpresaNoActiva(registrarConSso.error)) return <EmpresaPendiente mensaje={registrarConSso.error.message} />;
 
   if (deFuera === undefined) {
     return (
@@ -184,6 +193,7 @@ export function RegistroEmpresa() {
             />
           </>
         )}
+        <CasillaDeCondiciones marcada={acepta} alCambiar={setAcepta} />
         {mensaje !== null && <Aviso>{mensaje}</Aviso>}
         <Boton type="submit" ocupado={registrar.isPending || registrarConSso.isPending}>
           {G.crear}

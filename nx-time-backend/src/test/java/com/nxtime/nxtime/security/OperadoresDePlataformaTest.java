@@ -52,9 +52,9 @@ class OperadoresDePlataformaTest {
         assertThat(operadores.es(cuenta)).isTrue();
         assertThat(operadores.authoritiesDe(cuenta))
                 .isSorted()
-                .contains(RoleAuthorities.PLATAFORMA_VER)
+                .contains(RoleAuthorities.PLATAFORMA_VER, RoleAuthorities.PLATAFORMA_GESTIONAR)
                 .containsAll(RoleAuthorities.forRole(rol))
-                .hasSize(RoleAuthorities.forRole(rol).size() + 1);
+                .hasSize(RoleAuthorities.forRole(rol).size() + RoleAuthorities.FUERA_DE_LOS_ROLES.size());
         // Lo que autoriza el servidor y lo que se le enseña al cliente, lo mismo.
         assertThat(operadores.principalDe(cuenta).getAuthorities())
                 .extracting(GrantedAuthority::getAuthority)

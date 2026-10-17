@@ -1,6 +1,15 @@
 /** El armazón: menú, cabecera, campana y menú de usuario. */
 export const navegacion = {
   saltarAlContenido: 'Saltar al contenido',
+
+  /** Al ADMIN de una empresa que no tiene aceptadas las condiciones en vigor (ADR 046). */
+  condiciones: {
+    texto:
+      'Las condiciones del servicio y el contrato de encargo del tratamiento han cambiado. Como administrador, léelos y acéptalos en nombre de la empresa.',
+    leer: 'Leerlos',
+    aceptar: 'Los acepto',
+    aceptando: 'Guardando…',
+  },
   menuPrincipal: 'Menú principal',
   mas: 'Más',
   todasLasSecciones: 'Todas las secciones',

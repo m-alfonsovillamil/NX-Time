@@ -5,7 +5,8 @@
  * ha confirmado todavía (el login ya le ha mandado otro código).
  *
  * Si el código vale, el servidor abre la sesión como el login, con
- * `origen: 'WEB'`: el refresh, en la cookie (ADR 030).
+ * `origen: 'WEB'`: el refresh, en la cookie (ADR 030). Salvo que la empresa
+ * espere aprobación (423, ADR 046): entonces se dice eso.
  */
 
 import { useState, type FormEvent } from 'react';
@@ -16,6 +17,7 @@ import { pedir, useMutacion } from '../../api/consultas';
 import { abrirSesion } from '../../api/sesion';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { T } from '../../i18n/es';
+import { EmpresaPendiente, esEmpresaNoActiva } from './EmpresaPendiente';
 import { MarcoDeAcceso } from './MarcoDeAcceso';
 
 const C = T.confirmarCorreo;
@@ -35,6 +37,7 @@ export function ConfirmarCorreo({ email, destino = '/fichar' }: { email: string;
           nombre: sesion.nombre ?? '',
           authorities: sesion.authorities ?? [],
           zonaHoraria: sesion.zonaHoraria,
+          condicionesPorAceptar: sesion.condicionesPorAceptar,
         });
         navegar(destino, { replace: true });
       },
@@ -50,6 +53,9 @@ export function ConfirmarCorreo({ email, destino = '/fichar' }: { email: string;
   }
 
   const mensaje = error ?? confirmar.error?.message ?? null;
+
+  // El correo ya está confirmado; la empresa espera a que la aprueben (ADR 046).
+  if (esEmpresaNoActiva(confirmar.error)) return <EmpresaPendiente mensaje={confirmar.error.message} />;
 
   return (
     <MarcoDeAcceso>

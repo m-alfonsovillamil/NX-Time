@@ -439,10 +439,26 @@ class SsoIT {
         assertThat(identidadesDe(javi)).isZero();
     }
 
+    @Test
+    @DisplayName("Con la empresa pendiente de aprobar o suspendida no se entra con Google, y se dice por qué (ADR 046)")
+    void empresaNoActiva() throws Exception {
+        User ana = persona("Ana");
+        String sujeto = sujeto();
+
+        jdbc.update("UPDATE empresas SET estado = 'PENDIENTE' WHERE id = ?", empresa.getId());
+        noHaEntrado(entrarConGoogle(sujeto, ana.getEmail()), "empresa-pendiente");
+
+        jdbc.update("UPDATE empresas SET estado = 'SUSPENDIDA' WHERE id = ?", empresa.getId());
+        noHaEntrado(entrarConGoogle(sujeto, ana.getEmail()), "empresa-suspendida");
+
+        jdbc.update("UPDATE empresas SET estado = 'ACTIVA' WHERE id = ?", empresa.getId());
+        assertThat(cookie(entrarConGoogle(sujeto, ana.getEmail()), "__Secure-nx_refresh")).isNotBlank();
+    }
+
     /** Lo que hace quien se adelanta: registrar una empresa con el correo de otro y una contraseña suya. */
     private String registroAjeno(String correo) throws Exception {
         String suya = "Trampa " + System.nanoTime();
-        assertThat(post("/auth/register-manager", Map.of("nombreEmpresa", suya, "nombre", "Mallory",
+        assertThat(post("/auth/register-manager", Map.of("aceptaCondiciones", true, "nombreEmpresa", suya, "nombre", "Mallory",
                 "apellidos", "Atacante", "email", correo, "contrasena", "la-del-atacante")).statusCode())
                 .isEqualTo(202);
         assertThat(userRepository.findByEmail(correo).orElseThrow().correoPendienteDeConfirmar()).isTrue();
@@ -967,7 +983,7 @@ class SsoIT {
     }
 
     private HttpResponse<String> registrar(String alta, String empresaNueva) throws Exception {
-        Map<String, String> cuerpo = Map.of("nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora");
+        Map<String, Object> cuerpo = Map.of("aceptaCondiciones", true, "nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora");
         return alta == null
                 ? post("/auth/sso/registro", cuerpo)
                 : post("/auth/sso/registro", cuerpo, "Cookie", "__Secure-nx_sso_alta=" + alta);
@@ -1134,7 +1150,7 @@ class SsoIT {
 
     private HttpResponse<String> registrarDesdeLaApp(String pase, String empresaNueva) throws Exception {
         return post("/auth/sso/registro/app",
-                Map.of("pase", pase, "nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora"));
+                Map.of("aceptaCondiciones", true, "pase", pase, "nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora"));
     }
 
     @Test
@@ -1260,7 +1276,7 @@ class SsoIT {
     void laAppRegistraSinElPase() throws Exception {
         String empresaNueva = "Fantasma " + System.nanoTime();
         assertThat(post("/auth/sso/registro/app",
-                Map.of("nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora")).statusCode())
+                Map.of("aceptaCondiciones", true, "nombreEmpresa", empresaNueva, "nombre", "Eva", "apellidos", "Fundadora")).statusCode())
                 .isEqualTo(400);
         assertThat(registrarDesdeLaApp("no-es-un-pase", empresaNueva).statusCode()).isEqualTo(404);
 

@@ -133,8 +133,40 @@ public class UnconfirmedRegistrationCleaner {
         }
     }
 
+    /**
+     * Borra una empresa que el operador ha rechazado (ADR 046), en la
+     * transacción de quien llama.
+     *
+     * Solo una PENDIENTE: nadie de ella ha llegado a entrar, así que no tiene
+     * más que la cuenta de quien la registró y lo que dejó al registrarse (el
+     * código del correo, la cuenta de Google o Microsoft con la que lo hizo).
+     * Si tuviera cualquier otra cosa, las claves RESTRICT lo impiden y salta
+     * {@link DataIntegrityViolationException}: entonces no se fuerza.
+     *
+     * @return si la ha borrado (no, si ya no estaba pendiente)
+     */
+    public boolean borrarEmpresaRechazada(long empresaId) {
+        Integer pendiente = jdbc.queryForObject(
+                "SELECT count(*) FROM empresas WHERE id = ? AND estado = 'PENDIENTE'", Integer.class, empresaId);
+        if (pendiente == null || pendiente == 0) {
+            return false;
+        }
+        String deSuGente = "usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)";
+        jdbc.update("DELETE FROM identidades_externas WHERE " + deSuGente, empresaId);
+        jdbc.update("DELETE FROM codigos_acceso WHERE " + deSuGente, empresaId);
+        jdbc.update("DELETE FROM refresh_tokens WHERE " + deSuGente, empresaId);
+        jdbc.update("UPDATE empresas SET condiciones_aceptadas_por = NULL WHERE id = ?", empresaId);
+        jdbc.update("DELETE FROM usuarios WHERE empresa_id = ?", empresaId);
+        jdbc.update("DELETE FROM empresas WHERE id = ? AND estado = 'PENDIENTE'", empresaId);
+        log.info("Empresa {} rechazada y borrada.", empresaId);
+        return true;
+    }
+
     private boolean borrar(Pendiente pendiente, Timestamp limite) {
         jdbc.update("DELETE FROM codigos_acceso WHERE usuario_id = ?", pendiente.usuarioId());
+        // Desde la V43 la empresa apunta a quien aceptó sus condiciones, que
+        // es esta misma cuenta (ON DELETE SET NULL lo haría solo; así se lee).
+        jdbc.update("UPDATE empresas SET condiciones_aceptadas_por = NULL WHERE id = ?", pendiente.empresaId());
         // Se vuelve a mirar la fecha: entre la consulta y esto puede haber
         // confirmado, o haber vuelto a registrarse (que la pone a ahora).
         int cuentas = jdbc.update("DELETE FROM usuarios WHERE id = ? AND correo_sin_confirmar_desde < ?",

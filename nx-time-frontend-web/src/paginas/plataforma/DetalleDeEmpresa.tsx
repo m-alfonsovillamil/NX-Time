@@ -4,6 +4,7 @@
  *
  * Cada vez que se abre, el servidor apunta quién ha mirado a quién: aquí salen
  * los correos de los administradores de una empresa que no es la de quien mira.
+ * Y desde aquí se aprueba, rechaza, suspende y reactiva (ADR 046).
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +20,7 @@ import { EstadoDeConsulta, EsqueletoDePagina, Vacio } from '../../componentes/Es
 import { Tabla, type Columna } from '../../componentes/Tabla';
 import { plataforma } from '../../i18n/es/plataforma';
 import { fechaHoraCorta } from '../../util/fechas';
+import { AltaEnElServicio } from './AltaEnElServicio';
 import { CLAVE_PLATAFORMA, diaDe } from './Plataforma';
 
 const D = plataforma.detalle;
@@ -85,6 +87,8 @@ function Ficha({ empresa: e }: { empresa: Detalle }) {
 
       <div className="nx-composicion nx-composicion--mitades nx-composicion--arriba">
         <div className="nx-columna">
+          <AltaEnElServicio empresa={e} />
+
           <Tarjeta titulo={D.datos} icono="empresa">
             <dl className="nx-datos">
               <dt>{D.alta}</dt>

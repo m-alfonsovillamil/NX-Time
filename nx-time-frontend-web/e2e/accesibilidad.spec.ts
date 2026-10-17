@@ -41,7 +41,7 @@ for (const tema of ['light', 'dark'] as const) {
 
     test('las páginas sin sesión', async ({ page }) => {
       // /kiosco sin token es la pantalla de emparejar la tablet (ADR 033).
-      for (const ruta of ['/', '/recuperar-acceso', '/registro', '/kiosco']) {
+      for (const ruta of ['/', '/recuperar-acceso', '/registro', '/kiosco', '/legal', '/legal/aviso-legal', '/legal/cookies']) {
         // Carga inicial del documento: aquí `networkidle` sí sirve (ver ayudas.ts).
         await page.goto(ruta);
         await page.waitForLoadState('networkidle');

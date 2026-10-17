@@ -77,7 +77,7 @@ class RegistroConCorreoAjenoIT {
 
     private void registrar(String correo, String contrasena) {
         authService.registerManager(new RegisterManagerRequest(
-                "Empresa " + System.nanoTime(), "Alba", "Pruebas", correo, contrasena, "WEB"));
+                "Empresa " + System.nanoTime(), "Alba", "Pruebas", correo, contrasena, "WEB", true));
     }
 
     /** El dueño del correo canjea el último código que le ha llegado: es el único que tiene. */

@@ -60,7 +60,7 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                        .content("{\"aceptaCondiciones\":true,\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
                                 + "\"contrasena\":\"password123\"}"))
                 .andExpect(status().isAccepted())
@@ -73,7 +73,7 @@ class AuthControllerTest {
     void confirmarRegistro_devuelveLaSesion() throws Exception {
         when(authService.confirmarRegistro(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
-                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid"));
+                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid", false));
 
         mockMvc.perform(post("/auth/registro/confirmar")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,7 +97,7 @@ class AuthControllerTest {
     void registerManager_emailInvalido_devuelve400() throws Exception {
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                        .content("{\"aceptaCondiciones\":true,\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"no-es-un-email\","
                                 + "\"contrasena\":\"password123\"}"))
                 .andExpect(status().isBadRequest());
@@ -108,7 +108,7 @@ class AuthControllerTest {
     void registerManager_contrasenaCorta_devuelve400() throws Exception {
         mockMvc.perform(post("/auth/register-manager")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
+                        .content("{\"aceptaCondiciones\":true,\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
                                 + "\"contrasena\":\"abc\"}"))
                 .andExpect(status().isBadRequest());
@@ -119,7 +119,7 @@ class AuthControllerTest {
     void login_datosValidos_devuelve200() throws Exception {
         when(authService.login(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.GESTOR,
-                        RoleAuthorities.enOrden(Role.GESTOR), "Europe/Madrid"));
+                        RoleAuthorities.enOrden(Role.GESTOR), "Europe/Madrid", false));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

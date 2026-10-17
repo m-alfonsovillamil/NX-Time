@@ -38,6 +38,11 @@ export interface Sesion {
    * entonces se queda la de por defecto.
    */
   zonaHoraria?: string | undefined;
+  /**
+   * Si es un ADMIN y su empresa no ha aceptado las condiciones en vigor (ADR
+   * 046): el marco se lo pide. Un servidor de antes no lo manda.
+   */
+  condicionesPorAceptar?: boolean | undefined;
 }
 
 let sesion: Sesion | null = null;

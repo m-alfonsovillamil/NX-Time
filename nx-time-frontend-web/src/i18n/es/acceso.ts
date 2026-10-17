@@ -9,8 +9,8 @@ export const acceso = {
       { icono: 'vacaciones', titulo: 'Ausencias sin papeles', texto: 'Las vacaciones y los permisos se piden y se aprueban aquí.' },
       {
         icono: 'verificado',
-        titulo: 'Lo que pide la ley',
-        texto: 'El registro que exige el RD-ley 8/2019, guardado cuatro años y a prueba de cambios.',
+        titulo: 'Pensado para el registro de jornada',
+        texto: 'Te ayuda a llevar el registro que exige el RD-ley 8/2019: guardado cuatro años y con rastro de cada cambio.',
       },
     ],
   },
@@ -44,6 +44,8 @@ export const acceso = {
       'correo-sin-verificar':
         'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.',
       'cuenta-inactiva': 'Tu cuenta de NX Time está dada de baja. Habla con tu empresa.',
+      'empresa-pendiente': 'Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.',
+      'empresa-suspendida': 'El acceso de tu empresa está suspendido. Mira el correo que te enviamos para saber más.',
       'ya-tiene-otra':
         'Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
       'no-disponible': 'Ese acceso no está disponible ahora mismo. Entra con tu contraseña.',
@@ -74,7 +76,8 @@ export const acceso = {
 
   registro: {
     titulo: 'Registrar empresa',
-    explicacion: 'Se creará la empresa y tu cuenta de administrador.',
+    explicacion:
+      'Se creará la empresa y tu cuenta de administrador. Antes de que podáis entrar revisamos cada alta: te avisamos por correo.',
     empresa: 'Nombre de la empresa',
     nombre: 'Tu nombre',
     apellidos: 'Tus apellidos',
@@ -83,6 +86,19 @@ export const acceso = {
     contrasenaAyuda: 'Entre 8 y 72 caracteres.',
     crear: 'Crear empresa',
     faltan: 'Rellena todos los campos.',
+    /**
+     * La casilla (ADR 046). Va partida para meter los enlaces en medio: «He
+     * leído y acepto las [condiciones del servicio] y el [contrato de encargo del
+     * tratamiento] en nombre de la empresa, y soy mayor de edad».
+     */
+    acepto: {
+      antes: 'He leído y acepto las ',
+      condiciones: 'condiciones del servicio',
+      entre: ' y el ',
+      encargo: 'contrato de encargo del tratamiento',
+      despues: ' en nombre de la empresa, y soy mayor de edad.',
+    },
+    faltaAceptar: 'Para registrar la empresa tienes que aceptar las condiciones y el contrato de encargo.',
     yaTengoCuenta: 'Ya tengo cuenta: entrar',
     /**
      * Registrar la empresa con una cuenta de Google o de Microsoft (ADR 038):
@@ -104,6 +120,9 @@ export const acceso = {
         'correo-sin-verificar':
           'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.',
         'cuenta-inactiva': 'Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.',
+        'empresa-pendiente':
+          'Ya registraste una empresa con ese correo y está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.',
+        'empresa-suspendida': 'Ya tienes una cuenta con ese correo, y el acceso de su empresa está suspendido.',
         'ya-tiene-otra':
           'Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
         'no-disponible': 'Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.',
@@ -111,6 +130,14 @@ export const acceso = {
         fallo: 'No se ha podido completar. Vuelve a intentarlo, o registra la empresa con tu correo y una contraseña.',
       },
     },
+  },
+
+  /** Tras confirmar el correo o registrar con SSO, mientras el operador no aprueba el alta (ADR 046). */
+  pendiente: {
+    titulo: 'Empresa registrada',
+    siguiente:
+      'Revisamos cada alta antes de abrirla. En cuanto la aprobemos te escribiremos, y podréis entrar con vuestro correo.',
+    volver: 'Volver al inicio',
   },
 
   /** Confirmar el correo con el código, tras registrar la empresa (ADR 034). */

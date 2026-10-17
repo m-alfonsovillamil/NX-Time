@@ -48,6 +48,8 @@
     <string name="sso_error_sin_cuenta">No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.</string>
     <string name="sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.</string>
     <string name="sso_error_cuenta_inactiva">Tu cuenta de NX Time está dada de baja. Habla con tu empresa.</string>
+    <string name="sso_error_empresa_pendiente">Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
+    <string name="sso_error_empresa_suspendida">El acceso de tu empresa está suspendido. Mira el correo que te enviamos para saber más.</string>
     <string name="sso_error_ya_tiene_otra">Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="sso_error_no_disponible">Ese acceso no está disponible ahora mismo. Entra con tu contraseña.</string>
     <string name="sso_error_fallo">No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.</string>
@@ -94,7 +96,18 @@
 
     <!-- Registro de empresa -->
     <string name="registro_titulo">Registrar empresa</string>
-    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador.</string>
+    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador. Antes de que podáis entrar revisamos cada alta: te avisamos por correo.</string>
+    <!-- La casilla del registro (ADR 046), partida para meter los enlaces en medio -->
+    <string name="registro_acepto_antes">"He leído y acepto las "</string>
+    <string name="registro_acepto_condiciones">condiciones del servicio</string>
+    <string name="registro_acepto_entre">" y el "</string>
+    <string name="registro_acepto_encargo">contrato de encargo del tratamiento</string>
+    <string name="registro_acepto_despues">" en nombre de la empresa, y soy mayor de edad."</string>
+    <string name="registro_falta_aceptar">Para registrar la empresa tienes que aceptar las condiciones y el contrato de encargo.</string>
+    <!-- Registrada y esperando aprobación (ADR 046) -->
+    <string name="pendiente_titulo">Empresa registrada</string>
+    <string name="pendiente_siguiente">Revisamos cada alta antes de abrirla. En cuanto la aprobemos te escribiremos, y podréis entrar con vuestro correo.</string>
+    <string name="pendiente_volver">Volver al inicio</string>
     <string name="registro_empresa">Nombre de la empresa</string>
     <string name="registro_nombre">Tu nombre</string>
     <string name="registro_apellidos">Tus apellidos</string>
@@ -107,6 +120,8 @@
     <string name="registro_sso_error_cancelado">No has terminado de entrar con esa cuenta. Puedes volver a intentarlo.</string>
     <string name="registro_sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.</string>
     <string name="registro_sso_error_cuenta_inactiva">Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.</string>
+    <string name="registro_sso_error_empresa_pendiente">Ya registraste una empresa con ese correo y está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
+    <string name="registro_sso_error_empresa_suspendida">Ya tienes una cuenta con ese correo, y el acceso de su empresa está suspendido.</string>
     <string name="registro_sso_error_ya_tiene_otra">Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="registro_sso_error_no_disponible">Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.</string>
     <string name="registro_sso_error_caducado">El registro ha caducado. Vuelve a empezar con tu cuenta, o hazlo con tu correo y una contraseña.</string>
@@ -669,6 +684,7 @@
 
     <string name="ajustes_acerca_de">Acerca de</string>
     <string name="ajustes_version">Versión</string>
+    <string name="ajustes_informacion_legal">Información legal</string>
     <string name="ajustes_servidor">Servidor</string>
     <string name="ajustes_repositorio">Código fuente</string>
 

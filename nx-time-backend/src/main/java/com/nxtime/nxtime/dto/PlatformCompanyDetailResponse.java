@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.CompanyStatus;
 import com.nxtime.nxtime.domain.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -16,6 +17,15 @@ import java.util.List;
 public record PlatformCompanyDetailResponse(
         long id,
         String nombre,
+        @Schema(description = "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046)")
+        CompanyStatus estado,
+        @Schema(description = "Cuándo la aprobó el operador. Null si no lo ha hecho, o si es de antes de la V43")
+        Instant aprobadaEn,
+        @Schema(description = "La versión de las condiciones que tiene aceptada. Null si ninguna")
+        String condicionesVersion,
+        Instant condicionesAceptadasEn,
+        @Schema(description = "Lo que ha hecho y mirado el operador con ella, lo más reciente primero (hasta 50)")
+        List<PlatformActionDTO> historial,
         @Schema(description = "Nombre IANA de su zona horaria", example = "Europe/Madrid")
         String zonaHoraria,
         @Schema(description = "Cuándo se dio de alta. Null en las anteriores a octubre de 2026 de las que "

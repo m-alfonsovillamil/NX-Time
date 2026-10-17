@@ -79,8 +79,17 @@ public class SecurityUser implements UserDetails {
     // Desde la Fase 4: un usuario dado de baja (activo = false) ya no
     // puede autenticarse. Antes esto estaba cableado a "true" sin
     // excepción (ver auditoría, defectos de diseño).
+    //
+    // Y desde la V43 (ADR 046), tampoco nadie de una empresa que no esté
+    // activa: pendiente de aprobar o suspendida. Así un access token que ya
+    // tuviera deja de valer en la siguiente petición, no a los quince minutos.
     @Override
     public boolean isEnabled() {
-        return user.isActivo();
+        return user.isActivo() && (user.getEmpresa() == null || user.getEmpresa().estaActiva());
+    }
+
+    /** De alta, pero su empresa no está activa: lo que el login dice con otras palabras. */
+    public boolean soloFaltaLaEmpresa() {
+        return user.isActivo() && !isEnabled();
     }
 }

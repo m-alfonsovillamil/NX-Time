@@ -123,8 +123,8 @@ import java.util.stream.Collectors;
  * "empresa:configurar" (fase Z2) es solo de ADMIN: el nombre y la zona
  * horaria de la empresa (ADR 032). La zona decide a qué día pertenece cada
  * fichaje de todo el histórico, y cambiarla puede tumbar firmas mensuales.
- * "plataforma:ver" (ADR 040) NO es de ningún rol, y es la única: ver
- * {@link #FUERA_DE_LOS_ROLES}.
+ * "plataforma:ver" (ADR 040) y "plataforma:gestionar" (ADR 046) NO son de
+ * ningún rol, y son las únicas: ver {@link #FUERA_DE_LOS_ROLES}.
  */
 public final class RoleAuthorities {
 
@@ -182,6 +182,7 @@ public final class RoleAuthorities {
 
     /** Ver todas las empresas de la instalación: el panel de plataforma (ADR 040). */
     public static final String PLATAFORMA_VER = "plataforma:ver";
+    public static final String PLATAFORMA_GESTIONAR = "plataforma:gestionar";
 
     /**
      * Lo que no concede ningún rol.
@@ -198,7 +199,10 @@ public final class RoleAuthorities {
      * leen los dos tests que cruzan los permisos con los endpoints y con las
      * secciones de la web.
      */
-    public static final Set<String> FUERA_DE_LOS_ROLES = Set.of("plataforma:ver");
+    // "plataforma:gestionar" (ADR 046): aprobar, rechazar, suspender y
+    // reactivar empresas. Los mismos operadores que la ven; va aparte para que
+    // cada endpoint diga si solo mira o si cambia algo.
+    public static final Set<String> FUERA_DE_LOS_ROLES = Set.of("plataforma:ver", "plataforma:gestionar");
 
     public static Set<String> forRole(Role role) {
         return switch (role) {

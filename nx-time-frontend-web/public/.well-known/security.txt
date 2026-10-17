@@ -1,0 +1,6 @@
+# Cómo avisar de un fallo de seguridad en NX Time. Generado desde application.yml.
+Contact: mailto:seguridad@nxtime-web.com
+Expires: 2027-10-17T00:00:00Z
+Preferred-Languages: es, en
+Canonical: https://nxtime-web.com/.well-known/security.txt
+Policy: https://nxtime-web.com/legal/seguridad

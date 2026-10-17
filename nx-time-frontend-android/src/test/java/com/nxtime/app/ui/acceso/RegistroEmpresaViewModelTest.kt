@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -19,6 +20,8 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import retrofit2.Response
 
 /** Registrar una empresa: desde la V37 del backend (ADR 034), sin sesión hasta confirmar el correo. */
@@ -45,6 +48,7 @@ class RegistroEmpresaViewModelTest {
         viewModel.onApellidosCambia("Martín")
         viewModel.onEmailCambia(" eva@talleres.test ")
         viewModel.onContrasenaCambia("unaBuena123")
+        viewModel.onAceptaCambia(true)
     }
 
     @Test
@@ -67,5 +71,50 @@ class RegistroEmpresaViewModelTest {
 
         verify(repositorio).procesarLoginExitoso(sesion)
         assertTrue(viewModel.uiState.value.registrado)
+        // Con la casilla marcada, y así viaja (ADR 046).
+        verify(repositorio).registrarEmpresaGestor(
+            com.nxtime.app.data.dto.RegistroGestorRequest(
+                "Talleres Eva SL", "Eva", "Martín", "eva@talleres.test", "unaBuena123", true
+            )
+        )
+    }
+
+    @Test
+    fun `sin marcar la casilla de las condiciones no se manda nada`() = runTest {
+        rellenar()
+        viewModel.onAceptaCambia(false)
+
+        viewModel.registrar()
+        advanceUntilIdle()
+
+        verify(repositorio, never()).registrarEmpresaGestor(any())
+        assertEquals(
+            com.nxtime.app.ui.util.MensajeUi.Recurso(com.nxtime.app.R.string.registro_falta_aceptar),
+            viewModel.uiState.value.error
+        )
+    }
+
+    @Test
+    fun `al confirmar con la empresa pendiente de aprobar (423) lo dice y no abre sesion`() = runTest {
+        whenever(repositorio.registrarEmpresaGestor(any()))
+            .thenReturn(Response.success(202, RegistroPendienteDTO("eva@talleres.test", "Te hemos mandado un código")))
+        whenever(repositorio.confirmarRegistro("eva@talleres.test", "123456")).thenReturn(
+            Response.error(
+                423,
+                "{\"detail\":\"Tu empresa está pendiente de aprobación.\"}"
+                    .toResponseBody("application/problem+json".toMediaType())
+            )
+        )
+        rellenar()
+        viewModel.registrar()
+        advanceUntilIdle()
+        viewModel.onCodigoCambia("123456")
+
+        viewModel.confirmar()
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.empresaPendiente)
+        assertFalse(viewModel.uiState.value.registrado)
+        verify(repositorio, never()).procesarLoginExitoso(any())
     }
 }

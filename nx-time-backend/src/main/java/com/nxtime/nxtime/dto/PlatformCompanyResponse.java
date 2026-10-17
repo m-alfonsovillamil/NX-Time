@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.dto;
 
+import com.nxtime.nxtime.domain.CompanyStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
@@ -11,6 +12,8 @@ import java.time.Instant;
 public record PlatformCompanyResponse(
         long id,
         String nombre,
+        @Schema(description = "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046). Las pendientes salen las primeras")
+        CompanyStatus estado,
         @Schema(description = "Nombre IANA de su zona horaria", example = "Europe/Madrid")
         String zonaHoraria,
         @Schema(description = "Cuándo se dio de alta. Null en las anteriores a octubre de 2026 de las que "
