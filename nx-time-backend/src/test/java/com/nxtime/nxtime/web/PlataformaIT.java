@@ -422,7 +422,7 @@ class PlataformaIT {
     }
 
     @Test
-    @DisplayName("La traza rota en una fila de Alfa: la operadora ve la fila y la empresa; Beta, solo que falla")
+    @DisplayName("La traza rota en una fila de Alfa: la operadora ve la fila y la empresa; Beta, su cadena intacta")
     void laIntegridad() throws Exception {
         JsonNode intacta = cuerpo(get("/api/v1/plataforma/integridad", bearer(tokenOperadora)));
         assertThat(intacta.get("intacta").asBoolean()).isTrue();
@@ -450,9 +450,10 @@ class PlataformaIT {
         assertThat(rota.get("empresaDelFallo").asLong()).isEqualTo(alfa.getId());
         assertThat(rota.get("motivo").asText()).contains("hash");
 
-        // A la empresa que no es la dueña de esa fila se le sigue sin decir cuál es.
+        // Beta tiene su propia cadena desde V46 (ADR 050): la rotura de Alfa no
+        // le afecta, y de ella no sabe nada.
         JsonNode vistaPorBeta = cuerpo(get("/api/v1/auditoria/integridad", bearer(tokenAdminBeta)));
-        assertThat(vistaPorBeta.get("intacta").asBoolean()).isFalse();
+        assertThat(vistaPorBeta.get("intacta").asBoolean()).isTrue();
         assertThat(vistaPorBeta.get("primerFallo").isNull()).isTrue();
     }
 

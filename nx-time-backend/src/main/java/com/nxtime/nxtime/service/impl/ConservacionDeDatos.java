@@ -59,13 +59,15 @@ public class ConservacionDeDatos {
     private final TransactionTemplate transaccion;
     private final PersonalDataEraser borrado;
     private final RegistroDeAccesos accesos;
+    private final BajaDeEmpresa bajas;
 
     public ConservacionDeDatos(JdbcTemplate jdbc, TransactionTemplate transaccion, PersonalDataEraser borrado,
-            RegistroDeAccesos accesos) {
+            RegistroDeAccesos accesos, BajaDeEmpresa bajas) {
         this.jdbc = jdbc;
         this.transaccion = transaccion;
         this.borrado = borrado;
         this.accesos = accesos;
+        this.bajas = bajas;
     }
 
     /** Aplica todos los plazos. Devuelve cuántas filas se han ido en cada paso, para el resumen de la tarea. */
@@ -141,6 +143,10 @@ public class ConservacionDeDatos {
         // conservarlo, así que se anonimiza aunque nadie lo haya pedido. Antes
         // del plan J solo se hacía a petición (ADR 016).
         hecho.put("personasAnonimizadas", anonimizarLasCaducadas(ahora));
+
+        // Las empresas que pidieron la baja hace más de treinta días (ADR 050):
+        // enteras, auditoría incluida. Cada una en su transacción (ver BajaDeEmpresa).
+        hecho.put("empresasBorradas", bajas.borrarLasVencidas(ahora));
 
         log.info("Conservación aplicada: {}", hecho);
         return hecho;

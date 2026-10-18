@@ -73,4 +73,8 @@ public class AuditCheckpoint {
 
     @Column(name = "verificado_en", nullable = false)
     private Instant verificadoEn;
+
+    /** De qué cadena es (V46, ADR 050): null, el tramo común; un id, la de esa empresa. */
+    @Column(name = "empresa_id")
+    private Long empresaId;
 }

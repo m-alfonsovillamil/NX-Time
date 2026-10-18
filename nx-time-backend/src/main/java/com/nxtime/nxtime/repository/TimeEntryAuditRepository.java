@@ -38,9 +38,18 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
      * puede pedir PUBLIC, se suelta solo al hacer commit o rollback --no hay
      * forma de olvidarse de liberarlo-- y, al vivir en PostgreSQL y no en la
      * JVM, protege también si algún día hay más de una instancia.
+     *
+     * Desde V46 (ADR 050) el cerrojo es de la cadena de UNA empresa: la forma
+     * de dos enteros de {@code pg_advisory_xact_lock}, la clave y la empresa.
+     * Dos empresas fichando a la vez ya no se esperan la una a la otra.
      */
-    @Query(value = "SELECT pg_advisory_xact_lock(:clave)", nativeQuery = true)
-    void bloquearCadena(@Param("clave") long clave);
+    @Query(value = "SELECT pg_advisory_xact_lock(:clave, :empresa)", nativeQuery = true)
+    void bloquearCadenaDeEmpresa(@Param("clave") int clave, @Param("empresa") int empresa);
+
+    /** El hash de la última fila de la cadena de una empresa, si ya tiene alguna. */
+    @Query(value = "SELECT hash FROM auditoria_fichaje WHERE empresa_id = :empresa AND version_hash >= :version "
+            + "ORDER BY id DESC LIMIT 1", nativeQuery = true)
+    Optional<String> ultimoHashDeLaCadena(@Param("empresa") long empresa, @Param("version") short version);
 
     /**
      * Un bloque de la traza a partir de un id, en orden de escritura.
@@ -83,10 +92,50 @@ public interface TimeEntryAuditRepository extends JpaRepository<TimeEntryAudit, 
             from auditoria_fichaje a
             join a.registro r
             left join a.modificadoPor autor
-            where a.id > :desdeId
+            where a.id > :desdeId and a.versionHash < 3
             order by a.id asc
             """)
-    List<FilaDeLaCadena> findBloqueDeLaCadena(@Param("desdeId") long desdeId, Pageable bloque);
+    List<FilaDeLaCadena> findBloqueDelTramoComun(@Param("desdeId") long desdeId, Pageable bloque);
+
+    /**
+     * Lo mismo, de la cadena de UNA empresa (V46, ADR 050): sus filas de la
+     * versión 3, en orden de escritura. Entra por {@code ix_auditoria_cadena_de_empresa}.
+     */
+    @Transactional(readOnly = true)
+    @Query("""
+            select new com.nxtime.nxtime.audit.FilaDeLaCadena(
+                a.id, r.id, a.usuario.id, autor.id, a.accion, a.valorAnterior, a.valorNuevo, a.motivo,
+                a.fechaHora, a.hashAnterior, a.hash, a.versionHash, a.empresaId)
+            from auditoria_fichaje a
+            join a.registro r
+            left join a.modificadoPor autor
+            where a.empresaId = :empresaId and a.versionHash >= 3 and a.id > :desdeId
+            order by a.id asc
+            """)
+    List<FilaDeLaCadena> findBloqueDeLaCadenaDeEmpresa(
+            @Param("empresaId") long empresaId, @Param("desdeId") long desdeId, Pageable bloque);
+
+    /** Las empresas que tienen cadena propia, es decir, alguna fila de la versión 3. */
+    @Transactional(readOnly = true)
+    @Query(value = """
+            SELECT e.id FROM empresas e
+             WHERE EXISTS (SELECT 1 FROM auditoria_fichaje a WHERE a.empresa_id = e.id AND a.version_hash >= 3)
+             ORDER BY e.id
+            """, nativeQuery = true)
+    List<Long> empresasConCadena();
+
+    /** Filas de la cadena de una empresa, en total y después de un id. */
+    @Query("select count(a) from auditoria_fichaje a where a.empresaId = :empresaId and a.versionHash >= 3 and a.id > :desdeId")
+    long contarDeLaCadenaDeEmpresaDesde(@Param("empresaId") long empresaId, @Param("desdeId") long desdeId);
+
+    /** Filas del tramo común de una empresa después de un id. */
+    @Query("select count(a) from auditoria_fichaje a where a.registro.empresa.id = :empresaId "
+            + "and a.versionHash < 3 and a.id > :desdeId")
+    long contarDelTramoComunDeEmpresaDesde(@Param("empresaId") long empresaId, @Param("desdeId") long desdeId);
+
+    /** Filas del tramo común después de un id. */
+    @Query("select count(a) from auditoria_fichaje a where a.versionHash < 3 and a.id > :desdeId")
+    long contarDelTramoComunDesde(@Param("desdeId") long desdeId);
 
     /** Cuántas filas quedan por detrás de un punto de control. */
     long countByIdGreaterThan(long id);

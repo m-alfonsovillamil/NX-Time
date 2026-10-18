@@ -3649,6 +3649,121 @@
         } ]
       }
     },
+    "/api/v1/empresa/baja" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "La baja de mi empresa",
+        "description" : "Si está pedida, cuándo y desde cuándo se borra.",
+        "operationId" : "estado_1",
+        "responses" : {
+          "200" : {
+            "description" : "La baja",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Pedir la baja de mi empresa",
+        "description" : "Hay que escribir el nombre de la empresa. Durante 30 días todo sigue funcionando para llevarse los datos, y se puede cancelar; después se borra entera, auditoría incluida, y no se puede deshacer.",
+        "operationId" : "solicitar_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CompanyClosureRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Pedida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El nombre no coincide",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya estaba pedida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Cancelar la baja",
+        "description" : "Mientras no hayan pasado los 30 días.",
+        "operationId" : "cancelar_1",
+        "responses" : {
+          "200" : {
+            "description" : "Cancelada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No había ninguna",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/dispositivos-push" : {
       "post" : {
         "tags" : [ "Push" ],
@@ -7246,7 +7361,7 @@
         "tags" : [ "Kiosco" ],
         "summary" : "¿Puedo fichar en un kiosco?",
         "description" : "Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.",
-        "operationId" : "estado_1",
+        "operationId" : "estado_2",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -12209,6 +12324,30 @@
           "porAceptar" : {
             "type" : "boolean",
             "description" : "Si falta aceptar la versión en vigor"
+          }
+        }
+      },
+      "CompanyClosureRequest" : {
+        "type" : "object",
+        "properties" : {
+          "confirmacion" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "confirmacion" ]
+      },
+      "CompanyClosureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "solicitadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "borradoDesde" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },

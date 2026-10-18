@@ -123,15 +123,20 @@ export function Condiciones() {
 
       <h2>9. Baja y devolución de los datos</h2>
       <ul>
-        <li>La empresa puede darse de baja cuando quiera, escribiendo a {correo} desde el correo de un administrador.</li>
         <li>
-          Antes de borrar nada, el titular le entrega una copia completa de sus datos en formatos que se pueden leer
-          (los informes de cada persona, la traza de auditoría y las firmas). <strong>La empresa sigue obligada a
-          conservar el registro de jornada cuatro años</strong>: tiene que guardar esa copia.
+          La empresa puede darse de baja cuando quiera: un administrador la pide desde los ajustes de la empresa, o
+          escribiendo a {correo} desde su correo.
         </li>
         <li>
-          Treinta días después de entregarla, el titular borra los datos de la empresa y de su plantilla, salvo lo que
-          una ley le obligue a conservar, y lo confirma por escrito.
+          Durante treinta días todo sigue funcionando para que se lleve una copia completa de sus datos en formatos que
+          se pueden leer (el registro de jornada de cada persona, la traza de correcciones y las firmas, desde
+          Informes), y puede cancelar la baja. Si lo prefiere, el titular le entrega la copia. <strong>La empresa sigue
+          obligada a conservar el registro de jornada cuatro años</strong>: tiene que guardar esa copia.
+        </li>
+        <li>
+          Pasados los treinta días, el servicio borra los datos de la empresa y de su plantilla, también la traza de
+          auditoría, salvo lo que una ley obligue a conservar. Solo queda constancia de que la empresa existió y de
+          cuándo se borró.
         </li>
         <li>
           El titular puede dejar de prestar el servicio avisando con al menos tres meses de antelación, con el mismo

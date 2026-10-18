@@ -111,8 +111,9 @@ export function Encargo() {
           Agencia Española de Protección de Datos y, si procede, a las personas, le corresponde a la responsable.
         </li>
         <li>
-          <strong>Al terminar</strong>, entregar a la responsable todos sus datos y borrarlos treinta días después, como
-          dicen las condiciones (punto 9), salvo que una ley obligue a conservarlos. Las copias de seguridad se borran
+          <strong>Al terminar</strong>, dejar que la responsable se lleve todos sus datos (o entregárselos) y borrarlos
+          treinta días después de que pida la baja, como dicen las condiciones (punto 9), salvo que una ley obligue a
+          conservarlos. Las copias de seguridad se borran
           solas en su ciclo (como mucho 30 días después).
         </li>
         <li>

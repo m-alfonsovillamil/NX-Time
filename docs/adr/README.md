@@ -59,3 +59,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [047](047-el-rgpd-dentro-del-producto.md) | El RGPD dentro del producto: conservación, accesos y aviso de privacidad |
 | [048](048-el-canal-de-denuncias-y-la-ley-2-2023.md) | El canal de denuncias a la altura de la Ley 2/2023 |
 | [049](049-el-registro-de-jornada-propio-y-para-la-inspeccion.md) | El registro de jornada: el propio, y todo junto para la Inspección |
+| [050](050-una-cadena-de-auditoria-por-empresa-y-la-baja.md) | Una cadena de auditoría por empresa, y la baja de una empresa con borrado |

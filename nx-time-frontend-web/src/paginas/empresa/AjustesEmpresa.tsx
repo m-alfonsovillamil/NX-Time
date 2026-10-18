@@ -25,6 +25,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { empresa } from '../../i18n/es/empresa';
+import { BajaDeEmpresa } from './BajaDeEmpresa';
 import { CanalDeDenunciasAjustes } from './CanalDeDenunciasAjustes';
 import { Kioscos } from './Kioscos';
 
@@ -184,6 +185,7 @@ export function AjustesEmpresa() {
             )}
           </EstadoDeConsulta>
           <CanalDeDenunciasAjustes />
+          {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}
           <Tarjeta titulo={A.accesosTitulo} icono="candado" descripcion={A.accesosTexto}>
             <Link className="nx-boton nx-boton--secundario nx-boton--enlace" to="/accesos-a-datos">
               {A.verAccesos}

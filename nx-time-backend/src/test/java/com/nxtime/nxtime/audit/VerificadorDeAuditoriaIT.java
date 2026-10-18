@@ -16,6 +16,7 @@ import com.nxtime.nxtime.dto.AuditIntegrityResponse;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.repository.AuditCheckpointRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.EslabonRetiradoRepository;
 import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
@@ -90,6 +91,8 @@ class VerificadorDeAuditoriaIT {
     @Autowired
     private AuditCheckpointRepository checkpointRepository;
     @Autowired
+    private EslabonRetiradoRepository lapidas;
+    @Autowired
     private HuellaDeAuditoria huella;
     @Autowired
     private UserRepository userRepository;
@@ -122,8 +125,14 @@ class VerificadorDeAuditoriaIT {
      * encadenadas, con JSON en los dos valores, que es el caso que antes no
      * se podía recalcular.
      */
-    private void jornadaCompleta(String email) {
+    private Company jornadaCompleta(String email) {
         Company empresa = companyRepository.save(Company.builder().nombre("Empresa " + email).build());
+        jornadaCompleta(email, empresa);
+        return empresa;
+    }
+
+    /** Lo mismo, de alguien de una empresa que ya existe: misma cadena (V46, ADR 050). */
+    private void jornadaCompleta(String email, Company empresa) {
         userRepository.save(User.builder()
                 .email(email).nombre("Empleado").contrasena("hash")
                 .rol(Role.EMPLEADO).empresa(empresa).activo(true).build());
@@ -201,9 +210,11 @@ class VerificadorDeAuditoriaIT {
 
         assertThat(resultado.intacta()).isTrue();
         assertThat(resultado.movimientos()).isEqualTo(movimientos);
-        // Bloques de dos (ver arriba): seis con filas y el último, vacío, que
-        // es el que dice que se ha acabado. Con entidades eran más de treinta.
-        assertThat(consultas).isEqualTo(movimientos / 2 + 1);
+        // Desde V46 cada empresa tiene su cadena (ADR 050). Una consulta para
+        // saber qué cadenas hay, dos para el tramo común (vacío aquí: filas y
+        // lápidas) y, por cada empresa, bloques de dos más el último, vacío,
+        // que es el que dice que se ha acabado. Con entidades eran más de treinta.
+        assertThat(consultas).isEqualTo(1 + 2 + 3 * (4 / 2 + 1));
     }
 
     /*
@@ -283,18 +294,84 @@ class VerificadorDeAuditoriaIT {
     @DisplayName("Las filas viejas no se dan por buenas: se cuentan como no comprobables")
     void filasDeLaVersionUno_seCuentanAparte() throws Exception {
         jornadaCompleta("vieja@nxtime.test");
-        long id = todasLasFilas().get(0).getId();
+        long primera = todasLasFilas().get(0).getId();
 
-        // Se simula una fila escrita antes del cambio: su hash no se puede
-        // recalcular, y decir que está verificada sería mentir.
-        manipularSaltandoseElTrigger(
-                "UPDATE auditoria_fichaje SET version_hash = 1 WHERE id = " + id);
+        // Se simula una traza escrita antes de todo esto: filas de la versión 1,
+        // en el tramo común (sin empresa, y la primera sin nada antes). Su hash
+        // no se puede recalcular, y decir que están verificadas sería mentir.
+        manipularSaltandoseElTrigger("UPDATE auditoria_fichaje SET version_hash = 1, empresa_id = NULL");
+        manipularSaltandoseElTrigger("UPDATE auditoria_fichaje SET hash_anterior = NULL WHERE id = " + primera);
 
         AuditIntegrityResponse resultado = verificador.verificar();
 
         assertThat(resultado.intacta()).as("una fila vieja no es una fila rota").isTrue();
-        assertThat(resultado.soloEnlace()).isEqualTo(1);
-        assertThat(resultado.comprobados()).isEqualTo(resultado.movimientos() - 1);
+        assertThat(resultado.soloEnlace()).isEqualTo(4);
+        assertThat(resultado.comprobados()).isZero();
+    }
+
+    // ------------------------------------------------------------------
+    // Una cadena por empresa (V46, ADR 050)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Cada empresa encadena con lo suyo, y la primera fila con su génesis")
+    void cadaEmpresaTieneSuCadena() {
+        Company a = jornadaCompleta("cadena-a@nxtime.test");
+        Company b = jornadaCompleta("cadena-b@nxtime.test");
+
+        List<TimeEntryAudit> deA = todasLasFilas().stream().filter(f -> f.getEmpresaId() == a.getId()).toList();
+        List<TimeEntryAudit> deB = todasLasFilas().stream().filter(f -> f.getEmpresaId() == b.getId()).toList();
+        assertThat(deA).hasSize(4);
+        assertThat(deB).hasSize(4);
+        assertThat(deA.get(0).getHashAnterior()).isEqualTo(HuellaDeAuditoria.genesis(a.getId()));
+        assertThat(deB.get(0).getHashAnterior()).isEqualTo(HuellaDeAuditoria.genesis(b.getId()));
+        assertThat(deB.get(1).getHashAnterior()).isEqualTo(deB.get(0).getHash());
+        assertThat(todasLasFilas()).allMatch(f -> f.getVersionHash() == HuellaDeAuditoria.VERSION_POR_EMPRESA);
+    }
+
+    @Test
+    @DisplayName("Una cadena rota en una empresa no deja sin comprobar a las demás")
+    void unaCadenaRota_noAfectaALasDemas() throws Exception {
+        Company rota = jornadaCompleta("rota-a@nxtime.test");
+        Company sana = jornadaCompleta("sana-b@nxtime.test");
+        long id = todasLasFilas().stream().filter(f -> f.getEmpresaId() == rota.getId()).toList().get(1).getId();
+        manipularSaltandoseElTrigger("UPDATE auditoria_fichaje SET motivo = 'Lo cambie yo' WHERE id = " + id);
+
+        AuditIntegrityResponse deLaRota = verificador.verificarPara(rota.getId());
+        AuditIntegrityResponse deLaSana = verificador.verificarPara(sana.getId());
+
+        assertThat(deLaRota.intacta()).isFalse();
+        assertThat(deLaRota.primerFallo()).isEqualTo(id);
+        assertThat(deLaSana.intacta()).as("es otra cadena").isTrue();
+        assertThat(deLaSana.movimientos()).isEqualTo(4);
+        // Y la nocturna anota la sana aunque la otra esté rota.
+        verificador.verificarLoNuevoYAnotar();
+        assertThat(checkpointRepository.findTopByEmpresaIdOrderByHastaIdDesc(sana.getId())).isPresent();
+        assertThat(checkpointRepository.findTopByEmpresaIdOrderByHastaIdDesc(rota.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Quitarle a una empresa su primera fila se nota: la siguiente ya no enlaza con la génesis")
+    void quitarLaPrimeraFila_seDetecta() throws Exception {
+        Company empresa = jornadaCompleta("primera@nxtime.test");
+        var filas = todasLasFilas();
+        manipularSaltandoseElTrigger("DELETE FROM auditoria_fichaje WHERE id = " + filas.get(0).getId());
+
+        AuditIntegrityResponse resultado = verificador.verificarPara(empresa.getId());
+
+        assertThat(resultado.intacta()).isFalse();
+        assertThat(resultado.primerFallo()).isEqualTo(filas.get(1).getId());
+    }
+
+    @Test
+    @DisplayName("Una fila no se puede pasar de la cadena de una empresa a la de otra")
+    void cambiarLaEmpresaDeUnaFila_seDetecta() throws Exception {
+        Company a = jornadaCompleta("mover-a@nxtime.test");
+        Company b = jornadaCompleta("mover-b@nxtime.test");
+        long ultimaDeA = todasLasFilas().stream().filter(f -> f.getEmpresaId() == a.getId()).toList().get(3).getId();
+        manipularSaltandoseElTrigger("UPDATE auditoria_fichaje SET empresa_id = " + b.getId() + " WHERE id = " + ultimaDeA);
+
+        assertThat(verificador.verificarPara(b.getId()).intacta()).isFalse();
     }
 
     // ------------------------------------------------------------------
@@ -355,17 +432,17 @@ class VerificadorDeAuditoriaIT {
         assertThat(punto.getHastaId()).isEqualTo(ultima.getId());
         assertThat(punto.getHash()).isEqualTo(ultima.getHash());
         assertThat(punto.getFilas()).isEqualTo(4);
-        assertThat(verificador.movimientosSinRevisar(punto)).isZero();
+        assertThat(verificador.resumenDeLaInstalacion().sinRevisar()).isZero();
     }
 
     /** Lo que hace que la tarea nocturna sea barata: no revisa lo ya revisado. */
     @Test
     @DisplayName("La segunda verificación solo mira lo nuevo, y el total sigue siendo el de toda la traza")
     void segundaVerificacion_esIncrementalPeroSumaElTotal() {
-        jornadaCompleta("incremental1@nxtime.test");
+        Company empresa = jornadaCompleta("incremental1@nxtime.test");
         verificador.verificarLoNuevoYAnotar();
 
-        jornadaCompleta("incremental2@nxtime.test");
+        jornadaCompleta("incremental2@nxtime.test", empresa);
         AuditIntegrityResponse segunda = verificador.verificarLoNuevoYAnotar();
 
         assertThat(segunda.intacta()).isTrue();
@@ -415,7 +492,7 @@ class VerificadorDeAuditoriaIT {
     @Test
     @DisplayName("El punto de control firma la última fila recorrida, no una que llegó después")
     void fichajeDuranteLaComprobacion_noSeDaPorComprobado() {
-        jornadaCompleta("antes@nxtime.test");
+        Company empresa = jornadaCompleta("antes@nxtime.test");
         long ultimaRecorrida = todasLasFilas().get(3).getId();
         // Un verificador montado a mano sobre el repositorio de verdad, con un
         // solo añadido: en cuanto el recorrido lee su último bloque, alguien
@@ -424,15 +501,15 @@ class VerificadorDeAuditoriaIT {
         TimeEntryAuditRepository conUnFichajeEnMedio =
                 mock(TimeEntryAuditRepository.class, delegatesTo(auditRepository));
         doAnswer(invocacion -> {
-            List<FilaDeLaCadena> bloque = auditRepository.findBloqueDeLaCadena(
-                    invocacion.getArgument(0), invocacion.getArgument(1));
+            List<FilaDeLaCadena> bloque = auditRepository.findBloqueDeLaCadenaDeEmpresa(
+                    invocacion.getArgument(0), invocacion.getArgument(1), invocacion.getArgument(2));
             if (bloque.isEmpty() && yaHaFichado.compareAndSet(false, true)) {
-                jornadaCompleta("mientras@nxtime.test");
+                jornadaCompleta("mientras@nxtime.test", empresa);
             }
             return bloque;
-        }).when(conUnFichajeEnMedio).findBloqueDeLaCadena(anyLong(), any());
+        }).when(conUnFichajeEnMedio).findBloqueDeLaCadenaDeEmpresa(anyLong(), anyLong(), any());
         VerificadorDeAuditoria verificador = new VerificadorDeAuditoria(conUnFichajeEnMedio, checkpointRepository,
-                userRepository, huella, 2, Duration.ZERO, Duration.ofSeconds(20));
+                lapidas, userRepository, huella, 2, Duration.ZERO, Duration.ofSeconds(20));
 
         AuditIntegrityResponse resultado = verificador.verificarLoNuevoYAnotar();
 
@@ -443,7 +520,7 @@ class VerificadorDeAuditoriaIT {
         assertThat(punto.getFilas()).isEqualTo(4);
         // Los cuatro del fichaje de en medio siguen pendientes, y la noche
         // siguiente los revisa.
-        assertThat(verificador.movimientosSinRevisar(punto)).isEqualTo(4);
+        assertThat(verificador.resumenDeLaInstalacion().sinRevisar()).isEqualTo(4);
         assertThat(verificador.verificarLoNuevoYAnotar().movimientos()).isEqualTo(8);
     }
 
@@ -492,9 +569,9 @@ class VerificadorDeAuditoriaIT {
     @Test
     @DisplayName("El recorrido completo con movimientos nuevos anota el punto de control, con el total de la traza")
     void recorridoCompleto_conMovimientosNuevos_anotaElPunto() {
-        jornadaCompleta("completa2@nxtime.test");
+        Company empresa = jornadaCompleta("completa2@nxtime.test");
         verificador.verificarLoNuevoYAnotar();
-        jornadaCompleta("completa3@nxtime.test");
+        jornadaCompleta("completa3@nxtime.test", empresa);
 
         AuditIntegrityResponse completo = verificador.verificarTodoYAnotar();
 
@@ -581,26 +658,43 @@ class VerificadorDeAuditoriaIT {
     }
 
     /**
-     * La cadena es común: si se rompe en la parte de otra empresa, lo de esta
-     * que venga después se queda sin comprobar, y hay que decírselo. Lo que no
-     * se le dice es en qué movimiento, que no es suyo.
+     * Convierte la traza en un tramo común como el de antes de V46: filas de la
+     * versión 1, sin empresa y encadenadas cada una con la anterior de la
+     * tabla, sea de quien sea.
+     */
+    private void comoTramoComun() throws Exception {
+        manipularSaltandoseElTrigger("""
+                UPDATE auditoria_fichaje a
+                   SET version_hash = 1, empresa_id = NULL, hash_anterior = p.anterior
+                  FROM (SELECT id, lag(hash) OVER (ORDER BY id) AS anterior FROM auditoria_fichaje) p
+                 WHERE a.id = p.id
+                """);
+    }
+
+    /**
+     * El tramo común (las filas de antes de V46) sigue siendo uno: si se rompe
+     * en la parte de otra empresa, lo de esta que venga después se queda sin
+     * comprobar, y hay que decírselo. Lo que no se le dice es en qué
+     * movimiento, que no es suyo. En las cadenas por empresa esto ya no pasa:
+     * ver unaCadenaRota_noAfectaALasDemas.
      */
     @Test
-    @DisplayName("Una fila manipulada de OTRA empresa: se dice que la traza falla, pero no cuál; a su dueña, sí")
+    @DisplayName("Una fila rota del tramo común de OTRA empresa: se dice que la traza falla, pero no cuál; a su dueña, sí")
     void filaManipuladaDeOtraEmpresa() throws Exception {
         jornadaCompleta("rota-antes@nxtime.test");
         jornadaCompleta("rota-medio@nxtime.test");
         jornadaCompleta("rota-despues@nxtime.test");
+        comoTramoComun();
         long id = todasLasFilas().get(5).getId(); // la segunda de la empresa del medio
 
         manipularSaltandoseElTrigger(
-                "UPDATE auditoria_fichaje SET motivo = 'Lo cambie yo' WHERE id = " + id);
+                "UPDATE auditoria_fichaje SET hash_anterior = repeat('0', 64) WHERE id = " + id);
 
         // A su dueña: cuál es y qué le pasa. Su primera fila sí estaba bien.
         AuditIntegrityResponse paraLaDuenia = verificador.verificarPara(empresaDe("rota-medio@nxtime.test"));
         assertThat(paraLaDuenia.intacta()).isFalse();
         assertThat(paraLaDuenia.primerFallo()).isEqualTo(id);
-        assertThat(paraLaDuenia.motivo()).contains("no coincide con su hash");
+        assertThat(paraLaDuenia.motivo()).contains("enlace");
         assertThat(paraLaDuenia.movimientos()).isEqualTo(1);
 
         // A la que escribió antes: falla, sin decir dónde; lo suyo, comprobado entero.
@@ -634,10 +728,11 @@ class VerificadorDeAuditoriaIT {
         timeEntryService.registerTimeEntry("punto-b@nxtime.test", new TimeEntryRequest(TimeEntryAction.INICIO));
         timeEntryService.registerTimeEntry("punto-b@nxtime.test", new TimeEntryRequest(TimeEntryAction.FIN));
 
-        // El punto de control es de la cadena entera...
-        assertThat(verificador.ultimoPuntoDeControl().orElseThrow().getFilas()).isEqualTo(8);
+        // Un punto de control por cadena, y cada empresa tiene la suya (ADR 050)...
+        assertThat(checkpointRepository.findTopByEmpresaIdOrderByHastaIdDesc(a).orElseThrow().getFilas()).isEqualTo(4);
+        assertThat(checkpointRepository.findTopByEmpresaIdOrderByHastaIdDesc(b).orElseThrow().getFilas()).isEqualTo(4);
 
-        // ...y a cada empresa se le da su parte.
+        // ...y a cada empresa se le da lo suyo.
         var paraA = verificador.ultimaComprobacionPara(a).orElseThrow();
         assertThat(paraA.movimientos()).isEqualTo(4);
         assertThat(paraA.comprobados()).isEqualTo(4);
