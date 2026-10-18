@@ -18,8 +18,14 @@
         la corrección que pediste. El fichaje se queda como estaba.
     </p>
 
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
     <p th:if="${comentario != null and !comentario.isBlank()}" style="margin: 0;">
-        Comentario: <span th:text="${comentario}">Comentario</span>
+        Te han dejado un comentario: lo tienes en la aplicación.
     </p>
 </div>
 </body>

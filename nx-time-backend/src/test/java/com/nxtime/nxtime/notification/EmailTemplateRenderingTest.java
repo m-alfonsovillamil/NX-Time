@@ -76,7 +76,8 @@ class EmailTemplateRenderingTest {
 
         assertThat(html).contains("Marta").contains("Ana").contains("VACACIONES");
         assertThat(html).contains("01/06/2026").contains("05/06/2026");
-        assertThat(html).contains("Viaje familiar");
+        // El motivo no viaja en el correo (plan J, J5): puede revelar salud.
+        assertThat(html).doesNotContain("Viaje familiar").contains("lo verás en la aplicación");
         assertThat(html).contains("NX Time"); // viene del marco común
     }
 
@@ -121,7 +122,7 @@ class EmailTemplateRenderingTest {
     }
 
     @Test
-    @DisplayName("El comentario del gestor aparece cuando lo hay")
+    @DisplayName("Si el gestor deja un comentario, el correo lo dice pero no lo copia (plan J, J5)")
     void absenceResolved_muestraElComentario() {
         Map<String, Object> vars = new HashMap<>();
         vars.put("nombreEmpleado", "Ana");
@@ -132,7 +133,9 @@ class EmailTemplateRenderingTest {
         vars.put("aprobada", false);
         vars.put("comentario", "Coincide con el cierre trimestral.");
 
-        assertThat(render("absence-resolved", vars)).contains("Coincide con el cierre trimestral.");
+        assertThat(render("absence-resolved", vars))
+                .doesNotContain("Coincide con el cierre trimestral.")
+                .contains("Te han dejado un comentario");
     }
 
     @Test

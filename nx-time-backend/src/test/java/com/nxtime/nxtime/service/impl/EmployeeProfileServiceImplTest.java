@@ -339,6 +339,23 @@ class EmployeeProfileServiceImplTest {
                 .isInstanceOf(TenantAccessException.class);
     }
 
+    /** Plan J, J5: minimización (RGPD, art. 5.1.c). */
+    @Test
+    @DisplayName("La fecha de nacimiento la ven la propia persona, RRHH y ADMIN; un GESTOR, no")
+    void fechaDeNacimiento_soloQuienLaNecesita() {
+        empleado.setFechaNacimiento(java.time.LocalDate.of(1990, 5, 17));
+        User gestora = User.builder().id(12L).email("gestora@nxtime.test").nombre("Marta")
+                .rol(Role.GESTOR).empresa(empresa).activo(true).build();
+        User admin = User.builder().id(13L).email("admin@nxtime.test").nombre("Raúl")
+                .rol(Role.ADMIN).empresa(empresa).activo(true).build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+
+        assertThat(service.getProfile(10L, gestora).fechaNacimiento()).isNull();
+        assertThat(service.getProfile(10L, rrhh).fechaNacimiento()).isEqualTo(java.time.LocalDate.of(1990, 5, 17));
+        assertThat(service.getProfile(10L, admin).fechaNacimiento()).isEqualTo(java.time.LocalDate.of(1990, 5, 17));
+        assertThat(service.getMyProfile(empleado).fechaNacimiento()).isEqualTo(java.time.LocalDate.of(1990, 5, 17));
+    }
+
     // ------------------------------------------------------------------
     // Asignación de departamento
     // ------------------------------------------------------------------
