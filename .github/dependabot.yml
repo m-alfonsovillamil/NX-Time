@@ -50,6 +50,11 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # Java se queda en la 21 (LTS) hasta que se decida subir: pasar a la 25 es
+    # cambiar de versión de la plataforma, no un parche, y se hace a propósito.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
     groups:
       imagenes:
         patterns: ["*"]
