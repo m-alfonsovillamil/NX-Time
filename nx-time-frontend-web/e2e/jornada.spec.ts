@@ -99,7 +99,15 @@ test('en un portatil a 1440×900 «Mi jornada» cabe entera sin desplazarse', as
   await page.goto('/');
   await page.getByLabel('Correo electrónico').fill(EMPLEADO.email);
   await page.getByLabel('Contraseña').fill(EMPLEADO.contrasena);
+  const aviso = page.waitForResponse(
+    (r) => r.url().includes('/api/v1/perfil/aviso-de-privacidad') && r.request().method() === 'GET',
+  );
   await page.getByRole('button', { name: 'Entrar' }).click();
+  // El aviso de privacidad sale una sola vez (ADR 047): lo que se mide es la
+  // página de todos los días, así que se cierra como lo cierra cualquiera.
+  if ((await (await aviso).json()).visto !== true) {
+    await page.getByRole('button', { name: 'Entendido' }).click();
+  }
 
   // Con el resumen ya pintado y las fuentes cargadas: antes, la página mide menos.
   await expect(page.getByRole('heading', { name: 'Mi tiempo' })).toBeVisible();

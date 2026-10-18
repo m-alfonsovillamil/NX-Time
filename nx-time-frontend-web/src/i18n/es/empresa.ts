@@ -96,7 +96,7 @@ export const empresa = {
     viaVerbal: 'Vía verbal',
     viaVerbalAyuda:
       'Un teléfono, un horario o a quién pedir una reunión en persona. Se lo enseñamos a quien vaya a denunciar. La reunión, si la piden, tiene que celebrarse en 7 días.',
-    guardar: 'Guardar',
+    guardar: 'Guardar el canal',
     guardado: 'Canal de denuncias guardado.',
   },
 
