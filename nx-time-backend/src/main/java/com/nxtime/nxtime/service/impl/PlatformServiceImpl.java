@@ -126,10 +126,12 @@ public class PlatformServiceImpl implements PlatformService {
      * El recorrido completo se pide aparte, y es quien da la fila rota.
      */
     private Cadena cadena() {
-        Optional<AuditCheckpoint> punto = verificador.ultimoPuntoDeControl();
-        return punto
-                .map(p -> new Cadena(p.getVerificadoEn(), p.getFilas(), verificador.movimientosSinRevisar(p)))
-                .orElseGet(() -> new Cadena(null, 0, verificador.movimientosEnTotal()));
+        // Desde V46 hay una cadena por empresa y el tramo común (ADR 050):
+        // se suma lo de todas.
+        VerificadorDeAuditoria.Resumen resumen = verificador.resumenDeLaInstalacion();
+        return resumen.ultimaComprobacion() == null
+                ? new Cadena(null, 0, verificador.movimientosEnTotal())
+                : new Cadena(resumen.ultimaComprobacion(), resumen.comprobados(), resumen.sinRevisar());
     }
 
     @Override

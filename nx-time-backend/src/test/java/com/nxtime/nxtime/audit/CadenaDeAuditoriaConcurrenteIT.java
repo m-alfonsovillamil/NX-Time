@@ -54,7 +54,7 @@ import org.springframework.test.context.DynamicPropertySource;
  *
  * <h2>Cómo saber que este test sirve</h2>
  *
- * Comprobado al escribirlo, comentando la llamada a {@code bloquearCadena} en
+ * Comprobado al escribirlo, comentando la llamada a {@code bloquearCadena} (hoy {@code bloquearCadenaDeEmpresa}) en
  * {@link TimeEntryAuditListener}: el test se pone rojo con
  *
  * <pre>

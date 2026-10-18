@@ -79,6 +79,25 @@ export const empresa = {
         : `Zona cambiada. Se han anulado ${n} firmas mensuales cuyo mes ha cambiado: se ha avisado a cada persona para que vuelva a firmar.`,
   },
 
+  /** La baja de la empresa (condiciones, punto 9; ADR 050). */
+  baja: {
+    titulo: 'Dar de baja la empresa',
+    explicacion:
+      'Si dejáis de usar el servicio. Durante 30 días todo sigue funcionando para que os llevéis los datos, y se puede cancelar; después se borra todo, también la traza de auditoría, y no se puede deshacer.',
+    pedir: 'Pedir la baja',
+    confirmarTitulo: '¿Dar de baja la empresa?',
+    confirmarTexto:
+      'A los 30 días se borra todo lo de la empresa: personas, fichajes, ausencias, firmas, denuncias y la traza de auditoría. La empresa tiene que conservar el registro de jornada cuatro años: descárgalo antes desde Informes.',
+    escribeElNombre: (nombre: string) => `Para confirmar, escribe «${nombre}»`,
+    confirmar: 'Dar de baja',
+    pedida: 'Baja pedida. Os lo hemos dicho también por correo.',
+    enCurso: (dia: string) => `La baja está pedida: el ${dia} se borra todo.`,
+    llevatelo: 'Antes, llévate el registro de jornada, doce meses de cada vez:',
+    irAInformes: 'ir a Informes',
+    cancelar: 'Cancelar la baja',
+    cancelada: 'Baja cancelada: no se va a borrar nada.',
+  },
+
   /** El canal de denuncias de la empresa (Ley 2/2023, art. 8; ADR 048). */
   canal: {
     titulo: 'Canal de denuncias',

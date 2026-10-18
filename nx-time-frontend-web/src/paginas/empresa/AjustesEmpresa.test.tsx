@@ -142,6 +142,44 @@ describe('canal de denuncias de la empresa (ADR 048)', () => {
   });
 });
 
+describe('la baja de la empresa (ADR 050)', () => {
+  const B = empresa.baja;
+
+  it('pedirla exige escribir el nombre, y después se puede cancelar', async () => {
+    let pedida: { solicitadaEn?: string; borradoDesde?: string } = {};
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => AJUSTES,
+      'GET /api/v1/empresa/baja': () => pedida,
+      'POST /api/v1/empresa/baja': () => {
+        pedida = { solicitadaEn: '2026-10-18T10:00:00Z', borradoDesde: '2026-11-17T10:00:00Z' };
+        return pedida;
+      },
+      'DELETE /api/v1/empresa/baja': () => {
+        pedida = {};
+        return pedida;
+      },
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    await userEvent.click(await screen.findByRole('button', { name: B.pedir }));
+    const dialogo = await screen.findByRole('dialog', { name: B.confirmarTitulo });
+    const confirmar = within(dialogo).getByRole('button', { name: B.confirmar });
+    expect((confirmar as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.type(within(dialogo).getByLabelText(B.escribeElNombre('Talleres Ana')), 'talleres ana');
+    expect((confirmar as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(confirmar);
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/empresa/baja').map((l) => l.cuerpo)).toEqual([{ confirmacion: 'talleres ana' }]),
+    );
+    expect(await screen.findByText(/^La baja está pedida: el /)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: B.cancelar }));
+    await waitFor(() => expect(llamadas.a('DELETE', '/api/v1/empresa/baja')).toHaveLength(1));
+    expect(await screen.findByRole('button', { name: B.pedir })).toBeTruthy();
+  });
+});
+
 describe('kioscos de la empresa', () => {
   it('se da de alta uno con el código de la tablet y se revoca', async () => {
     let lista: { id: number; nombre: string; creadoEn: string; activo: boolean }[] = [];

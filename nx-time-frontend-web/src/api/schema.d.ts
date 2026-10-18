@@ -1094,6 +1094,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/baja": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La baja de mi empresa
+         * @description Si está pedida, cuándo y desde cuándo se borra.
+         */
+        get: operations["estado_1"];
+        put?: never;
+        /**
+         * Pedir la baja de mi empresa
+         * @description Hay que escribir el nombre de la empresa. Durante 30 días todo sigue funcionando para llevarse los datos, y se puede cancelar; después se borra entera, auditoría incluida, y no se puede deshacer.
+         */
+        post: operations["solicitar_1"];
+        /**
+         * Cancelar la baja
+         * @description Mientras no hayan pasado los 30 días.
+         */
+        delete: operations["cancelar_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispositivos-push": {
         parameters: {
             query?: never;
@@ -2163,7 +2191,7 @@ export interface paths {
          * ¿Puedo fichar en un kiosco?
          * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
          */
-        get: operations["estado_1"];
+        get: operations["estado_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4023,6 +4051,15 @@ export interface components {
             aceptadaPor?: string;
             /** @description Si falta aceptar la versión en vigor */
             porAceptar?: boolean;
+        };
+        CompanyClosureRequest: {
+            confirmacion: string;
+        };
+        CompanyClosureResponse: {
+            /** Format: date-time */
+            solicitadaEn?: string;
+            /** Format: date-time */
+            borradoDesde?: string;
         };
         RegisterPushDeviceRequest: {
             token: string;
@@ -8336,6 +8373,106 @@ export interface operations {
             };
         };
     };
+    estado_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La baja */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    solicitar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyClosureRequest"];
+            };
+        };
+        responses: {
+            /** @description Pedida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description El nombre no coincide */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya estaba pedida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    cancelar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description No había ninguna */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     registrar_1: {
         parameters: {
             query?: never;
@@ -11142,7 +11279,7 @@ export interface operations {
             };
         };
     };
-    estado_1: {
+    estado_2: {
         parameters: {
             query?: never;
             header?: never;

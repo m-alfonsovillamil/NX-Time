@@ -105,6 +105,13 @@ public class Company {
     @Column(name = "canal_via_verbal", length = 500)
     private String canalViaVerbal;
 
+    /** Cuándo pidió el ADMIN la baja: a los 30 días se borra entera (V46, ADR 050). */
+    @Column(name = "baja_solicitada_en")
+    private Instant bajaSolicitadaEn;
+
+    @Column(name = "baja_solicitada_por")
+    private Long bajaSolicitadaPor;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

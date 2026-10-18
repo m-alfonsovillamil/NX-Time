@@ -20,4 +20,21 @@ public interface AuditCheckpointRepository extends JpaRepository<AuditCheckpoint
      * ser la que llegó menos lejos.
      */
     Optional<AuditCheckpoint> findTopByOrderByHastaIdDesc();
+
+    /** El último del tramo común (V46, ADR 050). */
+    Optional<AuditCheckpoint> findTopByEmpresaIdIsNullOrderByHastaIdDesc();
+
+    /** El último de la cadena de una empresa. */
+    Optional<AuditCheckpoint> findTopByEmpresaIdOrderByHastaIdDesc(long empresaId);
+
+    /** El más reciente de todos, sea de la cadena que sea: «comprobada anoche». */
+    Optional<AuditCheckpoint> findTopByOrderByVerificadoEnDesc();
+
+    /** El último de cada cadena, para sumar lo comprobado de la instalación entera. */
+    @org.springframework.data.jpa.repository.Query("""
+            select p from puntos_control_auditoria p
+             where p.hastaId = (select max(q.hastaId) from puntos_control_auditoria q
+                                 where (q.empresaId = p.empresaId) or (q.empresaId is null and p.empresaId is null))
+            """)
+    java.util.List<AuditCheckpoint> ultimosDeCadaCadena();
 }

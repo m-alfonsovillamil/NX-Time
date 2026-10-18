@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<!--/* A los ADMIN: se ha cancelado la baja de la empresa (ADR 050). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Se ha cancelado la baja de tu empresa', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Se ha cancelado la baja de <strong th:text="${nombreEmpresa}">tu empresa</strong> en
+        <span th:text="${producto}">NX Time</span>. No se va a borrar nada: todo sigue como estaba.</p>
+
+    <p>Si no lo esperabas, escríbenos a
+        <a th:href="'mailto:' + ${correoContacto}" href="#" th:text="${correoContacto}">correo</a>.</p>
+</div>
+</body>
+</html>

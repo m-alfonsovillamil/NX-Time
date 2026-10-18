@@ -102,6 +102,14 @@ public class TimeEntryAudit {
     @Column(name = "version_hash", nullable = false)
     private short versionHash;
 
+    /**
+     * La cadena a la que pertenece (V46, ADR 050): la de su empresa. Solo en
+     * las filas de la versión 3; las de antes forman el tramo común y van
+     * con null.
+     */
+    @Column(name = "empresa_id")
+    private Long empresaId;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

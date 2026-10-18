@@ -15,7 +15,7 @@ siguiente. El resumen de cada pasada queda en `/estado/tareas`.
 | Persona dada de baja | Anonimizada cuando han pasado 4 años de su último fichaje y de su baja, aunque nadie lo pida | Fin del plazo del ET | Sí (`ConservacionDeDatos`); a petición, como antes (ADR 016) |
 | Registro de empresa sin confirmar | 48 horas | No hay relación | Sí (`UnconfirmedRegistrationCleaner`) |
 | Empresa rechazada | En el acto | No hay relación | Sí (ADR 046) |
-| Empresa que se da de baja | 30 días tras entregarle sus datos | Condiciones, punto 9 | A mano por ahora (J7) |
+| Empresa que se da de baja | 30 días desde que la pide un ADMIN (para llevarse los datos; se puede cancelar) | Condiciones, punto 9 | Sí (`borrar_empresa`, ADR 050); queda solo su nombre en `empresas_borradas` y las lápidas de su tramo común |
 | Sesiones (refresh tokens) caducadas | 30 días desde que caduca la última de la familia | Detectar reutilización | Sí |
 | Códigos de acceso usados, anulados o caducados | 90 días | Investigar abusos | Sí |
 | Avisos dentro de la aplicación | 1 año | Ya no se miran | Sí |

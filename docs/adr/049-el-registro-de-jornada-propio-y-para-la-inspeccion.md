@@ -43,4 +43,4 @@ se hace aquí**, y el motivo es técnico: la cadena de huellas de la auditoría 
 **una sola para todas las empresas** (cada fila enlaza con la anterior, sea de
 quien sea; ADR 018). Borrar las filas de una empresa rompería la verificación de
 todas. Las salidas posibles —una cadena por empresa, o anonimizar en vez de
-borrar— se deciden aparte. Mientras tanto, la baja sigue siendo a mano.
+borrar— se deciden aparte. **Decidido el mismo día: una cadena por empresa, en el [ADR 050](050-una-cadena-de-auditoria-por-empresa-y-la-baja.md).**
