@@ -3,6 +3,7 @@ package com.nxtime.nxtime.service.impl;
 import com.nxtime.nxtime.domain.Attachment;
 import com.nxtime.nxtime.domain.AttachmentData;
 import com.nxtime.nxtime.domain.AttachmentType;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AttachmentResponse;
@@ -48,13 +49,16 @@ public class AttachmentServiceImpl implements AttachmentService {
      * este: la regla la impone la candidatura.
      */
     private final JobApplicationRepository jobApplicationRepository;
+    private final RegistroDeAccesos accesos;
 
     public AttachmentServiceImpl(AttachmentRepository attachmentRepository,
                                  AttachmentDataRepository attachmentDataRepository,
-                                 JobApplicationRepository jobApplicationRepository) {
+                                 JobApplicationRepository jobApplicationRepository,
+                                 RegistroDeAccesos accesos) {
         this.attachmentRepository = attachmentRepository;
         this.attachmentDataRepository = attachmentDataRepository;
         this.jobApplicationRepository = jobApplicationRepository;
+        this.accesos = accesos;
     }
 
     @Override
@@ -145,6 +149,9 @@ public class AttachmentServiceImpl implements AttachmentService {
                     actor.getId(), adjuntoId);
             throw new TenantAccessException("Ese adjunto no es tuyo.");
         }
+        // El CV de otra persona (el de una candidatura) queda anotado; el
+        // propio, no (ADR 047).
+        accesos.anotar(actor, DatoConsultado.CV, adjunto.getUsuario().getId(), "Adjunto " + adjuntoId);
 
         // La única lectura de los bytes en todo el servicio, y explícita:
         // por eso están en su propia tabla (ver ADR 007).

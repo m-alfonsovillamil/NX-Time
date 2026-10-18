@@ -200,12 +200,12 @@ class ZonaHorariaIT {
     @DisplayName("Los ajustes rechazan una zona inventada y un desfase fijo, que no sabe de horario de verano")
     void zonaInvalida() {
         assertThatThrownBy(() -> ajustes.guardar(
-                new UpdateCompanySettingsRequest("Empresa", "Marte/Olimpo"), enMadrid))
+                new UpdateCompanySettingsRequest("Empresa", "Marte/Olimpo", null), enMadrid))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getStatus())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
         assertThatThrownBy(() -> ajustes.guardar(
-                new UpdateCompanySettingsRequest("Empresa", "+01:00"), enMadrid))
+                new UpdateCompanySettingsRequest("Empresa", "+01:00", null), enMadrid))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -222,7 +222,7 @@ class ZonaHorariaIT {
         signatureService.firmar(enMadrid, YearMonth.of(2026, 1), null);
 
         CompanySettingsResponse respuesta = ajustes.guardar(
-                new UpdateCompanySettingsRequest(enMadrid.getEmpresa().getNombre(), CANARIAS), enMadrid);
+                new UpdateCompanySettingsRequest(enMadrid.getEmpresa().getNombre(), CANARIAS, null), enMadrid);
 
         assertThat(respuesta.zonaHoraria()).isEqualTo(CANARIAS);
         assertThat(respuesta.firmasInvalidadas()).isEqualTo(1);
@@ -233,14 +233,14 @@ class ZonaHorariaIT {
 
         // Guardar otra vez la misma zona no revisa nada.
         assertThat(ajustes.guardar(new UpdateCompanySettingsRequest(
-                enMadrid.getEmpresa().getNombre(), CANARIAS), enMadrid).firmasInvalidadas()).isZero();
+                enMadrid.getEmpresa().getNombre(), CANARIAS, null), enMadrid).firmasInvalidadas()).isZero();
     }
 
     @Test
     @DisplayName("No se puede poner el nombre de otra empresa")
     void nombreDeOtraEmpresa() {
         assertThatThrownBy(() -> ajustes.guardar(new UpdateCompanySettingsRequest(
-                enCanarias.getEmpresa().getNombre(), Company.ZONA_POR_DEFECTO), enMadrid))
+                enCanarias.getEmpresa().getNombre(), Company.ZONA_POR_DEFECTO, null), enMadrid))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getStatus())
                 .isEqualTo(HttpStatus.CONFLICT);

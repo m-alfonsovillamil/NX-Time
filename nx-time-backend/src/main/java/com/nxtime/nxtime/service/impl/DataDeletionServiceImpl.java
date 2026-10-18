@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.DeletionRequest;
 import com.nxtime.nxtime.domain.DeletionStatus;
 import com.nxtime.nxtime.domain.Role;
@@ -19,6 +20,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -361,7 +363,24 @@ public class DataDeletionServiceImpl implements DataDeletionService {
                 solicitud.getResueltaEn(),
                 solicitud.getComentarioResolucion(),
                 solicitud.getAnonimizarDesde(),
-                bloqueos);
+                bloqueos,
+                diasParaResponder(solicitud));
+    }
+
+    /**
+     * El mes del art. 12.3 del RGPD, en días naturales y en el calendario de
+     * la empresa, igual que los plazos de las denuncias: «quedan 3 días» dice
+     * lo mismo a las 9:00 que a las 23:00. Lo que no dice es que se pueda
+     * prorrogar dos meses más: eso exige avisar a la persona con el motivo, y
+     * es una decisión de la empresa.
+     */
+    private Long diasParaResponder(DeletionRequest solicitud) {
+        if (solicitud.getEstado() != DeletionStatus.PENDIENTE || solicitud.getCreadaEn() == null) {
+            return null;
+        }
+        ZoneId zona = Company.zonaDe(solicitud.getEmpresa());
+        LocalDate limite = solicitud.getCreadaEn().atZone(zona).toLocalDate().plusMonths(1);
+        return ChronoUnit.DAYS.between(LocalDate.now(clock.withZone(zona)), limite);
     }
 
     private static String nombreCompleto(User persona) {

@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.Department;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
@@ -41,15 +42,18 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     private final VacationBalanceRepository vacationBalanceRepository;
     private final DepartmentRepository departmentRepository;
     private final OperadoresDePlataforma operadores;
+    private final RegistroDeAccesos accesos;
 
     public EmployeeProfileServiceImpl(UserRepository userRepository,
                                       VacationBalanceRepository vacationBalanceRepository,
                                       DepartmentRepository departmentRepository,
-                                      OperadoresDePlataforma operadores) {
+                                      OperadoresDePlataforma operadores,
+                                      RegistroDeAccesos accesos) {
         this.userRepository = userRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.departmentRepository = departmentRepository;
         this.operadores = operadores;
+        this.accesos = accesos;
     }
 
     @Override
@@ -161,7 +165,9 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
     @Override
     public ProfileResponse getProfile(long usuarioId, User actor) {
-        return toProfile(deLaMismaEmpresa(usuarioId, actor, "No puedes ver el perfil de otra empresa."), actor);
+        User usuario = deLaMismaEmpresa(usuarioId, actor, "No puedes ver el perfil de otra empresa.");
+        accesos.anotar(actor, DatoConsultado.PERFIL, usuario.getId(), null);
+        return toProfile(usuario, actor);
     }
 
     @Override

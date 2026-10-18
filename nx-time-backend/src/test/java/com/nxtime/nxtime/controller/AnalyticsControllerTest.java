@@ -58,6 +58,9 @@ class AnalyticsControllerTest {
     @MockitoBean
     private AnalyticsService analyticsService;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.impl.RegistroDeAccesos accesos;
+
     @Test
     @WithMockSecurityUser(rol = Role.EMPLEADO)
     @DisplayName("Un EMPLEADO no ve la analítica")

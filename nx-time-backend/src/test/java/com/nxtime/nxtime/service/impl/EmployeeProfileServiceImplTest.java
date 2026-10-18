@@ -61,6 +61,8 @@ class EmployeeProfileServiceImplTest {
 
     @Mock
     private DepartmentRepository departmentRepository;
+    @Mock
+    private RegistroDeAccesos accesos;
 
     private EmployeeProfileServiceImpl service;
 
@@ -73,7 +75,7 @@ class EmployeeProfileServiceImplTest {
     void setUp() {
         service = new EmployeeProfileServiceImpl(
                 userRepository, vacationBalanceRepository, departmentRepository,
-                new OperadoresDePlataforma(""));
+                new OperadoresDePlataforma(""), accesos);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         rrhh = User.builder().id(5L).email("rrhh@nxtime.test").nombre("Elena")

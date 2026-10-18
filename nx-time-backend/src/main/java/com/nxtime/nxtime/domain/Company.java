@@ -81,6 +81,14 @@ public class Company {
     @Column(name = "condiciones_aceptadas_por")
     private Long condicionesAceptadasPor;
 
+    /**
+     * A quién se dirige su gente para ejercer sus derechos del RGPD: un correo
+     * o un enlace https (V44, ADR 047). La empresa es la responsable; NX Time,
+     * el encargado. Null si el ADMIN no lo ha puesto.
+     */
+    @Column(name = "contacto_privacidad", length = 255)
+    private String contactoPrivacidad;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

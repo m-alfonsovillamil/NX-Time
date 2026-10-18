@@ -48,11 +48,14 @@ public class ConservacionDeDatos {
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaccion;
     private final PersonalDataEraser borrado;
+    private final RegistroDeAccesos accesos;
 
-    public ConservacionDeDatos(JdbcTemplate jdbc, TransactionTemplate transaccion, PersonalDataEraser borrado) {
+    public ConservacionDeDatos(JdbcTemplate jdbc, TransactionTemplate transaccion, PersonalDataEraser borrado,
+            RegistroDeAccesos accesos) {
         this.jdbc = jdbc;
         this.transaccion = transaccion;
         this.borrado = borrado;
+        this.accesos = accesos;
     }
 
     /** Aplica todos los plazos. Devuelve cuántas filas se han ido en cada paso, para el resumen de la tarea. */
@@ -88,6 +91,9 @@ public class ConservacionDeDatos {
                  WHERE a.vigente = FALSE
                    AND NOT EXISTS (SELECT 1 FROM candidaturas c WHERE c.adjunto_cv_id = a.id)
                 """));
+
+        // Dos años, y con el reloj de la base: ver RegistroDeAccesos.
+        paso(hecho, "registroDeAccesos", accesos::borrarLosCaducados);
 
         // Quien lleva de baja más de cuatro años desde su último fichaje (o
         // desde la baja, si nunca fichó): el registro ya no hay que

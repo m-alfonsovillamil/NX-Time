@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.MonthlySignatureStatus;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
@@ -35,14 +36,17 @@ public class ReportServiceImpl implements ReportService {
     private final TimeEntryRepository timeEntryRepository;
     private final UserRepository userRepository;
     private final MonthlySignatureRepository signatureRepository;
+    private final RegistroDeAccesos accesos;
 
     public ReportServiceImpl(
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
-            MonthlySignatureRepository signatureRepository) {
+            MonthlySignatureRepository signatureRepository,
+            RegistroDeAccesos accesos) {
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.signatureRepository = signatureRepository;
+        this.accesos = accesos;
     }
 
     @Override
@@ -52,6 +56,7 @@ public class ReportServiceImpl implements ReportService {
 
         List<TimeEntry> fichajes = timeEntryRepository.findParaInforme(
                 solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));
+        accesos.anotar(solicitante, DatoConsultado.INFORME_EMPRESA, null, "Excel de horas de " + mes);
 
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
@@ -74,6 +79,7 @@ public class ReportServiceImpl implements ReportService {
         if (empleado.getEmpresa().getId() != solicitante.getEmpresa().getId()) {
             throw new TenantAccessException("No puedes generar informes de empleados de otra empresa.");
         }
+        accesos.anotar(solicitante, DatoConsultado.INFORME_MENSUAL, empleado.getId(), "Registro de " + mes);
 
         ZoneId zona = solicitante.zona();
         List<TimeEntry> fichajes = timeEntryRepository.findParaInformeDeEmpleado(

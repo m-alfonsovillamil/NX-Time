@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Complaint;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.ComplaintAuthor;
 import com.nxtime.nxtime.domain.ComplaintMessage;
 import com.nxtime.nxtime.domain.ComplaintStatus;
@@ -91,16 +92,19 @@ public class ComplaintServiceImpl implements ComplaintService {
     private final ComplaintMessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RegistroDeAccesos accesos;
 
     public ComplaintServiceImpl(
             ComplaintRepository complaintRepository,
             ComplaintMessageRepository messageRepository,
             UserRepository userRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            RegistroDeAccesos accesos) {
         this.complaintRepository = complaintRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
+        this.accesos = accesos;
     }
 
     // ------------------------------------------------------------------
@@ -242,7 +246,10 @@ public class ComplaintServiceImpl implements ComplaintService {
 
     @Override
     public ComplaintResponse detalle(long id, User actor) {
-        return toResponse(porId(id, actor));
+        Complaint denuncia = porId(id, actor);
+        // Sin «de quién»: quién la puso no se anota en ninguna parte (ADR 047).
+        accesos.anotar(actor, DatoConsultado.DENUNCIA, null, "Expediente " + denuncia.getId());
+        return toResponse(denuncia);
     }
 
     @Override
