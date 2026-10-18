@@ -363,7 +363,7 @@ dependencies {
 
     // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
     // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
-    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation(platform("com.google.firebase:firebase-bom:35.0.2"))
     implementation("com.google.firebase:firebase-messaging")
 
     // La tarjeta del kiosco (ADR 033): el QR se dibuja aquí a partir de su
@@ -385,7 +385,7 @@ dependencies {
      * plugin de terceros para tan poca ganancia aquí.
      */
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     // Turbine: para afirmar sobre lo que va emitiendo un StateFlow.
     testImplementation("app.cash.turbine:turbine:1.2.0")
