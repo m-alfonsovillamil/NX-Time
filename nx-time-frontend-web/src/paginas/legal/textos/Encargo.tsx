@@ -78,8 +78,19 @@ export function Encargo() {
         </li>
         <li>
           <strong>Ayudar con los derechos de las personas</strong>: el servicio permite consultar, corregir, exportar y
-          borrar los datos de cada persona. Si una persona escribe al encargado, este se lo pasará a la responsable en
-          5 días laborables y no contestará por ella.
+          borrar los datos de cada persona, y cuenta en pantalla el mes que hay para responder a cada petición de
+          borrado. A cada persona le dice, la primera vez que entra, que la responsable es su empresa y a quién
+          dirigirse (el contacto que la responsable ponga en sus ajustes). Si una persona escribe al encargado, este se
+          lo pasará a la responsable en 5 días laborables y no contestará por ella.
+        </li>
+        <li>
+          <strong>Conservar solo lo necesario.</strong> La responsable encarga al encargado que borre solo lo que ya
+          no hace falta (sesiones caducadas, códigos de acceso, avisos y dispositivos antiguos, candidaturas resueltas
+          hace más de un año y currículos sustituidos) y que anonimice a cada persona dada de baja cuando hayan pasado
+          cuatro años desde su último fichaje y desde su baja, que es lo que la ley obliga a conservar el registro de
+          jornada (art. 34.9 del Estatuto de los Trabajadores). El registro se queda; lo que se quita es quién era. Si
+          la responsable necesita otro plazo, por ejemplo por un procedimiento abierto, lo dirá por escrito antes de
+          que venza.
         </li>
         <li>
           <strong>Ayudar con las demás obligaciones</strong> de la responsable (seguridad, brechas, evaluaciones de
@@ -152,6 +163,15 @@ export function Encargo() {
         </li>
         <li>La firma mensual del registro guarda una huella de lo firmado y se invalida si algo cambia después.</li>
         <li>Lo que hace el operador del servicio con cada empresa queda registrado sin poder borrarse.</li>
+        <li>
+          Queda registrado, sin poder cambiarse ni borrarse durante dos años, quién consulta datos personales de otra
+          persona (un currículo, un perfil, un registro mensual, el Excel de horas, un expediente de denuncia o una
+          exportación). La administración de la empresa puede revisarlo.
+        </li>
+        <li>
+          Los correos de aviso no copian lo que escribió nadie (motivos, comentarios, cartas): se lee dentro de la
+          aplicación.
+        </li>
       </ul>
       <h3>Comunicaciones y almacenamiento</h3>
       <ul>

@@ -56,3 +56,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [044](044-registrar-empresa-con-sso-desde-la-app.md) | Registrar una empresa con Google o Microsoft también desde la app |
 | [045](045-la-sesion-de-la-app-cifrada.md) | La sesión de la app, cifrada en el disco |
 | [046](046-alta-con-aprobacion-y-ciclo-de-vida-de-la-empresa.md) | El alta de empresas con aprobación, y el ciclo de vida de una empresa |
+| [047](047-el-rgpd-dentro-del-producto.md) | El RGPD dentro del producto: conservación, accesos y aviso de privacidad |
