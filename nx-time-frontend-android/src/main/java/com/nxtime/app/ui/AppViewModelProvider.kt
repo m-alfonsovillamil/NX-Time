@@ -39,6 +39,7 @@ import com.nxtime.app.ui.gestion.HistorialEquipoViewModel
 import com.nxtime.app.ui.gestion.PanelEmpresaViewModel
 import com.nxtime.app.ui.historial.HistorialViewModel
 import com.nxtime.app.ui.perfil.PerfilViewModel
+import com.nxtime.app.ui.privacidad.AvisoDePrivacidadViewModel
 import com.nxtime.app.ui.proyectos.ProyectosViewModel
 import com.nxtime.app.ui.usuario.CambiarContrasenaViewModel
 
@@ -96,6 +97,7 @@ object AppViewModelProvider {
          * a un "estado de sesión" que tiene la app sin meter Hilt.
          */
         initializer { AvisosViewModel(app().authRepository) }
+        initializer { AvisoDePrivacidadViewModel(app().authRepository) }
         initializer { PerfilViewModel(app().authRepository, app().sessionManager) }
 
         /*

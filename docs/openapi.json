@@ -70,6 +70,9 @@
     "name" : "Ausencias",
     "description" : "Solicitud de ausencias (vacaciones, bajas...) y su aprobación/rechazo por un gestor."
   }, {
+    "name" : "Privacidad",
+    "description" : "El aviso de privacidad y el registro de accesos a datos personales."
+  }, {
     "name" : "Adjuntos",
     "description" : "Currículum y foto de perfil. Un CV y una foto vigentes por persona: subir otro reemplaza el anterior."
   }, {
@@ -2268,6 +2271,32 @@
           },
           "404" : {
             "description" : "No hay ninguna pendiente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/aviso-de-privacidad/visto" : {
+      "post" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Ya he visto el aviso de privacidad",
+        "description" : "Solo cuenta la primera vez: repetirlo no cambia la fecha.",
+        "operationId" : "marcarAvisoVisto",
+        "responses" : {
+          "204" : {
+            "description" : "Anotado"
+          },
+          "401" : {
+            "description" : "No autenticado",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -7048,6 +7077,39 @@
         } ]
       }
     },
+    "/api/v1/perfil/aviso-de-privacidad" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Mi aviso de privacidad",
+        "description" : "Quién es la responsable de mis datos (mi empresa), a quién dirigirme y si ya lo he visto.",
+        "operationId" : "leerAviso",
+        "responses" : {
+          "200" : {
+            "description" : "El aviso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivacyNoticeResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/perfil/adjuntos/{id}" : {
       "get" : {
         "tags" : [ "Adjuntos" ],
@@ -8236,6 +8298,52 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CompanyTermsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/accesos" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Quién ha consultado datos personales de otra persona",
+        "description" : "Los CV de candidaturas, perfiles ajenos, registros mensuales de otro, el Excel de la empresa, expedientes de denuncias y exportaciones. Lo último primero, hasta 500. Se conserva dos años y no se puede borrar ni cambiar.",
+        "operationId" : "accesos",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "query",
+          "description" : "Solo los datos de esta persona",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
                 }
               }
             }
@@ -10427,6 +10535,11 @@
             "type" : "string",
             "maxLength" : 64,
             "minLength" : 0
+          },
+          "contactoPrivacidad" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -10438,6 +10551,9 @@
             "type" : "string"
           },
           "zonaHoraria" : {
+            "type" : "string"
+          },
+          "contactoPrivacidad" : {
             "type" : "string"
           },
           "firmasInvalidadas" : {
@@ -11173,6 +11289,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "diasParaResponder" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -13654,6 +13774,20 @@
           }
         }
       },
+      "PrivacyNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "empresa" : {
+            "type" : "string"
+          },
+          "contacto" : {
+            "type" : "string"
+          },
+          "visto" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "PaginaDTOScheduleIncidentResponse" : {
         "type" : "object",
         "properties" : {
@@ -13962,6 +14096,35 @@
           },
           "cerradaPorElSistema" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "DataAccessResponse" : {
+        "type" : "object",
+        "properties" : {
+          "en" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "quienId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quien" : {
+            "type" : "string"
+          },
+          "que" : {
+            "type" : "string"
+          },
+          "sobreId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sobre" : {
+            "type" : "string"
+          },
+          "detalle" : {
+            "type" : "string"
           }
         }
       },

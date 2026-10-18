@@ -632,6 +632,14 @@ class AuthRepositoryImpl(
         return apiService.marcarTodosLosAvisosLeidos()
     }
 
+    override suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO> {
+        return apiService.getAvisoDePrivacidad()
+    }
+
+    override suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit> {
+        return apiService.marcarAvisoDePrivacidadVisto()
+    }
+
     override suspend fun descargarMisDatosJson(): Response<ResponseBody> = apiService.descargarMisDatosJson()
 
     override suspend fun descargarMisDatosPdf(): Response<ResponseBody> = apiService.descargarMisDatosPdf()

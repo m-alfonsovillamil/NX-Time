@@ -698,6 +698,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/aviso-de-privacidad/visto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ya he visto el aviso de privacidad
+         * @description Solo cuenta la primera vez: repetirlo no cambia la fecha.
+         */
+        post: operations["marcarAvisoVisto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/adjuntos": {
         parameters: {
             query?: never;
@@ -2091,6 +2111,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/aviso-de-privacidad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi aviso de privacidad
+         * @description Quién es la responsable de mis datos (mi empresa), a quién dirigirme y si ya lo he visto.
+         */
+        get: operations["leerAviso"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/adjuntos/{id}": {
         parameters: {
             query?: never;
@@ -2507,6 +2547,26 @@ export interface paths {
          * @description La versión en vigor, la que tiene aceptada la empresa, cuándo y quién.
          */
         get: operations["condiciones"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/empresa/accesos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién ha consultado datos personales de otra persona
+         * @description Los CV de candidaturas, perfiles ajenos, registros mensuales de otro, el Excel de la empresa, expedientes de denuncias y exportaciones. Lo último primero, hasta 500. Se conserva dos años y no se puede borrar ni cambiar.
+         */
+        get: operations["accesos"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3324,10 +3384,12 @@ export interface components {
         UpdateCompanySettingsRequest: {
             nombre: string;
             zonaHoraria: string;
+            contactoPrivacidad?: string;
         };
         CompanySettingsResponse: {
             nombre?: string;
             zonaHoraria?: string;
+            contactoPrivacidad?: string;
             /** Format: int32 */
             firmasInvalidadas?: number;
         };
@@ -3585,6 +3647,8 @@ export interface components {
             /** Format: date */
             anonimizarDesde?: string;
             bloqueos?: string[];
+            /** Format: int64 */
+            diasParaResponder?: number;
         };
         AttachmentResponse: {
             /** Format: int64 */
@@ -4638,6 +4702,11 @@ export interface components {
             /** Format: int32 */
             diasTotales?: number;
         };
+        PrivacyNoticeResponse: {
+            empresa?: string;
+            contacto?: string;
+            visto?: boolean;
+        };
         PaginaDTOScheduleIncidentResponse: {
             contenido?: components["schemas"]["ScheduleIncidentResponse"][];
             /** Format: int32 */
@@ -4777,6 +4846,18 @@ export interface components {
             segundosPausaAcumulados?: number;
             kiosco?: string;
             cerradaPorElSistema?: boolean;
+        };
+        DataAccessResponse: {
+            /** Format: date-time */
+            en?: string;
+            /** Format: int64 */
+            quienId?: number;
+            quien?: string;
+            que?: string;
+            /** Format: int64 */
+            sobreId?: number;
+            sobre?: string;
+            detalle?: string;
         };
         ComplaintSummaryResponse: {
             /** Format: int64 */
@@ -6958,6 +7039,33 @@ export interface operations {
             };
             /** @description No hay ninguna pendiente */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    marcarAvisoVisto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Anotado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10713,6 +10821,35 @@ export interface operations {
             };
         };
     };
+    leerAviso: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El aviso */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PrivacyNoticeResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     descargar: {
         parameters: {
             query?: never;
@@ -11580,6 +11717,38 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CompanyTermsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    accesos: {
+        parameters: {
+            query?: {
+                /** @description Solo los datos de esta persona */
+                usuarioId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los accesos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DataAccessResponse"][];
                 };
             };
             /** @description Sin 'empresa:configurar' */

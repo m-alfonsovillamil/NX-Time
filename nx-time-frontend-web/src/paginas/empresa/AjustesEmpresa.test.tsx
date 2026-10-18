@@ -1,6 +1,7 @@
 /**
  * Los ajustes de la empresa (fase Z2): el nombre, y la zona horaria con su
- * confirmación, porque cambiarla mueve los días de todo el histórico.
+ * confirmación, porque cambiarla mueve los días de todo el histórico. Y el
+ * contacto de privacidad (ADR 047).
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -44,7 +45,7 @@ describe('ajustes de la empresa', () => {
 
     await waitFor(() =>
       expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
-        { nombre: 'Talleres Ana S.L.', zonaHoraria: 'Europe/Madrid' },
+        { nombre: 'Talleres Ana S.L.', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: '' },
       ]),
     );
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -69,8 +70,29 @@ describe('ajustes de la empresa', () => {
     await waitFor(() => expect(zonaActual()).toBe('Atlantic/Canary'));
     expect(sesionActual()?.zonaHoraria).toBe('Atlantic/Canary');
     expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
-      { nombre: 'Talleres Ana', zonaHoraria: 'Atlantic/Canary' },
+      { nombre: 'Talleres Ana', zonaHoraria: 'Atlantic/Canary', contactoPrivacidad: '' },
     ]);
+  });
+
+  it('el contacto de privacidad se guarda recortado, y desde aquí se llega a los accesos (ADR 047)', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => ({ ...AJUSTES, contactoPrivacidad: 'viejo@talleres.es' }),
+      'PUT /api/v1/empresa/ajustes': ({ cuerpo }) => ({ ...(cuerpo as object), firmasInvalidadas: 0 }),
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    const contacto = await screen.findByLabelText(A.contacto);
+    expect((contacto as HTMLInputElement).value).toBe('viejo@talleres.es');
+    await userEvent.clear(contacto);
+    await userEvent.type(contacto, ' https://talleres.es/privacidad ');
+    await userEvent.click(screen.getByRole('button', { name: A.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
+        { nombre: 'Talleres Ana', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: 'https://talleres.es/privacidad' },
+      ]),
+    );
+    expect(screen.getByRole('link', { name: A.verAccesos }).getAttribute('href')).toBe('/accesos-a-datos');
   });
 
   it('un error del servidor se enseña en el formulario', async () => {

@@ -132,6 +132,13 @@ function ConfirmarEjecucion({ solicitud, alTerminar }: { solicitud: Solicitud; a
   );
 }
 
+/** El mes que da el RGPD (art. 12.3): en rojo si ya pasó, en ámbar la última semana. */
+function PlazoDeRespuesta({ dias }: { dias: number }) {
+  if (dias < 0) return <Insignia tono="error">{B.plazoVencido(-dias)}</Insignia>;
+  if (dias <= 7) return <Insignia tono="aviso">{B.plazo(dias)}</Insignia>;
+  return <span className="nx-sutil">{B.plazo(dias)}</span>;
+}
+
 export function Borrados() {
   const [registrando, setRegistrando] = useState(false);
   const [ejecutando, setEjecutando] = useState<Solicitud | null>(null);
@@ -164,6 +171,7 @@ export function Borrados() {
       celda: (s) => (
         <span className="nx-celda-apilada">
           {s.creadaEn && <span>{B.pedidaEl(fechaCorta(diaEnEmpresa(s.creadaEn)))}</span>}
+          {s.diasParaResponder != null && <PlazoDeRespuesta dias={s.diasParaResponder} />}
           {s.registradaPor && <span className="nx-sutil">{B.registradaPor(s.registradaPor)}</span>}
         </span>
       ),

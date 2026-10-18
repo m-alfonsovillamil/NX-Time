@@ -73,6 +73,21 @@ describe('borrados de datos', () => {
     expect(screen.getByRole('button', { name: B.rechazar })).toBeTruthy();
   });
 
+  it('cada solicitud dice cuánto queda del mes para responder, y si ya pasó (ADR 047)', async () => {
+    simularApi({
+      'GET /api/v1/borrados/pendientes': () => [
+        solicitud(4, 'Lucía', { diasParaResponder: 20 }),
+        solicitud(5, 'Carlos', { diasParaResponder: 3 }),
+        solicitud(6, 'Marta', { diasParaResponder: -2 }),
+      ],
+    });
+    pintar(<Borrados />, { sesion: sesionDe('RRHH') });
+
+    expect(await screen.findByText(B.plazo(20))).toBeTruthy();
+    expect(screen.getByText(B.plazo(3))).toBeTruthy();
+    expect(screen.getByText(B.plazoVencido(2))).toBeTruthy();
+  });
+
   it('rechazar exige comentario', async () => {
     const llamadas = simularApi({
       'GET /api/v1/borrados/pendientes': () => [solicitud(4, 'Lucía')],

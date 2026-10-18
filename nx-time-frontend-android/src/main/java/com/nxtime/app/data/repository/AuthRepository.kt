@@ -310,6 +310,10 @@ interface AuthRepository {
     suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit>
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
 
+    /* El aviso de privacidad de la primera entrada (ADR 047) */
+    suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO>
+    suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit>
+
     /* Fichar en un kiosco (ADR 033) */
     suspend fun getEstadoKiosco(): Response<EstadoKioscoDTO>
     suspend fun fijarPinKiosco(pin: String): Response<EstadoKioscoDTO>

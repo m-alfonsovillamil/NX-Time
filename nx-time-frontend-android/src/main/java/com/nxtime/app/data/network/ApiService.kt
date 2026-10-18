@@ -825,6 +825,14 @@ interface ApiService {
     @PATCH("api/v1/avisos/leer-todos")
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
 
+    /*  El aviso de privacidad de la primera entrada (ADR 047)  */
+
+    @GET("api/v1/perfil/aviso-de-privacidad")
+    suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO>
+
+    @POST("api/v1/perfil/aviso-de-privacidad/visto")
+    suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit>
+
     /*  Fichar en un kiosco (ADR 033): el PIN y la tarjeta de cada uno  */
 
     @GET("api/v1/perfil/kiosco")

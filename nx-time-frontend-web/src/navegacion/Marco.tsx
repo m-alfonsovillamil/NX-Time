@@ -33,6 +33,7 @@ import { Iniciales } from '../componentes/Iniciales';
 import { Notificaciones } from '../componentes/Notificaciones';
 import { T } from '../i18n/es';
 import { AvisoDeCondiciones } from './AvisoDeCondiciones';
+import { AvisoDePrivacidad } from './AvisoDePrivacidad';
 import { Campana } from './Campana';
 import { ChipDeJornada } from './ChipDeJornada';
 import { usePendientesPorRuta } from './pendientes';
@@ -330,6 +331,7 @@ export function Marco() {
       <main id="contenido" className="nx-contenido" tabIndex={-1} data-zona={zona}>
         {/* Cada página es un trozo de JS aparte: mientras llega, su esqueleto. */}
         <AvisoDeCondiciones />
+        <AvisoDePrivacidad />
         <Suspense fallback={<EsqueletoDePagina />}>
           <Outlet />
         </Suspense>

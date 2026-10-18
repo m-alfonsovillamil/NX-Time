@@ -1243,4 +1243,13 @@
     <string name="kiosco_distintivo">Kiosco · %1$s</string>
     <!-- En los dos historiales: la salida la puso el cierre automático de las 3:00. -->
     <string name="historial_cerrada_por_el_sistema">Cerrada por el sistema</string>
+
+    <!-- El aviso de privacidad de la primera entrada (ADR 047) -->
+    <string name="privacidad_titulo">Tus datos</string>
+    <string name="privacidad_texto">%1$s es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. NX Time es la herramienta que usa, y los trata solo por encargo suyo.</string>
+    <string name="privacidad_contacto_correo">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, escribe a %1$s.</string>
+    <string name="privacidad_contacto_enlace">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, sigue su política de privacidad: %1$s</string>
+    <string name="privacidad_sin_contacto">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, dirígete a tu empresa.</string>
+    <string name="privacidad_mas_informacion">Más información</string>
+    <string name="privacidad_entendido">Entendido</string>
 </resources>
