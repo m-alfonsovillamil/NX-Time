@@ -6,7 +6,7 @@ import java.time.Instant;
 /** Las condiciones del servicio y el contrato de encargo de una empresa (ADR 046). */
 @Schema(description = "Qué versión de las condiciones está en vigor y cuál tiene aceptada la empresa")
 public record CompanyTermsResponse(
-        @Schema(description = "La versión en vigor", example = "2026-10-17")
+        @Schema(description = "La versión en vigor", example = "2026-10-18")
         String versionVigente,
         @Schema(description = "La que tiene aceptada la empresa. Null si ninguna")
         String versionAceptada,

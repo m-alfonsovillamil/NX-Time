@@ -12192,7 +12192,7 @@
           "versionVigente" : {
             "type" : "string",
             "description" : "La versión en vigor",
-            "example" : "2026-10-17"
+            "example" : "2026-10-18"
           },
           "versionAceptada" : {
             "type" : "string",

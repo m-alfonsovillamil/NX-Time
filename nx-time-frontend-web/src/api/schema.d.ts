@@ -4012,7 +4012,7 @@ export interface components {
         CompanyTermsResponse: {
             /**
              * @description La versión en vigor
-             * @example 2026-10-17
+             * @example 2026-10-18
              */
             versionVigente?: string;
             /** @description La que tiene aceptada la empresa. Null si ninguna */
