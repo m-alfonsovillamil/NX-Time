@@ -95,6 +95,11 @@ test('una jornada entera con el dedo', async ({ page }) => {
 
 for (const { rol, email } of CUENTAS) {
   test(`ninguna página de ${rol} se sale por los lados`, async ({ page }) => {
+    // Recorre TODAS las páginas del rol (más de veinte las de RRHH y ADMIN),
+    // cada una con su trozo de JS y sus datos, en WebKit: con los 30 s de
+    // cualquier otro test se quedaba al borde, y en un runner lento del CI se
+    // pasaba (18/10/2026: 31 s RRHH y 28 s ADMIN; 22 s en el anterior).
+    test.setTimeout(90_000);
     await entrar(page, email);
     const barra = page.locator('nav.nx-inferior');
 
