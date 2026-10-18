@@ -428,11 +428,94 @@
         } ]
       }
     },
+    "/api/v1/empresa/canal-denuncias" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "El canal de denuncias de mi empresa",
+        "operationId" : "leer",
+        "responses" : {
+          "200" : {
+            "description" : "Cómo está montado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Designar al Responsable del Sistema y la vía verbal",
+        "description" : "Desde que hay Responsable, solo él instruye: los ADMIN dejan de ver el canal. Sin Responsable (null), instruyen los ADMIN. La empresa tiene 10 días hábiles para comunicar el nombramiento o el cese a la Autoridad Independiente de Protección del Informante.",
+        "operationId" : "guardar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateComplaintChannelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Guardado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "La persona no es de la empresa o no está activa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/empresa/ajustes" : {
       "get" : {
         "tags" : [ "Empresa" ],
         "summary" : "Ajustes de mi empresa",
-        "operationId" : "leer",
+        "operationId" : "leer_1",
         "responses" : {
           "200" : {
             "description" : "Ajustes",
@@ -473,7 +556,7 @@
         "tags" : [ "Empresa" ],
         "summary" : "Guardar los ajustes de mi empresa",
         "description" : "Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.",
-        "operationId" : "guardar",
+        "operationId" : "guardar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3851,11 +3934,115 @@
         } ]
       }
     },
+    "/api/v1/denuncias/{id}/supresiones" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Suprimir un texto del expediente",
+        "description" : "La descripción (sin mensajeId) o un mensaje, porque contiene categorías especiales de datos, no es pertinente o se acreditó que no es veraz (Ley 2/2023, arts. 30 y 32). No se puede deshacer: queda la marca de cuándo y por qué.",
+        "operationId" : "suprimir",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintRedactionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el texto suprimido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "La denuncia o el mensaje no existen",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/{id}/prorroga" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Ampliar a seis meses el plazo de respuesta",
+        "description" : "Ley 2/2023, art. 9.2.d: solo en casos de especial complejidad, una vez y antes de que venza. El motivo le llega a quien denunció como un mensaje del expediente.",
+        "operationId" : "prorrogar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintExtensionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el plazo ampliado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya se amplió, ya venció o está cerrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/{id}/mensajes" : {
       "post" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Escribir en un expediente como instructor",
-        "description" : "El primer mensaje vale como acuse de recibo si todavía no se había dado. Nadie instruye una denuncia que presentó él mismo.",
+        "description" : "En las denuncias de antes del acuse automático (ADR 048), el primer mensaje vale como acuse de recibo. Nadie instruye una denuncia que presentó él mismo.",
         "operationId" : "responderComoInstructor",
         "parameters" : [ {
           "name" : "id",
@@ -8368,7 +8555,7 @@
       "get" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Un expediente completo",
-        "description" : "Solo ADMIN.",
+        "description" : "Solo quien instruye: el Responsable del Sistema o, sin él, los ADMIN.",
         "operationId" : "detalle_2",
         "parameters" : [ {
           "name" : "id",
@@ -8464,6 +8651,79 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/libro-registro.csv" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "El libro-registro en CSV",
+        "description" : "Ley 2/2023, art. 26: fecha de recepción, objeto, estado, hitos y fin de cada comunicación. Sin relatos, conclusiones ni nombres. La descarga queda anotada.",
+        "operationId" : "libroRegistro",
+        "responses" : {
+          "200" : {
+            "description" : "El fichero",
+            "content" : {
+              "text/csv" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/canal" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Cómo funciona el canal de mi empresa",
+        "description" : "Quién es el Responsable del Sistema (si la empresa lo ha designado) y cómo comunicar algo de palabra o pedir una reunión (Ley 2/2023, arts. 7.2 y 9.2).",
+        "operationId" : "canal",
+        "responses" : {
+          "200" : {
+            "description" : "El canal",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/accesos" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Quién ha abierto cada expediente",
+        "description" : "Solo quien instruye: la Autoridad recomienda que este registro quede reservado al Responsable del Sistema (Recomendación 1/2026). Lo último primero, hasta 500.",
+        "operationId" : "accesos_1",
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
                 }
               }
             }
@@ -10523,6 +10783,39 @@
           }
         }
       },
+      "UpdateComplaintChannelRequest" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "viaVerbal" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          }
+        }
+      },
+      "ComplaintChannelSettingsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "responsable" : {
+            "type" : "string"
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "viaVerbal" : {
+            "type" : "string"
+          }
+        }
+      },
       "UpdateCompanySettingsRequest" : {
         "type" : "object",
         "properties" : {
@@ -11863,6 +12156,11 @@
           },
           "anonima" : {
             "type" : "boolean"
+          },
+          "contactoNotificaciones" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "anonima", "categoria", "descripcion" ]
@@ -11885,16 +12183,19 @@
           }
         }
       },
-      "ComplaintMessageRequest" : {
+      "ComplaintRedactionRequest" : {
         "type" : "object",
         "properties" : {
-          "texto" : {
+          "mensajeId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "motivo" : {
             "type" : "string",
-            "maxLength" : 2000,
-            "minLength" : 0
+            "enum" : [ "CATEGORIAS_ESPECIALES", "NO_PERTINENTE", "NO_VERAZ" ]
           }
         },
-        "required" : [ "texto" ]
+        "required" : [ "motivo" ]
       },
       "ComplaintMessageResponse" : {
         "type" : "object",
@@ -11974,8 +12275,49 @@
             "items" : {
               "$ref" : "#/components/schemas/ComplaintMessageResponse"
             }
+          },
+          "contactoNotificaciones" : {
+            "type" : "string"
+          },
+          "investigacionIniciadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "respuestaProrrogadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "contenidoSuprimidoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
+      },
+      "ComplaintExtensionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "motivo" ]
+      },
+      "ComplaintMessageRequest" : {
+        "type" : "object",
+        "properties" : {
+          "texto" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "texto" ]
       },
       "ComplaintTrackingRequest" : {
         "type" : "object",
@@ -14168,6 +14510,24 @@
           "mensajes" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "contenidoSuprimido" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ComplaintChannelInfoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsable" : {
+            "type" : "string"
+          },
+          "viaVerbal" : {
+            "type" : "string"
           }
         }
       },

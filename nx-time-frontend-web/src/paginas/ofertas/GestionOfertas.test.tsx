@@ -184,6 +184,7 @@ describe('canal de denuncias (quien instruye)', () => {
 
   it('la bandeja con el plazo vencido en rojo; cerrar exige conclusión', async () => {
     const llamadas = simularApi({
+      'GET /api/v1/denuncias/accesos': () => [],
       'GET /api/v1/denuncias': () => [{ ...EXPEDIENTE, mensajes: 0 }],
       'GET /api/v1/denuncias/{id}': () => EXPEDIENTE,
       'PATCH /api/v1/denuncias/{id}/estado': () => ({ ...EXPEDIENTE, estado: 'RESUELTA' }),
@@ -211,6 +212,7 @@ describe('canal de denuncias (quien instruye)', () => {
 
   it('responder a una propia: el 403 del servidor se lee', async () => {
     simularApi({
+      'GET /api/v1/denuncias/accesos': () => [],
       'GET /api/v1/denuncias': () => [{ ...EXPEDIENTE, mensajes: 0 }],
       'GET /api/v1/denuncias/{id}': () => EXPEDIENTE,
       'POST /api/v1/denuncias/{id}/mensajes': () => problema(403, 'Nadie instruye una denuncia que presentó él mismo.'),

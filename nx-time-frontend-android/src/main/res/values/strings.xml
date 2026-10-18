@@ -1022,7 +1022,28 @@
     <string name="denuncia_cerrar_dialogo">Cerrar</string>
 
     <string name="denuncias_que_es_titulo">Canal interno de información</string>
-    <string name="denuncias_que_es_texto">Aquí puedes comunicar irregularidades. La empresa tiene 7 días naturales para acusar recibo y 3 meses para responder. Puedes hacerlo con tu nombre o de forma anónima.</string>
+    <string name="denuncias_que_es_texto">Aquí puedes comunicar irregularidades, con tu nombre o de forma anónima. El acuse de recibo es el aviso que recibes al enviarla, y la empresa tiene 3 meses para responderte (6 si el caso es complejo y te lo explica).</string>
+    <string name="denuncias_gestiona">La gestiona %1$s, Responsable del Sistema Interno de Información de la empresa.</string>
+    <string name="denuncias_gestiona_administracion">La gestiona la administración de la empresa.</string>
+    <string name="denuncias_via_verbal_titulo">De palabra o en persona</string>
+    <string name="denuncias_via_verbal_con">%1$s. Si pides una reunión, tiene que celebrarse en 7 días.</string>
+    <string name="denuncias_via_verbal_sin">También puedes comunicarlo de palabra o pedir una reunión en persona, que tiene que celebrarse en 7 días: pregúntalo a quien gestiona el canal.</string>
+    <string name="denuncias_ambito">La protección de la Ley 2/2023 cubre las infracciones penales, las administrativas graves o muy graves y las del Derecho de la Unión Europea. Puedes comunicar aquí otras cosas, pero quedan fuera de esa protección.</string>
+    <string name="denuncias_proteccion_titulo">Tus datos y tu protección</string>
+    <string name="denuncias_proteccion_texto">Tu identidad es confidencial: no se comunica a las personas a las que se refieren los hechos ni a nadie más, salvo a un juez, al Ministerio Fiscal o a la autoridad competente en una investigación. Tu empresa trata tus datos solo para gestionar la comunicación, y si en tres meses no se abre una investigación, su contenido se suprime. Las represalias contra quien informa de buena fe están prohibidas.</string>
+    <string name="denuncias_externos_titulo">Fuera de la empresa</string>
+    <string name="denuncias_externos_texto">También puedes acudir, antes o en lugar de este canal, a la Autoridad Independiente de Protección del Informante, a la autoridad de tu comunidad autónoma si la hay, o a las instituciones de la Unión Europea.</string>
+    <string name="denuncias_externos_enlace">Cómo informar a la Autoridad</string>
+    <string name="denuncia_contacto">Dónde recibir notificaciones (opcional)</string>
+    <string name="denuncia_suprimida">Su contenido se suprimió: pasaron tres meses sin abrir una investigación (Ley 2/2023, art. 32).</string>
+    <string name="denuncia_plazo_ampliado">El plazo de respuesta se amplió a seis meses.</string>
+    <string name="denuncia_contacto_dado">Notificaciones: %1$s</string>
+    <string name="denuncia_supresion_hoy">Si no la pasas hoy a investigación, esta noche se suprime su contenido.</string>
+    <plurals name="denuncia_supresion_en">
+        <item quantity="one">Si no la pasas a investigación, su contenido se suprime en %d día.</item>
+        <item quantity="other">Si no la pasas a investigación, su contenido se suprime en %d días.</item>
+    </plurals>
+    <string name="denuncia_contacto_ayuda">Un domicilio, un correo o un lugar seguro. Si la envías anónima, ten en cuenta que esto puede identificarte.</string>
 
     <string name="denuncias_presentar">Presentar una denuncia</string>
     <string name="denuncia_categoria">Categoría</string>

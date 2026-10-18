@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.DatoConsultado;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.DataAccessResponse;
 import java.util.List;
@@ -49,9 +50,31 @@ public class RegistroDeAccesos {
                 detalle == null ? null : detalle.substring(0, Math.min(detalle.length(), 160)));
     }
 
-    /** Lo de su empresa, lo último primero; solo lo de una persona si se da {@code sobreId}. */
+    /**
+     * Lo de su empresa, lo último primero; solo lo de una persona si se da
+     * {@code sobreId}.
+     *
+     * <b>Los accesos a expedientes de denuncia, solo a quien instruye</b> (ADR
+     * 048). Si la empresa ha designado un Responsable del Sistema, un ADMIN no
+     * ve quién ha abierto qué expediente: la Autoridad recomienda que ese
+     * registro quede reservado al Responsable (Recomendación 1/2026). Él lo ve
+     * en {@link #deLosExpedientes}.
+     */
     @Transactional(readOnly = true)
     public List<DataAccessResponse> deLaEmpresa(User actor, Long sobreId) {
+        return consultar(actor, sobreId,
+                RoleAuthorities.tiene(actor, "denuncia:instruir") ? Filtro.TODO : Filtro.SIN_DENUNCIAS);
+    }
+
+    /** Quién ha abierto cada expediente del canal de denuncias, para quien instruye. */
+    @Transactional(readOnly = true)
+    public List<DataAccessResponse> deLosExpedientes(User actor) {
+        return consultar(actor, null, Filtro.SOLO_DENUNCIAS);
+    }
+
+    private enum Filtro { TODO, SIN_DENUNCIAS, SOLO_DENUNCIAS }
+
+    private List<DataAccessResponse> consultar(User actor, Long sobreId, Filtro filtro) {
         return jdbc.query("""
                 SELECT a.en, a.quien_id, trim(q.nombre || ' ' || coalesce(q.apellidos, '')) AS quien,
                        a.que, a.sobre_id,
@@ -61,6 +84,9 @@ public class RegistroDeAccesos {
                   LEFT JOIN usuarios q ON q.id = a.quien_id
                   LEFT JOIN usuarios s ON s.id = a.sobre_id
                  WHERE a.empresa_id = ? AND (CAST(? AS BIGINT) IS NULL OR a.sobre_id = ?)
+                   AND (? = 'TODO'
+                        OR (? = 'SIN_DENUNCIAS' AND a.que <> 'DENUNCIA')
+                        OR (? = 'SOLO_DENUNCIAS' AND a.que = 'DENUNCIA'))
                  ORDER BY a.en DESC, a.id DESC
                  LIMIT ?
                 """, (fila, n) -> new DataAccessResponse(
@@ -71,7 +97,7 @@ public class RegistroDeAccesos {
                         (Long) fila.getObject("sobre_id", Long.class),
                         fila.getString("sobre"),
                         fila.getString("detalle")),
-                actor.getEmpresa().getId(), sobreId, sobreId, MAXIMO);
+                actor.getEmpresa().getId(), sobreId, sobreId, filtro.name(), filtro.name(), filtro.name(), MAXIMO);
     }
 
     /**

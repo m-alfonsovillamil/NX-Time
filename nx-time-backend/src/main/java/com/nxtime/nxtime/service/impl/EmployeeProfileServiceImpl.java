@@ -216,7 +216,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
      */
     private static boolean puedeVerLaFechaDeNacimiento(User usuario, User actor) {
         return usuario.getId() == actor.getId()
-                || RoleAuthorities.forRole(actor.getRol()).contains("empleado:gestionar");
+                || RoleAuthorities.de(actor).contains("empleado:gestionar");
     }
 
     private ProfileResponse toProfile(User usuario, User actor) {

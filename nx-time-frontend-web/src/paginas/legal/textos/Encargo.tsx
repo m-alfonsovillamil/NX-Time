@@ -48,6 +48,14 @@ export function Encargo() {
           una ausencia (por ejemplo, de salud) o en una denuncia. La responsable decide si los recoge y cómo.
         </li>
         <li>No se registra la ubicación.</li>
+        <li>
+          <strong>El canal de denuncias:</strong> el encargado solo aporta la herramienta. No recibe, no lee y no
+          gestiona las comunicaciones: lo hace el Responsable del Sistema Interno de Información que designe la
+          responsable (Ley 2/2023, art. 8) o, mientras no lo designe, sus administradores. El servicio da acuse de
+          recibo al presentarlas, suprime su contenido si en tres meses no se abre una investigación, borra los
+          expedientes a los diez años y deja registrado quién abre cada uno, sin que lo vean los administradores si hay
+          Responsable.
+        </li>
       </ul>
 
       <h2>3. Lo que hace el encargado</h2>

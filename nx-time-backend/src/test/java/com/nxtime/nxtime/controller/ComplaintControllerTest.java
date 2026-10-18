@@ -62,19 +62,25 @@ class ComplaintControllerTest {
     @MockitoBean
     private ComplaintService complaintService;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.impl.CanalDeDenuncias canalDeDenuncias;
+
+    @MockitoBean
+    private com.nxtime.nxtime.service.impl.RegistroDeAccesos registroDeAccesos;
+
     private ComplaintResponse expediente() {
         return new ComplaintResponse(
                 100L, ComplaintCategory.ACOSO, "Acoso laboral o sexual", "Los hechos.",
                 ComplaintStatus.EN_INVESTIGACION, true, null,
                 Instant.parse("2026-09-01T08:00:00Z"), Instant.parse("2026-09-02T08:00:00Z"),
-                null, null, null, 82L, List.of());
+                null, null, null, 82L, List.of(), null, Instant.parse("2026-09-02T08:00:00Z"), null, null, null);
     }
 
     private ComplaintSummaryResponse fila() {
         return new ComplaintSummaryResponse(
                 100L, ComplaintCategory.SEGURIDAD, "Seguridad y salud en el trabajo",
                 ComplaintStatus.RECIBIDA, true,
-                Instant.parse("2026-09-01T08:00:00Z"), null, -2L, 82L, 0);
+                Instant.parse("2026-09-01T08:00:00Z"), null, -2L, 82L, 0, 60L, false);
     }
 
     // ------------------------------------------------------------------

@@ -29,6 +29,18 @@ public record CreateComplaintRequest(
         String descripcion,
 
         @NotNull(message = "Hay que decir expresamente si la denuncia es anónima.")
-        Boolean anonima
+        Boolean anonima,
+
+        /**
+         * Un domicilio, correo o lugar seguro para recibir las notificaciones
+         * (Ley 2/2023, art. 7.2). Opcional: quien lo da sabe que puede
+         * identificarle, también en una anónima, y la pantalla se lo dice.
+         */
+        @Size(max = 255, message = "El contacto para notificaciones no puede pasar de 255 caracteres.")
+        String contactoNotificaciones
 ) {
+    /** Sin contacto para notificaciones, como antes de la fase J6. */
+    public CreateComplaintRequest(ComplaintCategory categoria, String descripcion, Boolean anonima) {
+        this(categoria, descripcion, anonima, null);
+    }
 }

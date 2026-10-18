@@ -233,10 +233,15 @@ class AuthRepositoryImpl(
     override suspend fun presentarDenuncia(
         categoria: String,
         descripcion: String,
-        anonima: Boolean
+        anonima: Boolean,
+        contactoNotificaciones: String?
     ): Response<DenunciaCreadaDTO> {
         return apiService.presentarDenuncia(
-            CrearDenunciaRequest(categoria, descripcion, anonima))
+            CrearDenunciaRequest(categoria, descripcion, anonima, contactoNotificaciones))
+    }
+
+    override suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO> {
+        return apiService.getCanalDenuncias()
     }
 
     override suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO> {

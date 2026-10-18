@@ -73,6 +73,27 @@ export const empresa = {
         : `Zona cambiada. Se han anulado ${n} firmas mensuales cuyo mes ha cambiado: se ha avisado a cada persona para que vuelva a firmar.`,
   },
 
+  /** El canal de denuncias de la empresa (Ley 2/2023, art. 8; ADR 048). */
+  canal: {
+    titulo: 'Canal de denuncias',
+    explicacion:
+      'Quién gestiona las comunicaciones del canal interno y cómo se comunica algo de palabra. La ley obliga a tenerlo a las empresas de 50 personas o más.',
+    responsable: 'Responsable del Sistema Interno de Información',
+    responsableAyuda:
+      'Solo esta persona verá e instruirá las denuncias: los administradores dejan de verlas. Tiene que poder hacerlo con independencia. Sin Responsable, las gestionan los administradores.',
+    nadie: 'Sin designar: lo llevan los administradores',
+    desde: (dia: string) => `Designado el ${dia}.`,
+    autoridad:
+      'La empresa tiene que comunicar el nombramiento y el cese a la Autoridad Independiente de Protección del Informante (o a la de su comunidad autónoma) en 10 días hábiles.',
+    autoridadEnlace: 'Formulario de la Autoridad',
+    autoridadUrl: 'https://proteccioninformante.sede.gob.es/procedimiento/portada?idProc=155879',
+    viaVerbal: 'Vía verbal',
+    viaVerbalAyuda:
+      'Un teléfono, un horario o a quién pedir una reunión en persona. Se lo enseñamos a quien vaya a denunciar. La reunión, si la piden, tiene que celebrarse en 7 días.',
+    guardar: 'Guardar',
+    guardado: 'Canal de denuncias guardado.',
+  },
+
   accesos: {
     titulo: 'Accesos a datos personales',
     explicacion:

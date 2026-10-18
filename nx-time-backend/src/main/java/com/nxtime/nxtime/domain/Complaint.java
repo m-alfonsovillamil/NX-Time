@@ -91,6 +91,18 @@ public class Complaint {
      */
     private Instant acuseReciboEn;
 
+    /** Un domicilio, correo o lugar seguro para las notificaciones (Ley 2/2023, art. 7.2). */
+    private String contactoNotificaciones;
+
+    /** Cuándo pasó a investigación. Sin ella, a los tres meses se suprime el contenido (art. 32.3). */
+    private Instant investigacionIniciadaEn;
+
+    /** Cuándo se amplió la respuesta de tres a seis meses (art. 9.2.d). */
+    private Instant respuestaProrrogadaEn;
+
+    /** Cuándo se suprimió el contenido: queda la fila, como evidencia del funcionamiento del canal. */
+    private Instant contenidoSuprimidoEn;
+
     /** Cuándo se cerró, esté {@code RESUELTA} o {@code ARCHIVADA}. */
     private Instant resueltaEn;
 

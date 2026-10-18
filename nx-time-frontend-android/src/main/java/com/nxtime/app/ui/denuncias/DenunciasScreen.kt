@@ -32,14 +32,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.CanalDenunciasDTO
 import com.nxtime.app.data.dto.DenunciaCreadaDTO
 import com.nxtime.app.ui.AppViewModelProvider
+import com.nxtime.app.ui.acceso.abrirEnElNavegador
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
@@ -91,7 +94,8 @@ fun DenunciasScreen(
                     }
                 }
 
-                item { TarjetaQueEsElCanal() }
+                item { TarjetaQueEsElCanal(estado.canal) }
+                item { TarjetaProteccion() }
 
                 item {
                     FormularioDenuncia(
@@ -148,9 +152,9 @@ fun DenunciasScreen(
     }
 }
 
-/** Qué es esto y qué obliga la ley, en tres líneas. */
+/** Qué es esto, quién lo gestiona y cómo comunicarlo de palabra (Ley 2/2023, arts. 7.2 y 9.2). */
 @Composable
-private fun TarjetaQueEsElCanal() {
+private fun TarjetaQueEsElCanal(canal: CanalDenunciasDTO?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = elevacionDeTarjeta(),
@@ -169,15 +173,83 @@ private fun TarjetaQueEsElCanal() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (canal != null) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = canal.responsable?.let { stringResource(R.string.denuncias_gestiona, it) }
+                        ?: stringResource(R.string.denuncias_gestiona_administracion),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.denuncias_via_verbal_titulo),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = canal.viaVerbal?.let { stringResource(R.string.denuncias_via_verbal_con, it) }
+                        ?: stringResource(R.string.denuncias_via_verbal_sin),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.denuncias_ambito),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
+/** La protección de quien informa y los canales externos: la ley obliga a decirlo (arts. 7.3, 31-33). */
+@Composable
+private fun TarjetaProteccion() {
+    val contexto = LocalContext.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.denuncias_proteccion_titulo),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.denuncias_proteccion_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.denuncias_externos_titulo),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(R.string.denuncias_externos_texto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(onClick = { abrirEnElNavegador(contexto, URL_AUTORIDAD) }) {
+                Text(stringResource(R.string.denuncias_externos_enlace))
+            }
+        }
+    }
+}
+
+/** Cómo informar a la Autoridad Independiente de Protección del Informante. */
+private const val URL_AUTORIDAD = "https://www.proteccioninformante.gob.es/nuestro-trabajo/investigacion/como-informar"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FormularioDenuncia(
     enviando: Boolean,
-    onPresentar: (CategoriaDenuncia, String, Boolean) -> Unit
+    onPresentar: (CategoriaDenuncia, String, Boolean, String) -> Unit
 ) {
     var categoria by remember { mutableStateOf(CategoriaDenuncia.ACOSO) }
     var desplegado by remember { mutableStateOf(false) }
@@ -186,6 +258,7 @@ private fun FormularioDenuncia(
     // false porque el interruptor tiene que arrancar en algún sitio, y
     // el texto de al lado explica las dos opciones antes de enviar.
     var anonima by remember { mutableStateOf(false) }
+    var contacto by remember { mutableStateOf("") }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -267,10 +340,21 @@ private fun FormularioDenuncia(
             }
 
             Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = contacto,
+                onValueChange = { contacto = it },
+                label = { Text(stringResource(R.string.denuncia_contacto)) },
+                supportingText = { Text(stringResource(R.string.denuncia_contacto_ayuda)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = {
-                    onPresentar(categoria, descripcion, anonima)
+                    onPresentar(categoria, descripcion, anonima, contacto)
                     descripcion = ""
+                    contacto = ""
                 },
                 enabled = !enviando && descripcion.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
@@ -381,6 +465,7 @@ private fun DialogoExpediente(
                     diasHastaAcuse = expediente.diasHastaAcuse,
                     diasHastaRespuesta = expediente.diasHastaRespuesta
                 )
+                HitosDelExpediente(expediente = expediente, paraQuienInstruye = false)
 
                 Spacer(Modifier.height(8.dp))
                 Text(text = expediente.descripcion, style = MaterialTheme.typography.bodyMedium)

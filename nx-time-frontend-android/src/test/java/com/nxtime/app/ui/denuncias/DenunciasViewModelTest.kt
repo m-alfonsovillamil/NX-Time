@@ -1,6 +1,7 @@
 package com.nxtime.app.ui.denuncias
 
 import com.nxtime.app.ReglaDispatcherPrincipal
+import com.nxtime.app.data.dto.CanalDenunciasDTO
 import com.nxtime.app.data.dto.DenunciaCreadaDTO
 import com.nxtime.app.data.dto.DenunciaDTO
 import com.nxtime.app.data.dto.MensajeDenunciaDTO
@@ -18,6 +19,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -93,7 +95,7 @@ class DenunciasViewModelTest {
     @Test
     fun `el anonimato viaja tal cual se eligio`() = runTest {
         conListaVacia()
-        whenever(repositorio.presentarDenuncia(any(), any(), any()))
+        whenever(repositorio.presentarDenuncia(any(), any(), any(), anyOrNull()))
             .thenReturn(Response.success(
                 DenunciaCreadaDTO("codigo-1", true, "2026-09-08T08:00:00Z", "Guárdalo.")))
 
@@ -104,13 +106,33 @@ class DenunciasViewModelTest {
 
         // Sin traducciones ni defectos por el camino: lo que marcó la
         // persona es lo que llega al servidor.
-        verify(repositorio).presentarDenuncia("SEGURIDAD", "Salidas bloqueadas.", true)
+        verify(repositorio).presentarDenuncia("SEGURIDAD", "Salidas bloqueadas.", true, null)
+    }
+
+    @Test
+    fun `el contacto para notificaciones llega recortado y el canal se carga (ADR 048)`() = runTest {
+        conListaVacia()
+        whenever(repositorio.getCanalDenuncias())
+            .thenReturn(Response.success(CanalDenunciasDTO(responsable = "Laura Gil", viaVerbal = "Tel. 600 000 000")))
+        whenever(repositorio.presentarDenuncia(any(), any(), any(), anyOrNull()))
+            .thenReturn(Response.success(
+                DenunciaCreadaDTO("codigo-1", false, "2026-09-08T08:00:00Z", "Acuse.")))
+
+        val vm = DenunciasViewModel(repositorio)
+        vm.cargar()
+        advanceUntilIdle()
+        assertEquals("Laura Gil", vm.uiState.value.canal?.responsable)
+
+        vm.presentar(CategoriaDenuncia.FRAUDE, "Los hechos.", anonima = false, contacto = "  Calle Real 1  ")
+        advanceUntilIdle()
+
+        verify(repositorio).presentarDenuncia("FRAUDE", "Los hechos.", false, "Calle Real 1")
     }
 
     @Test
     fun `el codigo se ensena una vez y se suelta al confirmar`() = runTest {
         conListaVacia()
-        whenever(repositorio.presentarDenuncia(any(), any(), any()))
+        whenever(repositorio.presentarDenuncia(any(), any(), any(), anyOrNull()))
             .thenReturn(Response.success(
                 DenunciaCreadaDTO("codigo-1", true, "2026-09-08T08:00:00Z", "Guárdalo.")))
 
@@ -138,7 +160,7 @@ class DenunciasViewModelTest {
         vm.presentar(CategoriaDenuncia.OTRA, "   ", anonima = false)
         advanceUntilIdle()
 
-        verify(repositorio, never()).presentarDenuncia(any(), any(), any())
+        verify(repositorio, never()).presentarDenuncia(any(), any(), any(), anyOrNull())
         assertNotNull(vm.uiState.value.error)
     }
 
@@ -251,7 +273,7 @@ class DenunciasViewModelTest {
     fun `presentar recarga la lista, aunque la denuncia fuera anonima y no vaya a aparecer`() =
         runTest {
             conListaVacia()
-            whenever(repositorio.presentarDenuncia(any(), any(), eq(true)))
+            whenever(repositorio.presentarDenuncia(any(), any(), eq(true), anyOrNull()))
                 .thenReturn(Response.success(
                     DenunciaCreadaDTO("codigo-1", true, "2026-09-08T08:00:00Z", "Guárdalo.")))
 

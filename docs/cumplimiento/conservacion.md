@@ -24,8 +24,9 @@ siguiente. El resumen de cada pasada queda en `/estado/tareas`.
 | Currículos y fotos sustituidos | La noche siguiente, si ninguna candidatura los usa | Sin finalidad | Sí |
 | Candidaturas resueltas | 1 año desde la resolución | Reclamaciones del proceso | Sí |
 | Registro de accesos a datos personales | 2 años | Demostrar quién consultó qué (art. 5.2) | Sí; antes no se puede borrar (trigger de V44) |
-| Canal de denuncias: contenido sin investigación | 3 meses | Ley 2/2023, art. 32 | **No** (J6) |
-| Canal de denuncias: libro-registro | 10 años | Ley 2/2023, art. 26 | **No** (J6) |
+| Canal de denuncias: contenido sin investigación | 3 meses: se suprimen relato, mensajes, quién la puso y su contacto, y se archiva | Ley 2/2023, art. 32.3 | Sí (ADR 048); queda la fila como evidencia |
+| Canal de denuncias: expedientes y libro-registro | 10 años desde la recepción | Ley 2/2023, art. 26.2 | Sí (ADR 048) |
+| Canal de denuncias: textos con categorías especiales, no pertinentes o no veraces | En cuanto se detectan | Ley 2/2023, arts. 30 y 32 | A mano, por quien instruye (queda la marca) |
 | Historial del panel de plataforma | Mientras dure el servicio | Demostrar cómo se ha tratado a cada empresa (art. 5.2): solo lleva el nombre de la empresa y el correo del operador | Se guarda, decidido en J5 |
 | Registros del servidor (Render) | Lo que guarde Render (días) | Seguridad | Del proveedor |
 | Informes de errores (Sentry) | Hasta 90 días | Arreglar fallos | Del proveedor |

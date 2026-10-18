@@ -2,6 +2,8 @@ package com.nxtime.nxtime.service;
 
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.ComplaintCreatedResponse;
+import com.nxtime.nxtime.dto.ComplaintExtensionRequest;
+import com.nxtime.nxtime.dto.ComplaintRedactionRequest;
 import com.nxtime.nxtime.dto.ComplaintMessageRequest;
 import com.nxtime.nxtime.dto.ComplaintResponse;
 import com.nxtime.nxtime.dto.ComplaintSummaryResponse;
@@ -75,4 +77,13 @@ public interface ComplaintService {
 
     /** Mover la denuncia de estado. Cerrarla exige conclusión. */
     ComplaintResponse cambiarEstado(long id, UpdateComplaintStatusRequest request, User actor);
+
+    /** Ampliar a seis meses el plazo de respuesta, diciéndole por qué a quien denunció (ADR 048). */
+    ComplaintResponse prorrogar(long id, ComplaintExtensionRequest request, User actor);
+
+    /** Suprimir la descripción o un mensaje: categorías especiales, no pertinente, no veraz (ADR 048). */
+    ComplaintResponse suprimirTexto(long id, ComplaintRedactionRequest request, User actor);
+
+    /** El libro-registro de la empresa en CSV (Ley 2/2023, art. 26; ADR 048). */
+    byte[] libroRegistro(User actor);
 }

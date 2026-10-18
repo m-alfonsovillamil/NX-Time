@@ -89,6 +89,22 @@ public class Company {
     @Column(name = "contacto_privacidad", length = 255)
     private String contactoPrivacidad;
 
+    /**
+     * El Responsable del Sistema Interno de Información (Ley 2/2023, art. 8;
+     * V45, ADR 048): el único que instruye el canal de denuncias. Un id y no
+     * una relación: se mira en cada petición para resolver los permisos
+     * ({@link RoleAuthorities#de}). Null: instruyen los ADMIN.
+     */
+    @Column(name = "responsable_canal_id")
+    private Long responsableCanalId;
+
+    @Column(name = "responsable_canal_desde")
+    private Instant responsableCanalDesde;
+
+    /** Cómo comunicar algo de palabra o pedir una reunión (arts. 7.2 y 9.2). */
+    @Column(name = "canal_via_verbal", length = 500)
+    private String canalViaVerbal;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

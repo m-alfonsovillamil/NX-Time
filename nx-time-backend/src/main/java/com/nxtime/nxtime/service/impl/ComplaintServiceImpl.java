@@ -9,6 +9,8 @@ import com.nxtime.nxtime.domain.ComplaintStatus;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.ComplaintCreatedResponse;
+import com.nxtime.nxtime.dto.ComplaintExtensionRequest;
+import com.nxtime.nxtime.dto.ComplaintRedactionRequest;
 import com.nxtime.nxtime.dto.ComplaintMessageRequest;
 import com.nxtime.nxtime.dto.ComplaintMessageResponse;
 import com.nxtime.nxtime.dto.ComplaintResponse;
@@ -19,6 +21,7 @@ import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.report.LibroRegistroCsv;
 import com.nxtime.nxtime.repository.ComplaintMessageRepository;
 import com.nxtime.nxtime.repository.ComplaintRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -26,6 +29,7 @@ import com.nxtime.nxtime.service.ComplaintService;
 import com.nxtime.nxtime.service.TrackingCode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +85,9 @@ public class ComplaintServiceImpl implements ComplaintService {
     /** Art. 9.2 Ley 2/2023: respuesta en 3 meses. */
     private static final int MESES_PARA_RESPONDER = 3;
 
+    /** «Ampliable hasta un máximo de otros tres meses adicionales» en casos complejos (art. 9.2.d). */
+    private static final int MESES_PRORROGADA = 6;
+
     /**
      * Los plazos son en días NATURALES y se cuentan en el calendario de
      * aquí, no en UTC: una denuncia presentada el día 1 a las 00:30 hora
@@ -117,6 +124,7 @@ public class ComplaintServiceImpl implements ComplaintService {
         boolean anonima = Boolean.TRUE.equals(request.anonima());
 
         String codigo = TrackingCode.generar();
+        Instant ahora = Instant.now();
         Complaint denuncia = complaintRepository.save(Complaint.builder()
                 .empresa(actor.getEmpresa())
                 .codigoHash(TrackingCode.hash(codigo))
@@ -126,8 +134,12 @@ public class ComplaintServiceImpl implements ComplaintService {
                 .denunciante(anonima ? null : actor)
                 .categoria(request.categoria())
                 .descripcion(request.descripcion().trim())
+                .contactoNotificaciones(vacioComoNulo(request.contactoNotificaciones()))
                 .estado(ComplaintStatus.RECIBIDA)
-                .creadoEn(Instant.now())
+                .creadoEn(ahora)
+                // El acuse de recibo es esta respuesta, en el momento (ADR
+                // 048): los siete días del art. 9.2.c se cumplen siempre.
+                .acuseReciboEn(ahora)
                 .build());
 
         // El log dice QUE ha entrado una denuncia y de qué categoría,
@@ -145,7 +157,8 @@ public class ComplaintServiceImpl implements ComplaintService {
                 codigo,
                 anonima,
                 denuncia.getCreadoEn(),
-                "Guarda este código: es la única forma de seguir tu denuncia y de "
+                "Esto es el acuse de recibo: tu comunicación ha quedado registrada ahora. "
+                        + "Guarda este código: es la única forma de seguir tu denuncia y de "
                         + "responder a quien la instruya. No se puede recuperar ni volver a "
                         + "enviar, porque poder hacerlo sería poder saber que la denuncia "
                         + "es tuya.");
@@ -309,6 +322,10 @@ public class ComplaintServiceImpl implements ComplaintService {
         acusarRecibo(denuncia);
 
         denuncia.setEstado(destino);
+        if (destino == ComplaintStatus.EN_INVESTIGACION && denuncia.getInvestigacionIniciadaEn() == null) {
+            // Desde aquí el contenido ya no se suprime a los tres meses (art. 32.3).
+            denuncia.setInvestigacionIniciadaEn(Instant.now());
+        }
         if (cierra) {
             denuncia.setResueltaEn(Instant.now());
             denuncia.setConclusion(request.conclusion().trim());
@@ -321,6 +338,61 @@ public class ComplaintServiceImpl implements ComplaintService {
 
         log.info("{} ha movido la denuncia {} a {}", actor.getId(), denuncia.getId(), destino);
         return toResponse(denuncia);
+    }
+
+    @Override
+    @Transactional
+    public ComplaintResponse prorrogar(long id, ComplaintExtensionRequest request, User actor) {
+        Complaint denuncia = porId(id, actor);
+        exigirQueNoSeaSuya(denuncia, actor);
+        exigirExpedienteAbierto(denuncia);
+        if (denuncia.getRespuestaProrrogadaEn() != null) {
+            throw new BusinessException("El plazo de esta denuncia ya se amplió una vez: no se puede más.");
+        }
+        Long quedan = diasHastaRespuesta(denuncia);
+        if (quedan != null && quedan < 0) {
+            // Ampliar un plazo que ya venció no lo cumple: se amplía antes.
+            throw new BusinessException("El plazo de respuesta ya ha vencido: no se puede ampliar.");
+        }
+        denuncia.setRespuestaProrrogadaEn(Instant.now());
+        complaintRepository.save(denuncia);
+        // Quien denunció tiene que saberlo, y por qué: va como un mensaje más.
+        anotarMensaje(denuncia, ComplaintAuthor.INSTRUCTOR, actor,
+                "He ampliado a seis meses el plazo para responderte, por la complejidad del caso: "
+                        + request.motivo().trim());
+        avisarAlDenunciante(denuncia, "Se ha ampliado el plazo para responder a tu denuncia.");
+        log.info("{} ha ampliado el plazo de la denuncia {}", actor.getId(), denuncia.getId());
+        return toResponse(denuncia);
+    }
+
+    @Override
+    @Transactional
+    public ComplaintResponse suprimirTexto(long id, ComplaintRedactionRequest request, User actor) {
+        Complaint denuncia = porId(id, actor);
+        exigirQueNoSeaSuya(denuncia, actor);
+        String marca = "[Texto suprimido el " + LocalDate.now(Company.zonaDe(denuncia.getEmpresa()))
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                + " porque " + request.motivo().getTexto() + ".]";
+        if (request.mensajeId() == null) {
+            denuncia.setDescripcion(marca);
+            complaintRepository.save(denuncia);
+        } else {
+            ComplaintMessage mensaje = messageRepository.findById(request.mensajeId())
+                    .filter(m -> m.getDenuncia().getId() == denuncia.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Ese mensaje no es de esta denuncia."));
+            mensaje.setTexto(marca);
+            messageRepository.save(mensaje);
+        }
+        // Sin el texto, claro: lo que se suprime no se copia a un log.
+        log.info("{} ha suprimido un texto de la denuncia {} ({})", actor.getId(), denuncia.getId(), request.motivo());
+        return toResponse(denuncia);
+    }
+
+    @Override
+    public byte[] libroRegistro(User actor) {
+        List<Complaint> todas = complaintRepository.findDeEmpresa(actor.getEmpresa().getId());
+        accesos.anotar(actor, DatoConsultado.EXPORTACION, null, "Libro-registro del canal de denuncias");
+        return LibroRegistroCsv.generar(todas, Company.zonaDe(actor.getEmpresa()));
     }
 
     // ------------------------------------------------------------------
@@ -446,6 +518,11 @@ public class ComplaintServiceImpl implements ComplaintService {
      * garantizarlo es que no lo mire.
      */
     private List<User> quienInstruye(Company empresa) {
+        // Con Responsable designado (ADR 048), solo él: los ADMIN ya no instruyen.
+        Long responsable = empresa.getResponsableCanalId();
+        if (responsable != null) {
+            return userRepository.findById(responsable).filter(User::isActivo).map(List::of).orElse(List.of());
+        }
         // conAuthority y NO conAuthorityMenos: ver el Javadoc de arriba.
         return Destinatarios.conAuthority(userRepository, empresa, INSTRUIR, null);
     }
@@ -475,7 +552,20 @@ public class ComplaintServiceImpl implements ComplaintService {
         if (!denuncia.getEstado().estaAbierta()) {
             return null;
         }
-        return diasHasta(denuncia, diaDeLaEmpresa(denuncia).plusMonths(MESES_PARA_RESPONDER));
+        int meses = denuncia.getRespuestaProrrogadaEn() != null ? MESES_PRORROGADA : MESES_PARA_RESPONDER;
+        return diasHasta(denuncia, diaDeLaEmpresa(denuncia).plusMonths(meses));
+    }
+
+    /**
+     * Días hasta que se suprima el contenido si nadie la pasa a investigación
+     * (art. 32.3); null si ya se investiga o ya se suprimió. Lo hace la tarea
+     * de las 03:45 ({@link ConservacionDeDatos}), con el mismo plazo.
+     */
+    private Long diasHastaSupresion(Complaint denuncia) {
+        if (denuncia.getInvestigacionIniciadaEn() != null || denuncia.getContenidoSuprimidoEn() != null) {
+            return null;
+        }
+        return diasHasta(denuncia, diaDeLaEmpresa(denuncia).plusMonths(ConservacionDeDatos.MESES_SIN_INVESTIGAR));
     }
 
     /**
@@ -516,7 +606,12 @@ public class ComplaintServiceImpl implements ComplaintService {
                 denuncia.getConclusion(),
                 diasHastaAcuse(denuncia),
                 diasHastaRespuesta(denuncia),
-                mensajesDe(denuncia));
+                mensajesDe(denuncia),
+                denuncia.getContactoNotificaciones(),
+                denuncia.getInvestigacionIniciadaEn(),
+                denuncia.getRespuestaProrrogadaEn(),
+                denuncia.getContenidoSuprimidoEn(),
+                diasHastaSupresion(denuncia));
     }
 
     private List<ComplaintMessageResponse> mensajesDe(Complaint denuncia) {
@@ -551,7 +646,9 @@ public class ComplaintServiceImpl implements ComplaintService {
                         denuncia.getAcuseReciboEn(),
                         diasHastaAcuse(denuncia),
                         diasHastaRespuesta(denuncia),
-                        mensajes.getOrDefault(denuncia.getId(), 0)))
+                        mensajes.getOrDefault(denuncia.getId(), 0),
+                        diasHastaSupresion(denuncia),
+                        denuncia.getContenidoSuprimidoEn() != null))
                 .toList();
     }
 
@@ -566,5 +663,9 @@ public class ComplaintServiceImpl implements ComplaintService {
             porDenuncia.put(((Number) fila[0]).longValue(), ((Number) fila[1]).intValue());
         }
         return porDenuncia;
+    }
+
+    private static String vacioComoNulo(String texto) {
+        return texto == null || texto.isBlank() ? null : texto.strip();
     }
 }

@@ -118,8 +118,11 @@ interface AuthRepository {
     suspend fun presentarDenuncia(
         categoria: String,
         descripcion: String,
-        anonima: Boolean
+        anonima: Boolean,
+        contactoNotificaciones: String? = null
     ): Response<DenunciaCreadaDTO>
+
+    suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO>
     suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO>
     suspend fun responderDenunciaPorCodigo(codigo: String, texto: String): Response<DenunciaDTO>
     suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>>

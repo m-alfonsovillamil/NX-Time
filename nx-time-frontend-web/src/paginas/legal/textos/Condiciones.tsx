@@ -65,7 +65,9 @@ export function Condiciones() {
         </li>
         <li>
           si tiene 50 o más personas en plantilla, tener un sistema interno de información conforme a la Ley 2/2023 y
-          designar a su responsable: el canal de {P} puede ser la herramienta, pero no la exime de lo demás;
+          designar a su responsable (en los ajustes de la empresa) y comunicarlo a la Autoridad Independiente de
+          Protección del Informante en 10 días hábiles: el canal de {P} puede ser la herramienta, pero no la exime de
+          lo demás, como la vía verbal o la reunión en persona;
         </li>
         <li>
           dar de alta solo a quien trabaje para ella, con el rol que le corresponda, y darle de baja cuando deje de

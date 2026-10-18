@@ -64,6 +64,9 @@ class PersonalDataEraser {
         // Sus cuentas de Google o de Microsoft (ADR 036): identifican a la
         // persona en un tercero, y sin ellas tampoco se entra por ahí.
         int identidades = jdbc.update("DELETE FROM identidades_externas WHERE usuario_id = ?", usuarioId);
+        // Si era Responsable del canal de denuncias (ADR 048), deja de serlo.
+        jdbc.update("UPDATE empresas SET responsable_canal_id = NULL, responsable_canal_desde = NULL "
+                + "WHERE responsable_canal_id = ?", usuarioId);
 
         // La cuenta: fuera la fecha de nacimiento, baja, y una contraseña que
         // nadie conoce (el hash de un UUID que no se guarda). Sin sesiones y

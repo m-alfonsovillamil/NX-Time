@@ -61,7 +61,7 @@ public class PendingWorkServiceImpl implements PendingWorkService {
 
     @Override
     public PendingWorkResponse contar(User actor) {
-        Set<String> authorities = RoleAuthorities.forRole(actor.getRol());
+        Set<String> authorities = RoleAuthorities.de(actor);
 
         // Sin la authority de una bandeja, 0 y no un 403: el panel pide los
         // tres de una vez, y un GESTOR sin alguna no debe quedarse sin los otros.

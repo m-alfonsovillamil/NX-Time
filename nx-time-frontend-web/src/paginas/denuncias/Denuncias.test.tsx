@@ -140,6 +140,39 @@ describe('canal de denuncias', () => {
     expect(llamadas.llamadas.some((l) => l.ruta.includes('K7Q2'))).toBe(false);
   });
 
+  it('antes de denunciar dice quién lo gestiona, la vía verbal, la protección y los canales externos (ADR 048)', async () => {
+    simularApi({
+      'GET /api/v1/denuncias/mias': () => [],
+      'GET /api/v1/denuncias/canal': () => ({ responsable: 'Laura Gil', viaVerbal: 'Teléfono 600 000 000, de 9 a 14' }),
+    });
+    pintar(<Denuncias />, { sesion: sesionDe('EMPLEADO') });
+
+    expect(await screen.findByText(D.gestiona('Laura Gil'))).toBeTruthy();
+    expect(screen.getByText('Teléfono 600 000 000, de 9 a 14')).toBeTruthy();
+    expect(screen.getByText(D.proteccionTexto)).toBeTruthy();
+    expect(screen.getByText(D.ambito)).toBeTruthy();
+    expect(screen.getByRole('link', { name: D.externosEnlace }).getAttribute('href')).toBe(D.externosUrl);
+  });
+
+  it('el contacto para notificaciones va recortado, y solo si se da', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/denuncias/mias': () => [],
+      'POST /api/v1/denuncias': () =>
+        json({ codigoSeguimiento: 'X', anonima: false, creadoEn: '2026-10-18T10:00:00Z', avisoImportante: 'Acuse.' }, 201),
+    });
+    pintar(<Denuncias />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.type(await screen.findByLabelText(D.descripcion), 'Hechos');
+    await userEvent.type(screen.getByLabelText(D.contacto), '  Calle Real 1  ');
+    await userEvent.click(screen.getByRole('button', { name: D.enviar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/denuncias').map((l) => l.cuerpo)).toEqual([
+        { categoria: 'ACOSO', descripcion: 'Hechos', anonima: false, contactoNotificaciones: 'Calle Real 1' },
+      ]),
+    );
+  });
+
   it('un código que no existe dice lo que diga el servidor', async () => {
     simularApi({
       'GET /api/v1/denuncias/mias': () => [],

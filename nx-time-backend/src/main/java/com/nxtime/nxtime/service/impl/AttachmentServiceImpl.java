@@ -226,7 +226,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         if (adjunto.getUsuario().getId() == actor.getId()) {
             return true;
         }
-        if (!RoleAuthorities.forRole(actor.getRol()).contains(GESTIONAR_CANDIDATURAS)) {
+        if (!RoleAuthorities.de(actor).contains(GESTIONAR_CANDIDATURAS)) {
             return false;
         }
         return jobApplicationRepository.esCvDeCandidaturaDeEmpresa(

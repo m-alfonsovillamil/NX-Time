@@ -25,6 +25,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { empresa } from '../../i18n/es/empresa';
+import { CanalDeDenunciasAjustes } from './CanalDeDenunciasAjustes';
 import { Kioscos } from './Kioscos';
 
 const A = empresa.ajustes;
@@ -182,6 +183,7 @@ export function AjustesEmpresa() {
               <Formulario key={`${datos.nombre}|${datos.zonaHoraria}|${datos.contactoPrivacidad ?? ''}`} ajustes={datos} />
             )}
           </EstadoDeConsulta>
+          <CanalDeDenunciasAjustes />
           <Tarjeta titulo={A.accesosTitulo} icono="candado" descripcion={A.accesosTexto}>
             <Link className="nx-boton nx-boton--secundario nx-boton--enlace" to="/accesos-a-datos">
               {A.verAccesos}

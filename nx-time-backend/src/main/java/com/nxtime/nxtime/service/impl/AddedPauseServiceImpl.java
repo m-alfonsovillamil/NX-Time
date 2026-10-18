@@ -175,7 +175,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
     public List<AddedPauseDTO> deLaJornada(long fichajeId, User actor) {
         TimeEntry fichaje = cargar(fichajeId, actor);
         boolean esMio = fichaje.getUsuario().getId() == actor.getId();
-        if (!esMio && !RoleAuthorities.forRole(actor.getRol()).contains(VER_EQUIPO)) {
+        if (!esMio && !RoleAuthorities.de(actor).contains(VER_EQUIPO)) {
             throw new TenantAccessException("No puedes ver las pausas del fichaje de otra persona.");
         }
         return addedPauseRepository.findByRegistroAndAnuladaFalseOrderByInicioAsc(fichaje).stream()

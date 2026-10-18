@@ -108,6 +108,40 @@ describe('ajustes de la empresa', () => {
   });
 });
 
+describe('canal de denuncias de la empresa (ADR 048)', () => {
+  const CANAL = empresa.canal;
+
+  it('designar al Responsable lo guarda y pone al día los permisos de la sesión', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => AJUSTES,
+      'GET /api/v1/empresa/canal-denuncias': () => ({}),
+      'GET /api/v1/gestor/plantilla': () => [
+        { id: 7, nombre: 'Laura Gil', activo: true },
+        { id: 8, nombre: 'Baja Antigua', activo: false },
+      ],
+      'PUT /api/v1/empresa/canal-denuncias': ({ cuerpo }) => ({ ...(cuerpo as object), responsable: 'Laura Gil' }),
+      'GET /api/v1/perfil': () => ({ id: 1, nombre: 'Ana', authorities: ['empresa:configurar'] }),
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    const selector = await screen.findByLabelText(CANAL.responsable);
+    // Quien está de baja no se ofrece.
+    expect(within(selector).queryByText('Baja Antigua')).toBeNull();
+    await userEvent.selectOptions(selector, '7');
+    await userEvent.type(screen.getByLabelText(CANAL.viaVerbal), 'Teléfono 600 000 000');
+    await userEvent.click(within(screen.getByRole('region', { name: CANAL.titulo })).getByRole('button', { name: CANAL.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/canal-denuncias').map((l) => l.cuerpo)).toEqual([
+        { responsableId: 7, viaVerbal: 'Teléfono 600 000 000' },
+      ]),
+    );
+    // El ADMIN ya no instruye: el menú lo sabe sin esperar a renovar la sesión.
+    await waitFor(() => expect(sesionActual()?.authorities).toEqual(['empresa:configurar']));
+    expect(screen.getByRole('link', { name: CANAL.autoridadEnlace }).getAttribute('href')).toBe(CANAL.autoridadUrl);
+  });
+});
+
 describe('kioscos de la empresa', () => {
   it('se da de alta uno con el código de la tablet y se revoca', async () => {
     let lista: { id: number; nombre: string; creadoEn: string; activo: boolean }[] = [];

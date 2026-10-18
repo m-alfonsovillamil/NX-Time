@@ -340,6 +340,10 @@ interface ApiService {
         @Body peticion: CrearDenunciaRequest
     ): Response<DenunciaCreadaDTO>
 
+    /** Quién gestiona el canal y cuál es la vía verbal (ADR 048). */
+    @GET("api/v1/denuncias/canal")
+    suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO>
+
     /**
      * Seguir una denuncia con su codigo. Va autenticado (el canal es
      * interno) pero el servidor NO comprueba quien lo trae: el codigo es

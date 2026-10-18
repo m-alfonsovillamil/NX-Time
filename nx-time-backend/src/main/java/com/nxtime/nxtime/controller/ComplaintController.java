@@ -1,15 +1,21 @@
 package com.nxtime.nxtime.controller;
 
+import com.nxtime.nxtime.dto.ComplaintChannelInfoResponse;
 import com.nxtime.nxtime.dto.ComplaintCreatedResponse;
+import com.nxtime.nxtime.dto.ComplaintExtensionRequest;
 import com.nxtime.nxtime.dto.ComplaintMessageRequest;
+import com.nxtime.nxtime.dto.ComplaintRedactionRequest;
 import com.nxtime.nxtime.dto.ComplaintResponse;
 import com.nxtime.nxtime.dto.ComplaintSummaryResponse;
 import com.nxtime.nxtime.dto.ComplaintTrackingRequest;
 import com.nxtime.nxtime.dto.CreateComplaintRequest;
+import com.nxtime.nxtime.dto.DataAccessResponse;
 import com.nxtime.nxtime.dto.UpdateComplaintStatusRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.ComplaintService;
+import com.nxtime.nxtime.service.impl.CanalDeDenuncias;
+import com.nxtime.nxtime.service.impl.RegistroDeAccesos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,8 +25,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,9 +75,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ComplaintController {
 
     private final ComplaintService complaintService;
+    private final CanalDeDenuncias canalDeDenuncias;
+    private final RegistroDeAccesos registroDeAccesos;
 
-    public ComplaintController(ComplaintService complaintService) {
+    public ComplaintController(ComplaintService complaintService, CanalDeDenuncias canalDeDenuncias,
+            RegistroDeAccesos registroDeAccesos) {
         this.complaintService = complaintService;
+        this.canalDeDenuncias = canalDeDenuncias;
+        this.registroDeAccesos = registroDeAccesos;
     }
 
     // ------------------------------------------------------------------
@@ -209,7 +223,7 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintService.bandeja(usuario.getUser()));
     }
 
-    @Operation(summary = "Un expediente completo", description = "Solo ADMIN.")
+    @Operation(summary = "Un expediente completo", description = "Solo quien instruye: el Responsable del Sistema o, sin él, los ADMIN.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "El expediente y su conversación",
                     content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
@@ -225,8 +239,8 @@ public class ComplaintController {
     }
 
     @Operation(summary = "Escribir en un expediente como instructor",
-            description = "El primer mensaje vale como acuse de recibo si todavía no se había "
-                    + "dado. Nadie instruye una denuncia que presentó él mismo.")
+            description = "En las denuncias de antes del acuse automático (ADR 048), el primer "
+                    + "mensaje vale como acuse de recibo. Nadie instruye una denuncia que presentó él mismo.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Expediente con el mensaje añadido",
                     content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
@@ -271,5 +285,84 @@ public class ComplaintController {
             @AuthenticationPrincipal SecurityUser usuario) {
         return ResponseEntity.ok(
                 complaintService.cambiarEstado(id, request, usuario.getUser()));
+    }
+
+    @Operation(summary = "Cómo funciona el canal de mi empresa",
+            description = "Quién es el Responsable del Sistema (si la empresa lo ha designado) y cómo comunicar "
+                    + "algo de palabra o pedir una reunión (Ley 2/2023, arts. 7.2 y 9.2).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "El canal",
+                    content = @Content(schema = @Schema(implementation = ComplaintChannelInfoResponse.class)))
+    })
+    @GetMapping("/canal")
+    @PreAuthorize("hasAuthority('denuncia:crear')")
+    public ResponseEntity<ComplaintChannelInfoResponse> canal(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(canalDeDenuncias.paraQuienDenuncia(usuario.getUser()));
+    }
+
+    @Operation(summary = "Quién ha abierto cada expediente",
+            description = "Solo quien instruye: la Autoridad recomienda que este registro quede reservado al "
+                    + "Responsable del Sistema (Recomendación 1/2026). Lo último primero, hasta 500.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Los accesos",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = DataAccessResponse.class))))
+    })
+    @GetMapping("/accesos")
+    @PreAuthorize("hasAuthority('denuncia:instruir')")
+    public ResponseEntity<List<DataAccessResponse>> accesos(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(registroDeAccesos.deLosExpedientes(usuario.getUser()));
+    }
+
+    @Operation(summary = "El libro-registro en CSV",
+            description = "Ley 2/2023, art. 26: fecha de recepción, objeto, estado, hitos y fin de cada "
+                    + "comunicación. Sin relatos, conclusiones ni nombres. La descarga queda anotada.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "El fichero",
+                    content = @Content(mediaType = "text/csv", schema = @Schema(type = "string", format = "binary")))
+    })
+    @GetMapping("/libro-registro.csv")
+    @PreAuthorize("hasAuthority('denuncia:instruir')")
+    public ResponseEntity<byte[]> libroRegistro(@AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"libro-registro.csv\"")
+                .body(complaintService.libroRegistro(usuario.getUser()));
+    }
+
+    @Operation(summary = "Ampliar a seis meses el plazo de respuesta",
+            description = "Ley 2/2023, art. 9.2.d: solo en casos de especial complejidad, una vez y antes de "
+                    + "que venza. El motivo le llega a quien denunció como un mensaje del expediente.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Expediente con el plazo ampliado",
+                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Ya se amplió, ya venció o está cerrado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/{id}/prorroga")
+    @PreAuthorize("hasAuthority('denuncia:instruir')")
+    public ResponseEntity<ComplaintResponse> prorrogar(
+            @PathVariable long id,
+            @Valid @RequestBody ComplaintExtensionRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(complaintService.prorrogar(id, request, usuario.getUser()));
+    }
+
+    @Operation(summary = "Suprimir un texto del expediente",
+            description = "La descripción (sin mensajeId) o un mensaje, porque contiene categorías especiales "
+                    + "de datos, no es pertinente o se acreditó que no es veraz (Ley 2/2023, arts. 30 y 32). "
+                    + "No se puede deshacer: queda la marca de cuándo y por qué.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Expediente con el texto suprimido",
+                    content = @Content(schema = @Schema(implementation = ComplaintResponse.class))),
+            @ApiResponse(responseCode = "404", description = "La denuncia o el mensaje no existen",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/{id}/supresiones")
+    @PreAuthorize("hasAuthority('denuncia:instruir')")
+    public ResponseEntity<ComplaintResponse> suprimir(
+            @PathVariable long id,
+            @Valid @RequestBody ComplaintRedactionRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(complaintService.suprimirTexto(id, request, usuario.getUser()));
     }
 }

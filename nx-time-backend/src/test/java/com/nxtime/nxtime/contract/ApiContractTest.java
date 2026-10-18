@@ -2524,8 +2524,11 @@ class ApiContractTest {
         assertThat(body.get("anonima").asBoolean()).isTrue();
         assertThat(body.get("denunciante").isNull()).isTrue();
         assertThat(body.get("estado").asText()).isEqualTo("RECIBIDA");
-        // Recien presentada: quedan 7 dias naturales para acusar recibo.
-        assertThat(body.get("diasHastaAcuse").asInt()).isEqualTo(7);
+        // Desde la fase J6 (ADR 048) el acuse se da al presentarla: no queda
+        // plazo de acuse, y corre el de la supresion si nadie la investiga.
+        assertThat(body.get("acuseReciboEn").isNull()).isFalse();
+        assertThat(body.get("diasHastaAcuse").isNull()).isTrue();
+        assertThat(body.get("diasHastaSupresion").asInt()).isPositive();
 
         denunciaAnonimaId = body.get("id").asLong();
     }
@@ -2623,7 +2626,7 @@ class ApiContractTest {
 
     @Test
     @Order(127)
-    void elAdminAcusaReciboAlPasarlaAInvestigacion() throws Exception {
+    void elAdminLaPasaAInvestigacion_yDejaDeContarLaSupresion() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/denuncias/" + denunciaAnonimaId + "/estado"),
                 HttpMethod.PATCH,
@@ -2636,9 +2639,11 @@ class ApiContractTest {
         JsonNode body = bodyOf(response);
         assertThat(body.get("estado").asText()).isEqualTo("EN_INVESTIGACION");
         assertThat(body.get("acuseReciboEn").isNull()).isFalse();
-        // Dado el acuse, su plazo se apaga; el de los 3 meses sigue.
         assertThat(body.get("diasHastaAcuse").isNull()).isTrue();
         assertThat(body.get("diasHastaRespuesta").asInt()).isPositive();
+        // En investigacion, el contenido ya no se suprime a los tres meses.
+        assertThat(body.get("investigacionIniciadaEn").isNull()).isFalse();
+        assertThat(body.get("diasHastaSupresion").isNull()).isTrue();
     }
 
     @Test

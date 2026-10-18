@@ -44,6 +44,16 @@ public class ConservacionDeDatos {
     static final Duration CANDIDATURAS = Duration.ofDays(365);
     /** El registro de jornada se conserva cuatro años (art. 34.9 ET); después, nadie lo necesita. */
     static final int ANIOS_DEL_REGISTRO = 4;
+    /** Ley 2/2023, art. 32.3: sin investigación, a los tres meses se suprime el contenido. */
+    static final int MESES_SIN_INVESTIGAR = 3;
+    /** Ley 2/2023, art. 26.2: el libro-registro, nunca más de diez años. */
+    static final int ANIOS_DEL_LIBRO_REGISTRO = 10;
+
+    static final String DESCRIPCION_SUPRIMIDA =
+            "[Contenido suprimido: pasaron tres meses sin iniciar una investigación (Ley 2/2023, art. 32.3).]";
+    static final String CONCLUSION_SUPRIMIDA =
+            "Archivada sin investigación. El contenido se suprimió a los tres meses, como manda la Ley 2/2023 "
+                    + "(art. 32.3); queda solo que existió, como evidencia del funcionamiento del canal.";
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaccion;
@@ -94,6 +104,37 @@ public class ConservacionDeDatos {
 
         // Dos años, y con el reloj de la base: ver RegistroDeAccesos.
         paso(hecho, "registroDeAccesos", accesos::borrarLosCaducados);
+
+        // El canal de denuncias (ADR 048). A los diez años, el expediente
+        // entero (los mensajes, en cascada); va primero para no suprimir antes
+        // lo que se va a borrar.
+        paso(hecho, "libroRegistro", () -> jdbc.update("DELETE FROM denuncias WHERE creado_en < ?",
+                Timestamp.from(ahora.atOffset(ZoneOffset.UTC).minusYears(ANIOS_DEL_LIBRO_REGISTRO).toInstant())));
+
+        // Después, lo que lleva tres meses sin
+        // investigar: fuera los mensajes, el relato, quién la puso y su
+        // contacto, y se archiva. Queda la fila (fecha, categoría, estado)
+        // como evidencia de que el canal funciona, que la ley sí permite.
+        paso(hecho, "denunciasSinInvestigar", () -> {
+            Timestamp limite = Timestamp.from(ahora.atOffset(ZoneOffset.UTC).minusMonths(MESES_SIN_INVESTIGAR).toInstant());
+            jdbc.update("""
+                    DELETE FROM denuncia_mensajes
+                     WHERE denuncia_id IN (SELECT id FROM denuncias
+                                            WHERE investigacion_iniciada_en IS NULL
+                                              AND contenido_suprimido_en IS NULL
+                                              AND creado_en < ?)
+                    """, limite);
+            return jdbc.update("""
+                    UPDATE denuncias
+                       SET descripcion = ?, conclusion = ?,
+                           denunciante_id = NULL, contacto_notificaciones = NULL,
+                           estado = 'ARCHIVADA', resuelta_en = COALESCE(resuelta_en, now()),
+                           contenido_suprimido_en = now()
+                     WHERE investigacion_iniciada_en IS NULL
+                       AND contenido_suprimido_en IS NULL
+                       AND creado_en < ?
+                    """, DESCRIPCION_SUPRIMIDA, CONCLUSION_SUPRIMIDA, limite);
+        });
 
         // Quien lleva de baja más de cuatro años desde su último fichaje (o
         // desde la baja, si nunca fichó): el registro ya no hay que
