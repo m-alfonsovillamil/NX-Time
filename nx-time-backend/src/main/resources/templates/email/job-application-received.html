@@ -16,11 +16,14 @@
         presentado a <strong th:text="${oferta}">Título del puesto</strong>.
     </p>
 
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
     <p style="margin-top: 20px;" th:if="${carta}">
-        Su carta de presentación:
-    </p>
-    <p style="margin: 4px 0 0; font-style: italic;" th:if="${carta}" th:text="${carta}">
-        Texto de la carta.
+        Ha escrito una carta de presentación: la tienes en la aplicación, junto al CV.
     </p>
 
     <p style="margin-top: 20px;">

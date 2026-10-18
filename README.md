@@ -11,7 +11,9 @@
 Sistema de **registro horario laboral**: una API REST en Spring Boot, y una app
 Android nativa y un cliente web que la consumen. Los empleados fichan su jornada y solicitan
 ausencias; los gestores aprueban, consultan a su equipo y exportan los informes
-que exige la normativa.
+que pide la normativa. **Ayuda a la empresa a cumplir; no cumple por ella**: la
+obligada a llevar el registro, a informar a su plantilla y a todo lo demás es la
+empresa (ver las [condiciones del servicio](https://nxtime-web.com/legal/condiciones)).
 
 En España el registro de jornada es **obligatorio** desde el RD-ley 8/2019, que
 además exige conservar los registros cuatro años y que sean fiables. Ese
@@ -614,6 +616,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 43. [Jackson 3: un solo serializador en el código propio, y lo que se firma escrito igual que antes](docs/adr/043-jackson-3.md)
 44. [Registrar una empresa con Google o Microsoft también desde la app](docs/adr/044-registrar-empresa-con-sso-desde-la-app.md)
 45. [La sesión de la app, cifrada en el disco](docs/adr/045-la-sesion-de-la-app-cifrada.md)
+46. [El alta de empresas con aprobación, y el ciclo de vida de una empresa](docs/adr/046-alta-con-aprobacion-y-ciclo-de-vida-de-la-empresa.md)
 
 ---
 

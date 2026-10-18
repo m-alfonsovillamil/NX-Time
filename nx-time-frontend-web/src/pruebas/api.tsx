@@ -146,6 +146,7 @@ export function sesionDe(rol: keyof typeof AUTHORITIES, nombre = 'Ana'): Sesion 
 
 /** La que no es de ningún rol: la concede el servidor por una lista de correos (ADR 040). */
 export const PLATAFORMA_VER = 'plataforma:ver';
+export const PLATAFORMA_GESTIONAR = 'plataforma:gestionar';
 
 /** Quien mantiene el servicio. Una empleada rasa por defecto: el permiso no va con el rol. */
 export function sesionDeOperadora(rol: keyof typeof AUTHORITIES = 'EMPLEADO', nombre = 'Olga'): Sesion {

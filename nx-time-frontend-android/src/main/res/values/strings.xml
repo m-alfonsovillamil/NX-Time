@@ -48,6 +48,8 @@
     <string name="sso_error_sin_cuenta">No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.</string>
     <string name="sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.</string>
     <string name="sso_error_cuenta_inactiva">Tu cuenta de NX Time está dada de baja. Habla con tu empresa.</string>
+    <string name="sso_error_empresa_pendiente">Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
+    <string name="sso_error_empresa_suspendida">El acceso de tu empresa está suspendido. Mira el correo que te enviamos para saber más.</string>
     <string name="sso_error_ya_tiene_otra">Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="sso_error_no_disponible">Ese acceso no está disponible ahora mismo. Entra con tu contraseña.</string>
     <string name="sso_error_fallo">No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.</string>
@@ -94,7 +96,18 @@
 
     <!-- Registro de empresa -->
     <string name="registro_titulo">Registrar empresa</string>
-    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador.</string>
+    <string name="registro_explicacion">Se creará la empresa y tu cuenta de administrador. Antes de que podáis entrar revisamos cada alta: te avisamos por correo.</string>
+    <!-- La casilla del registro (ADR 046), partida para meter los enlaces en medio -->
+    <string name="registro_acepto_antes">"He leído y acepto las "</string>
+    <string name="registro_acepto_condiciones">condiciones del servicio</string>
+    <string name="registro_acepto_entre">" y el "</string>
+    <string name="registro_acepto_encargo">contrato de encargo del tratamiento</string>
+    <string name="registro_acepto_despues">" en nombre de la empresa, y soy mayor de edad."</string>
+    <string name="registro_falta_aceptar">Para registrar la empresa tienes que aceptar las condiciones y el contrato de encargo.</string>
+    <!-- Registrada y esperando aprobación (ADR 046) -->
+    <string name="pendiente_titulo">Empresa registrada</string>
+    <string name="pendiente_siguiente">Revisamos cada alta antes de abrirla. En cuanto la aprobemos te escribiremos, y podréis entrar con vuestro correo.</string>
+    <string name="pendiente_volver">Volver al inicio</string>
     <string name="registro_empresa">Nombre de la empresa</string>
     <string name="registro_nombre">Tu nombre</string>
     <string name="registro_apellidos">Tus apellidos</string>
@@ -107,6 +120,8 @@
     <string name="registro_sso_error_cancelado">No has terminado de entrar con esa cuenta. Puedes volver a intentarlo.</string>
     <string name="registro_sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.</string>
     <string name="registro_sso_error_cuenta_inactiva">Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.</string>
+    <string name="registro_sso_error_empresa_pendiente">Ya registraste una empresa con ese correo y está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
+    <string name="registro_sso_error_empresa_suspendida">Ya tienes una cuenta con ese correo, y el acceso de su empresa está suspendido.</string>
     <string name="registro_sso_error_ya_tiene_otra">Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="registro_sso_error_no_disponible">Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.</string>
     <string name="registro_sso_error_caducado">El registro ha caducado. Vuelve a empezar con tu cuenta, o hazlo con tu correo y una contraseña.</string>
@@ -669,6 +684,7 @@
 
     <string name="ajustes_acerca_de">Acerca de</string>
     <string name="ajustes_version">Versión</string>
+    <string name="ajustes_informacion_legal">Información legal</string>
     <string name="ajustes_servidor">Servidor</string>
     <string name="ajustes_repositorio">Código fuente</string>
 
@@ -934,6 +950,7 @@
 
     <!-- Fase B3: la firma mensual del registro. De aceptación, no eIDAS. -->
     <string name="firma_ver">Firmar mi registro</string>
+    <string name="firma_descargar_pdf">Descargar PDF</string>
     <string name="firma_titulo">Firmar mi registro</string>
     <string name="firma_explicacion">Al terminar cada mes, firmas que tu registro horario es correcto. Si después se corrige un fichaje de ese mes, la firma queda sin efecto y te lo pedirá otra vez.</string>
     <string name="firma_vacio">No hay meses terminados con jornadas que firmar.</string>
@@ -1006,7 +1023,28 @@
     <string name="denuncia_cerrar_dialogo">Cerrar</string>
 
     <string name="denuncias_que_es_titulo">Canal interno de información</string>
-    <string name="denuncias_que_es_texto">Aquí puedes comunicar irregularidades. La empresa tiene 7 días naturales para acusar recibo y 3 meses para responder. Puedes hacerlo con tu nombre o de forma anónima.</string>
+    <string name="denuncias_que_es_texto">Aquí puedes comunicar irregularidades, con tu nombre o de forma anónima. El acuse de recibo es el aviso que recibes al enviarla, y la empresa tiene 3 meses para responderte (6 si el caso es complejo y te lo explica).</string>
+    <string name="denuncias_gestiona">La gestiona %1$s, Responsable del Sistema Interno de Información de la empresa.</string>
+    <string name="denuncias_gestiona_administracion">La gestiona la administración de la empresa.</string>
+    <string name="denuncias_via_verbal_titulo">De palabra o en persona</string>
+    <string name="denuncias_via_verbal_con">%1$s. Si pides una reunión, tiene que celebrarse en 7 días.</string>
+    <string name="denuncias_via_verbal_sin">También puedes comunicarlo de palabra o pedir una reunión en persona, que tiene que celebrarse en 7 días: pregúntalo a quien gestiona el canal.</string>
+    <string name="denuncias_ambito">La protección de la Ley 2/2023 cubre las infracciones penales, las administrativas graves o muy graves y las del Derecho de la Unión Europea. Puedes comunicar aquí otras cosas, pero quedan fuera de esa protección.</string>
+    <string name="denuncias_proteccion_titulo">Tus datos y tu protección</string>
+    <string name="denuncias_proteccion_texto">Tu identidad es confidencial: no se comunica a las personas a las que se refieren los hechos ni a nadie más, salvo a un juez, al Ministerio Fiscal o a la autoridad competente en una investigación. Tu empresa trata tus datos solo para gestionar la comunicación, y si en tres meses no se abre una investigación, su contenido se suprime. Las represalias contra quien informa de buena fe están prohibidas.</string>
+    <string name="denuncias_externos_titulo">Fuera de la empresa</string>
+    <string name="denuncias_externos_texto">También puedes acudir, antes o en lugar de este canal, a la Autoridad Independiente de Protección del Informante, a la autoridad de tu comunidad autónoma si la hay, o a las instituciones de la Unión Europea.</string>
+    <string name="denuncias_externos_enlace">Cómo informar a la Autoridad</string>
+    <string name="denuncia_contacto">Dónde recibir notificaciones (opcional)</string>
+    <string name="denuncia_suprimida">Su contenido se suprimió: pasaron tres meses sin abrir una investigación (Ley 2/2023, art. 32).</string>
+    <string name="denuncia_plazo_ampliado">El plazo de respuesta se amplió a seis meses.</string>
+    <string name="denuncia_contacto_dado">Notificaciones: %1$s</string>
+    <string name="denuncia_supresion_hoy">Si no la pasas hoy a investigación, esta noche se suprime su contenido.</string>
+    <plurals name="denuncia_supresion_en">
+        <item quantity="one">Si no la pasas a investigación, su contenido se suprime en %d día.</item>
+        <item quantity="other">Si no la pasas a investigación, su contenido se suprime en %d días.</item>
+    </plurals>
+    <string name="denuncia_contacto_ayuda">Un domicilio, un correo o un lugar seguro. Si la envías anónima, ten en cuenta que esto puede identificarte.</string>
 
     <string name="denuncias_presentar">Presentar una denuncia</string>
     <string name="denuncia_categoria">Categoría</string>
@@ -1227,4 +1265,13 @@
     <string name="kiosco_distintivo">Kiosco · %1$s</string>
     <!-- En los dos historiales: la salida la puso el cierre automático de las 3:00. -->
     <string name="historial_cerrada_por_el_sistema">Cerrada por el sistema</string>
+
+    <!-- El aviso de privacidad de la primera entrada (ADR 047) -->
+    <string name="privacidad_titulo">Tus datos</string>
+    <string name="privacidad_texto">%1$s es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. NX Time es la herramienta que usa, y los trata solo por encargo suyo.</string>
+    <string name="privacidad_contacto_correo">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, escribe a %1$s.</string>
+    <string name="privacidad_contacto_enlace">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, sigue su política de privacidad: %1$s</string>
+    <string name="privacidad_sin_contacto">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, dirígete a tu empresa.</string>
+    <string name="privacidad_mas_informacion">Más información</string>
+    <string name="privacidad_entendido">Entendido</string>
 </resources>

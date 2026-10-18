@@ -25,6 +25,9 @@ public record ComplaintSummaryResponse(
         Instant acuseReciboEn,
         Long diasHastaAcuse,
         Long diasHastaRespuesta,
-        int mensajes
+        int mensajes,
+        /** Días hasta que se suprima el contenido sin investigación (art. 32.3); null si no aplica. */
+        Long diasHastaSupresion,
+        boolean contenidoSuprimido
 ) {
 }

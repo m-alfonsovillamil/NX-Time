@@ -24,7 +24,13 @@
         y te toca revisarlo.
     </p>
 
-    <p style="margin: 0;">Motivo: <span th:text="${motivo}">Motivo</span></p>
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
+    <p style="margin: 0;">El motivo lo tienes en la aplicación.</p>
 
     <p style="margin-top: 20px;" th:if="${sobreSuFichaje}">
         Si no estás de acuerdo, puedes no aceptarla y lo revisará Recursos Humanos.

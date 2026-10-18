@@ -3,7 +3,9 @@ package com.nxtime.nxtime.controller;
 import com.nxtime.nxtime.report.ExcelReportGenerator;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.PdfReportGenerator;
+import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.ReportService;
+import com.nxtime.nxtime.service.impl.ExportacionParaLaInspeccion;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,12 +17,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.YearMonth;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,15 +59,48 @@ public class ReportController {
     private final ReportService reportService;
     private final ExcelReportGenerator excelGenerator;
     private final PdfReportGenerator pdfGenerator;
+    private final ExportacionParaLaInspeccion exportacion;
 
     public ReportController(
             ReportService reportService,
             ExcelReportGenerator excelGenerator,
-            PdfReportGenerator pdfGenerator
+            PdfReportGenerator pdfGenerator,
+            ExportacionParaLaInspeccion exportacion
     ) {
         this.reportService = reportService;
         this.excelGenerator = excelGenerator;
         this.pdfGenerator = pdfGenerator;
+        this.exportacion = exportacion;
+    }
+
+    @Operation(summary = "Exportación para la Inspección o la representación legal",
+            description = "Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada "
+                    + "mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas "
+                    + "(art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "El ZIP",
+                    content = @Content(mediaType = "application/zip", schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "400", description = "Periodo al revés o de más de doce meses",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'informe:exportar' (RRHH/ADMIN)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('informe:exportar')")
+    @GetMapping("/inspeccion.zip")
+    public ResponseEntity<StreamingResponseBody> exportarParaLaInspeccion(
+            @Parameter(description = "Primer mes, AAAA-MM") @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth desde,
+            @Parameter(description = "Último mes, AAAA-MM") @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth hasta,
+            @AuthenticationPrincipal SecurityUser usuario) {
+
+        // Se prepara ANTES de empezar a escribir: ver el Javadoc.
+        ExportacionParaLaInspeccion.Preparada preparada = exportacion.preparar(usuario.getUser(), desde, hasta);
+        StreamingResponseBody cuerpo = salida -> exportacion.escribir(preparada, salida);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"registro-de-jornada-" + desde + "-a-" + hasta + ".zip\"")
+                .body(cuerpo);
     }
 
     @Operation(summary = "Excel de horas de la empresa",
@@ -96,6 +133,36 @@ public class ReportController {
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"horas-" + YearMonth.of(anio, mes) + ".xlsx\"")
+                .body(cuerpo);
+    }
+
+    @Operation(summary = "Mi registro de jornada del mes en PDF",
+            description = "El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene "
+                    + "derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Documento PDF",
+                    content = @Content(mediaType = MediaType.APPLICATION_PDF_VALUE)),
+            @ApiResponse(responseCode = "400", description = "Mes o año fuera de rango",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:leer')")
+    @GetMapping("/mensual/mio")
+    public ResponseEntity<StreamingResponseBody> exportarMiInformeMensualEnPdf(
+            @Parameter(description = "Año del informe") @RequestParam @Min(2000) @Max(2100) int anio,
+            @Parameter(description = "Mes del informe (1-12)") @RequestParam @Min(1) @Max(12) int mes,
+            @AuthenticationPrincipal SecurityUser usuario) {
+
+        MonthlyReport informe = reportService.informeDeEmpleado(
+                usuario.getUsername(), usuario.getUser().getId(), YearMonth.of(anio, mes));
+
+        StreamingResponseBody cuerpo = salida -> pdfGenerator.generar(informe, salida);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"mi-registro-" + YearMonth.of(anio, mes) + ".pdf\"")
                 .body(cuerpo);
     }
 

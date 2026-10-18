@@ -12,6 +12,8 @@ export const plataforma = {
     fichajesHoy: 'Fichajes de hoy',
     sinConfirmar: 'Registros sin confirmar',
     sinConfirmarDetalle: 'Alguien registró la empresa y no ha confirmado el correo.',
+    pendientes: 'Esperando aprobación',
+    pendientesDetalle: 'Han confirmado el correo y esperan a que las apruebes. Salen las primeras de la lista.',
   },
 
   altas: {
@@ -84,6 +86,8 @@ export const plataforma = {
     nunca: 'Nunca',
     sinFecha: 'Antes de oct. 2026',
     sinConfirmar: 'Sin confirmar',
+    /** El estado de cada empresa en el servicio (ADR 046). ACTIVA no se marca. */
+    estados: { PENDIENTE: 'Pendiente de aprobar', SUSPENDIDA: 'Suspendida' } as Record<string, string>,
     vacio: 'Todavía no hay ninguna empresa dada de alta.',
     sinResultados: (texto: string) => `Ninguna empresa se llama «${texto}».`,
     cuantas: (n: number) => (n === 1 ? '1 empresa' : `${n} empresas`),
@@ -91,7 +95,8 @@ export const plataforma = {
 
   detalle: {
     volver: 'Todas las empresas',
-    explicacion: 'Sus cifras de uso y a quién escribir. Cada consulta a esta página queda apuntada en el servidor.',
+    explicacion:
+      'Sus cifras de uso y a quién escribir. Cada consulta a esta página queda en su historial, con quién la hizo, y no se puede borrar.',
     noExiste: 'Esa empresa no existe.',
     datos: 'La empresa',
     alta: 'Alta',
@@ -133,5 +138,55 @@ export const plataforma = {
     adjuntos: 'Adjuntos',
     borrados: 'Borrados de datos pendientes',
     auditoria: 'Movimientos de auditoría',
+
+    /** El alta en el servicio: estado, condiciones y lo que puede hacer el operador (ADR 046). */
+    servicio: {
+      titulo: 'Alta en el servicio',
+      estado: 'Estado',
+      estados: { PENDIENTE: 'Pendiente de aprobar', ACTIVA: 'Activa', SUSPENDIDA: 'Suspendida' } as Record<string, string>,
+      aprobadaEn: 'Aprobada',
+      noAprobada: 'No consta',
+      condiciones: 'Condiciones aceptadas',
+      sinCondiciones: 'Ninguna (anterior a octubre de 2026)',
+      condicionesDe: (version: string, cuando: string) => `Versión ${version}, el ${cuando}`,
+      pendienteAyuda:
+        'Ha confirmado su correo y nadie de ella puede entrar hasta que la apruebes. Antes de aprobar la primera empresa real, los textos legales deberían haber pasado por un abogado.',
+      aprobar: 'Aprobar',
+      aprobarTitulo: 'Aprobar la empresa',
+      aprobarTexto: 'Desde ahora podrán entrar. Se avisa por correo a sus administradores.',
+      rechazar: 'Rechazar',
+      rechazarTitulo: 'Rechazar la empresa',
+      rechazarAyuda:
+        'Se le dice a quien la registró, con este motivo, y se borra entera: nadie de ella ha llegado a entrar. En el historial queda su nombre.',
+      suspender: 'Suspender',
+      suspenderTitulo: 'Suspender la empresa',
+      suspenderAyuda:
+        'Nadie de ella podrá entrar ni fichar, tampoco en sus kioscos, y se cierran sus sesiones. Sus datos se quedan. Se avisa a sus administradores con este motivo.',
+      reactivar: 'Reactivar',
+      reactivarTitulo: 'Reactivar la empresa',
+      reactivarTexto: 'Su gente volverá a poder entrar. Se avisa a sus administradores.',
+      motivo: 'Motivo',
+      faltaMotivo: 'Escribe el motivo: le llega a la empresa.',
+      confirmar: 'Confirmar',
+      cancelar: 'Cancelar',
+      rechazada: 'Rechazada y borrada.',
+    },
+
+    historial: {
+      titulo: 'Historial',
+      descripcion: 'Lo que se ha hecho y mirado desde este panel, lo más reciente primero.',
+      vacio: 'Nada todavía.',
+      tabla: 'Historial de la empresa en el panel de plataforma',
+      cuando: 'Cuándo',
+      quien: 'Quién',
+      que: 'Qué',
+      acciones: {
+        CONSULTAR: 'Consultó esta página',
+        APROBAR: 'Aprobó el alta',
+        RECHAZAR: 'Rechazó el alta',
+        SUSPENDER: 'Suspendió el acceso',
+        REACTIVAR: 'Reactivó el acceso',
+      } as Record<string, string>,
+    },
   },
 } as const;

@@ -1,6 +1,7 @@
 /**
  * Los ajustes de la empresa (fase Z2): el nombre, y la zona horaria con su
- * confirmación, porque cambiarla mueve los días de todo el histórico.
+ * confirmación, porque cambiarla mueve los días de todo el histórico. Y el
+ * contacto de privacidad (ADR 047).
  */
 
 import { screen, waitFor, within } from '@testing-library/react';
@@ -44,7 +45,7 @@ describe('ajustes de la empresa', () => {
 
     await waitFor(() =>
       expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
-        { nombre: 'Talleres Ana S.L.', zonaHoraria: 'Europe/Madrid' },
+        { nombre: 'Talleres Ana S.L.', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: '' },
       ]),
     );
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -69,8 +70,29 @@ describe('ajustes de la empresa', () => {
     await waitFor(() => expect(zonaActual()).toBe('Atlantic/Canary'));
     expect(sesionActual()?.zonaHoraria).toBe('Atlantic/Canary');
     expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
-      { nombre: 'Talleres Ana', zonaHoraria: 'Atlantic/Canary' },
+      { nombre: 'Talleres Ana', zonaHoraria: 'Atlantic/Canary', contactoPrivacidad: '' },
     ]);
+  });
+
+  it('el contacto de privacidad se guarda recortado, y desde aquí se llega a los accesos (ADR 047)', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => ({ ...AJUSTES, contactoPrivacidad: 'viejo@talleres.es' }),
+      'PUT /api/v1/empresa/ajustes': ({ cuerpo }) => ({ ...(cuerpo as object), firmasInvalidadas: 0 }),
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    const contacto = await screen.findByLabelText(A.contacto);
+    expect((contacto as HTMLInputElement).value).toBe('viejo@talleres.es');
+    await userEvent.clear(contacto);
+    await userEvent.type(contacto, ' https://talleres.es/privacidad ');
+    await userEvent.click(screen.getByRole('button', { name: A.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
+        { nombre: 'Talleres Ana', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: 'https://talleres.es/privacidad' },
+      ]),
+    );
+    expect(screen.getByRole('link', { name: A.verAccesos }).getAttribute('href')).toBe('/accesos-a-datos');
   });
 
   it('un error del servidor se enseña en el formulario', async () => {
@@ -83,6 +105,78 @@ describe('ajustes de la empresa', () => {
     await userEvent.click(await screen.findByRole('button', { name: A.guardar }));
 
     expect(await screen.findByText('Ya hay otra empresa con ese nombre.')).toBeTruthy();
+  });
+});
+
+describe('canal de denuncias de la empresa (ADR 048)', () => {
+  const CANAL = empresa.canal;
+
+  it('designar al Responsable lo guarda y pone al día los permisos de la sesión', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => AJUSTES,
+      'GET /api/v1/empresa/canal-denuncias': () => ({}),
+      'GET /api/v1/gestor/plantilla': () => [
+        { id: 7, nombre: 'Laura Gil', activo: true },
+        { id: 8, nombre: 'Baja Antigua', activo: false },
+      ],
+      'PUT /api/v1/empresa/canal-denuncias': ({ cuerpo }) => ({ ...(cuerpo as object), responsable: 'Laura Gil' }),
+      'GET /api/v1/perfil': () => ({ id: 1, nombre: 'Ana', authorities: ['empresa:configurar'] }),
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    const selector = await screen.findByLabelText(CANAL.responsable);
+    // Quien está de baja no se ofrece.
+    expect(within(selector).queryByText('Baja Antigua')).toBeNull();
+    await userEvent.selectOptions(selector, '7');
+    await userEvent.type(screen.getByLabelText(CANAL.viaVerbal), 'Teléfono 600 000 000');
+    await userEvent.click(within(screen.getByRole('region', { name: CANAL.titulo })).getByRole('button', { name: CANAL.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/canal-denuncias').map((l) => l.cuerpo)).toEqual([
+        { responsableId: 7, viaVerbal: 'Teléfono 600 000 000' },
+      ]),
+    );
+    // El ADMIN ya no instruye: el menú lo sabe sin esperar a renovar la sesión.
+    await waitFor(() => expect(sesionActual()?.authorities).toEqual(['empresa:configurar']));
+    expect(screen.getByRole('link', { name: CANAL.autoridadEnlace }).getAttribute('href')).toBe(CANAL.autoridadUrl);
+  });
+});
+
+describe('la baja de la empresa (ADR 050)', () => {
+  const B = empresa.baja;
+
+  it('pedirla exige escribir el nombre, y después se puede cancelar', async () => {
+    let pedida: { solicitadaEn?: string; borradoDesde?: string } = {};
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => AJUSTES,
+      'GET /api/v1/empresa/baja': () => pedida,
+      'POST /api/v1/empresa/baja': () => {
+        pedida = { solicitadaEn: '2026-10-18T10:00:00Z', borradoDesde: '2026-11-17T10:00:00Z' };
+        return pedida;
+      },
+      'DELETE /api/v1/empresa/baja': () => {
+        pedida = {};
+        return pedida;
+      },
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    await userEvent.click(await screen.findByRole('button', { name: B.pedir }));
+    const dialogo = await screen.findByRole('dialog', { name: B.confirmarTitulo });
+    const confirmar = within(dialogo).getByRole('button', { name: B.confirmar });
+    expect((confirmar as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.type(within(dialogo).getByLabelText(B.escribeElNombre('Talleres Ana')), 'talleres ana');
+    expect((confirmar as HTMLButtonElement).disabled).toBe(false);
+    await userEvent.click(confirmar);
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/empresa/baja').map((l) => l.cuerpo)).toEqual([{ confirmacion: 'talleres ana' }]),
+    );
+    expect(await screen.findByText(/^La baja está pedida: el /)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: B.cancelar }));
+    await waitFor(() => expect(llamadas.a('DELETE', '/api/v1/empresa/baja')).toHaveLength(1));
+    expect(await screen.findByRole('button', { name: B.pedir })).toBeTruthy();
   });
 });
 

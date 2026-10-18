@@ -3,6 +3,7 @@ package com.nxtime.app.ui.denuncias
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.CanalDenunciasDTO
 import com.nxtime.app.data.dto.DenunciaCreadaDTO
 import com.nxtime.app.data.dto.DenunciaDTO
 import com.nxtime.app.data.dto.ResumenDenunciaDTO
@@ -48,7 +49,10 @@ data class DenunciasUiState(
 
     val enviando: Boolean = false,
     val error: MensajeUi? = null,
-    val aviso: MensajeUi? = null
+    val aviso: MensajeUi? = null,
+
+    /** Quién gestiona el canal y la vía verbal (ADR 048); null hasta que llega. */
+    val canal: CanalDenunciasDTO? = null
 )
 
 /**
@@ -80,6 +84,14 @@ class DenunciasViewModel(
     fun cargar() {
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
+            // Lo que la ley obliga a decir antes de denunciar. Un fallo aquí
+            // no tapa la pantalla: la tarjeta enseña lo que no depende de él.
+            try {
+                val canal = authRepository.getCanalDenuncias()
+                if (canal.isSuccessful) _uiState.update { it.copy(canal = canal.body()) }
+            } catch (_: Exception) {
+                // Ver arriba.
+            }
             try {
                 val respuesta = authRepository.getMisDenuncias()
                 if (respuesta.isSuccessful) {
@@ -104,7 +116,7 @@ class DenunciasViewModel(
      * punto del camino, igual que en el DTO y en el servidor: es la
      * única decisión de la app que no se puede deshacer después.
      */
-    fun presentar(categoria: CategoriaDenuncia, descripcion: String, anonima: Boolean) {
+    fun presentar(categoria: CategoriaDenuncia, descripcion: String, anonima: Boolean, contacto: String = "") {
         if (descripcion.isBlank()) {
             _uiState.update { it.copy(error = MensajeUi.de(R.string.denuncia_error_sin_descripcion)) }
             return
@@ -113,7 +125,7 @@ class DenunciasViewModel(
         viewModelScope.launch {
             try {
                 val respuesta = authRepository.presentarDenuncia(
-                    categoria.name, descripcion.trim(), anonima)
+                    categoria.name, descripcion.trim(), anonima, contacto.trim().ifBlank { null })
                 if (respuesta.isSuccessful && respuesta.body() != null) {
                     _uiState.update { it.copy(enviando = false, recienCreada = respuesta.body()) }
                     // Si fue identificada aparece en "mis denuncias"; si

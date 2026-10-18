@@ -22,6 +22,11 @@ import java.util.List;
  * enseñar, no ocultar tras un cero. Cada uno se apaga (null) cuando su
  * hecho ya ocurrió: el del acuse en cuanto hay acuse, el de la
  * respuesta en cuanto el expediente se cierra.
+ *
+ * Desde la fase J6 (ADR 048) el acuse es automático al presentarla, así que
+ * {@code diasHastaAcuse} solo sale en las de antes; y hay un tercer plazo,
+ * {@code diasHastaSupresion}: sin investigación, a los tres meses el
+ * contenido se suprime.
  */
 public record ComplaintResponse(
         long id,
@@ -42,9 +47,26 @@ public record ComplaintResponse(
         /** Días que quedan para acusar recibo; negativo si ya pasó el plazo. */
         Long diasHastaAcuse,
 
-        /** Días que quedan para responder; negativo si ya pasó el plazo. */
+        /** Días que quedan para responder; negativo si ya pasó el plazo. Seis meses si se prorrogó. */
         Long diasHastaRespuesta,
 
-        List<ComplaintMessageResponse> mensajes
+        List<ComplaintMessageResponse> mensajes,
+
+        /** Domicilio, correo o lugar seguro que dio quien denunció (art. 7.2), o null. */
+        String contactoNotificaciones,
+
+        Instant investigacionIniciadaEn,
+
+        /** Cuándo se amplió la respuesta a seis meses (art. 9.2.d), o null. */
+        Instant respuestaProrrogadaEn,
+
+        /** Cuándo se suprimió el contenido (art. 32.3), o null. */
+        Instant contenidoSuprimidoEn,
+
+        /**
+         * Días que quedan para que se suprima el contenido si no se pasa a
+         * investigación (art. 32.3); null si ya se investiga o ya se suprimió.
+         */
+        Long diasHastaSupresion
 ) {
 }

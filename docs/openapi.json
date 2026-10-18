@@ -61,11 +61,17 @@
     "name" : "Canal de denuncias",
     "description" : "Canal interno de información de la Ley 2/2023, con anonimato opcional."
   }, {
+    "name" : "Plataforma",
+    "description" : "La instalación entera, para quien la mantiene: cifras y el alta de las empresas. No la abre ningún rol de empresa."
+  }, {
     "name" : "Calendario",
     "description" : "Festivos del calendario laboral y ausencias del mes."
   }, {
     "name" : "Ausencias",
     "description" : "Solicitud de ausencias (vacaciones, bajas...) y su aprobación/rechazo por un gestor."
+  }, {
+    "name" : "Privacidad",
+    "description" : "El aviso de privacidad y el registro de accesos a datos personales."
   }, {
     "name" : "Adjuntos",
     "description" : "Currículum y foto de perfil. Un CV y una foto vigentes por persona: subir otro reemplaza el anterior."
@@ -94,14 +100,14 @@
     "name" : "Ofertas internas",
     "description" : "Vacantes internas y candidaturas de la plantilla."
   }, {
+    "name" : "Empresa",
+    "description" : "La configuración de la empresa"
+  }, {
     "name" : "SSO",
     "description" : "Entrar con una cuenta de Google o de Microsoft. Solo para quien ya tiene cuenta."
   }, {
     "name" : "Avisos",
     "description" : "Avisos in-app del usuario autenticado: listado, contador de no leídos y marcado como leído. Se generan desde los mismos eventos que envían los correos."
-  }, {
-    "name" : "Plataforma",
-    "description" : "La instalación entera, para quien la mantiene. Solo lectura; no la abre ningún rol de empresa."
   } ],
   "paths" : {
     "/api/v1/perfil/kiosco/pin" : {
@@ -422,11 +428,94 @@
         } ]
       }
     },
+    "/api/v1/empresa/canal-denuncias" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "El canal de denuncias de mi empresa",
+        "operationId" : "leer",
+        "responses" : {
+          "200" : {
+            "description" : "Cómo está montado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Designar al Responsable del Sistema y la vía verbal",
+        "description" : "Desde que hay Responsable, solo él instruye: los ADMIN dejan de ver el canal. Sin Responsable (null), instruyen los ADMIN. La empresa tiene 10 días hábiles para comunicar el nombramiento o el cese a la Autoridad Independiente de Protección del Informante.",
+        "operationId" : "guardar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateComplaintChannelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Guardado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "La persona no es de la empresa o no está activa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/empresa/ajustes" : {
       "get" : {
         "tags" : [ "Empresa" ],
         "summary" : "Ajustes de mi empresa",
-        "operationId" : "leer",
+        "operationId" : "leer_1",
         "responses" : {
           "200" : {
             "description" : "Ajustes",
@@ -467,7 +556,7 @@
         "tags" : [ "Empresa" ],
         "summary" : "Guardar los ajustes de mi empresa",
         "description" : "Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.",
-        "operationId" : "guardar",
+        "operationId" : "guardar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -914,6 +1003,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1004,6 +1103,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1037,6 +1146,16 @@
           },
           "400" : {
             "description" : "El código no vale, ha caducado o ya se usó",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1087,6 +1206,16 @@
           },
           "429" : {
             "description" : "Demasiados intentos desde esta IP",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1401,6 +1530,16 @@
                 }
               }
             }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         }
       }
@@ -1651,6 +1790,244 @@
           },
           "409" : {
             "description" : "Ya está asignado a otro proyecto en esas fechas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/suspender" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Suspender una empresa activa",
+        "description" : "Nadie de ella puede entrar ni fichar, tampoco en sus kioscos, y se cierran todas sus sesiones. Sus datos se quedan. Se avisa a sus ADMIN, con el motivo si se da.",
+        "operationId" : "suspender",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlatformActionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Suspendida"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está activa, o es la del propio operador",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/rechazar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Rechazar una empresa pendiente",
+        "description" : "Se avisa a quien la registró, con el motivo si se da, y se borra entera: nadie de ella llegó a entrar. Queda en el historial con su nombre.",
+        "operationId" : "rechazar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlatformActionRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Rechazada y borrada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está pendiente, o tiene datos y no se puede borrar",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/reactivar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Reactivar una empresa suspendida",
+        "description" : "Su gente vuelve a poder entrar. Se avisa a sus ADMIN.",
+        "operationId" : "reactivar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Reactivada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está suspendida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/plataforma/empresas/{id}/aprobar" : {
+      "post" : {
+        "tags" : [ "Plataforma" ],
+        "summary" : "Aprobar una empresa pendiente",
+        "description" : "Desde ese momento su gente puede entrar. Se avisa por correo a sus ADMIN, y queda en el historial de la empresa.",
+        "operationId" : "aprobar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Aprobada"
+          },
+          "403" : {
+            "description" : "Sin 'plataforma:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está pendiente",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1977,6 +2354,32 @@
           },
           "404" : {
             "description" : "No hay ninguna pendiente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/aviso-de-privacidad/visto" : {
+      "post" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Ya he visto el aviso de privacidad",
+        "description" : "Solo cuenta la primera vez: repetirlo no cambia la fecha.",
+        "operationId" : "marcarAvisoVisto",
+        "responses" : {
+          "204" : {
+            "description" : "Anotado"
+          },
+          "401" : {
+            "description" : "No autenticado",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -3213,6 +3616,154 @@
         } ]
       }
     },
+    "/api/v1/empresa/condiciones/aceptar" : {
+      "post" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Aceptar las condiciones en vigor",
+        "description" : "En nombre de la empresa. Queda la versión, la fecha y quién.",
+        "operationId" : "aceptar",
+        "responses" : {
+          "200" : {
+            "description" : "Aceptadas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyTermsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/baja" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "La baja de mi empresa",
+        "description" : "Si está pedida, cuándo y desde cuándo se borra.",
+        "operationId" : "estado_1",
+        "responses" : {
+          "200" : {
+            "description" : "La baja",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Pedir la baja de mi empresa",
+        "description" : "Hay que escribir el nombre de la empresa. Durante 30 días todo sigue funcionando para llevarse los datos, y se puede cancelar; después se borra entera, auditoría incluida, y no se puede deshacer.",
+        "operationId" : "solicitar_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CompanyClosureRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Pedida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El nombre no coincide",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya estaba pedida",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Cancelar la baja",
+        "description" : "Mientras no hayan pasado los 30 días.",
+        "operationId" : "cancelar_1",
+        "responses" : {
+          "200" : {
+            "description" : "Cancelada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyClosureResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No había ninguna",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/dispositivos-push" : {
       "post" : {
         "tags" : [ "Push" ],
@@ -3498,11 +4049,115 @@
         } ]
       }
     },
+    "/api/v1/denuncias/{id}/supresiones" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Suprimir un texto del expediente",
+        "description" : "La descripción (sin mensajeId) o un mensaje, porque contiene categorías especiales de datos, no es pertinente o se acreditó que no es veraz (Ley 2/2023, arts. 30 y 32). No se puede deshacer: queda la marca de cuándo y por qué.",
+        "operationId" : "suprimir",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintRedactionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el texto suprimido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "La denuncia o el mensaje no existen",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/{id}/prorroga" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Ampliar a seis meses el plazo de respuesta",
+        "description" : "Ley 2/2023, art. 9.2.d: solo en casos de especial complejidad, una vez y antes de que venza. El motivo le llega a quien denunció como un mensaje del expediente.",
+        "operationId" : "prorrogar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintExtensionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el plazo ampliado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya se amplió, ya venció o está cerrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/{id}/mensajes" : {
       "post" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Escribir en un expediente como instructor",
-        "description" : "El primer mensaje vale como acuse de recibo si todavía no se había dado. Nadie instruye una denuncia que presentó él mismo.",
+        "description" : "En las denuncias de antes del acuse automático (ADR 048), el primer mensaje vale como acuse de recibo. Nadie instruye una denuncia que presentó él mismo.",
         "operationId" : "responderComoInstructor",
         "parameters" : [ {
           "name" : "id",
@@ -4216,7 +4871,7 @@
         "tags" : [ "Borrado de datos" ],
         "summary" : "Rechazar un borrado",
         "description" : "Con comentario obligatorio: se le manda a la persona para que sepa por qué y qué tiene que resolver antes de volver a pedirlo.",
-        "operationId" : "rechazar",
+        "operationId" : "rechazar_1",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -6529,7 +7184,7 @@
       "get" : {
         "tags" : [ "Plataforma" ],
         "summary" : "Una empresa",
-        "description" : "Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda apuntada en el log del servidor, con quién la hizo.",
+        "description" : "Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda en su historial, con quién la hizo (ADR 046).",
         "operationId" : "empresa",
         "parameters" : [ {
           "name" : "id",
@@ -6706,7 +7361,7 @@
         "tags" : [ "Kiosco" ],
         "summary" : "¿Puedo fichar en un kiosco?",
         "description" : "Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.",
-        "operationId" : "estado_1",
+        "operationId" : "estado_2",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -6714,6 +7369,39 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/MyKioskStatus"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/aviso-de-privacidad" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Mi aviso de privacidad",
+        "description" : "Quién es la responsable de mis datos (mi empresa), a quién dirigirme y si ya lo he visto.",
+        "operationId" : "leerAviso",
+        "responses" : {
+          "200" : {
+            "description" : "El aviso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivacyNoticeResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
                 }
               }
             }
@@ -6952,6 +7640,129 @@
           },
           "404" : {
             "description" : "Empleado no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/informes/mensual/mio" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Mi registro de jornada del mes en PDF",
+        "description" : "El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).",
+        "operationId" : "exportarMiInformeMensualEnPdf",
+        "parameters" : [ {
+          "name" : "anio",
+          "in" : "query",
+          "description" : "Año del informe",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000
+          }
+        }, {
+          "name" : "mes",
+          "in" : "query",
+          "description" : "Mes del informe (1-12)",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Documento PDF",
+            "content" : {
+              "application/pdf" : { }
+            }
+          },
+          "400" : {
+            "description" : "Mes o año fuera de rango",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/informes/inspeccion.zip" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Exportación para la Inspección o la representación legal",
+        "description" : "Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas (art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.",
+        "operationId" : "exportarParaLaInspeccion",
+        "parameters" : [ {
+          "name" : "desde",
+          "in" : "query",
+          "description" : "Primer mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "description" : "Último mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "El ZIP",
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo al revés o de más de doce meses",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'informe:exportar' (RRHH/ADMIN)",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -7899,11 +8710,90 @@
         } ]
       }
     },
+    "/api/v1/empresa/condiciones" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Las condiciones de mi empresa",
+        "description" : "La versión en vigor, la que tiene aceptada la empresa, cuándo y quién.",
+        "operationId" : "condiciones",
+        "responses" : {
+          "200" : {
+            "description" : "Las condiciones",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CompanyTermsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/accesos" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Quién ha consultado datos personales de otra persona",
+        "description" : "Los CV de candidaturas, perfiles ajenos, registros mensuales de otro, el Excel de la empresa, expedientes de denuncias y exportaciones. Lo último primero, hasta 500. Se conserva dos años y no se puede borrar ni cambiar.",
+        "operationId" : "accesos",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "query",
+          "description" : "Solo los datos de esta persona",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/{id}" : {
       "get" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Un expediente completo",
-        "description" : "Solo ADMIN.",
+        "description" : "Solo quien instruye: el Responsable del Sistema o, sin él, los ADMIN.",
         "operationId" : "detalle_2",
         "parameters" : [ {
           "name" : "id",
@@ -7999,6 +8889,79 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/libro-registro.csv" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "El libro-registro en CSV",
+        "description" : "Ley 2/2023, art. 26: fecha de recepción, objeto, estado, hitos y fin de cada comunicación. Sin relatos, conclusiones ni nombres. La descarga queda anotada.",
+        "operationId" : "libroRegistro",
+        "responses" : {
+          "200" : {
+            "description" : "El fichero",
+            "content" : {
+              "text/csv" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/canal" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Cómo funciona el canal de mi empresa",
+        "description" : "Quién es el Responsable del Sistema (si la empresa lo ha designado) y cómo comunicar algo de palabra o pedir una reunión (Ley 2/2023, arts. 7.2 y 9.2).",
+        "operationId" : "canal",
+        "responses" : {
+          "200" : {
+            "description" : "El canal",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/accesos" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Quién ha abierto cada expediente",
+        "description" : "Solo quien instruye: la Autoridad recomienda que este registro quede reservado al Responsable del Sistema (Recomendación 1/2026). Lo último primero, hasta 500.",
+        "operationId" : "accesos_1",
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
                 }
               }
             }
@@ -10058,6 +11021,39 @@
           }
         }
       },
+      "UpdateComplaintChannelRequest" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "viaVerbal" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          }
+        }
+      },
+      "ComplaintChannelSettingsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "responsable" : {
+            "type" : "string"
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "viaVerbal" : {
+            "type" : "string"
+          }
+        }
+      },
       "UpdateCompanySettingsRequest" : {
         "type" : "object",
         "properties" : {
@@ -10070,6 +11066,11 @@
             "type" : "string",
             "maxLength" : 64,
             "minLength" : 0
+          },
+          "contactoPrivacidad" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -10081,6 +11082,9 @@
             "type" : "string"
           },
           "zonaHoraria" : {
+            "type" : "string"
+          },
+          "contactoPrivacidad" : {
             "type" : "string"
           },
           "firmasInvalidadas" : {
@@ -10336,9 +11340,12 @@
             "type" : "string",
             "maxLength" : 150,
             "minLength" : 0
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "nombre", "nombreEmpresa" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "nombre", "nombreEmpresa" ]
       },
       "AuthenticationResponse" : {
         "type" : "object",
@@ -10364,6 +11371,9 @@
           },
           "zonaHoraria" : {
             "type" : "string"
+          },
+          "condicionesPorAceptar" : {
+            "type" : "boolean"
           }
         }
       },
@@ -10422,9 +11432,12 @@
             "type" : "string",
             "maxLength" : 150,
             "minLength" : 0
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "nombre", "nombreEmpresa", "pase" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "nombre", "nombreEmpresa", "pase" ]
       },
       "ConfirmRegistrationRequest" : {
         "type" : "object",
@@ -10474,9 +11487,12 @@
           },
           "origen" : {
             "type" : "string"
+          },
+          "aceptaCondiciones" : {
+            "type" : "boolean"
           }
         },
-        "required" : [ "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]
+        "required" : [ "aceptaCondiciones", "apellidos", "contrasena", "email", "nombre", "nombreEmpresa" ]
       },
       "RegistrationPendingResponse" : {
         "type" : "object",
@@ -10682,6 +11698,16 @@
           }
         }
       },
+      "PlatformActionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        }
+      },
       "VerifyPasswordRequest" : {
         "type" : "object",
         "description" : "Comprobar la contraseña propia, sin emitir tokens",
@@ -10794,6 +11820,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "diasParaResponder" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -11270,6 +12300,57 @@
           }
         }
       },
+      "CompanyTermsResponse" : {
+        "type" : "object",
+        "description" : "Qué versión de las condiciones está en vigor y cuál tiene aceptada la empresa",
+        "properties" : {
+          "versionVigente" : {
+            "type" : "string",
+            "description" : "La versión en vigor",
+            "example" : "2026-10-18"
+          },
+          "versionAceptada" : {
+            "type" : "string",
+            "description" : "La que tiene aceptada la empresa. Null si ninguna"
+          },
+          "aceptadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "aceptadaPor" : {
+            "type" : "string",
+            "description" : "Quién las aceptó en nombre de la empresa. Null si ninguna, o si ya no está"
+          },
+          "porAceptar" : {
+            "type" : "boolean",
+            "description" : "Si falta aceptar la versión en vigor"
+          }
+        }
+      },
+      "CompanyClosureRequest" : {
+        "type" : "object",
+        "properties" : {
+          "confirmacion" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "confirmacion" ]
+      },
+      "CompanyClosureResponse" : {
+        "type" : "object",
+        "properties" : {
+          "solicitadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "borradoDesde" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "RegisterPushDeviceRequest" : {
         "type" : "object",
         "properties" : {
@@ -11337,6 +12418,11 @@
           },
           "anonima" : {
             "type" : "boolean"
+          },
+          "contactoNotificaciones" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "anonima", "categoria", "descripcion" ]
@@ -11359,16 +12445,19 @@
           }
         }
       },
-      "ComplaintMessageRequest" : {
+      "ComplaintRedactionRequest" : {
         "type" : "object",
         "properties" : {
-          "texto" : {
+          "mensajeId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "motivo" : {
             "type" : "string",
-            "maxLength" : 2000,
-            "minLength" : 0
+            "enum" : [ "CATEGORIAS_ESPECIALES", "NO_PERTINENTE", "NO_VERAZ" ]
           }
         },
-        "required" : [ "texto" ]
+        "required" : [ "motivo" ]
       },
       "ComplaintMessageResponse" : {
         "type" : "object",
@@ -11448,8 +12537,49 @@
             "items" : {
               "$ref" : "#/components/schemas/ComplaintMessageResponse"
             }
+          },
+          "contactoNotificaciones" : {
+            "type" : "string"
+          },
+          "investigacionIniciadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "respuestaProrrogadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "contenidoSuprimidoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
+      },
+      "ComplaintExtensionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "motivo" ]
+      },
+      "ComplaintMessageRequest" : {
+        "type" : "object",
+        "properties" : {
+          "texto" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "texto" ]
       },
       "ComplaintTrackingRequest" : {
         "type" : "object",
@@ -12280,6 +13410,11 @@
             "format" : "int64",
             "description" : "Registros de empresa que se quedaron sin confirmar el correo"
           },
+          "empresasPendientes" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Empresas con el correo confirmado que esperan a que el operador las apruebe (ADR 046)"
+          },
           "fichajesHoy" : {
             "type" : "integer",
             "format" : "int64",
@@ -12386,6 +13521,11 @@
           "nombre" : {
             "type" : "string"
           },
+          "estado" : {
+            "type" : "string",
+            "description" : "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046). Las pendientes salen las primeras",
+            "enum" : [ "PENDIENTE", "ACTIVA", "SUSPENDIDA" ]
+          },
           "zonaHoraria" : {
             "type" : "string",
             "description" : "Nombre IANA de su zona horaria",
@@ -12489,6 +13629,25 @@
           }
         }
       },
+      "PlatformActionDTO" : {
+        "type" : "object",
+        "properties" : {
+          "en" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "operador" : {
+            "type" : "string"
+          },
+          "accion" : {
+            "type" : "string",
+            "enum" : [ "CONSULTAR", "APROBAR", "RECHAZAR", "SUSPENDER", "REACTIVAR" ]
+          },
+          "motivo" : {
+            "type" : "string"
+          }
+        }
+      },
       "PlatformCompanyDetailResponse" : {
         "type" : "object",
         "description" : "El detalle de una empresa de la instalación: cifras de uso y el contacto de sus administradores",
@@ -12499,6 +13658,31 @@
           },
           "nombre" : {
             "type" : "string"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046)",
+            "enum" : [ "PENDIENTE", "ACTIVA", "SUSPENDIDA" ]
+          },
+          "aprobadaEn" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Cuándo la aprobó el operador. Null si no lo ha hecho, o si es de antes de la V43"
+          },
+          "condicionesVersion" : {
+            "type" : "string",
+            "description" : "La versión de las condiciones que tiene aceptada. Null si ninguna"
+          },
+          "condicionesAceptadasEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "historial" : {
+            "type" : "array",
+            "description" : "Lo que ha hecho y mirado el operador con ella, lo más reciente primero (hasta 50)",
+            "items" : {
+              "$ref" : "#/components/schemas/PlatformActionDTO"
+            }
           },
           "zonaHoraria" : {
             "type" : "string",
@@ -13194,6 +14378,20 @@
           }
         }
       },
+      "PrivacyNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "empresa" : {
+            "type" : "string"
+          },
+          "contacto" : {
+            "type" : "string"
+          },
+          "visto" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "PaginaDTOScheduleIncidentResponse" : {
         "type" : "object",
         "properties" : {
@@ -13505,6 +14703,35 @@
           }
         }
       },
+      "DataAccessResponse" : {
+        "type" : "object",
+        "properties" : {
+          "en" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "quienId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quien" : {
+            "type" : "string"
+          },
+          "que" : {
+            "type" : "string"
+          },
+          "sobreId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sobre" : {
+            "type" : "string"
+          },
+          "detalle" : {
+            "type" : "string"
+          }
+        }
+      },
       "ComplaintSummaryResponse" : {
         "type" : "object",
         "properties" : {
@@ -13545,6 +14772,24 @@
           "mensajes" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "contenidoSuprimido" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ComplaintChannelInfoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsable" : {
+            "type" : "string"
+          },
+          "viaVerbal" : {
+            "type" : "string"
           }
         }
       },

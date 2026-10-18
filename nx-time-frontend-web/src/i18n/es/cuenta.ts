@@ -71,6 +71,10 @@ export const cuenta = {
     titulo: 'Ajustes',
 
     apariencia: 'Apariencia',
+    legal: {
+      titulo: 'Información legal',
+      descripcion: 'Quién presta el servicio, las condiciones y cómo se tratan los datos.',
+    },
     tema: 'Tema',
     temas: { sistema: 'El del sistema', claro: 'Claro', oscuro: 'Oscuro' },
 

@@ -8,5 +8,7 @@ data class RegistroGestorRequest(
     val nombre: String,
     val apellidos: String,
     val email: String,
-    val contrasena: String
+    val contrasena: String,
+    /** La casilla de las condiciones y el contrato de encargo (ADR 046): sin ella el servidor no registra. */
+    val aceptaCondiciones: Boolean
 )

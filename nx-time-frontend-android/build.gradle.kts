@@ -75,9 +75,13 @@ android {
          * Microsoft también desde la app (ADR 044), sin contraseña ni código.
          * 17 = 12/10/2026: los tokens de la sesión se guardan cifrados con una
          * clave del almacén de claves de Android (ver CifradoDeLaSesion).
+         * 18 = 17/10/2026: el registro pide aceptar las condiciones y el
+         * contrato de encargo, y la empresa espera la aprobación del operador
+         * (ADR 046); información legal en Ajustes; sin tráfico en claro fuera
+         * del sabor dev y la tarjeta del kiosco sin capturas (plan J).
          */
-        versionCode = 17
-        versionName = "1.16"
+        versionCode = 18
+        versionName = "1.17"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

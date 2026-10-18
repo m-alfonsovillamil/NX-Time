@@ -24,6 +24,7 @@ import { clienteDeKiosco } from '../../api/cliente';
 import { ErrorDeApi, pedir } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { PieLegal } from '../../componentes/PieLegal';
 import { kiosco as K } from '../../i18n/es/kiosco';
 import { fijarZona, hora } from '../../util/fechas';
 import { empezarALeer, type Lector } from './lectorQr';
@@ -79,6 +80,8 @@ export function Kiosco() {
       ) : (
         <Puesto api={api} alPerderElToken={() => tener(null)} />
       )}
+      {/* Los textos legales también aquí (plan J): quien ficha en la tablet tiene derecho a saber quién presta el servicio. */}
+      <PieLegal />
     </main>
   );
 }

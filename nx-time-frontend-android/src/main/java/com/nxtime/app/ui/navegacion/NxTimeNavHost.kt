@@ -76,6 +76,8 @@ import com.nxtime.app.ui.historial.HistorialScreen
 import com.nxtime.app.ui.ajustes.AjustesScreen
 import com.nxtime.app.ui.perfil.PerfilScreen
 import com.nxtime.app.ui.perfil.PerfilViewModel
+import com.nxtime.app.ui.privacidad.AvisoDePrivacidadViewModel
+import com.nxtime.app.ui.privacidad.DialogoDeAvisoDePrivacidad
 import com.nxtime.app.ui.proyectos.ProyectosScreen
 import com.nxtime.app.ui.usuario.CambiarContrasenaScreen
 import com.nxtime.app.ui.util.Permisos
@@ -310,6 +312,10 @@ fun NxTimeNavHost(
     val iniciales = estadoPerfil.perfil?.iniciales.orEmpty()
     val irAPerfil = { navController.navigate(Pantalla.PERFIL.ruta) }
 
+    /* El aviso de privacidad de la primera entrada (ADR 047): una vez, con sesión. */
+    val avisoDePrivacidadViewModel: AvisoDePrivacidadViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val avisoDePrivacidad by avisoDePrivacidadViewModel.aviso.collectAsStateWithLifecycle()
+
     /*
      * Entrar y salir de la sesión vacían la pila de atrás.
      *
@@ -329,9 +335,11 @@ fun NxTimeNavHost(
         if (destino == Pantalla.LOGIN) {
             avisosViewModel.limpiar()
             perfilViewModel.limpiar()
+            avisoDePrivacidadViewModel.limpiar()
         } else {
             avisosViewModel.refrescarContador()
             perfilViewModel.cargar()
+            avisoDePrivacidadViewModel.cargar()
         }
         navController.navigate(destino.ruta) {
             popUpTo(navController.graph.id) { inclusive = true }
@@ -368,6 +376,7 @@ fun NxTimeNavHost(
         if (sesionIniciada) {
             perfilViewModel.cargar()
             avisosViewModel.refrescarContador()
+            avisoDePrivacidadViewModel.cargar()
         }
     }
 
@@ -448,6 +457,11 @@ fun NxTimeNavHost(
         it != DestinoPrincipal.GESTION || Permisos.puedeGestionarEquipo(authorities)
     }
     val destinoActual = destinos.firstOrNull { it.pantalla.ruta == rutaActual }
+
+    // Solo en las pantallas principales: ni en el login ni a mitad de un formulario.
+    avisoDePrivacidad?.takeIf { destinoActual != null }?.let { aviso ->
+        DialogoDeAvisoDePrivacidad(aviso = aviso, onEntendido = avisoDePrivacidadViewModel::entendido)
+    }
 
     NavigationSuiteScaffold(
         /*

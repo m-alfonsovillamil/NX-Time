@@ -44,15 +44,17 @@ public record AuditIntegrityResponse(
     }
 
     /**
-     * La cadena falla en un movimiento que NO es de la empresa que pregunta.
-     * Se le dice que falla, porque la cadena es común y lo suyo posterior a ese
-     * punto se ha quedado sin comprobar; no se le dice en qué movimiento, que es
-     * de otra empresa. Quien mantiene el servicio lo tiene en el log.
+     * El tramo común de la traza (lo de antes de V46, ADR 050) falla en un
+     * movimiento que NO es de la empresa que pregunta. Se le dice que falla,
+     * porque lo suyo de ese tramo posterior a ese punto se ha quedado sin
+     * comprobar; no se le dice en qué movimiento, que es de otra empresa. Quien
+     * mantiene el servicio lo tiene en el log.
      */
     public static AuditIntegrityResponse rotaEnOtraParte(long movimientos, long comprobados, long soloEnlace) {
         return new AuditIntegrityResponse(false, movimientos, comprobados, soloEnlace, null,
-                "El problema está en un movimiento que no es de tu empresa. La traza es común a todas las "
-                        + "empresas de este servicio, así que tus movimientos posteriores a ese punto no se "
-                        + "han podido comprobar; los anteriores sí. Avisa a quien administra el servicio.");
+                "El problema está en un movimiento que no es de tu empresa, en el tramo de la traza anterior a "
+                        + "octubre de 2026, que es común a todas las empresas de este servicio: tus movimientos de ese "
+                        + "tramo posteriores a ese punto no se han podido comprobar. Tu cadena propia, la de después, "
+                        + "se comprueba aparte. Avisa a quien administra el servicio.");
     }
 }

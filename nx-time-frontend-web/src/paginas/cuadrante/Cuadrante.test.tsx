@@ -189,6 +189,21 @@ describe('la firma mensual', () => {
     await waitFor(() => expect(llamadas.a('POST', '/api/v1/firmas').map((l) => l.cuerpo)).toEqual([{ anio: 2026, mes: 8 }]));
   });
 
+  it('cada mes se descarga en PDF, el propio, sin pedírselo a nadie (J7)', async () => {
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:nx'), revokeObjectURL: vi.fn() }));
+    const llamadas = simularApi({
+      'GET /api/v1/firmas/mias': () => [AGOSTO],
+      'GET /api/v1/informes/mensual/mio': () => new Response(new Blob(['pdf']), { status: 200 }),
+    });
+    pintar(<Firmas />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.descargarDe('Agosto de 2026') }));
+
+    await waitFor(() => expect(llamadas.a('GET', '/api/v1/informes/mensual/mio')).toHaveLength(1));
+    const [pdf] = llamadas.a('GET', '/api/v1/informes/mensual/mio');
+    expect([pdf?.query.get('anio'), pdf?.query.get('mes')]).toEqual(['2026', '8']);
+  });
+
   it('un mes firmado enseña la huella y quién lo visó, y se puede comprobar', async () => {
     simularApi({
       'GET /api/v1/firmas/mias': () => [JULIO_FIRMADO],

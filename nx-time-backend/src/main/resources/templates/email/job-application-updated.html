@@ -26,8 +26,14 @@
         en proceso de valoración.
     </p>
 
-    <p style="margin-top: 20px;" th:if="${comentario}" th:text="${comentario}">
-        Comentario de quien la ha valorado.
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
+    <p style="margin-top: 20px;" th:if="${comentario}">
+        Te han dejado un comentario: lo tienes en NX Time.
     </p>
 
     <p style="margin-top: 20px;" th:if="${descartada}">

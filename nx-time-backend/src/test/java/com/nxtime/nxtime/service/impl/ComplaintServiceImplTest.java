@@ -70,6 +70,8 @@ class ComplaintServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private RegistroDeAccesos accesos;
 
     private ComplaintServiceImpl service;
 
@@ -81,7 +83,7 @@ class ComplaintServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new ComplaintServiceImpl(
-                complaintRepository, messageRepository, userRepository, eventPublisher);
+                complaintRepository, messageRepository, userRepository, eventPublisher, accesos);
 
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra").build();

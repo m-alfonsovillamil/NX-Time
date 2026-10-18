@@ -36,7 +36,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * fichaje real sin traza de auditoría.
  *
  * Leer la fila anterior y escribir la nueva van dentro de un advisory
- * lock (ver TimeEntryAuditRepository#bloquearCadena). Hasta septiembre
+ * lock (ver TimeEntryAuditRepository#bloquearCadenaDeEmpresa). Hasta septiembre
  * de 2026 no lo estaban, y aquí ponía que con una sola instancia la
  * carrera no era un problema real: era falso. No hacen falta varias
  * instancias -- dos hilos de Tomcat atendiendo dos fichajes a la vez,
@@ -90,16 +90,20 @@ public class TimeEntryAuditListener {
         row.setFechaHora(Instant.now().truncatedTo(ChronoUnit.MICROS));
         row.setIp(currentClientIp());
 
-        // A partir de aquí y hasta el commit, nadie más encadena: leer la
-        // última fila y escribir la siguiente es una sola operación o no es
-        // nada (ver el comentario de clase y bloquearCadena).
-        auditRepository.bloquearCadena(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_CADENA);
+        // Desde V46 cada empresa tiene su cadena (ADR 050): se encadena con la
+        // última fila de la MISMA empresa, y la primera, con su génesis.
+        long empresa = row.getRegistro().getEmpresa().getId();
 
-        String hashAnterior = auditRepository.findTopByOrderByIdDesc()
-                .map(TimeEntryAudit::getHash)
-                .orElse(null);
+        // A partir de aquí y hasta el commit, nadie más encadena en ESTA
+        // empresa: leer su última fila y escribir la siguiente es una sola
+        // operación o no es nada (ver el comentario de clase y bloquearCadenaDeEmpresa).
+        auditRepository.bloquearCadenaDeEmpresa(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_EMPRESA, Math.toIntExact(empresa));
+
+        String hashAnterior = auditRepository.ultimoHashDeLaCadena(empresa, HuellaDeAuditoria.VERSION_POR_EMPRESA)
+                .orElseGet(() -> HuellaDeAuditoria.genesis(empresa));
+        row.setEmpresaId(empresa);
         row.setHashAnterior(hashAnterior);
-        row.setVersionHash(HuellaDeAuditoria.VERSION_VERIFICABLE);
+        row.setVersionHash(HuellaDeAuditoria.VERSION_POR_EMPRESA);
         row.setHash(huella.calcular(row, hashAnterior));
 
         auditRepository.save(row);

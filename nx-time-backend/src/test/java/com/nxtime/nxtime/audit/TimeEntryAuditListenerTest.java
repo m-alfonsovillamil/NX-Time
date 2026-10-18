@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.nxtime.nxtime.domain.AuditAction;
+import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
 import com.nxtime.nxtime.domain.User;
@@ -46,8 +47,9 @@ class TimeEntryAuditListenerTest {
     }
 
     private TimeEntryAudit nuevaFilaSinGuardar() {
-        User user = User.builder().id(1L).email("empleado@nxtime.test").build();
-        TimeEntry entry = TimeEntry.builder().id(10L).usuario(user).build();
+        Company empresa = Company.builder().id(7L).nombre("Empresa").build();
+        User user = User.builder().id(1L).email("empleado@nxtime.test").empresa(empresa).build();
+        TimeEntry entry = TimeEntry.builder().id(10L).usuario(user).empresa(empresa).build();
         return TimeEntryAudit.builder()
                 .registro(entry)
                 .usuario(user)
@@ -58,14 +60,16 @@ class TimeEntryAuditListenerTest {
     }
 
     @Test
-    @DisplayName("La primera fila de la cadena no tiene hashAnterior, pero sí su propio hash")
-    void onTimeEntryAudit_primeraFila_hashAnteriorNuloYHashPropioCalculado() {
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+    @DisplayName("La primera fila de la cadena de una empresa enlaza con su génesis, y lleva su empresa (ADR 050)")
+    void onTimeEntryAudit_primeraFila_enlazaConLaGenesis() {
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA)).thenReturn(Optional.empty());
 
         TimeEntryAudit row = nuevaFilaSinGuardar();
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(row));
 
-        assertThat(row.getHashAnterior()).isNull();
+        assertThat(row.getHashAnterior()).isEqualTo(HuellaDeAuditoria.genesis(7L));
+        assertThat(row.getEmpresaId()).isEqualTo(7L);
+        assertThat(row.getVersionHash()).isEqualTo(HuellaDeAuditoria.VERSION_POR_EMPRESA);
         assertThat(row.getHash()).isNotBlank().hasSize(64); // SHA-256 en hexadecimal: 64 caracteres.
         assertThat(row.getFechaHora()).isNotNull();
     }
@@ -73,20 +77,20 @@ class TimeEntryAuditListenerTest {
     @Test
     @DisplayName("Una fila siguiente encadena con el hash de la anterior")
     void onTimeEntryAudit_filaSiguiente_encadenaConHashDeLaAnterior() {
-        TimeEntryAudit anterior = TimeEntryAudit.builder().id(1L).hash("hash-de-la-fila-anterior").build();
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.of(anterior));
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA))
+                .thenReturn(Optional.of("hash-de-la-fila-anterior"));
 
         TimeEntryAudit row = nuevaFilaSinGuardar();
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(row));
 
         assertThat(row.getHashAnterior()).isEqualTo("hash-de-la-fila-anterior");
-        assertThat(row.getHash()).isNotEqualTo(anterior.getHash());
+        assertThat(row.getHash()).isNotEqualTo("hash-de-la-fila-anterior");
     }
 
     @Test
     @DisplayName("Dos filas con contenido distinto producen hashes distintos")
     void onTimeEntryAudit_contenidoDistinto_produceHashesDistintos() {
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA)).thenReturn(Optional.empty());
 
         TimeEntryAudit fila1 = nuevaFilaSinGuardar();
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(fila1));
@@ -101,7 +105,7 @@ class TimeEntryAuditListenerTest {
     @Test
     @DisplayName("Sin contexto de petición HTTP (ej. en un test) no se captura IP, pero tampoco lanza excepción")
     void onTimeEntryAudit_sinContextoDePeticion_noCapturaIpNiLanza() {
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA)).thenReturn(Optional.empty());
 
         TimeEntryAudit row = nuevaFilaSinGuardar();
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(row));
@@ -110,9 +114,9 @@ class TimeEntryAuditListenerTest {
     }
 
     @Test
-    @DisplayName("Se pide el lock de la cadena ANTES de leer la última fila")
+    @DisplayName("Se pide el lock de la cadena de la empresa ANTES de leer su última fila")
     void onTimeEntryAudit_pideElLockAntesDeLeerLaUltimaFila() {
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA)).thenReturn(Optional.empty());
 
         listener.onTimeEntryAudit(new TimeEntryAuditEvent(nuevaFilaSinGuardar()));
 
@@ -120,15 +124,15 @@ class TimeEntryAuditListenerTest {
         // no serializa nada, porque la lectura que se quiere proteger ya se
         // habría hecho. Ver el comentario de clase del listener.
         InOrder enOrden = inOrder(auditRepository);
-        enOrden.verify(auditRepository).bloquearCadena(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_CADENA);
-        enOrden.verify(auditRepository).findTopByOrderByIdDesc();
+        enOrden.verify(auditRepository).bloquearCadenaDeEmpresa(HuellaDeAuditoria.CLAVE_DEL_LOCK_DE_EMPRESA, 7);
+        enOrden.verify(auditRepository).ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA);
         enOrden.verify(auditRepository).save(any(TimeEntryAudit.class));
     }
 
     @Test
     @DisplayName("La fila resultante se guarda a través del repositorio")
     void onTimeEntryAudit_guardaLaFilaAtravesDelRepositorio() {
-        when(auditRepository.findTopByOrderByIdDesc()).thenReturn(Optional.empty());
+        when(auditRepository.ultimoHashDeLaCadena(7L, HuellaDeAuditoria.VERSION_POR_EMPRESA)).thenReturn(Optional.empty());
         when(auditRepository.save(any(TimeEntryAudit.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TimeEntryAudit row = nuevaFilaSinGuardar();

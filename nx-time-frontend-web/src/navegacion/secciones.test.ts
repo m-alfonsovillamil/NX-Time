@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 // de Node no entran en un proyecto que corre en el navegador.
 import noticeTypeJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/NoticeType.java?raw';
 import roleAuthoritiesJava from '../../../nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java?raw';
-import { AUTHORITIES, PLATAFORMA_VER } from '../pruebas/api';
+import { AUTHORITIES, PLATAFORMA_GESTIONAR, PLATAFORMA_VER } from '../pruebas/api';
 import {
   ICONOS_DE_SUBGRUPO,
   SECCIONES,
@@ -134,7 +134,7 @@ describe('la plataforma', () => {
 
   it('el backend la declara fuera de los roles, y ningún rol la trae', () => {
     const backend = authoritiesDelBackend();
-    expect([...(backend['FUERA_DE_LOS_ROLES'] ?? [])]).toEqual([PLATAFORMA_VER]);
+    expect([...(backend['FUERA_DE_LOS_ROLES'] ?? [])]).toEqual([PLATAFORMA_VER, PLATAFORMA_GESTIONAR]);
     for (const rol of ROLES) {
       expect(backend[rol]?.has(PLATAFORMA_VER), rol).toBe(false);
     }

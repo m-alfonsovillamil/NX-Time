@@ -123,8 +123,8 @@ import java.util.stream.Collectors;
  * "empresa:configurar" (fase Z2) es solo de ADMIN: el nombre y la zona
  * horaria de la empresa (ADR 032). La zona decide a qué día pertenece cada
  * fichaje de todo el histórico, y cambiarla puede tumbar firmas mensuales.
- * "plataforma:ver" (ADR 040) NO es de ningún rol, y es la única: ver
- * {@link #FUERA_DE_LOS_ROLES}.
+ * "plataforma:ver" (ADR 040) y "plataforma:gestionar" (ADR 046) NO son de
+ * ningún rol, y son las únicas: ver {@link #FUERA_DE_LOS_ROLES}.
  */
 public final class RoleAuthorities {
 
@@ -182,6 +182,7 @@ public final class RoleAuthorities {
 
     /** Ver todas las empresas de la instalación: el panel de plataforma (ADR 040). */
     public static final String PLATAFORMA_VER = "plataforma:ver";
+    public static final String PLATAFORMA_GESTIONAR = "plataforma:gestionar";
 
     /**
      * Lo que no concede ningún rol.
@@ -198,7 +199,10 @@ public final class RoleAuthorities {
      * leen los dos tests que cruzan los permisos con los endpoints y con las
      * secciones de la web.
      */
-    public static final Set<String> FUERA_DE_LOS_ROLES = Set.of("plataforma:ver");
+    // "plataforma:gestionar" (ADR 046): aprobar, rechazar, suspender y
+    // reactivar empresas. Los mismos operadores que la ven; va aparte para que
+    // cada endpoint diga si solo mira o si cambia algo.
+    public static final Set<String> FUERA_DE_LOS_ROLES = Set.of("plataforma:ver", "plataforma:gestionar");
 
     public static Set<String> forRole(Role role) {
         return switch (role) {
@@ -243,7 +247,44 @@ public final class RoleAuthorities {
      * de un aviso). Estaba escrito igual, como método privado, en tres servicios.
      */
     public static boolean tiene(User usuario, String authority) {
-        return forRole(usuario.getRol()).contains(authority);
+        return de(usuario).contains(authority);
+    }
+
+    /**
+     * Lo que puede hacer una persona: lo de su rol, con una excepción que no
+     * sale del rol (ADR 048).
+     *
+     * <b>El canal de denuncias lo instruye el Responsable del Sistema</b> que
+     * designe la empresa (Ley 2/2023, art. 8). Si lo hay, {@code
+     * denuncia:instruir} es suyo, tenga el rol que tenga, y deja de ser de los
+     * ADMIN. Si no, sigue en los ADMIN, como desde la fase G (ADR 012).
+     *
+     * Es lo que usan el principal de cada petición, las respuestas de sesión y
+     * el perfil, así que lo que autoriza el servidor y lo que enseña el
+     * cliente no pueden decir cosas distintas.
+     */
+    public static Set<String> de(User usuario) {
+        Set<String> delRol = forRole(usuario.getRol());
+        Long responsable = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getResponsableCanalId();
+        if (responsable == null) {
+            return delRol;
+        }
+        boolean esResponsable = responsable == usuario.getId();
+        if (esResponsable == delRol.contains("denuncia:instruir")) {
+            return delRol;
+        }
+        Set<String> ajustado = new LinkedHashSet<>(delRol);
+        if (esResponsable) {
+            ajustado.add("denuncia:instruir");
+        } else {
+            ajustado.remove("denuncia:instruir");
+        }
+        return Set.copyOf(ajustado);
+    }
+
+    /** {@link #de}, ordenadas, para mandárselas al cliente (ver {@link #enOrden}). */
+    public static List<String> enOrden(User usuario) {
+        return de(usuario).stream().sorted().toList();
     }
 
     /**

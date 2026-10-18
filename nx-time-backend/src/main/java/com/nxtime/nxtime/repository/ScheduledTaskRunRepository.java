@@ -41,7 +41,7 @@ public interface ScheduledTaskRunRepository extends JpaRepository<ScheduledTaskR
      * apuntar, no la tarea entera).
      *
      * Un advisory lock de transacción, como el de la cadena de auditoría (ver
-     * {@link TimeEntryAuditRepository#bloquearCadena}): se suelta solo al
+     * {@link TimeEntryAuditRepository#bloquearCadenaDeEmpresa}): se suelta solo al
      * confirmar o deshacer. Y de transacción, no de sesión, a propósito:
      * producción llega a la base por el pooler de Neon, que reparte las
      * conexiones por transacción, y un cerrojo de sesión se quedaría en una

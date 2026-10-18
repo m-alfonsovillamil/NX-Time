@@ -233,10 +233,15 @@ class AuthRepositoryImpl(
     override suspend fun presentarDenuncia(
         categoria: String,
         descripcion: String,
-        anonima: Boolean
+        anonima: Boolean,
+        contactoNotificaciones: String?
     ): Response<DenunciaCreadaDTO> {
         return apiService.presentarDenuncia(
-            CrearDenunciaRequest(categoria, descripcion, anonima))
+            CrearDenunciaRequest(categoria, descripcion, anonima, contactoNotificaciones))
+    }
+
+    override suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO> {
+        return apiService.getCanalDenuncias()
     }
 
     override suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO> {
@@ -384,6 +389,10 @@ class AuthRepositoryImpl(
 
     override suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody> {
         return apiService.descargarExcelDeHoras(anio, mes)
+    }
+
+    override suspend fun descargarMiPdfMensual(anio: Int, mes: Int): Response<ResponseBody> {
+        return apiService.descargarMiPdfMensual(anio, mes)
     }
 
     override suspend fun descargarPdfMensual(
@@ -630,6 +639,14 @@ class AuthRepositoryImpl(
 
     override suspend fun marcarTodosLosAvisosLeidos(): Response<Unit> {
         return apiService.marcarTodosLosAvisosLeidos()
+    }
+
+    override suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO> {
+        return apiService.getAvisoDePrivacidad()
+    }
+
+    override suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit> {
+        return apiService.marcarAvisoDePrivacidadVisto()
     }
 
     override suspend fun descargarMisDatosJson(): Response<ResponseBody> = apiService.descargarMisDatosJson()

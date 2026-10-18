@@ -173,6 +173,7 @@ interface RespuestaDeSesion {
   nombre?: string;
   authorities?: string[];
   zonaHoraria?: string;
+  condicionesPorAceptar?: boolean;
 }
 
 async function pedirTokensNuevos(): Promise<string | null> {
@@ -203,6 +204,7 @@ async function pedirTokensNuevos(): Promise<string | null> {
       nombre: cuerpo.nombre ?? sesionActual()?.nombre ?? '',
       authorities: cuerpo.authorities ?? sesionActual()?.authorities ?? [],
       zonaHoraria: cuerpo.zonaHoraria ?? sesionActual()?.zonaHoraria,
+      condicionesPorAceptar: cuerpo.condicionesPorAceptar,
     });
     return cuerpo.token;
   } catch {

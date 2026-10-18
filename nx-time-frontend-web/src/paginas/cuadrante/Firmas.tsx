@@ -18,7 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { cliente } from '../../api/cliente';
-import { pedir, useMutacion } from '../../api/consultas';
+import { ErrorDeApi, pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { Aviso, Boton, Insignia } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
@@ -26,6 +26,7 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { cuadrante } from '../../i18n/es/cuadrante';
+import { descargar } from '../../util/descargar';
 import { diaEnEmpresa, duracion, fechaCorta, mesYAnio } from '../../util/fechas';
 
 const F = cuadrante.firmas;
@@ -64,6 +65,35 @@ export function Comprobacion({ firmaId }: { firmaId: number }) {
   );
 }
 
+/** Mi registro de ese mes, el mismo PDF oficial que descarga RRHH (plan J, J7). */
+function DescargarMiRegistro({ m }: { m: Mes }) {
+  const [bajando, setBajando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clave = `${m.anio ?? 0}-${String(m.mes ?? 1).padStart(2, '0')}`;
+  async function bajar() {
+    setError(null);
+    setBajando(true);
+    try {
+      await descargar(
+        cliente.GET('/api/v1/informes/mensual/mio', { params: { query: { anio: m.anio ?? 0, mes: m.mes ?? 1 } }, parseAs: 'blob' }),
+        `mi-registro-${clave}.pdf`,
+      );
+    } catch (fallo) {
+      setError(fallo instanceof ErrorDeApi ? fallo.message : String(fallo));
+    } finally {
+      setBajando(false);
+    }
+  }
+  return (
+    <>
+      <Boton variante="texto" icono="descargar" ocupado={bajando} aria-label={F.descargarDe(nombreDelMes(m))} onClick={() => void bajar()}>
+        {F.descargar}
+      </Boton>
+      {error !== null && <Aviso>{error}</Aviso>}
+    </>
+  );
+}
+
 function FilaDelMes({ m, alFirmar }: { m: Mes; alFirmar: (m: Mes) => void }) {
   const firma = m.firma;
   const vigente = firma?.estado === 'VIGENTE';
@@ -87,6 +117,7 @@ function FilaDelMes({ m, alFirmar }: { m: Mes; alFirmar: (m: Mes) => void }) {
       <div className="nx-acciones-fila">
         {!vigente && m.puedeFirmar === true && <Boton onClick={() => alFirmar(m)}>{F.firmar}</Boton>}
         {firma?.id !== undefined && <Comprobacion firmaId={firma.id} />}
+        <DescargarMiRegistro m={m} />
       </div>
     </li>
   );

@@ -6,6 +6,11 @@ export const borrados = {
   vacioTitulo: 'Nada pendiente',
   vacioTexto: 'Cuando alguien pida que se borren sus datos, aparecerá aquí. Hay un mes para responder.',
   pedidaEl: (dia: string) => `Pedido el ${dia}`,
+  /** El mes del art. 12.3 del RGPD, contado por el servidor (ADR 047). */
+  plazo: (dias: number) =>
+    dias === 0 ? 'El mes para responder vence hoy' : dias === 1 ? 'Queda 1 día para responder' : `Quedan ${dias} días para responder`,
+  plazoVencido: (dias: number) =>
+    dias === 1 ? 'El mes para responder venció hace 1 día' : `El mes para responder venció hace ${dias} días`,
   registradaPor: (quien: string) => `Registrada por ${quien}`,
   motivo: (texto: string) => `Motivo: ${texto}`,
   bloqueos: 'Antes hay que resolver:',

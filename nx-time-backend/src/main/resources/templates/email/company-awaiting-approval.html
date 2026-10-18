@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!--/* Al operador: una empresa nueva espera que la aprueben (ADR 046). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Empresa nueva esperando aprobación', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Se ha registrado una empresa en <span th:text="${producto}">NX Time</span> y espera que la apruebes:</p>
+
+    <ul>
+        <li>Empresa: <strong th:text="${nombreEmpresa}">Talleres López</strong></li>
+        <li>Quien la ha registrado: <span th:text="${adminNombre}">Ana López</span>
+            (<span th:text="${adminEmail}">ana@ejemplo.com</span>)</li>
+    </ul>
+
+    <p>Hasta que la apruebes, nadie de ella puede entrar. Apruébala o recházala desde el panel de plataforma:</p>
+
+    <p><a th:href="${enlace}" href="#" th:text="${enlace}">el panel</a></p>
+
+    <p style="color: #6a737d;">Antes de aprobar la primera empresa real, los textos legales tienen que haber
+        pasado por un abogado (plan J).</p>
+</div>
+</body>
+</html>

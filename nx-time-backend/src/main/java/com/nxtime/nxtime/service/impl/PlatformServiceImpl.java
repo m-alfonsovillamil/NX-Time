@@ -72,16 +72,19 @@ public class PlatformServiceImpl implements PlatformService {
     private final CompanyRepository companyRepository;
     private final TaskMonitorService taskMonitorService;
     private final VerificadorDeAuditoria verificador;
+    private final com.nxtime.nxtime.service.CompanyLifecycleService cicloDeLaEmpresa;
 
     public PlatformServiceImpl(
             PlatformRepository platformRepository,
             CompanyRepository companyRepository,
             TaskMonitorService taskMonitorService,
-            VerificadorDeAuditoria verificador) {
+            VerificadorDeAuditoria verificador,
+            com.nxtime.nxtime.service.CompanyLifecycleService cicloDeLaEmpresa) {
         this.platformRepository = platformRepository;
         this.companyRepository = companyRepository;
         this.taskMonitorService = taskMonitorService;
         this.verificador = verificador;
+        this.cicloDeLaEmpresa = cicloDeLaEmpresa;
     }
 
     @Override
@@ -98,6 +101,7 @@ public class PlatformServiceImpl implements PlatformService {
                 actividad.getEmpresasConActividad(),
                 cuentas.getActivas(),
                 cuentas.getSinConfirmar(),
+                companyRepository.countByEstado(com.nxtime.nxtime.domain.CompanyStatus.PENDIENTE),
                 actividad.getFichajesHoy(),
                 altasPorSemana(hoy),
                 taskMonitorService.estado(),
@@ -122,10 +126,12 @@ public class PlatformServiceImpl implements PlatformService {
      * El recorrido completo se pide aparte, y es quien da la fila rota.
      */
     private Cadena cadena() {
-        Optional<AuditCheckpoint> punto = verificador.ultimoPuntoDeControl();
-        return punto
-                .map(p -> new Cadena(p.getVerificadoEn(), p.getFilas(), verificador.movimientosSinRevisar(p)))
-                .orElseGet(() -> new Cadena(null, 0, verificador.movimientosEnTotal()));
+        // Desde V46 hay una cadena por empresa y el tramo común (ADR 050):
+        // se suma lo de todas.
+        VerificadorDeAuditoria.Resumen resumen = verificador.resumenDeLaInstalacion();
+        return resumen.ultimaComprobacion() == null
+                ? new Cadena(null, 0, verificador.movimientosEnTotal())
+                : new Cadena(resumen.ultimaComprobacion(), resumen.comprobados(), resumen.sinRevisar());
     }
 
     @Override
@@ -156,6 +162,7 @@ public class PlatformServiceImpl implements PlatformService {
         return new PlatformCompanyResponse(
                 empresa.getId(),
                 empresa.getNombre(),
+                com.nxtime.nxtime.domain.CompanyStatus.valueOf(empresa.getEstado()),
                 empresa.getZonaHoraria(),
                 empresa.getCreadaEn(),
                 empresa.getEmpleadosActivos(),
@@ -168,14 +175,18 @@ public class PlatformServiceImpl implements PlatformService {
                 ultimaSesion);
     }
 
+    // No de solo lectura: deja escrita la consulta (ADR 046).
     @Override
+    @Transactional
     public PlatformCompanyDetailResponse empresa(long empresaId, User operador) {
         Company empresa = companyRepository.findById(empresaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Esa empresa no existe."));
 
         // Quién ha mirado a quién. Aquí se ven los correos de los ADMIN de
-        // otra empresa: que quede constancia es parte del trato (ADR 040).
-        log.info("Panel de plataforma: el usuario {} ha consultado la empresa {}.", operador.getId(), empresaId);
+        // otra empresa: que quede constancia es parte del trato (ADR 040). Hasta
+        // la V43 era una línea de log, que se pierde; ahora es una fila que no
+        // se puede borrar (ADR 046).
+        cicloDeLaEmpresa.registrarConsulta(empresa, operador);
 
         Instant ahora = Instant.now();
         Instant hace7 = ahora.minus(Duration.ofDays(7));
@@ -200,6 +211,11 @@ public class PlatformServiceImpl implements PlatformService {
         return new PlatformCompanyDetailResponse(
                 empresa.getId(),
                 empresa.getNombre(),
+                empresa.getEstado(),
+                empresa.getAprobadaEn(),
+                empresa.getCondicionesVersion(),
+                empresa.getCondicionesAceptadasEn(),
+                cicloDeLaEmpresa.historial(empresaId),
                 empresa.getZonaHoraria(),
                 empresa.getCreadaEn(),
                 plantilla.stream().mapToLong(Plantilla::activos).sum(),

@@ -65,6 +65,22 @@ export async function entrar(page: Page, email: string): Promise<void> {
 }
 
 /**
+ * Entrar y cerrar el aviso de privacidad de la primera entrada (ADR 047), como
+ * lo cierra cualquiera la primera vez: para las specs que miran lo que hay en
+ * la página de todos los días, donde el aviso ya no sale.
+ */
+export async function entrarYCerrarElAviso(page: Page, email: string): Promise<void> {
+  const aviso = page.waitForResponse(
+    (r) => r.url().includes('/api/v1/perfil/aviso-de-privacidad') && r.request().method() === 'GET',
+  );
+  await entrar(page, email);
+  if ((await (await aviso).json()).visto !== true) {
+    await page.getByRole('button', { name: 'Entendido' }).click();
+  }
+  await expect(page.getByRole('region', { name: 'Tus datos' })).toHaveCount(0);
+}
+
+/**
  * Espera a que la página de `ruta` esté **pintada y con sus datos**.
  *
  * No vale mirar la URL ni `waitForLoadState('networkidle')`, y las dos cosas

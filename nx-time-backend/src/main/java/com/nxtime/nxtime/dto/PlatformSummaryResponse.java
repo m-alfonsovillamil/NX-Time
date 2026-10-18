@@ -19,6 +19,8 @@ public record PlatformSummaryResponse(
         long empleadosActivos,
         @Schema(description = "Registros de empresa que se quedaron sin confirmar el correo")
         long registrosSinConfirmar,
+        @Schema(description = "Empresas con el correo confirmado que esperan a que el operador las apruebe (ADR 046)")
+        long empresasPendientes,
         @Schema(description = "Fichajes empezados hoy (día de Madrid), sin los anulados")
         long fichajesHoy,
         @Schema(description = "Altas de empresas de las últimas doce semanas, de la más antigua a la actual")

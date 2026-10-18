@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<!--/* A los ADMIN: se ha pedido la baja de la empresa (ADR 050). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('La baja de tu empresa está pedida', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <p>Se ha pedido la baja de <strong th:text="${nombreEmpresa}">tu empresa</strong> en
+        <span th:text="${producto}">NX Time</span>. Hasta el
+        <strong th:text="${borradoEl}">día</strong> todo sigue funcionando.</p>
+
+    <p><strong>Llévate antes tus datos.</strong> Tu empresa tiene que conservar el registro de jornada cuatro años:
+        en <em>Informes</em> se descarga todo, doce meses de cada vez, en el formato que se le da a la Inspección.</p>
+
+    <p><strong>A partir de ese día se borra todo</strong>, también la traza de auditoría, y no se puede deshacer.
+        Hasta entonces, cualquier administrador puede cancelar la baja desde los ajustes de la empresa.</p>
+
+    <p>Si no la has pedido tú ni nadie de tu empresa, escríbenos cuanto antes a
+        <a th:href="'mailto:' + ${correoContacto}" href="#" th:text="${correoContacto}">correo</a>.</p>
+</div>
+</body>
+</html>

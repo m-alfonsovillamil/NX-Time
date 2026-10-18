@@ -76,6 +76,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/canal-denuncias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** El canal de denuncias de mi empresa */
+        get: operations["leer"];
+        /**
+         * Designar al Responsable del Sistema y la vía verbal
+         * @description Desde que hay Responsable, solo él instruye: los ADMIN dejan de ver el canal. Sin Responsable (null), instruyen los ADMIN. La empresa tiene 10 días hábiles para comunicar el nombramiento o el cese a la Autoridad Independiente de Protección del Informante.
+         */
+        put: operations["guardar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/empresa/ajustes": {
         parameters: {
             query?: never;
@@ -84,12 +105,12 @@ export interface paths {
             cookie?: never;
         };
         /** Ajustes de mi empresa */
-        get: operations["leer"];
+        get: operations["leer_1"];
         /**
          * Guardar los ajustes de mi empresa
          * @description Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.
          */
-        put: operations["guardar"];
+        put: operations["guardar_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -506,6 +527,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plataforma/empresas/{id}/suspender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspender una empresa activa
+         * @description Nadie de ella puede entrar ni fichar, tampoco en sus kioscos, y se cierran todas sus sesiones. Sus datos se quedan. Se avisa a sus ADMIN, con el motivo si se da.
+         */
+        post: operations["suspender"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/rechazar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rechazar una empresa pendiente
+         * @description Se avisa a quien la registró, con el motivo si se da, y se borra entera: nadie de ella llegó a entrar. Queda en el historial con su nombre.
+         */
+        post: operations["rechazar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/reactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivar una empresa suspendida
+         * @description Su gente vuelve a poder entrar. Se avisa a sus ADMIN.
+         */
+        post: operations["reactivar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plataforma/empresas/{id}/aprobar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aprobar una empresa pendiente
+         * @description Desde ese momento su gente puede entrar. Se avisa por correo a sus ADMIN, y queda en el historial de la empresa.
+         */
+        post: operations["aprobar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/verificar-contrasena": {
         parameters: {
             query?: never;
@@ -612,6 +713,26 @@ export interface paths {
          * @description Solo mientras está pendiente.
          */
         post: operations["cancelar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/aviso-de-privacidad/visto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ya he visto el aviso de privacidad
+         * @description Solo cuenta la primera vez: repetirlo no cambia la fecha.
+         */
+        post: operations["marcarAvisoVisto"];
         delete?: never;
         options?: never;
         head?: never;
@@ -953,6 +1074,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/condiciones/aceptar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar las condiciones en vigor
+         * @description En nombre de la empresa. Queda la versión, la fecha y quién.
+         */
+        post: operations["aceptar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/empresa/baja": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * La baja de mi empresa
+         * @description Si está pedida, cuándo y desde cuándo se borra.
+         */
+        get: operations["estado_1"];
+        put?: never;
+        /**
+         * Pedir la baja de mi empresa
+         * @description Hay que escribir el nombre de la empresa. Durante 30 días todo sigue funcionando para llevarse los datos, y se puede cancelar; después se borra entera, auditoría incluida, y no se puede deshacer.
+         */
+        post: operations["solicitar_1"];
+        /**
+         * Cancelar la baja
+         * @description Mientras no hayan pasado los 30 días.
+         */
+        delete: operations["cancelar_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dispositivos-push": {
         parameters: {
             query?: never;
@@ -1038,6 +1207,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/denuncias/{id}/supresiones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suprimir un texto del expediente
+         * @description La descripción (sin mensajeId) o un mensaje, porque contiene categorías especiales de datos, no es pertinente o se acreditó que no es veraz (Ley 2/2023, arts. 30 y 32). No se puede deshacer: queda la marca de cuándo y por qué.
+         */
+        post: operations["suprimir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/denuncias/{id}/prorroga": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ampliar a seis meses el plazo de respuesta
+         * @description Ley 2/2023, art. 9.2.d: solo en casos de especial complejidad, una vez y antes de que venza. El motivo le llega a quien denunció como un mensaje del expediente.
+         */
+        post: operations["prorrogar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/denuncias/{id}/mensajes": {
         parameters: {
             query?: never;
@@ -1049,7 +1258,7 @@ export interface paths {
         put?: never;
         /**
          * Escribir en un expediente como instructor
-         * @description El primer mensaje vale como acuse de recibo si todavía no se había dado. Nadie instruye una denuncia que presentó él mismo.
+         * @description En las denuncias de antes del acuse automático (ADR 048), el primer mensaje vale como acuse de recibo. Nadie instruye una denuncia que presentó él mismo.
          */
         post: operations["responderComoInstructor"];
         delete?: never;
@@ -1252,7 +1461,7 @@ export interface paths {
          * Rechazar un borrado
          * @description Con comentario obligatorio: se le manda a la persona para que sepa por qué y qué tiene que resolver antes de volver a pedirlo.
          */
-        post: operations["rechazar"];
+        post: operations["rechazar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1900,7 +2109,7 @@ export interface paths {
         };
         /**
          * Una empresa
-         * @description Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda apuntada en el log del servidor, con quién la hizo.
+         * @description Sus cifras y el contacto de sus ADMIN. Ni fichajes ni datos de empleados. Cada consulta queda en su historial, con quién la hizo (ADR 046).
          */
         get: operations["empresa"];
         put?: never;
@@ -1982,7 +2191,27 @@ export interface paths {
          * ¿Puedo fichar en un kiosco?
          * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
          */
-        get: operations["estado_1"];
+        get: operations["estado_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/aviso-de-privacidad": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi aviso de privacidad
+         * @description Quién es la responsable de mis datos (mi empresa), a quién dirigirme y si ya lo he visto.
+         */
+        get: operations["leerAviso"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2047,6 +2276,46 @@ export interface paths {
          * @description El registro de jornada individual que exige el RD-ley 8/2019, con el detalle diario, el total del mes y espacio para las firmas del trabajador y de la empresa.
          */
         get: operations["exportarInformeMensualEnPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/informes/mensual/mio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi registro de jornada del mes en PDF
+         * @description El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).
+         */
+        get: operations["exportarMiInformeMensualEnPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/informes/inspeccion.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportación para la Inspección o la representación legal
+         * @description Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas (art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.
+         */
+        get: operations["exportarParaLaInspeccion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2395,6 +2664,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/condiciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las condiciones de mi empresa
+         * @description La versión en vigor, la que tiene aceptada la empresa, cuándo y quién.
+         */
+        get: operations["condiciones"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/empresa/accesos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién ha consultado datos personales de otra persona
+         * @description Los CV de candidaturas, perfiles ajenos, registros mensuales de otro, el Excel de la empresa, expedientes de denuncias y exportaciones. Lo último primero, hasta 500. Se conserva dos años y no se puede borrar ni cambiar.
+         */
+        get: operations["accesos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/denuncias/{id}": {
         parameters: {
             query?: never;
@@ -2404,7 +2713,7 @@ export interface paths {
         };
         /**
          * Un expediente completo
-         * @description Solo ADMIN.
+         * @description Solo quien instruye: el Responsable del Sistema o, sin él, los ADMIN.
          */
         get: operations["detalle_2"];
         put?: never;
@@ -2447,6 +2756,66 @@ export interface paths {
          * @description Solo para las que presentaste IDENTIFICÁNDOTE. Sobre una anónima devuelve 404 aunque sea tuya: el sistema no sabe que lo es, que es exactamente lo que se prometió. A esas se entra con el código.
          */
         get: operations["miDetalle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/denuncias/libro-registro.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * El libro-registro en CSV
+         * @description Ley 2/2023, art. 26: fecha de recepción, objeto, estado, hitos y fin de cada comunicación. Sin relatos, conclusiones ni nombres. La descarga queda anotada.
+         */
+        get: operations["libroRegistro"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/denuncias/canal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cómo funciona el canal de mi empresa
+         * @description Quién es el Responsable del Sistema (si la empresa lo ha designado) y cómo comunicar algo de palabra o pedir una reunión (Ley 2/2023, arts. 7.2 y 9.2).
+         */
+        get: operations["canal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/denuncias/accesos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién ha abierto cada expediente
+         * @description Solo quien instruye: la Autoridad recomienda que este registro quede reservado al Responsable del Sistema (Recomendación 1/2026). Lo último primero, hasta 500.
+         */
+        get: operations["accesos_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3201,13 +3570,28 @@ export interface components {
         SimpleUserDTO: {
             nombre?: string;
         };
+        UpdateComplaintChannelRequest: {
+            /** Format: int64 */
+            responsableId?: number;
+            viaVerbal?: string;
+        };
+        ComplaintChannelSettingsResponse: {
+            /** Format: int64 */
+            responsableId?: number;
+            responsable?: string;
+            /** Format: date-time */
+            desde?: string;
+            viaVerbal?: string;
+        };
         UpdateCompanySettingsRequest: {
             nombre: string;
             zonaHoraria: string;
+            contactoPrivacidad?: string;
         };
         CompanySettingsResponse: {
             nombre?: string;
             zonaHoraria?: string;
+            contactoPrivacidad?: string;
             /** Format: int32 */
             firmasInvalidadas?: number;
         };
@@ -3299,6 +3683,7 @@ export interface components {
             nombreEmpresa: string;
             nombre: string;
             apellidos: string;
+            aceptaCondiciones: boolean;
         };
         AuthenticationResponse: {
             token?: string;
@@ -3308,6 +3693,7 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             authorities?: string[];
             zonaHoraria?: string;
+            condicionesPorAceptar?: boolean;
         };
         SsoExchangeRequest: {
             codigo: string;
@@ -3324,6 +3710,7 @@ export interface components {
             nombreEmpresa: string;
             nombre: string;
             apellidos: string;
+            aceptaCondiciones: boolean;
         };
         ConfirmRegistrationRequest: {
             /** Format: email */
@@ -3339,6 +3726,7 @@ export interface components {
             email: string;
             contrasena: string;
             origen?: string;
+            aceptaCondiciones: boolean;
         };
         RegistrationPendingResponse: {
             email?: string;
@@ -3415,6 +3803,9 @@ export interface components {
             fechaFin?: string;
             vigente?: boolean;
         };
+        PlatformActionRequest: {
+            motivo?: string;
+        };
         /** @description Comprobar la contraseña propia, sin emitir tokens */
         VerifyPasswordRequest: {
             /** @description La contraseña actual de quien hace la petición */
@@ -3458,6 +3849,8 @@ export interface components {
             /** Format: date */
             anonimizarDesde?: string;
             bloqueos?: string[];
+            /** Format: int64 */
+            diasParaResponder?: number;
         };
         AttachmentResponse: {
             /** Format: int64 */
@@ -3643,6 +4036,31 @@ export interface components {
             ultimoUso?: string;
             activo?: boolean;
         };
+        /** @description Qué versión de las condiciones está en vigor y cuál tiene aceptada la empresa */
+        CompanyTermsResponse: {
+            /**
+             * @description La versión en vigor
+             * @example 2026-10-18
+             */
+            versionVigente?: string;
+            /** @description La que tiene aceptada la empresa. Null si ninguna */
+            versionAceptada?: string;
+            /** Format: date-time */
+            aceptadaEn?: string;
+            /** @description Quién las aceptó en nombre de la empresa. Null si ninguna, o si ya no está */
+            aceptadaPor?: string;
+            /** @description Si falta aceptar la versión en vigor */
+            porAceptar?: boolean;
+        };
+        CompanyClosureRequest: {
+            confirmacion: string;
+        };
+        CompanyClosureResponse: {
+            /** Format: date-time */
+            solicitadaEn?: string;
+            /** Format: date-time */
+            borradoDesde?: string;
+        };
         RegisterPushDeviceRequest: {
             token: string;
             /** @enum {string} */
@@ -3666,6 +4084,7 @@ export interface components {
             categoria: "ACOSO" | "DISCRIMINACION" | "FRAUDE" | "SEGURIDAD" | "CORRUPCION" | "PROTECCION_DATOS" | "OTRA";
             descripcion: string;
             anonima: boolean;
+            contactoNotificaciones?: string;
         };
         ComplaintCreatedResponse: {
             codigoSeguimiento?: string;
@@ -3674,8 +4093,11 @@ export interface components {
             creadoEn?: string;
             avisoImportante?: string;
         };
-        ComplaintMessageRequest: {
-            texto: string;
+        ComplaintRedactionRequest: {
+            /** Format: int64 */
+            mensajeId?: number;
+            /** @enum {string} */
+            motivo: "CATEGORIAS_ESPECIALES" | "NO_PERTINENTE" | "NO_VERAZ";
         };
         ComplaintMessageResponse: {
             /** Format: int64 */
@@ -3710,6 +4132,21 @@ export interface components {
             /** Format: int64 */
             diasHastaRespuesta?: number;
             mensajes?: components["schemas"]["ComplaintMessageResponse"][];
+            contactoNotificaciones?: string;
+            /** Format: date-time */
+            investigacionIniciadaEn?: string;
+            /** Format: date-time */
+            respuestaProrrogadaEn?: string;
+            /** Format: date-time */
+            contenidoSuprimidoEn?: string;
+            /** Format: int64 */
+            diasHastaSupresion?: number;
+        };
+        ComplaintExtensionRequest: {
+            motivo: string;
+        };
+        ComplaintMessageRequest: {
+            texto: string;
         };
         ComplaintTrackingRequest: {
             codigo: string;
@@ -4043,6 +4480,11 @@ export interface components {
             registrosSinConfirmar?: number;
             /**
              * Format: int64
+             * @description Empresas con el correo confirmado que esperan a que el operador las apruebe (ADR 046)
+             */
+            empresasPendientes?: number;
+            /**
+             * Format: int64
              * @description Fichajes empezados hoy (día de Madrid), sin los anulados
              */
             fichajesHoy?: number;
@@ -4109,6 +4551,11 @@ export interface components {
             id?: number;
             nombre?: string;
             /**
+             * @description PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046). Las pendientes salen las primeras
+             * @enum {string}
+             */
+            estado?: "PENDIENTE" | "ACTIVA" | "SUSPENDIDA";
+            /**
              * @description Nombre IANA de su zona horaria
              * @example Europe/Madrid
              */
@@ -4169,11 +4616,35 @@ export interface components {
             /** Format: int64 */
             deBaja?: number;
         };
+        PlatformActionDTO: {
+            /** Format: date-time */
+            en?: string;
+            operador?: string;
+            /** @enum {string} */
+            accion?: "CONSULTAR" | "APROBAR" | "RECHAZAR" | "SUSPENDER" | "REACTIVAR";
+            motivo?: string;
+        };
         /** @description El detalle de una empresa de la instalación: cifras de uso y el contacto de sus administradores */
         PlatformCompanyDetailResponse: {
             /** Format: int64 */
             id?: number;
             nombre?: string;
+            /**
+             * @description PENDIENTE de aprobar, ACTIVA o SUSPENDIDA (ADR 046)
+             * @enum {string}
+             */
+            estado?: "PENDIENTE" | "ACTIVA" | "SUSPENDIDA";
+            /**
+             * Format: date-time
+             * @description Cuándo la aprobó el operador. Null si no lo ha hecho, o si es de antes de la V43
+             */
+            aprobadaEn?: string;
+            /** @description La versión de las condiciones que tiene aceptada. Null si ninguna */
+            condicionesVersion?: string;
+            /** Format: date-time */
+            condicionesAceptadasEn?: string;
+            /** @description Lo que ha hecho y mirado el operador con ella, lo más reciente primero (hasta 50) */
+            historial?: components["schemas"]["PlatformActionDTO"][];
             /**
              * @description Nombre IANA de su zona horaria
              * @example Europe/Madrid
@@ -4461,6 +4932,11 @@ export interface components {
             /** Format: int32 */
             diasTotales?: number;
         };
+        PrivacyNoticeResponse: {
+            empresa?: string;
+            contacto?: string;
+            visto?: boolean;
+        };
         PaginaDTOScheduleIncidentResponse: {
             contenido?: components["schemas"]["ScheduleIncidentResponse"][];
             /** Format: int32 */
@@ -4601,6 +5077,18 @@ export interface components {
             kiosco?: string;
             cerradaPorElSistema?: boolean;
         };
+        DataAccessResponse: {
+            /** Format: date-time */
+            en?: string;
+            /** Format: int64 */
+            quienId?: number;
+            quien?: string;
+            que?: string;
+            /** Format: int64 */
+            sobreId?: number;
+            sobre?: string;
+            detalle?: string;
+        };
         ComplaintSummaryResponse: {
             /** Format: int64 */
             id?: number;
@@ -4620,6 +5108,13 @@ export interface components {
             diasHastaRespuesta?: number;
             /** Format: int32 */
             mensajes?: number;
+            /** Format: int64 */
+            diasHastaSupresion?: number;
+            contenidoSuprimido?: boolean;
+        };
+        ComplaintChannelInfoResponse: {
+            responsable?: string;
+            viaVerbal?: string;
         };
         PersonalDashboardResponse: {
             /** @enum {string} */
@@ -5215,6 +5710,77 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description Cómo está montado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintChannelSettingsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    guardar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateComplaintChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description Guardado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintChannelSettingsResponse"];
+                };
+            };
+            /** @description La persona no es de la empresa o no está activa */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    leer_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description Ajustes */
             200: {
                 headers: {
@@ -5244,7 +5810,7 @@ export interface operations {
             };
         };
     };
-    guardar: {
+    guardar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5628,6 +6194,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     canjearRegistro: {
@@ -5703,6 +6278,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     canjear: {
@@ -5736,6 +6320,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
         };
     };
     confirmarRegistro: {
@@ -5762,6 +6355,15 @@ export interface operations {
             };
             /** @description Datos inválidos, o un código incorrecto, caducado, usado o anulado. El mensaje es el mismo en todos los casos. */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6042,6 +6644,15 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
+            /** @description Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
             /** @description Demasiados intentos desde esta IP */
             429: {
                 headers: {
@@ -6261,6 +6872,202 @@ export interface operations {
                 };
             };
             /** @description Ya está asignado a otro proyecto en esas fechas */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    suspender: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlatformActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Suspendida */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está activa, o es la del propio operador */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    rechazar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlatformActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Rechazada y borrada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está pendiente, o tiene datos y no se puede borrar */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    reactivar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reactivada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está suspendida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    aprobar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aprobada */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sin 'plataforma:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está pendiente */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6540,6 +7347,33 @@ export interface operations {
             };
             /** @description No hay ninguna pendiente */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    marcarAvisoVisto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Anotado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7510,6 +8344,135 @@ export interface operations {
             };
         };
     };
+    aceptar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aceptadas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyTermsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    estado_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description La baja */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    solicitar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyClosureRequest"];
+            };
+        };
+        responses: {
+            /** @description Pedida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description El nombre no coincide */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya estaba pedida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    cancelar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyClosureResponse"];
+                };
+            };
+            /** @description No había ninguna */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     registrar_1: {
         parameters: {
             query?: never;
@@ -7741,6 +8704,76 @@ export interface operations {
             };
             /** @description Falta la categoría, la descripción o el 'anonima' */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    suprimir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplaintRedactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Expediente con el texto suprimido */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintResponse"];
+                };
+            };
+            /** @description La denuncia o el mensaje no existen */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    prorrogar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplaintExtensionRequest"];
+            };
+        };
+        responses: {
+            /** @description Expediente con el plazo ampliado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintResponse"];
+                };
+            };
+            /** @description Ya se amplió, ya venció o está cerrado */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8313,7 +9346,7 @@ export interface operations {
             };
         };
     };
-    rechazar: {
+    rechazar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -10246,7 +11279,7 @@ export interface operations {
             };
         };
     };
-    estado_1: {
+    estado_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -10262,6 +11295,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MyKioskStatus"];
+                };
+            };
+        };
+    };
+    leerAviso: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El aviso */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PrivacyNoticeResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
         };
@@ -10445,6 +11507,92 @@ export interface operations {
             };
             /** @description Empleado no encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    exportarMiInformeMensualEnPdf: {
+        parameters: {
+            query: {
+                /** @description Año del informe */
+                anio: number;
+                /** @description Mes del informe (1-12) */
+                mes: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documento PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Mes o año fuera de rango */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    exportarParaLaInspeccion: {
+        parameters: {
+            query: {
+                /** @description Primer mes, AAAA-MM */
+                desde: string;
+                /** @description Último mes, AAAA-MM */
+                hasta: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El ZIP */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            /** @description Periodo al revés o de más de doce meses */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'informe:exportar' (RRHH/ADMIN) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11117,6 +12265,67 @@ export interface operations {
             };
         };
     };
+    condiciones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las condiciones */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CompanyTermsResponse"];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    accesos: {
+        parameters: {
+            query?: {
+                /** @description Solo los datos de esta persona */
+                usuarioId?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los accesos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DataAccessResponse"][];
+                };
+            };
+            /** @description Sin 'empresa:configurar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     detalle_2: {
         parameters: {
             query?: never;
@@ -11195,6 +12404,66 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    libroRegistro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El fichero */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+        };
+    };
+    canal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El canal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComplaintChannelInfoResponse"];
+                };
+            };
+        };
+    };
+    accesos_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Los accesos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DataAccessResponse"][];
                 };
             };
         };

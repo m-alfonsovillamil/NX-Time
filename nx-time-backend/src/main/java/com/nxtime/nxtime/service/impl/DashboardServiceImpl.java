@@ -159,7 +159,7 @@ public class DashboardServiceImpl implements DashboardService {
      * callar. La consulta no se hace siquiera.
      */
     private Long denunciasAbiertas(User manager) {
-        if (!RoleAuthorities.forRole(manager.getRol()).contains("denuncia:instruir")) {
+        if (!RoleAuthorities.de(manager).contains("denuncia:instruir")) {
             return null;
         }
         return complaintRepository.contarAbiertas(manager.getEmpresa().getId());

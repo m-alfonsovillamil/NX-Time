@@ -340,6 +340,10 @@ interface ApiService {
         @Body peticion: CrearDenunciaRequest
     ): Response<DenunciaCreadaDTO>
 
+    /** Quién gestiona el canal y cuál es la vía verbal (ADR 048). */
+    @GET("api/v1/denuncias/canal")
+    suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO>
+
     /**
      * Seguir una denuncia con su codigo. Va autenticado (el canal es
      * interno) pero el servidor NO comprueba quien lo trae: el codigo es
@@ -559,6 +563,14 @@ interface ApiService {
     @Streaming
     @GET("api/v1/perfil/mis-datos/pdf")
     suspend fun descargarMisDatosPdf(): Response<ResponseBody>
+
+    /** Mi registro del mes en PDF, sin pedírselo a nadie (art. 34.9 ET; plan J, J7). */
+    @Streaming
+    @GET("api/v1/informes/mensual/mio")
+    suspend fun descargarMiPdfMensual(
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<ResponseBody>
 
     @Streaming
     @GET("api/v1/informes/mensual/{empleadoId}")
@@ -824,6 +836,14 @@ interface ApiService {
 
     @PATCH("api/v1/avisos/leer-todos")
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
+
+    /*  El aviso de privacidad de la primera entrada (ADR 047)  */
+
+    @GET("api/v1/perfil/aviso-de-privacidad")
+    suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO>
+
+    @POST("api/v1/perfil/aviso-de-privacidad/visto")
+    suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit>
 
     /*  Fichar en un kiosco (ADR 033): el PIN y la tarjeta de cada uno  */
 

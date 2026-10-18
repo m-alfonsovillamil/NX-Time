@@ -228,7 +228,7 @@ public class CalendarServiceImpl implements CalendarService {
         // Se pregunta a RoleAuthorities y no al SecurityContext a
         // propósito: es la misma fuente que alimenta el @PreAuthorize de
         // los endpoints, así que no puede decir una cosa distinta.
-        return RoleAuthorities.forRole(actor.getRol()).contains(AUTHORITY_EQUIPO);
+        return RoleAuthorities.de(actor).contains(AUTHORITY_EQUIPO);
     }
 
     private HolidayResponse toResponse(Holiday festivo) {

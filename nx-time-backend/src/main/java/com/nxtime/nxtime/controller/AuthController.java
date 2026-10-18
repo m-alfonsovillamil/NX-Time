@@ -101,6 +101,8 @@ public class AuthController {
                     + "usado o anulado. El mensaje es el mismo en todos los casos.",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "423", description = "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/registro/confirmar")
@@ -134,6 +136,8 @@ public class AuthController {
                     + "ha confirmado su correo: se le acaba de mandar otro código (/auth/registro/confirmar)",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "429", description = "Demasiados intentos desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "423", description = "Su empresa no está activa: pendiente de que la apruebe el operador, o suspendida (ADR 046). El detalle dice qué hacer",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/login")

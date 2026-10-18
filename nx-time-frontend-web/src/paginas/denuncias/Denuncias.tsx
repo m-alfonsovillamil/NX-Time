@@ -80,15 +80,27 @@ function FormularioDeDenuncia({ alCrear }: { alCrear: (creada: Creada) => void }
   const [categoria, setCategoria] = useState<Categoria>('ACOSO');
   const [descripcion, setDescripcion] = useState('');
   const [anonima, setAnonima] = useState(false);
+  const [contacto, setContacto] = useState('');
   const [falta, setFalta] = useState(false);
 
   const presentar = useMutacion(
-    () => pedir(cliente.POST('/api/v1/denuncias', { body: { categoria, descripcion: descripcion.trim(), anonima } })),
+    () =>
+      pedir(
+        cliente.POST('/api/v1/denuncias', {
+          body: {
+            categoria,
+            descripcion: descripcion.trim(),
+            anonima,
+            ...(contacto.trim() !== '' ? { contactoNotificaciones: contacto.trim() } : {}),
+          },
+        }),
+      ),
     {
       invalida: [CLAVE_MIAS],
       alTerminar: (creada) => {
         setDescripcion('');
         setAnonima(false);
+        setContacto('');
         alCrear(creada);
       },
     },
@@ -132,6 +144,15 @@ function FormularioDeDenuncia({ alCrear }: { alCrear: (creada: Creada) => void }
           {anonima ? D.anonimaSi : D.anonimaNo}
         </p>
       </div>
+      <Campo
+        id="denuncia-contacto"
+        etiqueta={D.contacto}
+        ayuda={D.contactoAyuda}
+        maxLength={255}
+        autoComplete="off"
+        value={contacto}
+        onChange={(e) => setContacto(e.target.value)}
+      />
       {presentar.error !== null && <Aviso>{presentar.error.message}</Aviso>}
       <div>
         <Boton type="submit" ocupado={presentar.isPending}>
@@ -245,7 +266,19 @@ function FormularioDeMensaje({ via, alResponder }: { via: Via; alResponder: (e: 
  * plazo, hechos, conclusión y conversación. Lo que cambia es el subtítulo
  * (quién la puso) y lo que va debajo (responder, cambiar de estado).
  */
-export function CuerpoDeExpediente({ e, subtitulo, children }: { e: Expediente; subtitulo: string; children?: ReactNode }) {
+export function CuerpoDeExpediente({
+  e,
+  subtitulo,
+  children,
+  alSuprimir,
+}: {
+  e: Expediente;
+  subtitulo: string;
+  children?: ReactNode;
+  /** Solo quien instruye: suprimir el relato (null) o un mensaje (ADR 048). */
+  alSuprimir?: (mensajeId: number | null) => void;
+}) {
+  const puedeSuprimir = alSuprimir !== undefined && !e.contenidoSuprimidoEn;
   return (
     <div className="nx-expediente">
       <div className="nx-incidencia__cabecera">
@@ -253,7 +286,18 @@ export function CuerpoDeExpediente({ e, subtitulo, children }: { e: Expediente; 
         <span className="nx-sutil">{subtitulo}</span>
       </div>
       <Plazo e={e} />
+      {e.acuseReciboEn && <span className="nx-sutil">{D.acuse(fechaHoraCorta(e.acuseReciboEn))}</span>}
+      {e.respuestaProrrogadaEn && <span className="nx-sutil">{D.plazoAmpliado}</span>}
+      {e.contactoNotificaciones && <span className="nx-sutil">{D.contactoDado(e.contactoNotificaciones)}</span>}
+      {e.contenidoSuprimidoEn && <Aviso>{D.suprimida}</Aviso>}
       <p className="nx-texto-largo">{e.descripcion}</p>
+      {puedeSuprimir && (
+        <div className="nx-acciones-fila">
+          <Boton variante="texto" onClick={() => alSuprimir(null)}>
+            {D.canal.suprimirDescripcion}
+          </Boton>
+        </div>
+      )}
       {e.conclusion && (
         <section>
           <h3>{D.conclusion}</h3>
@@ -271,6 +315,11 @@ export function CuerpoDeExpediente({ e, subtitulo, children }: { e: Expediente; 
                   {m.creadoEn ? ` · ${fechaHoraCorta(m.creadoEn)}` : ''}
                 </span>
                 <p className="nx-texto-largo">{m.texto}</p>
+                {puedeSuprimir && m.id !== undefined && (
+                  <Boton variante="texto" onClick={() => alSuprimir(m.id ?? null)}>
+                    {D.canal.suprimir}
+                  </Boton>
+                )}
               </li>
             ))}
           </ol>
@@ -405,6 +454,27 @@ function MisDenuncias({ alAbrir }: { alAbrir: (via: Via, e: Expediente) => void 
   );
 }
 
+/** Quién gestiona el canal y cómo comunicarlo de palabra (Ley 2/2023, arts. 7.2 y 9.2). */
+function ElCanal() {
+  const canal = useQuery({ queryKey: ['denuncias', 'canal'], queryFn: () => pedir(cliente.GET('/api/v1/denuncias/canal', {})) });
+  const datos = canal.data;
+  if (datos === undefined) return null;
+  return (
+    <>
+      <p className="nx-sutil">{datos.responsable ? D.gestiona(datos.responsable) : D.gestionaAdministracion}</p>
+      <h3>{D.viaVerbalTitulo}</h3>
+      {datos.viaVerbal ? (
+        <>
+          <p className="nx-texto-largo">{datos.viaVerbal}</p>
+          <p className="nx-sutil">{D.viaVerbalNota}</p>
+        </>
+      ) : (
+        <p className="nx-sutil">{D.viaVerbalSinDatos}</p>
+      )}
+    </>
+  );
+}
+
 export function Denuncias() {
   const clienteDeConsultas = useQueryClient();
   const [creada, setCreada] = useState<Creada | null>(null);
@@ -429,6 +499,18 @@ export function Denuncias() {
           <section className="nx-tarjeta" aria-labelledby="denuncias-que-es">
             <h2 id="denuncias-que-es">{D.queEsTitulo}</h2>
             <p className="nx-sutil">{D.queEsTexto}</p>
+            <ElCanal />
+            <p className="nx-sutil">{D.ambito}</p>
+          </section>
+
+          <section className="nx-tarjeta" aria-labelledby="denuncias-proteccion">
+            <h2 id="denuncias-proteccion">{D.proteccionTitulo}</h2>
+            <p className="nx-sutil">{D.proteccionTexto}</p>
+            <h3>{D.externosTitulo}</h3>
+            <p className="nx-sutil">{D.externosTexto}</p>
+            <a className="nx-enlace" href={D.externosUrl} target="_blank" rel="noopener noreferrer">
+              {D.externosEnlace}
+            </a>
           </section>
 
           <section className="nx-tarjeta">

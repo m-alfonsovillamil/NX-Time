@@ -249,6 +249,7 @@ class ApiContractTest {
     void registrarGestor_datosValidos_devuelve202YAlConfirmarTokenNombreYRol() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA,
+                "aceptaCondiciones", true,
                 "nombre", "Gestor",
                 "apellidos", "Contract",
                 "email", EMAIL_GESTOR,
@@ -301,6 +302,7 @@ class ApiContractTest {
         // tal cual, con un cuerpo ProblemDetail real.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA, // misma empresa que en el test anterior
+                "aceptaCondiciones", true,
                 "nombre", "Otro",
                 "apellidos", "Gestor",
                 "email", "otro.gestor@nxtime.test",
@@ -393,6 +395,7 @@ class ApiContractTest {
         // usuario tal cual.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", "",
+                "aceptaCondiciones", true,
                 "nombre", "",
                 "apellidos", "",
                 "email", "esto-no-es-un-email",
@@ -416,6 +419,7 @@ class ApiContractTest {
         // debe poder ver ni tocar nada de EMPRESA.
         Map<String, Object> peticion = mapOf(
                 "nombreEmpresa", EMPRESA_OTRA,
+                "aceptaCondiciones", true,
                 "nombre", "Gestor",
                 "apellidos", "Otra Empresa",
                 "email", EMAIL_GESTOR_OTRA_EMPRESA,
@@ -2520,8 +2524,11 @@ class ApiContractTest {
         assertThat(body.get("anonima").asBoolean()).isTrue();
         assertThat(body.get("denunciante").isNull()).isTrue();
         assertThat(body.get("estado").asText()).isEqualTo("RECIBIDA");
-        // Recien presentada: quedan 7 dias naturales para acusar recibo.
-        assertThat(body.get("diasHastaAcuse").asInt()).isEqualTo(7);
+        // Desde la fase J6 (ADR 048) el acuse se da al presentarla: no queda
+        // plazo de acuse, y corre el de la supresion si nadie la investiga.
+        assertThat(body.get("acuseReciboEn").isNull()).isFalse();
+        assertThat(body.get("diasHastaAcuse").isNull()).isTrue();
+        assertThat(body.get("diasHastaSupresion").asInt()).isPositive();
 
         denunciaAnonimaId = body.get("id").asLong();
     }
@@ -2619,7 +2626,7 @@ class ApiContractTest {
 
     @Test
     @Order(127)
-    void elAdminAcusaReciboAlPasarlaAInvestigacion() throws Exception {
+    void elAdminLaPasaAInvestigacion_yDejaDeContarLaSupresion() throws Exception {
         ResponseEntity<String> response = rest.exchange(
                 url("/api/v1/denuncias/" + denunciaAnonimaId + "/estado"),
                 HttpMethod.PATCH,
@@ -2632,9 +2639,11 @@ class ApiContractTest {
         JsonNode body = bodyOf(response);
         assertThat(body.get("estado").asText()).isEqualTo("EN_INVESTIGACION");
         assertThat(body.get("acuseReciboEn").isNull()).isFalse();
-        // Dado el acuse, su plazo se apaga; el de los 3 meses sigue.
         assertThat(body.get("diasHastaAcuse").isNull()).isTrue();
         assertThat(body.get("diasHastaRespuesta").asInt()).isPositive();
+        // En investigacion, el contenido ya no se suprime a los tres meses.
+        assertThat(body.get("investigacionIniciadaEn").isNull()).isFalse();
+        assertThat(body.get("diasHastaSupresion").isNull()).isTrue();
     }
 
     @Test
@@ -3344,6 +3353,7 @@ class ApiContractTest {
                 url("/auth/register-manager"),
                 new HttpEntity<>(toJson(mapOf(
                         "nombreEmpresa", "Recupera Contract SL",
+                        "aceptaCondiciones", true,
                         "nombre", "Rita",
                         "apellidos", "Levi",
                         "email", email,

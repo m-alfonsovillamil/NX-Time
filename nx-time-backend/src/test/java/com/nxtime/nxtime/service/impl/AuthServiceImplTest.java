@@ -81,6 +81,11 @@ class AuthServiceImplTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private AccessCodeService accessCodeService;
+    @Mock
+    private com.nxtime.nxtime.service.CompanyLifecycleService cicloDeLaEmpresa;
+
+    static final com.nxtime.nxtime.config.CondicionesDelServicio SERVICIO = new com.nxtime.nxtime.config.CondicionesDelServicio(
+            "NX Time", "Titular de prueba", "privacidad@nxtime.test", "https://nxtime.test", "2026-10-17", true);
 
     /*
      * Real y no simulado: es un contador en memoria sin dependencias, y
@@ -99,7 +104,7 @@ class AuthServiceImplTest {
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
                 authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta,
                 new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
-                new TurnoDeContrasena(0));
+                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa);
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
@@ -114,7 +119,7 @@ class AuthServiceImplTest {
     void registerManager_empresaNueva_creaEmpresaYAdmin() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace",
-                        "ada@nxtime.test", "password123", null);
+                        "ada@nxtime.test", "password123", null, true);
         when(companyRepository.findByNombre(request.nombreEmpresa())).thenReturn(Optional.empty());
         when(companyRepository.save(any(Company.class)))
                 .thenReturn(Company.builder().id(1L).nombre(request.nombreEmpresa()).build());
@@ -134,7 +139,7 @@ class AuthServiceImplTest {
     @DisplayName("registerManager con un correo que ya tiene cuenta responde lo mismo, no crea nada y avisa a su dueño")
     void registerManager_correoYaRegistrado_respondeIgualYAvisaAlDueno() {
         RegisterManagerRequest request =
-                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null, true);
         User existente = User.builder().id(7L).email("ada@nxtime.test").nombre("Ada").rol(Role.EMPLEADO)
                 .empresa(Company.builder().id(3L).nombre("Talleres SL").build()).build();
         when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(existente));
@@ -165,7 +170,7 @@ class AuthServiceImplTest {
     @DisplayName("registerManager con un correo que ya tiene cuenta no vuelve a avisar si ya lo hizo hace poco")
     void registerManager_correoYaRegistrado_noAvisaDosVecesSeguidas() {
         RegisterManagerRequest request =
-                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+                new RegisterManagerRequest("Otra SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null, true);
         User existente = User.builder().id(7L).email("ada@nxtime.test").rol(Role.EMPLEADO).build();
         when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(existente));
         when(userRepository.marcarAvisoDeCuentaExistente(eq(7L), any(), any())).thenReturn(0);
@@ -187,9 +192,9 @@ class AuthServiceImplTest {
                 jwtService, authenticationManager, org.mockito.Mockito.mock(ApplicationEventPublisher.class),
                 org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta,
                 new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
-                new TurnoDeContrasena(0));
+                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa);
         return nuevo.registerManager(
-                new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null));
+                new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null, true));
     }
 
     @Test
@@ -199,7 +204,7 @@ class AuthServiceImplTest {
         User pendiente = User.builder().id(8L).email("ada@nxtime.test").nombre("A").rol(Role.ADMIN)
                 .empresa(suya).correoSinConfirmarDesde(java.time.Instant.parse("2026-10-01T10:00:00Z")).build();
         RegisterManagerRequest request =
-                new RegisterManagerRequest("Nueva SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null);
+                new RegisterManagerRequest("Nueva SL", "Ada", "Lovelace", "ada@nxtime.test", "password123", null, true);
         pendiente.setContrasena("hash-viejo");
         when(userRepository.findByEmail("ada@nxtime.test")).thenReturn(Optional.of(pendiente));
         when(companyRepository.findByNombre("Nueva SL")).thenReturn(Optional.empty());
@@ -229,7 +234,7 @@ class AuthServiceImplTest {
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service.registerManager(
-                new RegisterManagerRequest("Vieja SL", "Ada", "Lovelace", "ada@nxtime.test", "otra-contrasena", null));
+                new RegisterManagerRequest("Vieja SL", "Ada", "Lovelace", "ada@nxtime.test", "otra-contrasena", null, true));
 
         assertThat(pendiente.getContrasena())
                 .isNotEqualTo("hash-viejo")
@@ -272,7 +277,7 @@ class AuthServiceImplTest {
     void registerManager_empresaYaExiste_lanzaBusinessException() {
         RegisterManagerRequest request =
                 new RegisterManagerRequest("Empresa Repetida SL", "Ada", "Lovelace",
-                        "ada@nxtime.test", "password123", null);
+                        "ada@nxtime.test", "password123", null, true);
         when(companyRepository.findByNombre(request.nombreEmpresa()))
                 .thenReturn(Optional.of(Company.builder().id(1L).nombre(request.nombreEmpresa()).build()));
 

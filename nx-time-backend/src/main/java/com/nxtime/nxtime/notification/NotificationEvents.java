@@ -386,6 +386,16 @@ public final class NotificationEvents {
     }
 
     /**
+     * Un correo suelto a una dirección, sin aviso dentro de la aplicación
+     * (plan J): que se ha vinculado una cuenta de fuera, que una empresa está
+     * esperando aprobación, que la han aprobado, rechazado o suspendido. Sale
+     * después del commit y en otro hilo, como {@link AccessCodeRequested}, y
+     * por lo mismo lleva los datos copiados.
+     */
+    public record CorreoDirecto(String email, String plantilla, String asunto, java.util.Map<String, Object> variables) {
+    }
+
+    /**
      * Se acaba de guardar un aviso (Fase B5). Lo publica
      * {@code NoticeServiceImpl.publicar} y lo convierte en push {@link PushSender}.
      *

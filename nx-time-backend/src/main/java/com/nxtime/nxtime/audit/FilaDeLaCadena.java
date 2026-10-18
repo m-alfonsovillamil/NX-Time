@@ -30,5 +30,25 @@ public record FilaDeLaCadena(
         String hashAnterior,
         String hash,
         short versionHash,
-        Long empresaId) {
+        Long empresaId,
+        /**
+         * Es una lápida (V46, ADR 050): una fila del tramo común de una empresa
+         * ya borrada. Solo tiene su sitio y sus hashes, así que de ella se
+         * comprueba el enlace, como de las de la versión 1.
+         */
+        boolean retirada) {
+
+    /** La que sale de la tabla: es la que construye la consulta del repositorio. */
+    public FilaDeLaCadena(long id, long registroId, long usuarioId, Long modificadoPorId, AuditAction accion,
+            String valorAnterior, String valorNuevo, String motivo, Instant fechaHora, String hashAnterior,
+            String hash, short versionHash, Long empresaId) {
+        this(id, registroId, usuarioId, modificadoPorId, accion, valorAnterior, valorNuevo, motivo, fechaHora,
+                hashAnterior, hash, versionHash, empresaId, false);
+    }
+
+    /** Una lápida del tramo común, puesta en el sitio de la fila que fue. */
+    public static FilaDeLaCadena lapida(long id, String hashAnterior, String hash, long empresaId) {
+        return new FilaDeLaCadena(id, 0L, 0L, null, null, null, null, null, null, hashAnterior, hash, (short) 0,
+                empresaId, true);
+    }
 }

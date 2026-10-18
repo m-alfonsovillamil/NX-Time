@@ -2,12 +2,14 @@ package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.domain.AnalyticsGrouping;
 import com.nxtime.nxtime.domain.AnalyticsPeriod;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.dto.AbsenteeismResponse;
 import com.nxtime.nxtime.dto.AnalyticsSummaryResponse;
 import com.nxtime.nxtime.dto.PunctualityResponse;
 import com.nxtime.nxtime.report.AbsenteeismCsv;
 import com.nxtime.nxtime.security.SecurityUser;
 import com.nxtime.nxtime.service.AnalyticsService;
+import com.nxtime.nxtime.service.impl.RegistroDeAccesos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,9 +52,11 @@ public class AnalyticsController {
             + "departamento.";
 
     private final AnalyticsService analyticsService;
+    private final RegistroDeAccesos accesos;
 
-    public AnalyticsController(AnalyticsService analyticsService) {
+    public AnalyticsController(AnalyticsService analyticsService, RegistroDeAccesos accesos) {
         this.analyticsService = analyticsService;
+        this.accesos = accesos;
     }
 
     @Operation(summary = "Las cifras de un vistazo",
@@ -143,6 +147,13 @@ public class AnalyticsController {
         AbsenteeismResponse absentismo =
                 analyticsService.absentismo(usuario.getUser(), periodo, oHoy(fecha, usuario), agrupar);
         String nombre = "absentismo-" + absentismo.ventana().desde() + "-a-" + absentismo.ventana().hasta() + ".csv";
+        // Por persona, el fichero lleva el absentismo de cada una con su
+        // nombre, y sale del sistema: queda anotado (ADR 047). Por
+        // departamento son cifras de grupo.
+        if (agrupar == AnalyticsGrouping.EMPLEADO) {
+            accesos.anotar(usuario.getUser(), DatoConsultado.EXPORTACION, null,
+                    "Absentismo por persona, " + absentismo.ventana().desde() + " a " + absentismo.ventana().hasta());
+        }
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nombre + "\"")

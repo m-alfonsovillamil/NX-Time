@@ -57,5 +57,7 @@ data class PeticionRegistroSso(
     val pase: String,
     val nombreEmpresa: String,
     val nombre: String,
-    val apellidos: String
+    val apellidos: String,
+    /** La casilla de las condiciones y el contrato de encargo (ADR 046). */
+    val aceptaCondiciones: Boolean
 )

@@ -34,7 +34,7 @@ class CabeEnBcryptTest {
 
         assertThat(validador.validate(new ChangePasswordRequest("vieja-123", larga))).isNotEmpty();
         assertThat(validador.validate(new PasswordResetRequest("ana@nxtime.test", "123456", larga))).isNotEmpty();
-        assertThat(validador.validate(new RegisterManagerRequest("Empresa", "Ana", "Pruebas", "ana@nxtime.test", larga, null)))
+        assertThat(validador.validate(new RegisterManagerRequest("Empresa", "Ana", "Pruebas", "ana@nxtime.test", larga, null, true)))
                 .isNotEmpty();
     }
 

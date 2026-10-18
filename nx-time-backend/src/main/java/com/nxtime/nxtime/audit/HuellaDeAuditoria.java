@@ -57,18 +57,38 @@ public class HuellaDeAuditoria {
     public static final short VERSION_VERIFICABLE = 2;
 
     /**
-     * La clave del advisory lock con el que se serializa el encadenamiento
-     * (ver {@code TimeEntryAuditRepository#bloquearCadena}).
+     * Filas encadenadas solo con las de su empresa (V46, ADR 050). Se calculan
+     * igual que las de la versión 2, más la empresa al final: así una fila no
+     * se puede pasar de una cadena a otra sin que se note.
+     */
+    public static final short VERSION_POR_EMPRESA = 3;
+
+    /**
+     * La primera mitad del advisory lock con el que se serializa el
+     * encadenamiento de UNA empresa (la segunda es su id; ver
+     * {@code TimeEntryAuditRepository#bloquearCadenaDeEmpresa}). Desde V46 cada
+     * empresa encadena por su cuenta, y dos empresas fichando a la vez ya no se
+     * esperan la una a la otra.
      *
      * Vive aquí y no en el listener porque es parte de lo que define la
      * cadena, igual que la versión del hash: quien encadene una fila tiene que
      * pedir <b>esta</b> clave y no otra, o no se estará serializando con nadie.
-     *
-     * El valor en sí es arbitrario --solo tiene que ser estable y no chocar con
-     * otro advisory lock de la aplicación; hoy es el único que hay-- y está
-     * elegido para que se reconozca de un vistazo en {@code pg_locks}.
+     * El valor es arbitrario; solo tiene que ser estable y reconocerse en
+     * {@code pg_locks}.
      */
-    public static final long CLAVE_DEL_LOCK_DE_CADENA = 8_2019_0312L;
+    public static final int CLAVE_DEL_LOCK_DE_EMPRESA = 82_019;
+
+    /**
+     * Con qué enlaza la primera fila de la cadena de una empresa.
+     *
+     * No es null, como la primera fila del tramo común, por dos motivos: ancla
+     * la cadena (quitarle la primera fila se nota, porque la siguiente enlazaría
+     * con otra cosa) y no choca con {@code uq_auditoria_hash_anterior}, que no
+     * deja que dos filas digan ir detrás de lo mismo.
+     */
+    public static String genesis(long empresaId) {
+        return Canonico.sha256("nxtime:empresa:" + empresaId);
+    }
 
     /**
      * El hash de una fila, encadenado al de la anterior.
@@ -87,7 +107,8 @@ public class HuellaDeAuditoria {
                 fila.getValorNuevo(),
                 fila.getMotivo(),
                 fila.getFechaHora(),
-                hashAnterior);
+                hashAnterior,
+                fila.getVersionHash() >= VERSION_POR_EMPRESA ? fila.getEmpresaId() : null);
     }
 
     /**
@@ -98,12 +119,14 @@ public class HuellaDeAuditoria {
      */
     public String calcular(FilaDeLaCadena fila, String hashAnterior) {
         return calcular(fila.registroId(), fila.usuarioId(), fila.modificadoPorId(), fila.accion(),
-                fila.valorAnterior(), fila.valorNuevo(), fila.motivo(), fila.fechaHora(), hashAnterior);
+                fila.valorAnterior(), fila.valorNuevo(), fila.motivo(), fila.fechaHora(), hashAnterior,
+                fila.versionHash() >= VERSION_POR_EMPRESA ? fila.empresaId() : null);
     }
 
     private String calcular(
             long registroId, long usuarioId, Long modificadoPorId, AuditAction accion,
-            String valorAnterior, String valorNuevo, String motivo, Instant fechaHora, String hashAnterior) {
+            String valorAnterior, String valorNuevo, String motivo, Instant fechaHora, String hashAnterior,
+            Long empresaDeLaCadena) {
         String payload = String.join("|",
                 String.valueOf(registroId),
                 String.valueOf(usuarioId),
@@ -115,6 +138,9 @@ public class HuellaDeAuditoria {
                 Objects.toString(motivo, ""),
                 marcaDeTiempo(fechaHora),
                 Objects.toString(hashAnterior, ""));
+        if (empresaDeLaCadena != null) {
+            payload = payload + "|" + empresaDeLaCadena;
+        }
         return Canonico.sha256(payload);
     }
 

@@ -19,8 +19,14 @@
     </p>
 
     <p style="margin: 0;">Tipo: <span th:text="${tipo}">VACACIONES</span></p>
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
     <p th:if="${motivo != null and !motivo.isBlank()}" style="margin: 4px 0 0;">
-        Motivo: <span th:text="${motivo}">Motivo</span>
+        Ha escrito un motivo: lo verás en la aplicación.
     </p>
 
     <p style="margin-top: 20px;">Tienes la petición pendiente de revisar en la aplicación.</p>

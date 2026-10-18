@@ -40,6 +40,12 @@ export const empresa = {
     elegir: 'Elige a alguien',
     pdf: 'Descargar PDF',
     faltaPersona: 'Elige de quién es el informe.',
+    inspeccionTitulo: 'Para la Inspección o la representación legal',
+    inspeccionTexto:
+      'Un ZIP con todo el registro de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con quién las hizo y las firmas. La descarga queda registrada.',
+    desde: 'Desde',
+    hasta: 'Hasta',
+    zip: 'Descargar el ZIP',
   },
 
   ajustes: {
@@ -55,6 +61,12 @@ export const empresa = {
     peninsula: 'Península, Baleares, Ceuta y Melilla',
     canarias: 'Canarias',
     otras: 'Otras zonas',
+    contacto: 'Contacto de privacidad',
+    contactoAyuda:
+      'Un correo o un enlace (https) a vuestra política de privacidad. Es a donde se dirige la plantilla para ejercer sus derechos sobre sus datos: se lo enseñamos a cada persona la primera vez que entra.',
+    accesosTitulo: 'Accesos a datos personales',
+    accesosTexto: 'Quién ha consultado datos de otra persona en los dos últimos años: CV, perfiles, registros mensuales, el Excel, expedientes de denuncia y exportaciones.',
+    verAccesos: 'Ver los accesos',
     guardar: 'Guardar',
     guardado: 'Ajustes guardados.',
     confirmarTitulo: '¿Cambiar la zona horaria?',
@@ -65,6 +77,67 @@ export const empresa = {
       n === 1
         ? 'Zona cambiada. Se ha anulado 1 firma mensual cuyo mes ha cambiado: se le ha avisado para que vuelva a firmar.'
         : `Zona cambiada. Se han anulado ${n} firmas mensuales cuyo mes ha cambiado: se ha avisado a cada persona para que vuelva a firmar.`,
+  },
+
+  /** La baja de la empresa (condiciones, punto 9; ADR 050). */
+  baja: {
+    titulo: 'Dar de baja la empresa',
+    explicacion:
+      'Si dejáis de usar el servicio. Durante 30 días todo sigue funcionando para que os llevéis los datos, y se puede cancelar; después se borra todo, también la traza de auditoría, y no se puede deshacer.',
+    pedir: 'Pedir la baja',
+    confirmarTitulo: '¿Dar de baja la empresa?',
+    confirmarTexto:
+      'A los 30 días se borra todo lo de la empresa: personas, fichajes, ausencias, firmas, denuncias y la traza de auditoría. La empresa tiene que conservar el registro de jornada cuatro años: descárgalo antes desde Informes.',
+    escribeElNombre: (nombre: string) => `Para confirmar, escribe «${nombre}»`,
+    confirmar: 'Dar de baja',
+    pedida: 'Baja pedida. Os lo hemos dicho también por correo.',
+    enCurso: (dia: string) => `La baja está pedida: el ${dia} se borra todo.`,
+    llevatelo: 'Antes, llévate el registro de jornada, doce meses de cada vez:',
+    irAInformes: 'ir a Informes',
+    cancelar: 'Cancelar la baja',
+    cancelada: 'Baja cancelada: no se va a borrar nada.',
+  },
+
+  /** El canal de denuncias de la empresa (Ley 2/2023, art. 8; ADR 048). */
+  canal: {
+    titulo: 'Canal de denuncias',
+    explicacion:
+      'Quién gestiona las comunicaciones del canal interno y cómo se comunica algo de palabra. La ley obliga a tenerlo a las empresas de 50 personas o más.',
+    responsable: 'Responsable del Sistema Interno de Información',
+    responsableAyuda:
+      'Solo esta persona verá e instruirá las denuncias: los administradores dejan de verlas. Tiene que poder hacerlo con independencia. Sin Responsable, las gestionan los administradores.',
+    nadie: 'Sin designar',
+    desde: (dia: string) => `Designado el ${dia}.`,
+    autoridad:
+      'La empresa tiene que comunicar el nombramiento y el cese a la Autoridad Independiente de Protección del Informante (o a la de su comunidad autónoma) en 10 días hábiles.',
+    autoridadEnlace: 'Formulario de la Autoridad',
+    autoridadUrl: 'https://proteccioninformante.sede.gob.es/procedimiento/portada?idProc=155879',
+    viaVerbal: 'Vía verbal',
+    viaVerbalAyuda:
+      'Un teléfono, un horario o a quién pedir una reunión en persona. Se lo enseñamos a quien vaya a denunciar. La reunión, si la piden, tiene que celebrarse en 7 días.',
+    guardar: 'Guardar el canal',
+    guardado: 'Canal de denuncias guardado.',
+  },
+
+  accesos: {
+    titulo: 'Accesos a datos personales',
+    explicacion:
+      'Quién ha consultado datos de otra persona: el CV de una candidatura, un perfil, su registro mensual, el Excel de horas, un expediente de denuncia o una exportación. Lo de uno mismo no se anota. Se guarda dos años y nadie puede borrarlo ni cambiarlo.',
+    tabla: 'Accesos a datos personales, lo último primero',
+    columnas: { cuando: 'Cuándo', quien: 'Quién', que: 'Qué', sobre: 'De quién', detalle: 'Detalle' },
+    que: {
+      CV: 'CV',
+      PERFIL: 'Perfil',
+      INFORME_MENSUAL: 'Registro mensual',
+      INFORME_EMPRESA: 'Excel de horas',
+      DENUNCIA: 'Expediente de denuncia',
+      EXPORTACION: 'Exportación',
+    },
+    varias: 'Varias personas',
+    denuncia: 'No se anota',
+    vacioTitulo: 'Nadie ha consultado datos ajenos',
+    vacioTexto: 'Cuando alguien descargue un CV, un registro mensual o el Excel, o abra un expediente, aparecerá aquí.',
+    maximo: 'Se enseñan los 500 últimos.',
   },
 
   integridad: {
@@ -113,8 +186,8 @@ export const empresa = {
       },
       {
         icono: 'verificado',
-        titulo: 'Es lo que pide la ley',
-        texto: 'El RD-ley 8/2019 exige conservar el registro de jornada cuatro años y que sea fiable. Esta comprobación es lo que lo demuestra ante una inspección.',
+        titulo: 'Por qué importa',
+        texto: 'El RD-ley 8/2019 exige conservar el registro de jornada cuatro años y que sea fiable. Esta comprobación te ayuda a demostrar ante una inspección que nadie lo ha cambiado sin dejar rastro.',
       },
     ],
   },

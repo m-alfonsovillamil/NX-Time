@@ -52,6 +52,11 @@ public class OperadoresDePlataforma {
         log.info("Panel de plataforma: {} operador(es) configurado(s).", correos.size());
     }
 
+    /** Los correos de los operadores, para avisarles de que hay una empresa esperando (ADR 046). */
+    public Set<String> correos() {
+        return correos;
+    }
+
     public boolean es(User usuario) {
         return usuario != null
                 && usuario.getEmail() != null
@@ -62,7 +67,7 @@ public class OperadoresDePlataforma {
 
     /** Las authorities de una persona, ordenadas, para mandárselas al cliente. */
     public List<String> authoritiesDe(User usuario) {
-        List<String> delRol = RoleAuthorities.enOrden(usuario.getRol());
+        List<String> delRol = RoleAuthorities.enOrden(usuario);
         if (!es(usuario)) {
             return delRol;
         }

@@ -1,5 +1,6 @@
 /**
- * Los ajustes de la empresa: el nombre y la zona horaria (fase Z2, ADR 032).
+ * Los ajustes de la empresa: el nombre, la zona horaria (fase Z2, ADR 032) y
+ * el contacto de privacidad que ve la plantilla (ADR 047).
  *
  * Solo la ve ADMIN (`empresa:configurar`). La zona decide a qué día pertenece
  * cada fichaje de todo el histórico, así que cambiarla pide confirmación: una
@@ -12,6 +13,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
@@ -23,6 +25,8 @@ import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto } from '../../componentes/Estados';
 import { T } from '../../i18n/es';
 import { empresa } from '../../i18n/es/empresa';
+import { BajaDeEmpresa } from './BajaDeEmpresa';
+import { CanalDeDenunciasAjustes } from './CanalDeDenunciasAjustes';
 import { Kioscos } from './Kioscos';
 
 const A = empresa.ajustes;
@@ -57,11 +61,13 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
   const clienteDeConsultas = useQueryClient();
   const [nombre, setNombre] = useState(ajustes.nombre ?? '');
   const [zona, setZona] = useState(ajustes.zonaHoraria ?? PENINSULA);
+  const [contacto, setContacto] = useState(ajustes.contactoPrivacidad ?? '');
   const [falta, setFalta] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
   const guardar = useMutacion(
-    (cuerpo: { nombre: string; zonaHoraria: string }) => pedir(cliente.PUT('/api/v1/empresa/ajustes', { body: cuerpo })),
+    (cuerpo: { nombre: string; zonaHoraria: string; contactoPrivacidad: string }) =>
+      pedir(cliente.PUT('/api/v1/empresa/ajustes', { body: cuerpo })),
     {
       invalida: [CLAVE_AJUSTES],
       exito: (r) => ((r.firmasInvalidadas ?? 0) > 0 ? A.firmasAnuladas(r.firmasInvalidadas ?? 0) : A.guardado),
@@ -84,7 +90,12 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
     if (nombre.trim() === '') return setFalta(true);
     setFalta(false);
     if (cambiaLaZona) return setConfirmando(true);
-    guardar.mutate({ nombre: nombre.trim(), zonaHoraria: zona });
+    guardar.mutate(cuerpo());
+  }
+
+  function cuerpo() {
+    // Vacío lo quita: el servidor lo guarda como «sin contacto».
+    return { nombre: nombre.trim(), zonaHoraria: zona, contactoPrivacidad: contacto.trim() };
   }
 
   return (
@@ -106,6 +117,17 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
           value={zona}
           onChange={(e) => setZona(e.target.value)}
           opciones={opcionesDeZona(ajustes.zonaHoraria ?? PENINSULA)}
+        />
+        <Campo
+          id="empresa-contacto-privacidad"
+          etiqueta={A.contacto}
+          ayuda={A.contactoAyuda}
+          maxLength={255}
+          inputMode="email"
+          autoComplete="off"
+          placeholder="privacidad@tuempresa.es"
+          value={contacto}
+          onChange={(e) => setContacto(e.target.value)}
         />
         <div className="nx-acciones-fila">
           <Boton type="submit" ocupado={guardar.isPending && !confirmando}>
@@ -131,7 +153,7 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
             <Boton
               variante="peligro"
               ocupado={guardar.isPending}
-              onClick={() => guardar.mutate({ nombre: nombre.trim(), zonaHoraria: zona })}
+              onClick={() => guardar.mutate(cuerpo())}
             >
               {A.confirmar}
             </Boton>
@@ -158,8 +180,17 @@ export function AjustesEmpresa() {
       <div className="nx-composicion nx-composicion--mitades nx-composicion--arriba">
         <div className="nx-columna">
           <EstadoDeConsulta consulta={ajustes} cargando={<Esqueleto lineas={3} />}>
-            {(datos) => <Formulario key={`${datos.nombre}|${datos.zonaHoraria}`} ajustes={datos} />}
+            {(datos) => (
+              <Formulario key={`${datos.nombre}|${datos.zonaHoraria}|${datos.contactoPrivacidad ?? ''}`} ajustes={datos} />
+            )}
           </EstadoDeConsulta>
+          <CanalDeDenunciasAjustes />
+          {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}
+          <Tarjeta titulo={A.accesosTitulo} icono="candado" descripcion={A.accesosTexto}>
+            <Link className="nx-boton nx-boton--secundario nx-boton--enlace" to="/accesos-a-datos">
+              {A.verAccesos}
+            </Link>
+          </Tarjeta>
         </div>
         <Kioscos />
       </div>

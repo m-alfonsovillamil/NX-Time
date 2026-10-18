@@ -32,6 +32,9 @@ on:
       # sea solo de backend.
       - 'nx-time-backend/src/main/java/com/nxtime/nxtime/domain/NoticeType.java'
       - 'nx-time-backend/src/main/java/com/nxtime/nxtime/domain/RoleAuthorities.java'
+      # De aquí salen los datos del titular de las páginas legales y el
+      # security.txt (npm run titular, plan J).
+      - 'nx-time-backend/src/main/resources/application.yml'
       - '.github/workflows/web.yml'
   # Cualquier pull request, sin filtro de rama: mismo motivo que en ci.yml
   # (un PR encadenado sobre otra rama también tiene que pasar por aquí).
