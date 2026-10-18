@@ -87,7 +87,7 @@ export const empresa = {
     responsable: 'Responsable del Sistema Interno de Información',
     responsableAyuda:
       'Solo esta persona verá e instruirá las denuncias: los administradores dejan de verlas. Tiene que poder hacerlo con independencia. Sin Responsable, las gestionan los administradores.',
-    nadie: 'Sin designar: lo llevan los administradores',
+    nadie: 'Sin designar',
     desde: (dia: string) => `Designado el ${dia}.`,
     autoridad:
       'La empresa tiene que comunicar el nombramiento y el cese a la Autoridad Independiente de Protección del Informante (o a la de su comunidad autónoma) en 10 días hábiles.',
