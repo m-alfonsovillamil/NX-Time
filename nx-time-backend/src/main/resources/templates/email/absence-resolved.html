@@ -20,9 +20,14 @@
       desde la Fase 9), así que aquí siempre habrá algo que mostrar en
       ese caso; al aprobar es opcional.
     */-->
-    <p th:if="${comentario != null and !comentario.isBlank()}"
-       style="background: #f6f8fa; border-left: 3px solid #d0d7de; padding: 10px 12px; margin-top: 16px;">
-        <span th:text="${comentario}">Comentario del gestor</span>
+    <!--/*
+      Sin el texto que escribió la persona (plan J, J5: minimización). Un
+      motivo o un comentario pueden revelar datos de salud o de la vida
+      personal, y el correo pasa por proveedores y buzones que no controlamos.
+      Se lee dentro de la aplicación.
+    */-->
+    <p th:if="${comentario != null and !comentario.isBlank()}" style="margin-top: 16px;">
+        Te han dejado un comentario: lo tienes en la aplicación.
     </p>
 </div>
 </body>

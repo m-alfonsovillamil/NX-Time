@@ -180,7 +180,7 @@ class AltaConAprobacionIT {
         assertThat(detalle(confirmada)).contains("pendiente de aprobación");
         Company empresa = empresa(nombre);
         assertThat(empresa.getEstado()).isEqualTo(CompanyStatus.PENDIENTE);
-        assertThat(empresa.getCondicionesVersion()).isEqualTo("2026-10-17");
+        assertThat(empresa.getCondicionesVersion()).isEqualTo("2026-10-18");
         assertThat(empresa.getCondicionesAceptadasEn()).isNotNull();
         assertThat(empresa.getCondicionesAceptadasPor()).isEqualTo(userRepository.findByEmail(correo).orElseThrow().getId());
         // El código se ha canjeado aunque la respuesta sea un error: el correo está confirmado.
@@ -327,7 +327,7 @@ class AltaConAprobacionIT {
 
         ResponseEntity<String> aceptadas = post("/api/v1/empresa/condiciones/aceptar", suToken, "");
         assertThat(aceptadas.getStatusCode().value()).isEqualTo(200);
-        assertThat(json.readTree(aceptadas.getBody()).get("versionAceptada").asText()).isEqualTo("2026-10-17");
+        assertThat(json.readTree(aceptadas.getBody()).get("versionAceptada").asText()).isEqualTo("2026-10-18");
         assertThat(json.readTree(aceptadas.getBody()).get("aceptadaPor").asText()).isEqualTo("Ana Alta");
 
         assertThat(json.readTree(entrar(correo).getBody()).get("condicionesPorAceptar").asBoolean()).isFalse();

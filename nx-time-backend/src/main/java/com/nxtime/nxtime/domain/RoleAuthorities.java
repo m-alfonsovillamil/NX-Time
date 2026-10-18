@@ -247,7 +247,44 @@ public final class RoleAuthorities {
      * de un aviso). Estaba escrito igual, como método privado, en tres servicios.
      */
     public static boolean tiene(User usuario, String authority) {
-        return forRole(usuario.getRol()).contains(authority);
+        return de(usuario).contains(authority);
+    }
+
+    /**
+     * Lo que puede hacer una persona: lo de su rol, con una excepción que no
+     * sale del rol (ADR 048).
+     *
+     * <b>El canal de denuncias lo instruye el Responsable del Sistema</b> que
+     * designe la empresa (Ley 2/2023, art. 8). Si lo hay, {@code
+     * denuncia:instruir} es suyo, tenga el rol que tenga, y deja de ser de los
+     * ADMIN. Si no, sigue en los ADMIN, como desde la fase G (ADR 012).
+     *
+     * Es lo que usan el principal de cada petición, las respuestas de sesión y
+     * el perfil, así que lo que autoriza el servidor y lo que enseña el
+     * cliente no pueden decir cosas distintas.
+     */
+    public static Set<String> de(User usuario) {
+        Set<String> delRol = forRole(usuario.getRol());
+        Long responsable = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getResponsableCanalId();
+        if (responsable == null) {
+            return delRol;
+        }
+        boolean esResponsable = responsable == usuario.getId();
+        if (esResponsable == delRol.contains("denuncia:instruir")) {
+            return delRol;
+        }
+        Set<String> ajustado = new LinkedHashSet<>(delRol);
+        if (esResponsable) {
+            ajustado.add("denuncia:instruir");
+        } else {
+            ajustado.remove("denuncia:instruir");
+        }
+        return Set.copyOf(ajustado);
+    }
+
+    /** {@link #de}, ordenadas, para mandárselas al cliente (ver {@link #enOrden}). */
+    public static List<String> enOrden(User usuario) {
+        return de(usuario).stream().sorted().toList();
     }
 
     /**

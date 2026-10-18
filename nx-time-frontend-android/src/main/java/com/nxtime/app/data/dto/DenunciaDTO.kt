@@ -12,7 +12,19 @@ data class CrearDenunciaRequest(
     /** "ACOSO", "DISCRIMINACION", "FRAUDE"... Ver [CategoriaDenuncia]. */
     val categoria: String,
     val descripcion: String,
-    val anonima: Boolean
+    val anonima: Boolean,
+    /** Un domicilio, correo o lugar seguro para las notificaciones (Ley 2/2023, art. 7.2). Opcional. */
+    val contactoNotificaciones: String? = null
+)
+
+/**
+ * Cómo funciona el canal de la empresa (ADR 048): quién lo gestiona y cómo
+ * comunicar algo de palabra o pedir una reunión. Null en los dos si la
+ * empresa no lo ha dicho.
+ */
+data class CanalDenunciasDTO(
+    val responsable: String? = null,
+    val viaVerbal: String? = null
 )
 
 /**
@@ -69,7 +81,13 @@ data class DenunciaDTO(
     val conclusion: String? = null,
     val diasHastaAcuse: Long? = null,
     val diasHastaRespuesta: Long? = null,
-    val mensajes: List<MensajeDenunciaDTO> = emptyList()
+    val mensajes: List<MensajeDenunciaDTO> = emptyList(),
+    /* Desde la fase J6 (ADR 048). */
+    val contactoNotificaciones: String? = null,
+    val investigacionIniciadaEn: String? = null,
+    val respuestaProrrogadaEn: String? = null,
+    val contenidoSuprimidoEn: String? = null,
+    val diasHastaSupresion: Long? = null
 )
 
 /**

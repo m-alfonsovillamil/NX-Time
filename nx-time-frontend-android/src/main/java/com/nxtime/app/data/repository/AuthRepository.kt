@@ -118,8 +118,11 @@ interface AuthRepository {
     suspend fun presentarDenuncia(
         categoria: String,
         descripcion: String,
-        anonima: Boolean
+        anonima: Boolean,
+        contactoNotificaciones: String? = null
     ): Response<DenunciaCreadaDTO>
+
+    suspend fun getCanalDenuncias(): Response<CanalDenunciasDTO>
     suspend fun getDenunciaPorCodigo(codigo: String): Response<DenunciaDTO>
     suspend fun responderDenunciaPorCodigo(codigo: String, texto: String): Response<DenunciaDTO>
     suspend fun getMisDenuncias(): Response<List<ResumenDenunciaDTO>>
@@ -174,6 +177,8 @@ interface AuthRepository {
     suspend fun cambiarEstadoEmpleado(empleadoId: Long, activo: Boolean): Response<Unit>
 
     suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody>
+
+    suspend fun descargarMiPdfMensual(anio: Int, mes: Int): Response<ResponseBody>
 
     suspend fun descargarPdfMensual(
         empleadoId: Long,
@@ -309,6 +314,10 @@ interface AuthRepository {
     suspend fun getContadorAvisos(): Response<ContadorAvisosDTO>
     suspend fun marcarAvisoLeido(avisoId: Long): Response<Unit>
     suspend fun marcarTodosLosAvisosLeidos(): Response<Unit>
+
+    /* El aviso de privacidad de la primera entrada (ADR 047) */
+    suspend fun getAvisoDePrivacidad(): Response<AvisoDePrivacidadDTO>
+    suspend fun marcarAvisoDePrivacidadVisto(): Response<Unit>
 
     /* Fichar en un kiosco (ADR 033) */
     suspend fun getEstadoKiosco(): Response<EstadoKioscoDTO>

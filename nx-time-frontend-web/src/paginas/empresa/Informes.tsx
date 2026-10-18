@@ -29,6 +29,45 @@ export function mesAnterior(hoy: string = hoyEnEmpresa()): string {
   return sumarDias(primeroDeMes(hoy), -1).slice(0, 7);
 }
 
+/** Todo el registro de un periodo, para la Inspección o la representación legal (plan J, J7). */
+function ParaLaInspeccion() {
+  const [desde, setDesde] = useState(mesAnterior());
+  const [hasta, setHasta] = useState(mesAnterior());
+  const [bajando, setBajando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function bajar() {
+    setError(null);
+    setBajando(true);
+    try {
+      await descargar(
+        cliente.GET('/api/v1/informes/inspeccion.zip', { params: { query: { desde, hasta } }, parseAs: 'blob' }),
+        `registro-de-jornada-${desde}-a-${hasta}.zip`,
+      );
+    } catch (fallo) {
+      setError(fallo instanceof ErrorDeApi ? fallo.message : String(fallo));
+    } finally {
+      setBajando(false);
+    }
+  }
+
+  const max = hoyEnEmpresa().slice(0, 7);
+  return (
+    <Tarjeta className="nx-tarjeta--accion" icono="documento" titulo={I.inspeccionTitulo} descripcion={I.inspeccionTexto}>
+      <div className="nx-acciones-fila">
+        <Campo id="inspeccion-desde" etiqueta={I.desde} type="month" max={max} value={desde} onChange={(e) => e.target.value !== '' && setDesde(e.target.value)} />
+        <Campo id="inspeccion-hasta" etiqueta={I.hasta} type="month" max={max} value={hasta} onChange={(e) => e.target.value !== '' && setHasta(e.target.value)} />
+      </div>
+      {error !== null && <Aviso>{error}</Aviso>}
+      <div className="nx-tarjeta__pie">
+        <Boton icono="descargar" variante="secundario" ocupado={bajando} onClick={() => void bajar()}>
+          {I.zip}
+        </Boton>
+      </div>
+    </Tarjeta>
+  );
+}
+
 export function Informes() {
   const { consulta: personas } = usePlantilla();
   const [mes, setMes] = useState(mesAnterior());
@@ -108,6 +147,8 @@ export function Informes() {
           </div>
         </Tarjeta>
       </div>
+
+      <ParaLaInspeccion />
     </div>
   );
 }

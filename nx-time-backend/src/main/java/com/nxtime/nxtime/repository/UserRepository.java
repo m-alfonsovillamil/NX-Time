@@ -113,4 +113,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "WHERE id = :id AND (aviso_cuenta_existente_en IS NULL OR aviso_cuenta_existente_en < :desde)",
             nativeQuery = true)
     int marcarAvisoDeCuentaExistente(@Param("id") long id, @Param("ahora") Instant ahora, @Param("desde") Instant desde);
+
+    /**
+     * Cuándo vio el aviso de privacidad de la primera entrada (V44, ADR 047),
+     * o null si aún no. Fuera de {@link User} por lo mismo que
+     * {@code aviso_cuenta_existente_en}: un {@code save} con una copia vieja
+     * lo devolvería a null y el aviso saldría otra vez.
+     */
+    @Query(value = "SELECT aviso_privacidad_visto_en FROM usuarios WHERE id = :id", nativeQuery = true)
+    Optional<Instant> avisoDePrivacidadVistoEn(@Param("id") long id);
+
+    /** Solo la primera vez: volver a marcarlo no mueve la fecha. */
+    @Modifying
+    @Query(value = "UPDATE usuarios SET aviso_privacidad_visto_en = :ahora "
+            + "WHERE id = :id AND aviso_privacidad_visto_en IS NULL", nativeQuery = true)
+    int marcarAvisoDePrivacidadVisto(@Param("id") long id, @Param("ahora") Instant ahora);
 }

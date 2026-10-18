@@ -67,7 +67,7 @@ public class OperadoresDePlataforma {
 
     /** Las authorities de una persona, ordenadas, para mandárselas al cliente. */
     public List<String> authoritiesDe(User usuario) {
-        List<String> delRol = RoleAuthorities.enOrden(usuario.getRol());
+        List<String> delRol = RoleAuthorities.enOrden(usuario);
         if (!es(usuario)) {
             return delRol;
         }

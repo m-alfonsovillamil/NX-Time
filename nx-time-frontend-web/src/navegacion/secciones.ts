@@ -149,6 +149,9 @@ const Integridad = perezosa(() => import('../paginas/empresa/Integridad').then((
 const AjustesEmpresa = perezosa(() =>
   import('../paginas/empresa/AjustesEmpresa').then((m) => ({ default: m.AjustesEmpresa })),
 );
+const AccesosADatos = perezosa(() =>
+  import('../paginas/empresa/AccesosADatos').then((m) => ({ default: m.AccesosADatos })),
+);
 const TarjetasKiosco = perezosa(() =>
   import('../paginas/plantilla/TarjetasKiosco').then((m) => ({ default: m.TarjetasKiosco })),
 );
@@ -201,6 +204,8 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: 'analitica', etiqueta: S.analitica, icono: 'tendencia', grupo: 'gestion', subgrupo: 'control', requiere: 'analitica:leer', enMenu: true, pagina: Analitica },
   { ruta: 'visado-firmas', etiqueta: S.visadoFirmas, icono: 'visado', grupo: 'gestion', subgrupo: 'control', requiere: 'firma:visar', enMenu: true, pagina: VisadoFirmas },
   { ruta: 'ajustes-empresa', etiqueta: S.ajustesEmpresa, icono: 'empresa', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: true, pagina: AjustesEmpresa },
+  // Desde los ajustes de la empresa, como las tarjetas del kiosco desde la plantilla.
+  { ruta: 'accesos-a-datos', etiqueta: S.accesosADatos, icono: 'candado', grupo: 'gestion', subgrupo: 'administracion', requiere: 'empresa:configurar', enMenu: false, pagina: AccesosADatos },
   { ruta: 'tarjetas-kiosco', etiqueta: S.tarjetasKiosco, icono: 'qr', grupo: 'gestion', subgrupo: 'organizacion', requiere: 'empresa:configurar', enMenu: false, pagina: TarjetasKiosco },
 
   /* ---- Plataforma ---- */

@@ -12,6 +12,7 @@ import com.nxtime.nxtime.domain.Attachment;
 import com.nxtime.nxtime.domain.AttachmentData;
 import com.nxtime.nxtime.domain.AttachmentType;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.AttachmentResponse;
@@ -68,6 +69,9 @@ class AttachmentServiceImplTest {
 
     private AttachmentServiceImpl service;
 
+    @Mock
+    private RegistroDeAccesos accesos;
+
     private Company empresa;
     private Company otraEmpresa;
     private User empleado;
@@ -76,7 +80,7 @@ class AttachmentServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new AttachmentServiceImpl(
-                attachmentRepository, attachmentDataRepository, jobApplicationRepository);
+                attachmentRepository, attachmentDataRepository, jobApplicationRepository, accesos);
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         empleado = User.builder().id(10L).email("ana@nxtime.test").nombre("Ana")
@@ -399,6 +403,8 @@ class AttachmentServiceImplTest {
 
         assertThat(contenido.nombreOriginal()).isEqualTo("cv.pdf");
         assertThat(contenido.tipo()).isEqualTo(AttachmentType.CV);
+        // Y queda anotado que lo leyó (ADR 047).
+        verify(accesos).anotar(gestora, DatoConsultado.CV, empleado.getId(), "Adjunto 5");
     }
 
     @Test

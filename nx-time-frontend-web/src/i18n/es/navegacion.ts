@@ -2,6 +2,21 @@
 export const navegacion = {
   saltarAlContenido: 'Saltar al contenido',
 
+  /**
+   * A cada persona, una vez: quién es quién con sus datos (ADR 047). Lo de
+   * informar es de la empresa; esto solo dice a quién dirigirse.
+   */
+  privacidad: {
+    titulo: 'Tus datos',
+    texto: (empresa: string) =>
+      `${empresa} es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. NX Time es la herramienta que usa, y los trata solo por encargo suyo.`,
+    contactoCorreo: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, escribe a',
+    contactoEnlace: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, sigue su política de privacidad:',
+    sinContacto: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, dirígete a tu empresa.',
+    masInformacion: 'Cómo trata NX Time los datos',
+    entendido: 'Entendido',
+  },
+
   /** Al ADMIN de una empresa que no tiene aceptadas las condiciones en vigor (ADR 046). */
   condiciones: {
     texto:
@@ -73,6 +88,7 @@ export const navegacion = {
     analitica: 'Analítica',
     visadoFirmas: 'Visado de firmas',
     ajustesEmpresa: 'Ajustes de la empresa',
+    accesosADatos: 'Accesos a datos',
     tarjetasKiosco: 'Tarjetas del kiosco',
     plataforma: 'Empresas',
   },

@@ -62,7 +62,7 @@ test('ADMIN cambia la zona horaria de la empresa y la deja como estaba', async (
   for (const [nueva, antes] of [['Atlantic/Canary', 'Europe/Madrid'], ['Europe/Madrid', 'Atlantic/Canary']] as const) {
     await expect(zona).toHaveValue(antes);
     await zona.selectOption(nueva);
-    await page.getByRole('button', { name: 'Guardar' }).click();
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click();
     const dialogo = page.getByRole('dialog', { name: '¿Cambiar la zona horaria?' });
     await expect(dialogo).toBeVisible();
     await dialogo.getByRole('button', { name: 'Cambiar la zona' }).click();

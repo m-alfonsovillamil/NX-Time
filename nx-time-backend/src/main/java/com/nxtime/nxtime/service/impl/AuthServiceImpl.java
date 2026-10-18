@@ -665,6 +665,10 @@ public class AuthServiceImpl implements AuthService {
             // Sus sesiones también: renovar ya lo impide (refreshAccessToken),
             // pero un refresh vivo de alguien de baja no tiene por qué existir.
             refreshTokenRepository.revocarTodasLasDe(employee, Instant.now());
+            if (companyRepository.quitarDelCanal(employee.getId()) > 0) {
+                log.warn("{} era Responsable del canal de denuncias de la empresa {}: vuelven a instruir los ADMIN.",
+                        employee.getId(), employee.getEmpresa().getId());
+            }
         }
         log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getId(), actingManager.getId());
     }

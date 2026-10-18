@@ -49,7 +49,7 @@ class DataDeletionControllerTest {
 
     private DeletionResponse solicitud(String estado) {
         return new DeletionResponse(3L, 10L, "Ana Pruebas", "ana@test", estado, null, null,
-                Instant.parse("2026-09-17T08:00:00Z"), null, null, null, null, List.of());
+                Instant.parse("2026-09-17T08:00:00Z"), null, null, null, null, List.of(), null);
     }
 
     @Test

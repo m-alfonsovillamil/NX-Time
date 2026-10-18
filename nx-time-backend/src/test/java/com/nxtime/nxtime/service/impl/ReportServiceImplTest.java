@@ -59,6 +59,8 @@ class ReportServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private MonthlySignatureRepository signatureRepository;
+    @Mock
+    private RegistroDeAccesos accesos;
 
     private ReportServiceImpl service;
 
@@ -67,7 +69,7 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository);
+        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository, accesos);
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         solicitante = User.builder().id(10L).email("rrhh@nxtime.test").nombre("RRHH")
                 .rol(Role.RRHH).empresa(empresa).activo(true).build();

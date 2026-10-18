@@ -1,7 +1,13 @@
 /**
- * El canal de denuncias visto por quien instruye (Ley 2/2023, solo ADMIN, que
- * es el Responsable del Sistema Interno de Información). Es la
- * `CanalDenunciasScreen` de la app.
+ * El canal de denuncias visto por quien instruye (Ley 2/2023): el Responsable
+ * del Sistema Interno de Información que designe la empresa o, sin él, los
+ * ADMIN (ADR 048). Es la `CanalDenunciasScreen` de la app.
+ *
+ * Desde la fase J6: el acuse se da al presentarla; sin investigación, el
+ * contenido se suprime a los tres meses (y aquí se avisa); la respuesta se
+ * puede ampliar a seis meses una vez; quien instruye puede suprimir un texto
+ * que no debe estar; y se descargan el libro-registro y quién ha abierto cada
+ * expediente.
  *
  * La bandeja trae primero las abiertas y, dentro, las más antiguas: son las
  * que están más cerca de que venza el plazo (7 días para el acuse, 3 meses
@@ -26,15 +32,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 
 import { cliente } from '../../api/cliente';
-import { pedir, useMutacion } from '../../api/consultas';
+import { ErrorDeApi, pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
-import { AreaDeTexto, Aviso, Boton, Insignia, Tarjeta } from '../../componentes/Basicos';
+import { AreaDeTexto, Aviso, Boton, Insignia, Selector, Tarjeta } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
+import { Tabla, type Columna } from '../../componentes/Tabla';
 import { denuncias } from '../../i18n/es/denuncias';
 import { useEsAncho } from '../../util/ancho';
+import { descargar } from '../../util/descargar';
 import { fechaHoraCorta } from '../../util/fechas';
 import { CuerpoDeExpediente, Plazo, TONO_DENUNCIA, cerrado } from './Denuncias';
 
@@ -43,6 +51,10 @@ const C = denuncias.canal;
 
 type Expediente = components['schemas']['ComplaintResponse'];
 type Estado = components['schemas']['UpdateComplaintStatusRequest']['estado'];
+type Motivo = components['schemas']['ComplaintRedactionRequest']['motivo'];
+type Acceso = components['schemas']['DataAccessResponse'];
+
+const MOTIVOS = Object.entries(C.motivos).map(([valor, texto]) => ({ valor, texto }));
 
 const CLAVE = ['canal-denuncias'] as const;
 
@@ -82,8 +94,54 @@ function Responder({ id }: { id: number }) {
   );
 }
 
+/** Suprimir el relato o un mensaje: no se deshace, así que se elige el motivo y se confirma. */
+function DialogoDeSupresion({ id, mensajeId, alCerrar }: { id: number; mensajeId: number | null | undefined; alCerrar: () => void }) {
+  const [motivo, setMotivo] = useState<Motivo>('CATEGORIAS_ESPECIALES');
+  const suprimir = useMutacion(
+    () =>
+      pedir(
+        cliente.POST('/api/v1/denuncias/{id}/supresiones', {
+          params: { path: { id } },
+          body: { motivo, ...(mensajeId !== null && mensajeId !== undefined ? { mensajeId } : {}) },
+        }),
+      ),
+    { invalida: [CLAVE], exito: C.suprimido, alTerminar: alCerrar },
+  );
+  return (
+    <Dialogo
+      abierto={mensajeId !== undefined}
+      titulo={C.suprimirTitulo}
+      alCerrar={() => {
+        suprimir.reset();
+        alCerrar();
+      }}
+      acciones={
+        <>
+          <Boton variante="texto" onClick={alCerrar}>
+            {C.cerrarCancelar}
+          </Boton>
+          <Boton variante="peligro" ocupado={suprimir.isPending} onClick={() => suprimir.mutate()}>
+            {C.suprimir}
+          </Boton>
+        </>
+      }
+    >
+      <p>{C.suprimirAyuda}</p>
+      <Selector id="canal-motivo-supresion" etiqueta={C.motivo} value={motivo} onChange={(e) => setMotivo(e.target.value as Motivo)} opciones={MOTIVOS} />
+      {suprimir.error !== null && <Aviso>{suprimir.error.message}</Aviso>}
+    </Dialogo>
+  );
+}
+
 function Expediente({ id }: { id: number }) {
   const [cerrando, setCerrando] = useState<'RESUELTA' | 'ARCHIVADA' | null>(null);
+  const [prorrogando, setProrrogando] = useState(false);
+  // undefined: no se suprime nada; null: el relato; un número: ese mensaje.
+  const [suprimiendo, setSuprimiendo] = useState<number | null | undefined>(undefined);
+  const prorrogar = useMutacion(
+    (motivo: string) => pedir(cliente.POST('/api/v1/denuncias/{id}/prorroga', { params: { path: { id } }, body: { motivo } })),
+    { invalida: [CLAVE], exito: C.prorrogada, alTerminar: () => setProrrogando(false) },
+  );
   const expediente = useQuery({
     queryKey: [...CLAVE, id],
     queryFn: () => pedir(cliente.GET('/api/v1/denuncias/{id}', { params: { path: { id } } })),
@@ -110,11 +168,15 @@ function Expediente({ id }: { id: number }) {
           <CuerpoDeExpediente
             e={e}
             subtitulo={[e.anonima === true ? C.esAnonima : C.laPuso(e.denunciante ?? ''), e.creadoEn ? fechaHoraCorta(e.creadoEn) : ''].filter(Boolean).join(' · ')}
+            alSuprimir={setSuprimiendo}
           >
             {cerrado(e) ? (
               <p className="nx-sutil">{D.cerrado}</p>
             ) : (
               <>
+                {e.diasHastaSupresion !== undefined && e.diasHastaSupresion !== null && (
+                  <Aviso>{C.supresion(e.diasHastaSupresion)}</Aviso>
+                )}
                 <Responder id={id} />
                 <div className="nx-acciones-fila">
                   {e.estado === 'RECIBIDA' && (
@@ -128,6 +190,11 @@ function Expediente({ id }: { id: number }) {
                   <Boton variante="texto" onClick={() => setCerrando('ARCHIVADA')}>
                     {C.archivar}
                   </Boton>
+                  {!e.respuestaProrrogadaEn && (
+                    <Boton variante="texto" onClick={() => setProrrogando(true)}>
+                      {C.prorrogar}
+                    </Boton>
+                  )}
                 </div>
                 {cambiar.error !== null && cerrando === null && <Aviso>{cambiar.error.message}</Aviso>}
               </>
@@ -150,9 +217,81 @@ function Expediente({ id }: { id: number }) {
               setCerrando(null);
             }}
           />
+
+          <DialogoDeTexto
+            abierto={prorrogando}
+            titulo={C.prorrogaTitulo}
+            ayuda={C.prorrogaAyuda}
+            etiqueta={C.prorrogaEtiqueta}
+            vacio={C.prorrogaVacia}
+            boton={C.prorrogar}
+            maxLength={1000}
+            ocupado={prorrogar.isPending}
+            error={prorrogar.error?.message ?? null}
+            alEnviar={(motivo) => prorrogar.mutate(motivo)}
+            alCerrar={() => {
+              prorrogar.reset();
+              setProrrogando(false);
+            }}
+          />
+
+          <DialogoDeSupresion id={id} mensajeId={suprimiendo} alCerrar={() => setSuprimiendo(undefined)} />
         </>
       )}
     </EstadoDeConsulta>
+  );
+}
+
+const COLUMNAS_ACCESOS: readonly Columna<Acceso>[] = [
+  { clave: 'cuando', cabecera: C.columnasAccesos.cuando, celda: (a) => fechaHoraCorta(a.en) },
+  { clave: 'quien', cabecera: C.columnasAccesos.quien, celda: (a) => a.quien },
+  { clave: 'detalle', cabecera: C.columnasAccesos.expediente, celda: (a) => a.detalle },
+];
+
+/** Quién ha abierto cada expediente: reservado a quien instruye (Recomendación 1/2026 de la AIPI). */
+function AccesosALosExpedientes() {
+  const accesos = useQuery({ queryKey: [...CLAVE, 'accesos'], queryFn: () => pedir(cliente.GET('/api/v1/denuncias/accesos', {})) });
+  return (
+    <Tarjeta titulo={C.accesosTitulo} icono="candado">
+      <EstadoDeConsulta consulta={accesos} cargando={<Esqueleto forma="tabla" lineas={3} />}>
+        {(lista) =>
+          lista.length === 0 ? (
+            <p className="nx-sutil">{C.accesosVacio}</p>
+          ) : (
+            <Tabla
+              titulo={C.accesosTitulo}
+              columnas={COLUMNAS_ACCESOS}
+              filas={lista}
+              claveDeFila={(a) => `${a.en}|${a.quienId}|${a.detalle ?? ''}`}
+            />
+          )
+        }
+      </EstadoDeConsulta>
+    </Tarjeta>
+  );
+}
+
+function LibroRegistro() {
+  const [bajando, setBajando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function bajar() {
+    setError(null);
+    setBajando(true);
+    try {
+      await descargar(cliente.GET('/api/v1/denuncias/libro-registro.csv', { parseAs: 'blob' }), 'libro-registro.csv');
+    } catch (fallo) {
+      setError(fallo instanceof ErrorDeApi ? fallo.message : String(fallo));
+    } finally {
+      setBajando(false);
+    }
+  }
+  return (
+    <>
+      <Boton variante="secundario" icono="descargar" ocupado={bajando} title={C.libroAyuda} onClick={() => void bajar()}>
+        {C.libro}
+      </Boton>
+      {error !== null && <Aviso>{error}</Aviso>}
+    </>
   );
 }
 
@@ -164,7 +303,7 @@ export function CanalDenuncias() {
 
   return (
     <div className="nx-pagina">
-      <CabeceraDePagina titulo={C.titulo} descripcion={C.explicacion} />
+      <CabeceraDePagina titulo={C.titulo} descripcion={C.explicacion} acciones={<LibroRegistro />} />
 
       <div className={alLado ? 'nx-composicion nx-composicion--lista-detalle' : 'nx-composicion'}>
       <section className="nx-tarjeta">
@@ -223,6 +362,8 @@ export function CanalDenuncias() {
           {abierto !== null && <Expediente id={abierto.id} />}
         </Dialogo>
       )}
+
+      <AccesosALosExpedientes />
     </div>
   );
 }

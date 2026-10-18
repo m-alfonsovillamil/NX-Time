@@ -13,7 +13,7 @@
 
 import { expect, test } from '@playwright/test';
 
-import { entrar, irASeccion, paginaLista } from './ayudas';
+import { entrar, entrarYCerrarElAviso, irASeccion, paginaLista } from './ayudas';
 
 const OPERADORA = 'lucia.moreno@techcorp.demo';
 
@@ -55,7 +55,9 @@ test('la operadora ve las empresas, busca una, abre su detalle y comprueba la tr
 });
 
 test('un ADMIN no ve el apartado, y la ruta escrita a mano le dice que no es para su cuenta', async ({ page }) => {
-  await entrar(page, 'raul.ortega@techcorp.demo');
+  // El aviso de privacidad dice el nombre de SU empresa, que es lo que se le
+  // tiene que decir; lo que aquí se comprueba es que la plataforma no sale.
+  await entrarYCerrarElAviso(page, 'raul.ortega@techcorp.demo');
   const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
   await expect(menu.getByRole('heading', { name: 'Gestión' })).toBeVisible();
   await expect(menu.getByRole('heading', { name: 'Plataforma' })).toHaveCount(0);

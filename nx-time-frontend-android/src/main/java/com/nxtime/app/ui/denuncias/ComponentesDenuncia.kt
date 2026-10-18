@@ -16,10 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.DenunciaDTO
 import com.nxtime.app.data.dto.MensajeDenunciaDTO
 import com.nxtime.app.data.dto.ResumenDenunciaDTO
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
@@ -211,3 +213,48 @@ fun MensajeDeDenuncia(mensaje: MensajeDenunciaDTO, modifier: Modifier = Modifier
         }
     }
 }
+
+/**
+ * Lo que la fase J6 añade al expediente (ADR 048): si su contenido se
+ * suprimió, si el plazo se amplió, el contacto que dio quien denunció y, para
+ * quien instruye, cuánto falta para que se suprima si nadie la investiga.
+ */
+@Composable
+fun HitosDelExpediente(expediente: DenunciaDTO, paraQuienInstruye: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        if (expediente.contenidoSuprimidoEn != null) {
+            Text(
+                text = stringResource(R.string.denuncia_suprimida),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        if (expediente.respuestaProrrogadaEn != null) {
+            Text(
+                text = stringResource(R.string.denuncia_plazo_ampliado),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        expediente.contactoNotificaciones?.let { contacto ->
+            Text(
+                text = stringResource(R.string.denuncia_contacto_dado, contacto),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        val supresion = expediente.diasHastaSupresion
+        if (paraQuienInstruye && supresion != null && expediente.contenidoSuprimidoEn == null) {
+            Text(
+                text = if (supresion <= 0) {
+                    stringResource(R.string.denuncia_supresion_hoy)
+                } else {
+                    pluralStringResource(R.plurals.denuncia_supresion_en, supresion.toInt(), supresion.toInt())
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+

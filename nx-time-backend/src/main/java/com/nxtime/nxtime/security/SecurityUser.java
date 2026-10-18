@@ -46,7 +46,7 @@ public class SecurityUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Stream.concat(RoleAuthorities.forRole(user.getRol()).stream(), extra.stream())
+        return Stream.concat(RoleAuthorities.de(user).stream(), extra.stream())
                 .map(SimpleGrantedAuthority::new)
                 .toList();
     }

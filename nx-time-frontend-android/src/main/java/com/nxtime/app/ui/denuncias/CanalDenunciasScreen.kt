@@ -158,6 +158,7 @@ private fun DialogoInstruccion(
                     diasHastaAcuse = expediente.diasHastaAcuse,
                     diasHastaRespuesta = expediente.diasHastaRespuesta
                 )
+                HitosDelExpediente(expediente = expediente, paraQuienInstruye = true)
 
                 Spacer(Modifier.height(8.dp))
                 Text(text = expediente.descripcion, style = MaterialTheme.typography.bodyMedium)

@@ -3,9 +3,11 @@ package com.nxtime.nxtime.scheduled;
 import com.nxtime.nxtime.domain.ScheduledTask;
 import com.nxtime.nxtime.service.DataDeletionService;
 import com.nxtime.nxtime.service.TaskMonitorService;
+import com.nxtime.nxtime.service.impl.ConservacionDeDatos;
 import com.nxtime.nxtime.service.impl.UnconfirmedRegistrationCleaner;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.time.ZoneId;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -23,6 +25,10 @@ import org.springframework.stereotype.Component;
  * en dos días ({@link UnconfirmedRegistrationCleaner}). Va aquí y no en una
  * tarea propia a propósito: cada tarea nueva es otra hora a la que se despierta
  * la base, y esta ya es la limpieza de la noche.
+ *
+ * <p>Y por lo mismo, desde el plan J, los plazos de conservación de todo lo
+ * demás ({@link ConservacionDeDatos}): sesiones, códigos, avisos, candidaturas,
+ * y quien lleva cuatro años de baja.
  */
 @Component
 public class DataDeletionScheduler {
@@ -32,12 +38,14 @@ public class DataDeletionScheduler {
     private final DataDeletionService dataDeletionService;
     private final TaskMonitorService taskMonitor;
     private final UnconfirmedRegistrationCleaner registrosSinConfirmar;
+    private final ConservacionDeDatos conservacion;
 
     public DataDeletionScheduler(DataDeletionService dataDeletionService, TaskMonitorService taskMonitor,
-            UnconfirmedRegistrationCleaner registrosSinConfirmar) {
+            UnconfirmedRegistrationCleaner registrosSinConfirmar, ConservacionDeDatos conservacion) {
         this.dataDeletionService = dataDeletionService;
         this.taskMonitor = taskMonitor;
         this.registrosSinConfirmar = registrosSinConfirmar;
+        this.conservacion = conservacion;
     }
 
     @Scheduled(cron = ScheduledTask.CRON_ANONIMIZACION, zone = ScheduledTask.ZONA)
@@ -45,12 +53,19 @@ public class DataDeletionScheduler {
         taskMonitor.ejecutar(ScheduledTask.ANONIMIZACION, () -> {
             int anonimizadas = dataDeletionService.anonimizarVencidas(LocalDate.now(MADRID));
             int sinConfirmar = registrosSinConfirmar.borrarCaducados(Instant.now());
+            Map<String, Integer> plazos = conservacion.aplicar(Instant.now());
             String resumen = anonimizadas == 1
                     ? "1 persona anonimizada."
                     : anonimizadas + " personas anonimizadas.";
-            return sinConfirmar == 0
-                    ? resumen
-                    : resumen + " Registros de empresa sin confirmar borrados: " + sinConfirmar + ".";
+            if (sinConfirmar > 0) {
+                resumen += " Registros de empresa sin confirmar borrados: " + sinConfirmar + ".";
+            }
+            // Solo lo que ha movido algo; -1 es un paso que ha fallado (se reintenta mañana).
+            String conservado = plazos.entrySet().stream()
+                    .filter(paso -> paso.getValue() != 0)
+                    .map(paso -> paso.getKey() + "=" + paso.getValue())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            return conservado.isEmpty() ? resumen : resumen + " Conservación: " + conservado + ".";
         });
     }
 }

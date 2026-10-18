@@ -10,7 +10,10 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.service.CompanySettingsService;
 import com.nxtime.nxtime.service.MonthlySignatureService;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.ZoneId;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -43,7 +46,8 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
     @Override
     public CompanySettingsResponse leer(User actor) {
         Company empresa = suEmpresa(actor);
-        return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(), 0);
+        return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
+                empresa.getContactoPrivacidad(), 0);
     }
 
     /**
@@ -72,6 +76,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
 
         empresa.setNombre(nombre);
         empresa.setZonaHoraria(zona);
+        empresa.setContactoPrivacidad(contactoValido(request.contactoPrivacidad()));
         companyRepository.saveAndFlush(empresa);
 
         int invalidadas = 0;
@@ -83,12 +88,42 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
             log.info("{} cambió la zona de la empresa {} a {}: {} firmas invalidadas.",
                     actor.getId(), empresa.getId(), zona, invalidadas);
         }
-        return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(), invalidadas);
+        return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
+                empresa.getContactoPrivacidad(), invalidadas);
     }
 
     private Company suEmpresa(User actor) {
         return companyRepository.findById(actor.getEmpresa().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada."));
+    }
+
+    private static final Pattern CORREO = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+
+    /**
+     * Un correo o un enlace https, o nada (V44, ADR 047). Es lo que se le
+     * enseña a cada persona de la plantilla en el aviso de privacidad, así
+     * que tiene que ser algo a lo que se pueda escribir o que se pueda abrir:
+     * un {@code javascript:} o un {@code http://} no pasan.
+     */
+    static String contactoValido(String contacto) {
+        if (contacto == null || contacto.isBlank()) {
+            return null;
+        }
+        String limpio = contacto.trim();
+        if (CORREO.matcher(limpio).matches()) {
+            return limpio;
+        }
+        try {
+            URI enlace = new URI(limpio);
+            if ("https".equalsIgnoreCase(enlace.getScheme()) && enlace.getHost() != null) {
+                return limpio;
+            }
+        } catch (URISyntaxException e) {
+            // Cae al error de abajo.
+        }
+        throw new BusinessException(
+                "El contacto de privacidad tiene que ser un correo o un enlace que empiece por https://.",
+                HttpStatus.BAD_REQUEST);
     }
 
     /**

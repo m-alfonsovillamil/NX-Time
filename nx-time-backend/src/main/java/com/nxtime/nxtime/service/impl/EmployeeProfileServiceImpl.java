@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.Department;
+import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
 import com.nxtime.nxtime.dto.ProfileResponse;
@@ -40,15 +42,18 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     private final VacationBalanceRepository vacationBalanceRepository;
     private final DepartmentRepository departmentRepository;
     private final OperadoresDePlataforma operadores;
+    private final RegistroDeAccesos accesos;
 
     public EmployeeProfileServiceImpl(UserRepository userRepository,
                                       VacationBalanceRepository vacationBalanceRepository,
                                       DepartmentRepository departmentRepository,
-                                      OperadoresDePlataforma operadores) {
+                                      OperadoresDePlataforma operadores,
+                                      RegistroDeAccesos accesos) {
         this.userRepository = userRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.departmentRepository = departmentRepository;
         this.operadores = operadores;
+        this.accesos = accesos;
     }
 
     @Override
@@ -124,7 +129,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
     @Override
     public ProfileResponse getMyProfile(User actor) {
-        return toProfile(actor);
+        return toProfile(actor, actor);
     }
 
     @Override
@@ -155,12 +160,14 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
         userRepository.save(usuario);
         log.info("{} ha actualizado su perfil", usuario.getId());
-        return toProfile(usuario);
+        return toProfile(usuario, usuario);
     }
 
     @Override
     public ProfileResponse getProfile(long usuarioId, User actor) {
-        return toProfile(deLaMismaEmpresa(usuarioId, actor, "No puedes ver el perfil de otra empresa."));
+        User usuario = deLaMismaEmpresa(usuarioId, actor, "No puedes ver el perfil de otra empresa.");
+        accesos.anotar(actor, DatoConsultado.PERFIL, usuario.getId(), null);
+        return toProfile(usuario, actor);
     }
 
     @Override
@@ -184,7 +191,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         userRepository.save(usuario);
         log.info("{} ha puesto a {} en el departamento {}",
                 actor.getId(), usuario.getId(), departamentoId);
-        return toProfile(usuario);
+        return toProfile(usuario, actor);
     }
 
     private User deLaMismaEmpresa(long usuarioId, User actor, String mensaje) {
@@ -201,7 +208,18 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         return limpio.isEmpty() ? null : limpio;
     }
 
-    private ProfileResponse toProfile(User usuario) {
+    /**
+     * La fecha de nacimiento solo a la propia persona y a quien gestiona la
+     * plantilla ({@code empleado:gestionar}: RRHH y ADMIN). Hasta el plan J la
+     * veía cualquiera con {@code empleado:leer}, desde GESTOR, y un jefe de
+     * equipo no la necesita para nada (RGPD, art. 5.1.c: minimización).
+     */
+    private static boolean puedeVerLaFechaDeNacimiento(User usuario, User actor) {
+        return usuario.getId() == actor.getId()
+                || RoleAuthorities.de(actor).contains("empleado:gestionar");
+    }
+
+    private ProfileResponse toProfile(User usuario, User actor) {
         int anio = anioActual(usuario);
         int dias = vacationBalanceRepository.findByUsuarioAndAnio(usuario, anio)
                 .map(VacationBalance::getDiasTotales)
@@ -214,7 +232,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.getApellidos(),
                 nombreCompleto(usuario),
                 iniciales(usuario),
-                usuario.getFechaNacimiento(),
+                puedeVerLaFechaDeNacimiento(usuario, actor) ? usuario.getFechaNacimiento() : null,
                 usuario.getPuesto(),
                 usuario.getDepartamento() != null ? usuario.getDepartamento().getId() : null,
                 usuario.getDepartamento() != null ? usuario.getDepartamento().getNombre() : null,

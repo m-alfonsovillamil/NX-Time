@@ -70,6 +70,9 @@
     "name" : "Ausencias",
     "description" : "Solicitud de ausencias (vacaciones, bajas...) y su aprobación/rechazo por un gestor."
   }, {
+    "name" : "Privacidad",
+    "description" : "El aviso de privacidad y el registro de accesos a datos personales."
+  }, {
     "name" : "Adjuntos",
     "description" : "Currículum y foto de perfil. Un CV y una foto vigentes por persona: subir otro reemplaza el anterior."
   }, {
@@ -425,11 +428,94 @@
         } ]
       }
     },
+    "/api/v1/empresa/canal-denuncias" : {
+      "get" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "El canal de denuncias de mi empresa",
+        "operationId" : "leer",
+        "responses" : {
+          "200" : {
+            "description" : "Cómo está montado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Empresa" ],
+        "summary" : "Designar al Responsable del Sistema y la vía verbal",
+        "description" : "Desde que hay Responsable, solo él instruye: los ADMIN dejan de ver el canal. Sin Responsable (null), instruyen los ADMIN. La empresa tiene 10 días hábiles para comunicar el nombramiento o el cese a la Autoridad Independiente de Protección del Informante.",
+        "operationId" : "guardar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateComplaintChannelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Guardado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelSettingsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "La persona no es de la empresa o no está activa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/empresa/ajustes" : {
       "get" : {
         "tags" : [ "Empresa" ],
         "summary" : "Ajustes de mi empresa",
-        "operationId" : "leer",
+        "operationId" : "leer_1",
         "responses" : {
           "200" : {
             "description" : "Ajustes",
@@ -470,7 +556,7 @@
         "tags" : [ "Empresa" ],
         "summary" : "Guardar los ajustes de mi empresa",
         "description" : "Nombre y zona horaria (nombre IANA, p. ej. 'Atlantic/Canary'). Cambiar la zona cambia a qué día pertenece cada fichaje de todo el histórico: las firmas mensuales cuyo mes cambie de contenido se invalidan, y la respuesta dice cuántas.",
-        "operationId" : "guardar",
+        "operationId" : "guardar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2282,6 +2368,32 @@
         } ]
       }
     },
+    "/api/v1/perfil/aviso-de-privacidad/visto" : {
+      "post" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Ya he visto el aviso de privacidad",
+        "description" : "Solo cuenta la primera vez: repetirlo no cambia la fecha.",
+        "operationId" : "marcarAvisoVisto",
+        "responses" : {
+          "204" : {
+            "description" : "Anotado"
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/perfil/adjuntos" : {
       "get" : {
         "tags" : [ "Adjuntos" ],
@@ -3822,11 +3934,115 @@
         } ]
       }
     },
+    "/api/v1/denuncias/{id}/supresiones" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Suprimir un texto del expediente",
+        "description" : "La descripción (sin mensajeId) o un mensaje, porque contiene categorías especiales de datos, no es pertinente o se acreditó que no es veraz (Ley 2/2023, arts. 30 y 32). No se puede deshacer: queda la marca de cuándo y por qué.",
+        "operationId" : "suprimir",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintRedactionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el texto suprimido",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "La denuncia o el mensaje no existen",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/{id}/prorroga" : {
+      "post" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Ampliar a seis meses el plazo de respuesta",
+        "description" : "Ley 2/2023, art. 9.2.d: solo en casos de especial complejidad, una vez y antes de que venza. El motivo le llega a quien denunció como un mensaje del expediente.",
+        "operationId" : "prorrogar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ComplaintExtensionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expediente con el plazo ampliado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya se amplió, ya venció o está cerrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/{id}/mensajes" : {
       "post" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Escribir en un expediente como instructor",
-        "description" : "El primer mensaje vale como acuse de recibo si todavía no se había dado. Nadie instruye una denuncia que presentó él mismo.",
+        "description" : "En las denuncias de antes del acuse automático (ADR 048), el primer mensaje vale como acuse de recibo. Nadie instruye una denuncia que presentó él mismo.",
         "operationId" : "responderComoInstructor",
         "parameters" : [ {
           "name" : "id",
@@ -7048,6 +7264,39 @@
         } ]
       }
     },
+    "/api/v1/perfil/aviso-de-privacidad" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Mi aviso de privacidad",
+        "description" : "Quién es la responsable de mis datos (mi empresa), a quién dirigirme y si ya lo he visto.",
+        "operationId" : "leerAviso",
+        "responses" : {
+          "200" : {
+            "description" : "El aviso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PrivacyNoticeResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/perfil/adjuntos/{id}" : {
       "get" : {
         "tags" : [ "Adjuntos" ],
@@ -7276,6 +7525,129 @@
           },
           "404" : {
             "description" : "Empleado no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/informes/mensual/mio" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Mi registro de jornada del mes en PDF",
+        "description" : "El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).",
+        "operationId" : "exportarMiInformeMensualEnPdf",
+        "parameters" : [ {
+          "name" : "anio",
+          "in" : "query",
+          "description" : "Año del informe",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000
+          }
+        }, {
+          "name" : "mes",
+          "in" : "query",
+          "description" : "Mes del informe (1-12)",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Documento PDF",
+            "content" : {
+              "application/pdf" : { }
+            }
+          },
+          "400" : {
+            "description" : "Mes o año fuera de rango",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/informes/inspeccion.zip" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Exportación para la Inspección o la representación legal",
+        "description" : "Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas (art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.",
+        "operationId" : "exportarParaLaInspeccion",
+        "parameters" : [ {
+          "name" : "desde",
+          "in" : "query",
+          "description" : "Primer mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "description" : "Último mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "El ZIP",
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo al revés o de más de doce meses",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'informe:exportar' (RRHH/ADMIN)",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -8256,11 +8628,57 @@
         } ]
       }
     },
+    "/api/v1/empresa/accesos" : {
+      "get" : {
+        "tags" : [ "Privacidad" ],
+        "summary" : "Quién ha consultado datos personales de otra persona",
+        "description" : "Los CV de candidaturas, perfiles ajenos, registros mensuales de otro, el Excel de la empresa, expedientes de denuncias y exportaciones. Lo último primero, hasta 500. Se conserva dos años y no se puede borrar ni cambiar.",
+        "operationId" : "accesos",
+        "parameters" : [ {
+          "name" : "usuarioId",
+          "in" : "query",
+          "description" : "Solo los datos de esta persona",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empresa:configurar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/denuncias/{id}" : {
       "get" : {
         "tags" : [ "Canal de denuncias" ],
         "summary" : "Un expediente completo",
-        "description" : "Solo ADMIN.",
+        "description" : "Solo quien instruye: el Responsable del Sistema o, sin él, los ADMIN.",
         "operationId" : "detalle_2",
         "parameters" : [ {
           "name" : "id",
@@ -8356,6 +8774,79 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/libro-registro.csv" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "El libro-registro en CSV",
+        "description" : "Ley 2/2023, art. 26: fecha de recepción, objeto, estado, hitos y fin de cada comunicación. Sin relatos, conclusiones ni nombres. La descarga queda anotada.",
+        "operationId" : "libroRegistro",
+        "responses" : {
+          "200" : {
+            "description" : "El fichero",
+            "content" : {
+              "text/csv" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/canal" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Cómo funciona el canal de mi empresa",
+        "description" : "Quién es el Responsable del Sistema (si la empresa lo ha designado) y cómo comunicar algo de palabra o pedir una reunión (Ley 2/2023, arts. 7.2 y 9.2).",
+        "operationId" : "canal",
+        "responses" : {
+          "200" : {
+            "description" : "El canal",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ComplaintChannelInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/denuncias/accesos" : {
+      "get" : {
+        "tags" : [ "Canal de denuncias" ],
+        "summary" : "Quién ha abierto cada expediente",
+        "description" : "Solo quien instruye: la Autoridad recomienda que este registro quede reservado al Responsable del Sistema (Recomendación 1/2026). Lo último primero, hasta 500.",
+        "operationId" : "accesos_1",
+        "responses" : {
+          "200" : {
+            "description" : "Los accesos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DataAccessResponse"
+                  }
                 }
               }
             }
@@ -10415,6 +10906,39 @@
           }
         }
       },
+      "UpdateComplaintChannelRequest" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "viaVerbal" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "minLength" : 0
+          }
+        }
+      },
+      "ComplaintChannelSettingsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsableId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "responsable" : {
+            "type" : "string"
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "viaVerbal" : {
+            "type" : "string"
+          }
+        }
+      },
       "UpdateCompanySettingsRequest" : {
         "type" : "object",
         "properties" : {
@@ -10427,6 +10951,11 @@
             "type" : "string",
             "maxLength" : 64,
             "minLength" : 0
+          },
+          "contactoPrivacidad" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -10438,6 +10967,9 @@
             "type" : "string"
           },
           "zonaHoraria" : {
+            "type" : "string"
+          },
+          "contactoPrivacidad" : {
             "type" : "string"
           },
           "firmasInvalidadas" : {
@@ -11173,6 +11705,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "diasParaResponder" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -11656,7 +12192,7 @@
           "versionVigente" : {
             "type" : "string",
             "description" : "La versión en vigor",
-            "example" : "2026-10-17"
+            "example" : "2026-10-18"
           },
           "versionAceptada" : {
             "type" : "string",
@@ -11743,6 +12279,11 @@
           },
           "anonima" : {
             "type" : "boolean"
+          },
+          "contactoNotificaciones" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
           }
         },
         "required" : [ "anonima", "categoria", "descripcion" ]
@@ -11765,16 +12306,19 @@
           }
         }
       },
-      "ComplaintMessageRequest" : {
+      "ComplaintRedactionRequest" : {
         "type" : "object",
         "properties" : {
-          "texto" : {
+          "mensajeId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "motivo" : {
             "type" : "string",
-            "maxLength" : 2000,
-            "minLength" : 0
+            "enum" : [ "CATEGORIAS_ESPECIALES", "NO_PERTINENTE", "NO_VERAZ" ]
           }
         },
-        "required" : [ "texto" ]
+        "required" : [ "motivo" ]
       },
       "ComplaintMessageResponse" : {
         "type" : "object",
@@ -11854,8 +12398,49 @@
             "items" : {
               "$ref" : "#/components/schemas/ComplaintMessageResponse"
             }
+          },
+          "contactoNotificaciones" : {
+            "type" : "string"
+          },
+          "investigacionIniciadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "respuestaProrrogadaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "contenidoSuprimidoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
+      },
+      "ComplaintExtensionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "motivo" ]
+      },
+      "ComplaintMessageRequest" : {
+        "type" : "object",
+        "properties" : {
+          "texto" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "texto" ]
       },
       "ComplaintTrackingRequest" : {
         "type" : "object",
@@ -13654,6 +14239,20 @@
           }
         }
       },
+      "PrivacyNoticeResponse" : {
+        "type" : "object",
+        "properties" : {
+          "empresa" : {
+            "type" : "string"
+          },
+          "contacto" : {
+            "type" : "string"
+          },
+          "visto" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "PaginaDTOScheduleIncidentResponse" : {
         "type" : "object",
         "properties" : {
@@ -13965,6 +14564,35 @@
           }
         }
       },
+      "DataAccessResponse" : {
+        "type" : "object",
+        "properties" : {
+          "en" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "quienId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quien" : {
+            "type" : "string"
+          },
+          "que" : {
+            "type" : "string"
+          },
+          "sobreId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sobre" : {
+            "type" : "string"
+          },
+          "detalle" : {
+            "type" : "string"
+          }
+        }
+      },
       "ComplaintSummaryResponse" : {
         "type" : "object",
         "properties" : {
@@ -14005,6 +14633,24 @@
           "mensajes" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "diasHastaSupresion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "contenidoSuprimido" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ComplaintChannelInfoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "responsable" : {
+            "type" : "string"
+          },
+          "viaVerbal" : {
+            "type" : "string"
           }
         }
       },

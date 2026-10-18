@@ -210,7 +210,7 @@ application:
     # La versión de las condiciones del servicio y del contrato de encargo que
     # se acepta al registrar una empresa. Cambiarla pide a los ADMIN de cada
     # empresa que acepten la nueva la próxima vez que entren.
-    version: "2026-10-17"
+    version: "2026-10-18"
   alta:
     # Las empresas que se registran esperan a que un operador del panel de
     # plataforma las apruebe (ADR 046). En una instalación propia, para una

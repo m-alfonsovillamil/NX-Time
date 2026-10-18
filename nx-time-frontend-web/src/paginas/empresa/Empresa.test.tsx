@@ -136,6 +136,23 @@ describe('informes', () => {
     expect(llamadas.a('GET', '/api/v1/informes/mensual/2')).toHaveLength(1);
   });
 
+  it('el ZIP para la Inspección va con el periodo elegido (J7)', async () => {
+    const descargas = capturarDescarga();
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/plantilla': () => [],
+      'GET /api/v1/informes/inspeccion.zip': () => new Response(new Blob(['zip']), { status: 200 }),
+    });
+    pintar(<Informes />, { sesion: sesionDe('RRHH') });
+
+    fireEvent.change(await screen.findByLabelText(I.desde), { target: { value: '2026-01' } });
+    fireEvent.change(screen.getByLabelText(I.hasta), { target: { value: '2026-06' } });
+    await userEvent.click(screen.getByRole('button', { name: I.zip }));
+
+    await waitFor(() => expect(descargas).toHaveLength(1));
+    const [zip] = llamadas.a('GET', '/api/v1/informes/inspeccion.zip');
+    expect([zip?.query.get('desde'), zip?.query.get('hasta')]).toEqual(['2026-01', '2026-06']);
+  });
+
   it('si el servidor no puede, se lee su mensaje', async () => {
     capturarDescarga();
     simularApi({

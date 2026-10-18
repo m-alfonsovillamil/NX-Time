@@ -9,12 +9,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.report.ExcelReportGenerator;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.PdfReportGenerator;
 import com.nxtime.nxtime.service.ReportService;
 import com.nxtime.nxtime.web.support.NxTimeWebMvcTest;
 import com.nxtime.nxtime.web.support.WebMvcTestSecurityConfig;
+import com.nxtime.nxtime.web.support.WithMockSecurityUser;
 import java.time.YearMonth;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +46,8 @@ class ReportControllerTest {
     private ExcelReportGenerator excelGenerator;
     @MockitoBean
     private PdfReportGenerator pdfGenerator;
+    @MockitoBean
+    private com.nxtime.nxtime.service.impl.ExportacionParaLaInspeccion exportacion;
 
     private MonthlyReport informeVacio() {
         return new MonthlyReport("Empresa", "Empleado", YearMonth.of(2026, 6), List.of());
@@ -103,5 +107,44 @@ class ReportControllerTest {
     void exportar_anioFueraDeRango_devuelve400() throws Exception {
         mockMvc.perform(get("/api/v1/informes/horas").param("anio", "1800").param("mes", "6"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockSecurityUser(email = "ana@nxtime.test", rol = Role.EMPLEADO)
+    @DisplayName("GET /informes/mensual/mio: un EMPLEADO descarga SU registro, sin 'informe:exportar' (J7)")
+    void miRegistro_unEmpleadoDescargaElSuyo() throws Exception {
+        when(reportService.informeDeEmpleado(eq("ana@nxtime.test"), anyLong(), any())).thenReturn(informeVacio());
+
+        mockMvc.perform(get("/api/v1/informes/mensual/mio").param("anio", "2026").param("mes", "6"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "application/pdf"))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"mi-registro-2026-06.pdf\""));
+
+        // El suyo y solo el suyo: el id sale del token, no de la URL.
+        verify(reportService).informeDeEmpleado("ana@nxtime.test", 1L, YearMonth.of(2026, 6));
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.EMPLEADO)
+    @DisplayName("GET /informes/inspeccion.zip: un EMPLEADO no exporta lo de todos")
+    void inspeccion_sinAuthority_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/v1/informes/inspeccion.zip").param("desde", "2026-01").param("hasta", "2026-03"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockSecurityUser(rol = Role.RRHH)
+    @DisplayName("GET /informes/inspeccion.zip: RRHH lo descarga, con el periodo en el nombre")
+    void inspeccion_conAuthority_devuelveElZip() throws Exception {
+        when(exportacion.preparar(any(), eq(YearMonth.of(2026, 1)), eq(YearMonth.of(2026, 3))))
+                .thenReturn(new com.nxtime.nxtime.service.impl.ExportacionParaLaInspeccion.Preparada(
+                        List.of(), List.of(), "", "", ""));
+
+        mockMvc.perform(get("/api/v1/informes/inspeccion.zip").param("desde", "2026-01").param("hasta", "2026-03"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "application/zip"))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"registro-de-jornada-2026-01-a-2026-03.zip\""));
     }
 }

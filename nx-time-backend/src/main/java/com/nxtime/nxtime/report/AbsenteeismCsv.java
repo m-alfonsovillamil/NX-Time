@@ -84,7 +84,7 @@ public final class AbsenteeismCsv {
         csv.append("\r\n");
     }
 
-    static String celda(String valor) {
+    public static String celda(String valor) {
         if (valor == null) {
             return "";
         }

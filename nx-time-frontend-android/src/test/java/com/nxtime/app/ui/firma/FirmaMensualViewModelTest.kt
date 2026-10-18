@@ -103,4 +103,35 @@ class FirmaMensualViewModelTest {
         assertFalse(vm.uiState.value.cargado)
         assertNotNull(vm.uiState.value.error)
     }
+
+    @Test
+    fun `descargar pide MI registro de ese mes y lo entrega con su nombre (J7)`() = runTest {
+        whenever(repositorio.getMisMesesParaFirmar()).thenReturn(Response.success(listOf(agosto)))
+        whenever(repositorio.descargarMiPdfMensual(2026, 8))
+            .thenReturn(Response.success("%PDF-".toResponseBody("application/pdf".toMediaType())))
+
+        val vm = FirmaMensualViewModel(repositorio)
+        advanceUntilIdle()
+        var nombre: String? = null
+        vm.descargar(agosto) { _, n -> nombre = n }
+        advanceUntilIdle()
+
+        assertEquals("mi-registro-2026-08.pdf", nombre)
+        assertNull(vm.uiState.value.descargando)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `si el servidor no deja descargar, se dice por que`() = runTest {
+        whenever(repositorio.getMisMesesParaFirmar()).thenReturn(Response.success(listOf(agosto)))
+        whenever(repositorio.descargarMiPdfMensual(2026, 8)).thenReturn(error(400, "Mes fuera de rango."))
+
+        val vm = FirmaMensualViewModel(repositorio)
+        advanceUntilIdle()
+        vm.descargar(agosto) { _, _ -> error("no tenía que llegar") }
+        advanceUntilIdle()
+
+        assertNotNull(vm.uiState.value.error)
+        assertNull(vm.uiState.value.descargando)
+    }
 }

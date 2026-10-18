@@ -67,11 +67,35 @@ Time:
 Obligatorio con 50 o más personas en plantilla. NX Time da la herramienta; la
 empresa tiene que:
 
-- designar al **Responsable del Sistema** y comunicarlo a la Autoridad
-  Independiente de Protección del Informante (o a la autonómica) en 10 días;
+- designar al **Responsable del Sistema** (en NX Time: Ajustes de la empresa →
+  Canal de denuncias) y comunicar el nombramiento y el cese a la Autoridad
+  Independiente de Protección del Informante (o a la autonómica) en **10 días
+  hábiles**, con su formulario:
+  <https://proteccioninformante.sede.gob.es/procedimiento/portada?idProc=155879>.
+  Tiene que ser alguien que pueda actuar con independencia: desde que se le
+  designa, solo esa persona ve las denuncias, y los administradores dejan de
+  verlas;
+- tener una **vía verbal** (un teléfono, o a quién pedir una reunión en
+  persona, que hay que celebrar en 7 días) y escribirla en esos mismos ajustes:
+  la aplicación se la enseña a quien va a denunciar;
 - aprobar la política del sistema y el procedimiento de gestión;
-- informar a la plantilla de los **canales externos** (la Autoridad y las
-  autoridades autonómicas).
+- documentar las comunicaciones verbales (grabación o transcripción, con el
+  consentimiento de quien informa), fuera de la aplicación;
+- informar a la plantilla de los **canales externos**. La aplicación ya lo dice
+  en la pantalla del canal, con el enlace a la Autoridad, y explica la
+  protección de quien informa y qué queda fuera de ella.
+
+Lo que hace la herramienta (ADR 048): acuse de recibo al presentarla, plazos
+contados en pantalla (3 meses, ampliables una vez a 6 con el motivo para quien
+denunció), supresión del contenido a los 3 meses si no se abre investigación,
+borrado a los 10 años, supresión a mano de textos con categorías especiales,
+libro-registro en CSV y registro de quién abre cada expediente, reservado a
+quien instruye. La Autoridad recomienda segundo factor para el Responsable:
+llegará con la fase J8.
+
+Lo que **no** sustituye: la herramienta no comprueba que la empresa haya
+comunicado el nombramiento, ni que su política esté aprobada, ni que el
+Responsable sea independiente. Eso es de la empresa.
 
 ## 5. Kioscos
 

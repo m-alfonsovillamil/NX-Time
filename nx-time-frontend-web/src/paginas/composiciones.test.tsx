@@ -97,6 +97,7 @@ describe('denuncias recibidas: el expediente al lado en una pantalla ancha', () 
   it('abre el expediente en la propia página, sin diálogo, y marca cuál es', async () => {
     ventanaAncha();
     simularApi({
+      'GET /api/v1/denuncias/accesos': () => [],
       'GET /api/v1/denuncias': () => [{ ...EXPEDIENTE, mensajes: 0 }],
       'GET /api/v1/denuncias/{id}': () => EXPEDIENTE,
     });
@@ -117,6 +118,7 @@ describe('denuncias recibidas: el expediente al lado en una pantalla ancha', () 
 
   it('en una pantalla estrecha sigue saliendo en su diálogo', async () => {
     simularApi({
+      'GET /api/v1/denuncias/accesos': () => [],
       'GET /api/v1/denuncias': () => [{ ...EXPEDIENTE, mensajes: 0 }],
       'GET /api/v1/denuncias/{id}': () => EXPEDIENTE,
     });

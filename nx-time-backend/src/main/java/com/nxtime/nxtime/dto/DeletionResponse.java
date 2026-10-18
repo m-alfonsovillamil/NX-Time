@@ -27,6 +27,12 @@ public record DeletionResponse(
         Instant resueltaEn,
         String comentarioResolucion,
         LocalDate anonimizarDesde,
-        List<String> bloqueos
+        List<String> bloqueos,
+        /**
+         * Días naturales que quedan del mes que da el RGPD (art. 12.3) para
+         * responder; negativo si ya pasó, null si ya está resuelta. Calculado,
+         * como los plazos de las denuncias (ADR 047).
+         */
+        Long diasParaResponder
 ) {
 }
