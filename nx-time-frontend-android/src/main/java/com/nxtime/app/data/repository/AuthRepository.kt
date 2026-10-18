@@ -178,6 +178,8 @@ interface AuthRepository {
 
     suspend fun descargarExcelDeHoras(anio: Int, mes: Int): Response<ResponseBody>
 
+    suspend fun descargarMiPdfMensual(anio: Int, mes: Int): Response<ResponseBody>
+
     suspend fun descargarPdfMensual(
         empleadoId: Long,
         anio: Int,

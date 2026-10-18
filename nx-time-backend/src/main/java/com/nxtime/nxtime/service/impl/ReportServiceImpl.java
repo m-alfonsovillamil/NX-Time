@@ -1,7 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
-import com.nxtime.nxtime.domain.MonthlySignatureStatus;
 import com.nxtime.nxtime.domain.DatoConsultado;
+import com.nxtime.nxtime.domain.MonthlySignatureStatus;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
@@ -17,7 +17,9 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,7 +82,30 @@ public class ReportServiceImpl implements ReportService {
             throw new TenantAccessException("No puedes generar informes de empleados de otra empresa.");
         }
         accesos.anotar(solicitante, DatoConsultado.INFORME_MENSUAL, empleado.getId(), "Registro de " + mes);
+        return construir(solicitante, empleado, mes);
+    }
 
+    /**
+     * El registro mensual de cada persona que fichó ese mes, para la
+     * exportación de la Inspección (plan J, fase J7).
+     *
+     * <b>No anota cada uno en el registro de accesos</b>: lo hace una vez quien
+     * los pide ({@code ExportacionParaLaInspeccion}), que es el acceso de
+     * verdad. Si no, una exportación de un año dejaría cientos de filas.
+     */
+    @Override
+    public List<MonthlyReport> informesDeLaPlantilla(String solicitanteEmail, YearMonth mes) {
+        User solicitante = getUsuario(solicitanteEmail);
+        ZoneId zona = solicitante.zona();
+        Map<Long, User> personas = new LinkedHashMap<>();
+        for (TimeEntry fichaje : timeEntryRepository.findParaInforme(
+                solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona))) {
+            personas.putIfAbsent(fichaje.getUsuario().getId(), fichaje.getUsuario());
+        }
+        return personas.values().stream().map(persona -> construir(solicitante, persona, mes)).toList();
+    }
+
+    private MonthlyReport construir(User solicitante, User empleado, YearMonth mes) {
         ZoneId zona = solicitante.zona();
         List<TimeEntry> fichajes = timeEntryRepository.findParaInformeDeEmpleado(
                 empleado, inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));

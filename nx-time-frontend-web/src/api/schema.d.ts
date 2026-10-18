@@ -2256,6 +2256,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/informes/mensual/mio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi registro de jornada del mes en PDF
+         * @description El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).
+         */
+        get: operations["exportarMiInformeMensualEnPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/informes/inspeccion.zip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportación para la Inspección o la representación legal
+         * @description Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas (art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.
+         */
+        get: operations["exportarParaLaInspeccion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/informes/horas": {
         parameters: {
             query?: never;
@@ -11330,6 +11370,92 @@ export interface operations {
             };
             /** @description Empleado no encontrado */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    exportarMiInformeMensualEnPdf: {
+        parameters: {
+            query: {
+                /** @description Año del informe */
+                anio: number;
+                /** @description Mes del informe (1-12) */
+                mes: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documento PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Mes o año fuera de rango */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    exportarParaLaInspeccion: {
+        parameters: {
+            query: {
+                /** @description Primer mes, AAAA-MM */
+                desde: string;
+                /** @description Último mes, AAAA-MM */
+                hasta: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El ZIP */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            /** @description Periodo al revés o de más de doce meses */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'informe:exportar' (RRHH/ADMIN) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

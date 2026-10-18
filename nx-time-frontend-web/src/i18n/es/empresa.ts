@@ -40,6 +40,12 @@ export const empresa = {
     elegir: 'Elige a alguien',
     pdf: 'Descargar PDF',
     faltaPersona: 'Elige de quién es el informe.',
+    inspeccionTitulo: 'Para la Inspección o la representación legal',
+    inspeccionTexto:
+      'Un ZIP con todo el registro de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con quién las hizo y las firmas. La descarga queda registrada.',
+    desde: 'Desde',
+    hasta: 'Hasta',
+    zip: 'Descargar el ZIP',
   },
 
   ajustes: {

@@ -950,6 +950,7 @@
 
     <!-- Fase B3: la firma mensual del registro. De aceptación, no eIDAS. -->
     <string name="firma_ver">Firmar mi registro</string>
+    <string name="firma_descargar_pdf">Descargar PDF</string>
     <string name="firma_titulo">Firmar mi registro</string>
     <string name="firma_explicacion">Al terminar cada mes, firmas que tu registro horario es correcto. Si después se corrige un fichaje de ese mes, la firma queda sin efecto y te lo pedirá otra vez.</string>
     <string name="firma_vacio">No hay meses terminados con jornadas que firmar.</string>

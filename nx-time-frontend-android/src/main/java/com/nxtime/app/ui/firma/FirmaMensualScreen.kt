@@ -1,5 +1,7 @@
 package com.nxtime.app.ui.firma
 
+import android.content.ActivityNotFoundException
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,9 +24,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,14 +38,19 @@ import com.nxtime.app.data.dto.MesParaFirmarDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.Insignia
-import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
+import com.nxtime.app.ui.components.TonoDeInsignia
+import com.nxtime.app.ui.informes.MIME_PDF
+import com.nxtime.app.ui.informes.compartirInforme
+import com.nxtime.app.ui.informes.guardarEnCache
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 import java.time.YearMonth
+import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 
 /**
  * Firmar mi registro (Fase B3, ADR 025).
@@ -59,6 +68,21 @@ fun FirmaMensualScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     var aFirmar by remember { mutableStateOf<MesParaFirmarDTO?>(null) }
+    val contexto = LocalContext.current
+    val alcance = rememberCoroutineScope()
+    val textoSinVisor = stringResource(R.string.empresa_sin_visor)
+
+    // Como en el panel de empresa: el ViewModel trae el cuerpo y aquí se guarda y se abre.
+    fun abrir(cuerpo: ResponseBody, nombre: String) {
+        alcance.launch {
+            val fichero = guardarEnCache(contexto, cuerpo, nombre)
+            try {
+                compartirInforme(contexto, fichero, MIME_PDF)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(contexto, textoSinVisor, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     PantallaConBarra(
         titulo = stringResource(R.string.firma_titulo),
@@ -91,7 +115,9 @@ fun FirmaMensualScreen(
                     TarjetaMes(
                         mes = mes,
                         firmando = estado.firmando == mes,
-                        onFirmar = { aFirmar = mes }
+                        descargando = estado.descargando == mes,
+                        onFirmar = { aFirmar = mes },
+                        onDescargar = { viewModel.descargar(mes, ::abrir) }
                     )
                 }
             }
@@ -124,7 +150,13 @@ fun FirmaMensualScreen(
 }
 
 @Composable
-private fun TarjetaMes(mes: MesParaFirmarDTO, firmando: Boolean, onFirmar: () -> Unit) {
+private fun TarjetaMes(
+    mes: MesParaFirmarDTO,
+    firmando: Boolean,
+    descargando: Boolean,
+    onFirmar: () -> Unit,
+    onDescargar: () -> Unit
+) {
     val firma = mes.firma
     val vigente = firma?.estado == "VIGENTE"
     val invalidada = firma?.estado == "INVALIDADA"
@@ -198,9 +230,13 @@ private fun TarjetaMes(mes: MesParaFirmarDTO, firmando: Boolean, onFirmar: () ->
                 Text(text = it, style = MaterialTheme.typography.bodySmall)
             }
 
-            if (mes.puedeFirmar) {
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                // El registro propio en PDF, firmado o no (plan J, J7).
+                TextButton(onClick = onDescargar, enabled = !descargando) {
+                    Text(stringResource(R.string.firma_descargar_pdf))
+                }
+                if (mes.puedeFirmar) {
                     Button(onClick = onFirmar, enabled = !firmando) {
                         Text(stringResource(R.string.firma_firmar))
                     }

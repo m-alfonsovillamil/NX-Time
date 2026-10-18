@@ -7539,6 +7539,129 @@
         } ]
       }
     },
+    "/api/v1/informes/mensual/mio" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Mi registro de jornada del mes en PDF",
+        "description" : "El mismo documento oficial que descarga RRHH, pero el propio: el trabajador tiene derecho a su registro (art. 34.9 ET) sin pedírselo a nadie (plan J, fase J7).",
+        "operationId" : "exportarMiInformeMensualEnPdf",
+        "parameters" : [ {
+          "name" : "anio",
+          "in" : "query",
+          "description" : "Año del informe",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 2100,
+            "minimum" : 2000
+          }
+        }, {
+          "name" : "mes",
+          "in" : "query",
+          "description" : "Mes del informe (1-12)",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 12,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Documento PDF",
+            "content" : {
+              "application/pdf" : { }
+            }
+          },
+          "400" : {
+            "description" : "Mes o año fuera de rango",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/informes/inspeccion.zip" : {
+      "get" : {
+        "tags" : [ "Informes" ],
+        "summary" : "Exportación para la Inspección o la representación legal",
+        "description" : "Un ZIP con el registro de jornada de un periodo de hasta doce meses: el Excel de cada mes, el PDF mensual de cada persona, la traza de correcciones con su autor y las firmas (art. 34.9 ET; plan J, fase J7). Queda en el registro de accesos.",
+        "operationId" : "exportarParaLaInspeccion",
+        "parameters" : [ {
+          "name" : "desde",
+          "in" : "query",
+          "description" : "Primer mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "hasta",
+          "in" : "query",
+          "description" : "Último mes, AAAA-MM",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "El ZIP",
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Periodo al revés o de más de doce meses",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'informe:exportar' (RRHH/ADMIN)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/informes/horas" : {
       "get" : {
         "tags" : [ "Informes" ],

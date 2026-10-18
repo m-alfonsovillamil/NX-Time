@@ -564,6 +564,14 @@ interface ApiService {
     @GET("api/v1/perfil/mis-datos/pdf")
     suspend fun descargarMisDatosPdf(): Response<ResponseBody>
 
+    /** Mi registro del mes en PDF, sin pedírselo a nadie (art. 34.9 ET; plan J, J7). */
+    @Streaming
+    @GET("api/v1/informes/mensual/mio")
+    suspend fun descargarMiPdfMensual(
+        @Query("anio") anio: Int,
+        @Query("mes") mes: Int
+    ): Response<ResponseBody>
+
     @Streaming
     @GET("api/v1/informes/mensual/{empleadoId}")
     suspend fun descargarPdfMensual(

@@ -391,6 +391,10 @@ class AuthRepositoryImpl(
         return apiService.descargarExcelDeHoras(anio, mes)
     }
 
+    override suspend fun descargarMiPdfMensual(anio: Int, mes: Int): Response<ResponseBody> {
+        return apiService.descargarMiPdfMensual(anio, mes)
+    }
+
     override suspend fun descargarPdfMensual(
         empleadoId: Long,
         anio: Int,

@@ -7,11 +7,13 @@ import com.nxtime.app.data.dto.MesParaFirmarDTO
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
+import java.time.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.ResponseBody
 
 data class FirmaMensualUiState(
     val cargando: Boolean = false,
@@ -20,6 +22,8 @@ data class FirmaMensualUiState(
     val meses: List<MesParaFirmarDTO> = emptyList(),
     /** El mes que se está firmando, para no dejar pulsar dos veces. */
     val firmando: MesParaFirmarDTO? = null,
+    /** El mes cuyo PDF se está descargando. */
+    val descargando: MesParaFirmarDTO? = null,
     val error: MensajeUi? = null,
     val aviso: MensajeUi? = null
 )
@@ -75,6 +79,29 @@ class FirmaMensualViewModel(private val authRepository: AuthRepository) : ViewMo
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(firmando = null, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /**
+     * Mi registro de ese mes en PDF (plan J, J7). El fichero lo escribe la
+     * pantalla, que tiene el Context: aquí solo se pide.
+     */
+    fun descargar(mes: MesParaFirmarDTO, alTener: (ResponseBody, String) -> Unit) {
+        if (_uiState.value.descargando != null) return
+        _uiState.update { it.copy(descargando = mes, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.descargarMiPdfMensual(mes.anio, mes.mes)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    alTener(cuerpo, "mi-registro-${YearMonth.of(mes.anio, mes.mes)}.pdf")
+                    _uiState.update { it.copy(descargando = null) }
+                } else {
+                    _uiState.update { it.copy(descargando = null, error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(descargando = null, error = ApiErrorParser.mensajeDeRed(e)) }
             }
         }
     }
