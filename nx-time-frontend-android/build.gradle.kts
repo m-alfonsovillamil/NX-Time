@@ -385,7 +385,7 @@ dependencies {
      * plugin de terceros para tan poca ganancia aquí.
      */
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     // Turbine: para afirmar sobre lo que va emitiendo un StateFlow.
     testImplementation("app.cash.turbine:turbine:1.2.0")
