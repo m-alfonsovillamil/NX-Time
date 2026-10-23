@@ -1,6 +1,5 @@
 package com.nxtime.nxtime.security.totp;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -70,8 +69,10 @@ public class SecretosTotp {
             cifrador.init(Cipher.ENCRYPT_MODE, clave, new GCMParameterSpec(BITS_DE_LA_ETIQUETA, nonce));
             cifrador.updateAAD(datoAsociado(usuarioId));
             byte[] cifrado = cifrador.doFinal(secreto);
-            byte[] junto = ByteBuffer.allocate(nonce.length + cifrado.length).put(nonce).put(cifrado).array();
-            return VERSION + Base64.getEncoder().encodeToString(junto);
+            java.io.ByteArrayOutputStream junto = new java.io.ByteArrayOutputStream();
+            junto.writeBytes(nonce);
+            junto.writeBytes(cifrado);
+            return VERSION + Base64.getEncoder().encodeToString(junto.toByteArray());
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("No se ha podido cifrar el secreto del segundo factor", e);
         }

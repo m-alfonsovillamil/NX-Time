@@ -109,7 +109,7 @@ public final class Totp {
 
     /** El secreto en Base32 sin relleno, que es como lo escriben las aplicaciones. */
     public static String base32(byte[] datos) {
-        StringBuilder salida = new StringBuilder((datos.length * 8 + 4) / 5);
+        StringBuilder salida = new StringBuilder();
         int buffer = 0;
         int bits = 0;
         for (byte b : datos) {
