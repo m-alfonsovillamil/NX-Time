@@ -3,7 +3,8 @@
  *
  * En local y en el CI, `application-dev.yml` nombra operadora a Lucía, una
  * EMPLEADA de demo que ninguna otra spec usa: así el menú de las cuatro
- * cuentas de siempre sigue siendo el suyo. Aquí no se escribe nada.
+ * cuentas de siempre sigue siendo el suyo. Aquí no se escribe nada. Entra con
+ * su código: al operador se le exige el segundo factor (ADR 051).
  *
  * Lo que de verdad cierra la puerta es el servidor, y eso lo prueba
  * `PlataformaIT`. Esta spec comprueba lo que ve cada quien: que quien no es
@@ -13,12 +14,11 @@
 
 import { expect, test } from '@playwright/test';
 
-import { entrar, entrarYCerrarElAviso, irASeccion, paginaLista } from './ayudas';
+import { entrarComoOperadora, entrarYCerrarElAviso, irASeccion, paginaLista } from './ayudas';
 
-const OPERADORA = 'lucia.moreno@techcorp.demo';
 
 test('la operadora ve las empresas, busca una, abre su detalle y comprueba la traza', async ({ page }) => {
-  await entrar(page, OPERADORA);
+  await entrarComoOperadora(page);
   const menu = page.getByRole('navigation', { name: 'Menú principal' }).first();
   // Es una empleada: lo suyo y la plataforma, nada de la gestión de su empresa.
   await expect(menu.getByRole('heading', { name: 'Plataforma' })).toBeVisible();

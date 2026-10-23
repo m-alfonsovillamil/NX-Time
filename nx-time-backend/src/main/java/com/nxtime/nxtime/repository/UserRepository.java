@@ -128,4 +128,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "UPDATE usuarios SET aviso_privacidad_visto_en = :ahora "
             + "WHERE id = :id AND aviso_privacidad_visto_en IS NULL", nativeQuery = true)
     int marcarAvisoDePrivacidadVisto(@Param("id") long id, @Param("ahora") Instant ahora);
+
+    /**
+     * Desde cuándo entra con segundo factor, o null para quitárselo (V47, ADR
+     * 051). Fuera de los save de {@link User} por lo mismo que el aviso de
+     * privacidad: una copia vieja no puede desactivarlo.
+     */
+    @Modifying
+    @Query(value = "UPDATE usuarios SET segundo_factor_desde = :desde WHERE id = :id", nativeQuery = true)
+    int marcarSegundoFactor(@Param("id") long id, @Param("desde") Instant desde);
+
+    /** Los access tokens de esta persona emitidos antes de {@code desde} dejan de valer (ADR 051). */
+    @Modifying
+    @Query(value = "UPDATE usuarios SET sesiones_validas_desde = :desde WHERE id = :id", nativeQuery = true)
+    int invalidarAccesosAnterioresA(@Param("id") long id, @Param("desde") Instant desde);
 }

@@ -236,6 +236,13 @@ application:
       # JWT firmado sin estado y no se puede invalidar antes de que
       # caduque por su cuenta.
       refresh-expiration: 2592000000
+    totp:
+      # Clave AES-256 (32 bytes en base64) con la que se cifran los secretos
+      # del segundo factor en la base (ADR 051). Se lee de TOTP_CLAVE. El
+      # valor por defecto es SOLO para desarrollo: está en el repositorio, y
+      # en producción el servidor no arranca con él (ver SecretosTotp).
+      # Cambiarla deja inservibles los segundos factores ya activados.
+      clave: "${TOTP_CLAVE:5W3oJApORCrZFouAZOrbZmA9bUHESg4Z/ggpox4SN4U=}"
     cors:
       # Lista de orígenes permitidos, separados por coma. Antes era "*"
       # fijo en el código (ver auditoría, defectos de diseño). Por

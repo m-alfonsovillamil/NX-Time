@@ -47,6 +47,13 @@ export const plantilla = {
   reactivar: 'Dar de alta',
   bajaTitulo: (quien: string) => `¿Dar de baja a ${quien}?`,
   bajaTexto: 'No se borra nada: sus fichajes se conservan y podrás volver a darle de alta cuando quieras. Mientras tanto no podrá entrar.',
+  /** El segundo factor (ADR 051). */
+  conSegundoFactor: 'Segundo factor',
+  quitarSegundoFactor: 'Quitar segundo factor',
+  quitarSegundoFactorTitulo: (nombre: string) => `¿Quitar el segundo factor a ${nombre}?`,
+  quitarSegundoFactorTexto:
+    'Hazlo solo si ha perdido el móvil y sus códigos de recuperación. Podrá entrar solo con su contraseña y volver a activarlo; le avisaremos por correo.',
+  segundoFactorQuitado: (nombre: string) => `${nombre} ya puede entrar sin segundo factor.`,
   bajaHecha: (quien: string) => `${quien} está de baja.`,
   altaHecha: (quien: string) => `${quien} vuelve a estar de alta.`,
 

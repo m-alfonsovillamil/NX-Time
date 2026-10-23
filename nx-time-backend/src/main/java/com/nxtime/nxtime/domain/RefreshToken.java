@@ -147,6 +147,15 @@ public class RefreshToken {
 
     private Instant creadoEn;
 
+    /**
+     * Si la sesión pasó por un segundo factor al abrirse: un código TOTP, uno
+     * de recuperación, o Google/Microsoft (V47, ADR 051). Se hereda al rotar,
+     * como la familia, y lo lleva cada access token que se emita con él.
+     */
+    @Builder.Default
+    @Column(name = "con_segundo_factor", nullable = false)
+    private boolean conSegundoFactor = false;
+
     public boolean estaVivo() {
         return !revocado && rotadoEn == null && expiraEn.isAfter(Instant.now());
     }

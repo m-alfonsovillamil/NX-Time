@@ -133,6 +133,16 @@
     <string name="confirmar_correo_entrar">Confirmar y entrar</string>
     <string name="confirmar_correo_otro">¿No te ha llegado? Entra con tu correo y tu contraseña y te mandaremos otro.</string>
 
+    <!-- El segundo factor al entrar (ADR 051 del backend). Activarlo se hace en la web. -->
+    <string name="segundo_paso_titulo">Código de verificación</string>
+    <string name="segundo_paso_explicacion">Escribe el código de 6 cifras que te da tu aplicación de autenticación.</string>
+    <string name="segundo_paso_codigo">Código</string>
+    <string name="segundo_paso_verificar">Verificar</string>
+    <string name="segundo_paso_recuperacion">¿No tienes el móvil? Escribe uno de tus códigos de recuperación. Si los has perdido, pide a un administrador de tu empresa que te quite el segundo factor.</string>
+    <string name="segundo_paso_volver">Volver a la contraseña</string>
+    <string name="segundo_paso_falta_codigo">Escribe el código de 6 cifras, o uno de recuperación.</string>
+    <string name="login_segundo_factor_por_activar">Para entrar en tu cuenta necesitas el segundo factor. Actívalo desde la web, en Ajustes → Segundo factor, y vuelve a entrar.</string>
+
     <!-- Fichar -->
     <string name="fichar_titulo">Mi jornada</string>
     <string name="fichar_saludo">Hola, %1$s</string>
@@ -614,11 +624,10 @@
     <string name="ajustes_cuenta">Cuenta</string>
     <string name="ajustes_cerrar_todas">Cerrar sesión en todos los dispositivos</string>
     <!--
-        Se dice lo que de verdad pasa: el access token es un JWT y vale
-        hasta que caduque, así que prometer un corte inmediato sería
-        mentir.
+        Desde el ADR 051 el corte es inmediato: el servidor rechaza también
+        los access tokens emitidos antes de cerrarlas.
     -->
-    <string name="ajustes_cerrar_todas_detalle">Se cerrará también en este dispositivo. Las sesiones abiertas dejan de poder renovarse y caducan en unos minutos.</string>
+    <string name="ajustes_cerrar_todas_detalle">Se cerrará también en este dispositivo, y en los demás donde la tengas abierta, al momento.</string>
     <string name="ajustes_cerrar_todas_hecho">Sesiones cerradas.</string>
     <string name="ajustes_privacidad">Privacidad</string>
     <string name="ajustes_informes_errores">Enviar informes de errores</string>

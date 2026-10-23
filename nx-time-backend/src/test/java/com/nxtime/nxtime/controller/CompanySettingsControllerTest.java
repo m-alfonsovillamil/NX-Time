@@ -44,7 +44,7 @@ class CompanySettingsControllerTest {
     @WithMockSecurityUser(rol = Role.ADMIN)
     @DisplayName("GET como ADMIN devuelve nombre y zona")
     void leer_comoAdmin() throws Exception {
-        when(service.leer(any())).thenReturn(new CompanySettingsResponse("Talleres Ana", "Atlantic/Canary", null, 0));
+        when(service.leer(any())).thenReturn(new CompanySettingsResponse("Talleres Ana", "Atlantic/Canary", null, false, 0));
 
         mockMvc.perform(get(RUTA))
                 .andExpect(status().isOk())
@@ -79,7 +79,7 @@ class CompanySettingsControllerTest {
     @WithMockSecurityUser(rol = Role.ADMIN)
     @DisplayName("PUT válido devuelve lo guardado y cuántas firmas cayeron")
     void guardar_comoAdmin() throws Exception {
-        when(service.guardar(any(), any())).thenReturn(new CompanySettingsResponse("Talleres", "Atlantic/Canary", null, 2));
+        when(service.guardar(any(), any())).thenReturn(new CompanySettingsResponse("Talleres", "Atlantic/Canary", null, false, 2));
 
         mockMvc.perform(put(RUTA).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nombre\":\"Talleres\",\"zonaHoraria\":\"Atlantic/Canary\"}"))

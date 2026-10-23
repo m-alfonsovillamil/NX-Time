@@ -8,6 +8,7 @@ import com.nxtime.nxtime.dto.RefreshTokenRequest;
 import com.nxtime.nxtime.dto.ConfirmRegistrationRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
 import com.nxtime.nxtime.dto.RegistrationPendingResponse;
+import com.nxtime.nxtime.dto.SegundoPasoRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.security.SesionWeb;
 import com.nxtime.nxtime.service.AccessCodeService;
@@ -144,6 +145,37 @@ public class AuthController {
     public ResponseEntity<AuthenticationResponse> login(
             @Valid @RequestBody LoginRequest request, HttpServletResponse respuesta) {
         AuthenticationResponse sesion = authService.login(request);
+        // Con segundo factor todavía no hay sesión (ADR 051): ni cookies.
+        if (!esNavegador(request.origen()) || sesion.faltaElCodigo()) {
+            return ResponseEntity.ok(sesion);
+        }
+        sesionWeb.emitir(respuesta, sesion.refreshToken());
+        return ResponseEntity.ok(sesion.sinRefreshToken());
+    }
+
+    @Operation(summary = "Segundo paso del login: el código",
+            description = "Para quien tiene el segundo factor activado (ADR 051): /auth/login le devolvió solo un "
+                    + "'desafio', que vale cinco minutos. Con él y las 6 cifras de su aplicación de autenticación (o "
+                    + "uno de sus códigos de recuperación, que se gasta) abre la sesión, igual que el login: con "
+                    + "'origen' WEB el refresh va en la cookie. Un código ya usado no vuelve a valer. Los fallos "
+                    + "cuentan en un límite por cuenta aparte del de la contraseña.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Código correcto, sesión abierta",
+                    content = @Content(schema = @Schema(implementation = AuthenticationResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Falta el desafío o el código",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "Código incorrecto o ya usado, o un desafío caducado o "
+                    + "que ya no vale (se ha cambiado la contraseña o el segundo factor): hay que volver a entrar",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "423", description = "Su empresa no está activa (ADR 046)",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "429", description = "Demasiados intentos con esta cuenta o desde esta IP",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/2fa")
+    public ResponseEntity<AuthenticationResponse> segundoPaso(
+            @Valid @RequestBody SegundoPasoRequest request, HttpServletResponse respuesta) {
+        AuthenticationResponse sesion = authService.segundoPaso(request);
         if (!esNavegador(request.origen())) {
             return ResponseEntity.ok(sesion);
         }

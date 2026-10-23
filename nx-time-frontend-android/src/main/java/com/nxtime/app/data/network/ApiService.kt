@@ -32,6 +32,12 @@ interface ApiService {
         @Body peticion: PeticionLogin
     ): Response<RespuestaAutenticacion>
 
+    /** El código del segundo factor, con el desafío del login (ADR 051). */
+    @POST("auth/2fa")
+    suspend fun segundoPaso(
+        @Body peticion: PeticionSegundoPaso
+    ): Response<RespuestaAutenticacion>
+
     // Desde la V37 (ADR 034) el registro no abre sesión: 202 y un código al
     // correo, que se canjea en auth/registro/confirmar.
     @POST("auth/register-manager")

@@ -86,6 +86,13 @@ services:
       - key: JWT_SECRET
         sync: false
 
+      # Clave con la que se cifran los secretos del segundo factor (ADR 051).
+      # Sin ella la aplicación NO ARRANCA, por lo mismo que JWT_SECRET.
+      # Generar con: openssl rand -base64 32. Cambiarla obliga a todos a
+      # volver a activar su segundo factor.
+      - key: TOTP_CLAVE
+        sync: false
+
       # SMTP real (Brevo, Resend... en su plan gratuito). MailHog solo
       # existe en local.
       - key: MAIL_HOST

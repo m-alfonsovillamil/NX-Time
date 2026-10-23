@@ -18,7 +18,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
-import { CUENTAS, desplegarMenu, entrar, irASeccion, paginaLista } from './ayudas';
+import { CUENTAS, desplegarMenu, entrar, entrarComoOperadora, irASeccion, paginaLista } from './ayudas';
 
 const REGLAS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -75,7 +75,7 @@ for (const tema of ['light', 'dark'] as const) {
     // El panel de plataforma no está en el menú de ningún rol (ADR 040): lo
     // recorre quien lo ve, la operadora de `application-dev.yml`.
     test('el panel de plataforma y el detalle de una empresa', async ({ page }) => {
-      await entrar(page, 'lucia.moreno@techcorp.demo');
+      await entrarComoOperadora(page);
       await irASeccion(page, 'Empresas');
       await paginaLista(page, '/plataforma');
       await expect(page.getByRole('link', { name: 'TechCorp Solutions' })).toBeVisible();

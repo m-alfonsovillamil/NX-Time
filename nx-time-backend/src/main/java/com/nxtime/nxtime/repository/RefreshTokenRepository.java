@@ -66,4 +66,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("UPDATE refresh_tokens r SET r.revocado = true, r.revocadoEn = :cuando "
             + "WHERE r.familia = :familia AND r.revocado = false")
     int revocarLaFamilia(@Param("familia") UUID familia, @Param("cuando") Instant cuando);
+
+    /**
+     * La sesión de quien acaba de activar el segundo factor pasa a contar como
+     * sesión con segundo factor (ADR 051): acaba de escribir un código bueno.
+     * Solo esa familia y solo de esa persona: un {@code sid} ajeno no hace nada.
+     */
+    @Modifying
+    @Query("UPDATE refresh_tokens r SET r.conSegundoFactor = true "
+            + "WHERE r.familia = :familia AND r.usuario = :usuario AND r.revocado = false")
+    int marcarConSegundoFactor(@Param("familia") UUID familia, @Param("usuario") User usuario);
 }

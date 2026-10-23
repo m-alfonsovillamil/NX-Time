@@ -1,6 +1,6 @@
 /**
- * Ajustes: el tema, la contraseña, cerrar las sesiones, descargar mis datos y
- * pedir que los borren.
+ * Ajustes: el tema, la contraseña, cerrar las sesiones, el segundo factor
+ * (ADR 051), descargar mis datos y pedir que los borren.
  *
  * Las notificaciones push se encienden aquí, en este navegador (W9, ADR 031).
  * Lo que la app tiene y la web no —el recordatorio de fichar y entrar con
@@ -38,6 +38,7 @@ import {
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
 import { DOCUMENTOS } from '../legal/documentos';
 import { CuentasVinculadas, useCuentasVinculadas } from './CuentasVinculadas';
+import { TarjetaSegundoFactor } from './SegundoFactor';
 
 const J = cuenta.ajustes;
 
@@ -375,6 +376,7 @@ const INDICE: readonly { id: string; icono: NombreIcono; texto: string; soloConS
   { id: 'ajustes-apariencia', icono: 'tema', texto: J.apariencia },
   { id: 'ajustes-notificaciones', icono: 'campana', texto: J.notificaciones.titulo },
   { id: 'ajustes-cuenta', icono: 'persona', texto: J.cuenta },
+  { id: 'ajustes-segundo-factor', icono: 'candado', texto: J.segundoFactor.titulo },
   { id: 'ajustes-vinculadas', icono: 'enlace', texto: J.vinculadas.titulo, soloConSso: true },
   { id: 'ajustes-privacidad', icono: 'candado', texto: J.privacidad },
   { id: 'ajustes-app', icono: 'movil', texto: J.enLaApp },
@@ -413,6 +415,7 @@ export function Ajustes() {
           <Apariencia />
           <Notificaciones />
           <Cuenta />
+          <TarjetaSegundoFactor />
           {vinculadas.hay && <CuentasVinculadas {...vinculadas} />}
           <Tarjeta id="ajustes-privacidad" icono="candado" titulo={J.privacidad}>
             <div className="nx-columna">

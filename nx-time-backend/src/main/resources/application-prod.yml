@@ -126,6 +126,12 @@ application:
       #   openssl rand -base64 64
       secret-key: ${JWT_SECRET}
 
+    totp:
+      # Lo mismo que JWT_SECRET: sin valor por defecto, para que una
+      # producción sin TOTP_CLAVE no arranque cifrando con la clave pública de
+      # desarrollo. Generar: openssl rand -base64 32 (ADR 051).
+      clave: ${TOTP_CLAVE}
+
     cors:
       # Sin frontend web todavía: la app Android no manda cabecera
       # Origin, así que CORS no le afecta. En cuanto haya un dominio

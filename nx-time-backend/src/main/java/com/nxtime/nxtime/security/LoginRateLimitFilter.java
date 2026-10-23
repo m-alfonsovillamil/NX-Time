@@ -92,7 +92,10 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
      * limita: es una redirección y no cuesta nada.
      */
     private static final Set<String> RUTAS_DE_ENTRADA = Set.of(
-            "/auth/login", "/auth/sso/google/vuelta", "/auth/sso/microsoft/vuelta", "/auth/sso/canjear");
+            "/auth/login", "/auth/sso/google/vuelta", "/auth/sso/microsoft/vuelta", "/auth/sso/canjear",
+            // El código del segundo factor (ADR 051) es el mismo entrar, en dos
+            // pasos. Contra una cuenta lo frena su propio límite por cuenta.
+            "/auth/2fa");
 
     private static final Set<String> RUTAS_LIMITADAS = Set.of(
             "/auth/register-manager", "/auth/registro/confirmar", "/auth/recuperar",

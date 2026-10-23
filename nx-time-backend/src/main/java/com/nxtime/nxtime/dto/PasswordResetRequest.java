@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.dto;
 
 import com.nxtime.nxtime.dto.validacion.CabeEnBcrypt;
+import com.nxtime.nxtime.dto.validacion.NoEsComun;
 import com.nxtime.nxtime.domain.Emails;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -28,6 +29,7 @@ public record PasswordResetRequest(
         @NotBlank(message = "La contraseña nueva es obligatoria.")
         @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres.")
         @CabeEnBcrypt
+        @NoEsComun
         String contrasenaNueva
 ) {
 

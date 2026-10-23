@@ -47,7 +47,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
     public CompanySettingsResponse leer(User actor) {
         Company empresa = suEmpresa(actor);
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
-                empresa.getContactoPrivacidad(), 0);
+                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0);
     }
 
     /**
@@ -77,6 +77,9 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
         empresa.setNombre(nombre);
         empresa.setZonaHoraria(zona);
         empresa.setContactoPrivacidad(contactoValido(request.contactoPrivacidad()));
+        if (request.exigirSegundoFactor() != null) {
+            exigirSegundoFactor(empresa, request.exigirSegundoFactor(), actor);
+        }
         companyRepository.saveAndFlush(empresa);
 
         int invalidadas = 0;
@@ -89,7 +92,24 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
                     actor.getId(), empresa.getId(), zona, invalidadas);
         }
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
-                empresa.getContactoPrivacidad(), invalidadas);
+                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), invalidadas);
+    }
+
+    /**
+     * Exigir el segundo factor a los ADMIN y RRHH (ADR 051). Para exigirlo,
+     * quien lo hace tiene que tenerlo ya: si no, en la petición siguiente su
+     * propia sesión quedaría limitada a activarlo, sin haber entendido por qué.
+     */
+    private void exigirSegundoFactor(Company empresa, boolean exigir, User actor) {
+        if (exigir && !empresa.isExigirSegundoFactor() && !actor.tieneSegundoFactor()) {
+            throw new BusinessException("Para exigir el segundo factor, actívalo antes tú en Ajustes → Segundo factor.",
+                    HttpStatus.CONFLICT);
+        }
+        if (exigir != empresa.isExigirSegundoFactor()) {
+            log.info("{} {} el segundo factor a los ADMIN y RRHH de la empresa {}.",
+                    actor.getId(), exigir ? "exige" : "deja de exigir", empresa.getId());
+        }
+        empresa.setExigirSegundoFactor(exigir);
     }
 
     private Company suEmpresa(User actor) {

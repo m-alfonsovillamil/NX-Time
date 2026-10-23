@@ -67,6 +67,16 @@ export const empresa = {
     accesosTitulo: 'Accesos a datos personales',
     accesosTexto: 'Quién ha consultado datos de otra persona en los dos últimos años: CV, perfiles, registros mensuales, el Excel, expedientes de denuncia y exportaciones.',
     verAccesos: 'Ver los accesos',
+    /** Exigir el segundo factor a ADMIN y RRHH (ADR 051). */
+    segundoFactor: {
+      titulo: 'Segundo factor',
+      texto:
+        'Los administradores y RRHH ven y cambian datos de toda la plantilla. Puedes exigirles que, además de la contraseña, entren con un código de una aplicación de autenticación (o con Google o Microsoft). Para exigirlo, actívalo antes tú en tus Ajustes.',
+      exigir: 'Exigir el segundo factor a administradores y RRHH',
+      guardar: 'Aplicar',
+      exigido: 'Desde ahora, administradores y RRHH tendrán que entrar con segundo factor.',
+      noExigido: 'Ya no se exige el segundo factor.',
+    },
     guardar: 'Guardar',
     guardado: 'Ajustes guardados.',
     confirmarTitulo: '¿Cambiar la zona horaria?',

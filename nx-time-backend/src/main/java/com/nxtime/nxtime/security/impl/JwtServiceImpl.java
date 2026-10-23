@@ -5,9 +5,12 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +43,17 @@ public class JwtServiceImpl implements JwtService {
      */
     static final String EMISOR = "nxtime";
     static final String DESTINO = "nxtime-api";
+
+    /*
+     * Segundo factor (ADR 051). El desafío lleva su propio destino: con la
+     * misma clave, un access token no pasa por desafío ni un desafío por
+     * access token.
+     */
+    static final String CLAIM_SEGUNDO_FACTOR = "mfa";
+    static final String CLAIM_EMITIDO = "emi";
+    static final String CLAIM_HUELLA = "hue";
+    static final String DESTINO_DESAFIO = "nxtime-2fa";
+    static final Duration VIDA_DEL_DESAFIO = Duration.ofMinutes(5);
 
     /**
      * La clave de desarrollo que trae application.yml. Está en el repositorio,
@@ -81,10 +95,54 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String generateToken(UserDetails userDetails, java.util.UUID sesion) {
+    public String generateToken(UserDetails userDetails, java.util.UUID sesion, boolean conSegundoFactor) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CLAIM_SESION, sesion.toString());
+        claims.put(CLAIM_SEGUNDO_FACTOR, conSegundoFactor);
         return generateToken(claims, userDetails);
+    }
+
+    @Override
+    public boolean conSegundoFactor(String token) {
+        return Boolean.TRUE.equals(extractClaim(token, claims -> claims.get(CLAIM_SEGUNDO_FACTOR, Boolean.class)));
+    }
+
+    @Override
+    public Instant emitidoEn(String token) {
+        Claims claims = extractAllClaims(token);
+        Long milisegundos = claims.get(CLAIM_EMITIDO, Long.class);
+        return milisegundos != null ? Instant.ofEpochMilli(milisegundos) : claims.getIssuedAt().toInstant();
+    }
+
+    @Override
+    public String generarDesafio(long usuarioId, String huella) {
+        Date now = new Date();
+        return Jwts.builder()
+                .subject(Long.toString(usuarioId))
+                .claim(CLAIM_HUELLA, huella)
+                .issuer(EMISOR)
+                .audience().add(DESTINO_DESAFIO).and()
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + VIDA_DEL_DESAFIO.toMillis()))
+                .signWith(clave)
+                .compact();
+    }
+
+    @Override
+    public Optional<Desafio> leerDesafio(String desafio) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(clave)
+                    .requireIssuer(EMISOR)
+                    .requireAudience(DESTINO_DESAFIO)
+                    .build()
+                    .parseSignedClaims(desafio)
+                    .getPayload();
+            return Optional.of(new Desafio(Long.parseLong(claims.getSubject()), claims.get(CLAIM_HUELLA, String.class)));
+        } catch (RuntimeException e) {
+            // Caducado, manipulado, de otro tipo o mal formado: da igual cuál.
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -107,6 +165,7 @@ public class JwtServiceImpl implements JwtService {
         Date now = new Date();
         return Jwts.builder()
                 .claims(extraClaims)
+                .claim(CLAIM_EMITIDO, now.getTime())
                 .subject(userDetails.getUsername())
                 .issuer(EMISOR)
                 .audience().add(DESTINO).and()

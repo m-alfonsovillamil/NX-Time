@@ -132,6 +132,28 @@ public class User {
         return correoSinConfirmarDesde != null;
     }
 
+    /*
+     * Segundo factor y sesiones (V47, ADR 051). De solo lectura en la entidad:
+     * los escriben sentencias propias (UserRepository), como
+     * aviso_privacidad_visto_en, para que un save con una copia vieja no
+     * desactive el segundo factor de nadie ni resucite sesiones cerradas.
+     */
+
+    /** Desde cuándo entra con segundo factor (TOTP). Null si no lo tiene. */
+    @Column(name = "segundo_factor_desde", insertable = false, updatable = false)
+    private Instant segundoFactorDesde;
+
+    /**
+     * Los access tokens emitidos antes de esto no valen: «cerrar todas las
+     * sesiones» los corta al momento, y no a los quince minutos.
+     */
+    @Column(name = "sesiones_validas_desde", insertable = false, updatable = false)
+    private Instant sesionesValidasDesde;
+
+    public boolean tieneSegundoFactor() {
+        return segundoFactorDesde != null;
+    }
+
     @Version
     private long version;
 

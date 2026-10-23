@@ -52,6 +52,16 @@ const RegistroEmpresa = lazy(() =>
 const Kiosco = lazy(() => import('../paginas/kiosco/Kiosco').then((m) => ({ default: m.Kiosco })));
 const Legal = lazy(() => import('../paginas/legal/Legal').then((m) => ({ default: m.Legal })));
 
+/*
+ * Quien tiene que entrar con segundo factor y aún no lo tiene (ADR 051): el
+ * servidor no le deja hacer otra cosa que activarlo, así que en vez del marco
+ * --que pediría la jornada, los avisos y todo lo demás, y recibiría 403-- se le
+ * enseña solo eso. Su propio trozo: casi nadie lo ve.
+ */
+const SegundoFactorObligatorio = lazy(() =>
+  import('../paginas/cuenta/SegundoFactor').then((m) => ({ default: m.SegundoFactorObligatorio })),
+);
+
 /** Lo que el login lee para volver a donde se quería ir. */
 export interface EstadoDeVuelta {
   desde?: string;
@@ -151,6 +161,8 @@ function useRestaurandoSesion(): boolean {
 
 export function App() {
   const dentro = useSesionIniciada();
+  const { sesion } = useSesion();
+  const soloActivarSegundoFactor = dentro && sesion?.segundoFactorPorActivar === true;
   const restaurando = useRestaurandoSesion();
   useVaciarCacheAlSalir();
   const secciones = disponibles();
@@ -179,7 +191,9 @@ export function App() {
           <Route path="/kiosco" element={<Kiosco />} />
           <Route path="/legal" element={<Legal />} />
           <Route path="/legal/:ruta" element={<Legal />} />
-          {dentro ? (
+          {soloActivarSegundoFactor ? (
+            <Route path="*" element={<SegundoFactorObligatorio />} />
+          ) : dentro ? (
             <Route element={<Marco />}>
               {secciones.map(({ ruta, requiere, pagina: Pagina }) => (
                 <Route

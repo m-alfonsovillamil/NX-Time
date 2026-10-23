@@ -446,6 +446,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/2fa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Segundo paso del login: el código
+         * @description Para quien tiene el segundo factor activado (ADR 051): /auth/login le devolvió solo un 'desafio', que vale cinco minutos. Con él y las 6 cifras de su aplicación de autenticación (o uno de sus códigos de recuperación, que se gasta) abre la sesión, igual que el login: con 'origen' WEB el refresh va en la cookie. Un código ya usado no vuelve a valer. Los fallos cuentan en un límite por cuenta aparte del de la contraseña.
+         */
+        post: operations["segundoPaso"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/usuario/cerrar-sesiones": {
         parameters: {
             query?: never;
@@ -457,7 +477,7 @@ export interface paths {
         put?: never;
         /**
          * Cerrar la sesión en todos los dispositivos
-         * @description Revoca todos los refresh tokens del usuario, incluido el del dispositivo desde el que se pide. El access token ya emitido sigue valiendo hasta que caduque (15 min): es un JWT y no se consulta en base, así que lo que se corta es la capacidad de renovarlo.
+         * @description Revoca todos los refresh tokens del usuario, incluido el del dispositivo desde el que se pide, y desde el ADR 051 también los access tokens ya emitidos: la siguiente petición con cualquiera de ellos responde 401.
          */
         post: operations["cerrarSesiones"];
         delete?: never;
@@ -621,6 +641,86 @@ export interface paths {
          * @description Responde 204 si es correcta y 401 si no, y no hace nada más: no emite tokens ni abre sesión. Comparte con el login el límite de intentos de la cuenta (429). Lo usa la app para activar la huella, que antes hacía un /auth/login completo -- y eso dejaba tokens nuevos guardados y el refresh anterior vivo en el servidor.
          */
         post: operations["verificarContrasena"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/segundo-factor/desactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desactivarlo
+         * @description Con la contraseña y un código (de la aplicación o de recuperación). No se puede si se me exige. Avisa por correo.
+         */
+        post: operations["desactivar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/segundo-factor/codigos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Códigos de recuperación nuevos
+         * @description Con un código de la aplicación. Los de antes dejan de valer. Avisa por correo.
+         */
+        post: operations["regenerarCodigos"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/segundo-factor/activacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Empezar a activarlo
+         * @description Un secreto nuevo, con la dirección otpauth:// para el QR. No se pide al entrar hasta confirmarlo con un código. Repetirlo antes de confirmar cambia el secreto.
+         */
+        post: operations["iniciar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/perfil/segundo-factor/activacion/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar la activación
+         * @description Con la contraseña y un código del secreto nuevo. Devuelve los diez códigos de recuperación: es la única vez que se ven. La sesión desde la que se confirma pasa a contar como sesión con segundo factor: el cliente tiene que renovar el access token (/auth/refresh) para que lo diga. Avisa por correo.
+         */
+        post: operations["confirmar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1047,7 +1147,7 @@ export interface paths {
          * Dar de alta un kiosco con el código de la tablet
          * @description El código que enseña la tablet al abrir /kiosco. Caduca a los 10 minutos.
          */
-        post: operations["confirmar"];
+        post: operations["confirmar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1971,7 +2071,7 @@ export interface paths {
          * Empezar: manda el navegador al proveedor
          * @description No es para llamarla con fetch: se navega a ella. Responde siempre con una redirección.
          */
-        get: operations["iniciar"];
+        get: operations["iniciar_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2140,6 +2240,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/segundo-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mi segundo factor
+         * @description Si está activo, si se me exige y por qué, y cuántos códigos de recuperación me quedan.
+         */
+        get: operations["estado_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfil/mis-datos": {
         parameters: {
             query?: never;
@@ -2191,7 +2311,7 @@ export interface paths {
          * ¿Puedo fichar en un kiosco?
          * @description Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.
          */
-        get: operations["estado_2"];
+        get: operations["estado_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3381,6 +3501,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gestor/empleados/{id}/segundo-factor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Quitar el segundo factor a alguien de la empresa
+         * @description Para quien ha perdido el móvil y los códigos de recuperación: vuelve a entrar solo con la contraseña y lo activa otra vez. No a uno mismo ni a un rol por encima del propio. Le avisa por correo. Si no lo tenía, no hace nada.
+         */
+        delete: operations["quitar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje/{id}/pausas/{pausaId}": {
         parameters: {
             query?: never;
@@ -3587,11 +3727,13 @@ export interface components {
             nombre: string;
             zonaHoraria: string;
             contactoPrivacidad?: string;
+            exigirSegundoFactor?: boolean;
         };
         CompanySettingsResponse: {
             nombre?: string;
             zonaHoraria?: string;
             contactoPrivacidad?: string;
+            exigirSegundoFactor?: boolean;
             /** Format: int32 */
             firmasInvalidadas?: number;
         };
@@ -3694,6 +3836,8 @@ export interface components {
             authorities?: string[];
             zonaHoraria?: string;
             condicionesPorAceptar?: boolean;
+            segundoFactorPorActivar?: boolean;
+            desafio?: string;
         };
         SsoExchangeRequest: {
             codigo: string;
@@ -3750,6 +3894,18 @@ export interface components {
             /** Format: email */
             email: string;
             contrasena: string;
+            origen?: string;
+        };
+        /** @description El código del segundo factor, con el desafío que devolvió el login */
+        SegundoPasoRequest: {
+            /** @description El 'desafio' de la respuesta de /auth/login. Vale cinco minutos */
+            desafio: string;
+            /**
+             * @description Las 6 cifras de la aplicación de autenticación, o uno de los códigos de recuperación
+             * @example 123456
+             */
+            codigo: string;
+            /** @description ANDROID, IOS o WEB, como en /auth/login. Con WEB el refresh va en la cookie */
             origen?: string;
         };
         ChangePasswordRequest: {
@@ -3810,6 +3966,37 @@ export interface components {
         VerifyPasswordRequest: {
             /** @description La contraseña actual de quien hace la petición */
             contrasena: string;
+        };
+        /** @description La contraseña y un código del segundo factor */
+        CambioSegundoFactorRequest: {
+            /** @description La contraseña actual de quien hace la petición */
+            contrasena: string;
+            /**
+             * @description Las 6 cifras de la aplicación de autenticación (o, al desactivarlo, un código de recuperación)
+             * @example 123456
+             */
+            codigo: string;
+        };
+        /** @description Un código del segundo factor */
+        CodigoSegundoFactorRequest: {
+            /**
+             * @description Las 6 cifras de la aplicación de autenticación, o uno de los códigos de recuperación
+             * @example 123456
+             */
+            codigo: string;
+        };
+        /** @description Diez códigos de recuperación de un solo uso. Solo se enseñan esta vez */
+        CodigosDeRecuperacionResponse: {
+            codigos?: string[];
+        };
+        /** @description El secreto nuevo, para la aplicación de autenticación */
+        ActivacionSegundoFactorResponse: {
+            /** @description El secreto en Base32, para escribirlo a mano */
+            secreto?: string;
+            /** @description La dirección otpauth:// que lleva el QR */
+            uri?: string;
+            /** @description El QR con esa dirección, en SVG */
+            qr?: string;
         };
         KioskCard: {
             /** Format: int64 */
@@ -4350,6 +4537,7 @@ export interface components {
             departamentoNombre?: string;
             /** @enum {string} */
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
+            segundoFactor?: boolean;
         };
         UpdateEmployeeStatusRequest: {
             activo: boolean;
@@ -4709,6 +4897,25 @@ export interface components {
             webEn30Dias?: number;
             /** Format: int64 */
             appEn30Dias?: number;
+        };
+        /** @description El segundo factor de quien pregunta */
+        SegundoFactorResponse: {
+            /** @description Si se le pide un código al entrar con contraseña */
+            activo?: boolean;
+            /**
+             * Format: date-time
+             * @description Desde cuándo, si está activo
+             */
+            desde?: string;
+            /** @description Si se le exige: entonces no puede desactivarlo */
+            obligatorio?: boolean;
+            /** @description Por qué se le exige */
+            motivo?: string;
+            /**
+             * Format: int32
+             * @description Códigos de recuperación sin usar
+             */
+            codigosDeRecuperacion?: number;
         };
         Adjunto: {
             tipo?: string;
@@ -6664,6 +6871,66 @@ export interface operations {
             };
         };
     };
+    segundoPaso: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SegundoPasoRequest"];
+            };
+        };
+        responses: {
+            /** @description Código correcto, sesión abierta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuthenticationResponse"];
+                };
+            };
+            /** @description Falta el desafío o el código */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Código incorrecto o ya usado, o un desafío caducado o que ya no vale (se ha cambiado la contraseña o el segundo factor): hay que volver a entrar */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Su empresa no está activa (ADR 046) */
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos con esta cuenta o desde esta IP */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     cerrarSesiones: {
         parameters: {
             query?: never;
@@ -7109,6 +7376,231 @@ export interface operations {
             };
             /** @description No autenticado, o la contraseña no es correcta */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos con esta cuenta */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    desactivar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CambioSegundoFactorRequest"];
+            };
+        };
+        responses: {
+            /** @description Desactivado */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contraseña o código incorrectos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Se me exige: no lo puedo quitar */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está activo */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos con esta cuenta */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    regenerarCodigos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodigoSegundoFactorRequest"];
+            };
+        };
+        responses: {
+            /** @description Códigos nuevos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CodigosDeRecuperacionResponse"];
+                };
+            };
+            /** @description Código incorrecto */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No está activo */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Demasiados intentos con esta cuenta */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    iniciar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Secreto nuevo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ActivacionSegundoFactorResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya está activo */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    confirmar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CambioSegundoFactorRequest"];
+            };
+        };
+        responses: {
+            /** @description Activado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CodigosDeRecuperacionResponse"];
+                };
+            };
+            /** @description Contraseña o código incorrectos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No hay activación empezada, o ya está activo */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8291,7 +8783,7 @@ export interface operations {
             };
         };
     };
-    confirmar: {
+    confirmar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -10889,7 +11381,7 @@ export interface operations {
             };
         };
     };
-    iniciar: {
+    iniciar_1: {
         parameters: {
             query?: {
                 /** @description 'app' si empieza la app Android; cualquier otra cosa, la web */
@@ -11221,6 +11713,35 @@ export interface operations {
             };
         };
     };
+    estado_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SegundoFactorResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     exportarMisDatos: {
         parameters: {
             query?: never;
@@ -11279,7 +11800,7 @@ export interface operations {
             };
         };
     };
-    estado_2: {
+    estado_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -13596,6 +14117,53 @@ export interface operations {
                 content?: never;
             };
             /** @description No tenía ninguna de ese proveedor */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    quitar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quitado (o no lo tenía) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'empleado:gestionar', de otra empresa, uno mismo o un rol por encima */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
             404: {
                 headers: {
                     [name: string]: unknown;

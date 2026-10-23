@@ -109,13 +109,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // borrado de datos (ADR 016) -- seguía valiendo sus 15
                 // minutos, y en ese rato se podía, por ejemplo, volver a subir
                 // la foto que el borrado acababa de eliminar.
-                if (userDetails.isEnabled() && jwtService.isTokenValid(jwtToken, userDetails)) {
+                if (userDetails.isEnabled() && jwtService.isTokenValid(jwtToken, userDetails)
+                        && !emitidoAntesDeCerrarSesiones(jwtToken, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     // PASO 7: Guardamos la autenticación en la memoria de Spring para esta petición.
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    // Cómo entró esta sesión: lo necesita el filtro siguiente (ADR 051).
+                    request.setAttribute(SegundoFactorObligatorioFilter.ATRIBUTO,
+                            jwtService.conSegundoFactor(jwtToken));
                 } else {
                     log.warn("Token JWT inválido o caducado, o de una cuenta de baja.");
                 }
@@ -144,5 +148,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // PASO 8: Pasamos la petición al siguiente filtro o al controlador correspondiente.
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Si el token es de antes de que su dueño cerrara todas sus sesiones (ADR
+     * 051). Hasta octubre de 2026 «cerrar todas» solo revocaba los refresh, y
+     * el access token de un intruso seguía valiendo hasta quince minutos. La
+     * persona ya se ha leído de la base para esta petición, así que mirarlo no
+     * cuesta ninguna consulta más.
+     */
+    private boolean emitidoAntesDeCerrarSesiones(String jwtToken, UserDetails userDetails) {
+        if (!(userDetails instanceof SecurityUser persona) || persona.getUser().getSesionesValidasDesde() == null) {
+            return false;
+        }
+        return jwtService.emitidoEn(jwtToken).isBefore(persona.getUser().getSesionesValidasDesde());
     }
 }
