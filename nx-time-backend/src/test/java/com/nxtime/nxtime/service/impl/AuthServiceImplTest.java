@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -35,6 +36,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.security.OperadoresDePlataforma;
+import com.nxtime.nxtime.security.SegundoFactorObligatorio;
 import com.nxtime.nxtime.security.TurnoDeContrasena;
 import com.nxtime.nxtime.service.AccessCodeService;
 import java.time.Instant;
@@ -83,6 +85,8 @@ class AuthServiceImplTest {
     private AccessCodeService accessCodeService;
     @Mock
     private com.nxtime.nxtime.service.CompanyLifecycleService cicloDeLaEmpresa;
+    @Mock
+    private com.nxtime.nxtime.service.SegundoFactorService segundoFactor;
 
     static final com.nxtime.nxtime.config.CondicionesDelServicio SERVICIO = new com.nxtime.nxtime.config.CondicionesDelServicio(
             "NX Time", "Titular de prueba", "privacidad@nxtime.test", "https://nxtime.test", "2026-10-17", true);
@@ -104,11 +108,12 @@ class AuthServiceImplTest {
                 userRepository, companyRepository, refreshTokenRepository, passwordEncoder, jwtService,
                 authenticationManager, eventPublisher, accessCodeService, limitadorPorCuenta,
                 new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
-                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa);
+                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa, segundoFactor,
+                new SegundoFactorObligatorio(new OperadoresDePlataforma("")));
         ReflectionTestUtils.setField(service, "refreshExpirationMillis", 2_592_000_000L);
         // lenient: solo los tests que emiten tokens de verdad llegan a estas líneas.
         lenient().when(jwtService.generateToken(any())).thenReturn("access-token");
-        lenient().when(jwtService.generateToken(any(), any())).thenReturn("access-token");
+        lenient().when(jwtService.generateToken(any(), any(), anyBoolean())).thenReturn("access-token");
         lenient().when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -192,7 +197,8 @@ class AuthServiceImplTest {
                 jwtService, authenticationManager, org.mockito.Mockito.mock(ApplicationEventPublisher.class),
                 org.mockito.Mockito.mock(AccessCodeService.class), limitadorPorCuenta,
                 new OperadoresDePlataforma(""), org.mockito.Mockito.mock(PlatformTransactionManager.class),
-                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa);
+                new TurnoDeContrasena(0), SERVICIO, cicloDeLaEmpresa, segundoFactor,
+                new SegundoFactorObligatorio(new OperadoresDePlataforma("")));
         return nuevo.registerManager(
                 new RegisterManagerRequest("Empresa Nueva SL", "Ada", "Lovelace", email, "password123", null, true));
     }

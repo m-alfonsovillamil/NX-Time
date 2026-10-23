@@ -297,6 +297,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                         empleado.getId(), VacationBalanceServiceImpl.DIAS_POR_DEFECTO),
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getId() : null,
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getNombre() : null,
-                empleado.getRol());
+                empleado.getRol(),
+                empleado.tieneSegundoFactor());
     }
 }

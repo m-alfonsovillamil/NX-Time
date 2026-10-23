@@ -28,6 +28,20 @@ export const acceso = {
     registrarEmpresa: 'Registrar una empresa',
   },
 
+  /** El código del segundo factor, después de la contraseña (ADR 051). */
+  segundoPaso: {
+    titulo: 'Código de verificación',
+    explicacion: 'Escribe el código de 6 cifras que te da tu aplicación de autenticación.',
+    codigo: 'Código',
+    ayuda: '¿No tienes el móvil? Escribe uno de tus códigos de recuperación.',
+    faltaCodigo: 'Escribe el código de 6 cifras, o uno de recuperación.',
+    entrar: 'Verificar',
+    entrando: 'Verificando…',
+    volver: 'Volver a entrar con otra cuenta',
+    sinCodigos:
+      'Si has perdido el móvil y los códigos de recuperación, pide a un administrador de tu empresa que te quite el segundo factor.',
+  },
+
   /** Entrar con Google o con Microsoft (ADR 036). Solo si el servidor los tiene configurados. */
   sso: {
     separador: 'o',

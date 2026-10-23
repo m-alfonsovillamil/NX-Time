@@ -175,4 +175,108 @@ class LoginViewModelTest {
 
         assertEquals(null, viewModel.uiState.value.error)
     }
+
+    // ---- El segundo factor (ADR 051 del backend) ----
+
+    /** Lo que responde el login a quien tiene segundo factor: solo el desafío (Gson deja el resto a null). */
+    private fun soloDesafio(): RespuestaAutenticacion =
+        com.google.gson.Gson().fromJson("""{"desafio":"el-desafio","authorities":[]}""", RespuestaAutenticacion::class.java)
+
+    private suspend fun entrarConContrasena() {
+        whenever(repositorio.login(any())).thenReturn(Response.success(soloDesafio()))
+        viewModel.onEmailCambia("ana@nxtime.com")
+        viewModel.onContrasenaCambia("una frase larga")
+        viewModel.entrar()
+    }
+
+    @Test
+    fun `con segundo factor la contrasena no abre sesion y se pide el codigo`() = runTest {
+        entrarConContrasena()
+        advanceUntilIdle()
+
+        val estado = viewModel.uiState.value
+        assertEquals("el-desafio", estado.desafio)
+        assertFalse(estado.accesoConcedido)
+        verify(repositorio, never()).procesarLoginExitoso(any())
+    }
+
+    @Test
+    fun `el codigo bueno abre la sesion`() = runTest {
+        entrarConContrasena()
+        advanceUntilIdle()
+        whenever(repositorio.segundoPaso(any(), any())).thenReturn(Response.success(respuestaValida))
+
+        viewModel.onCodigoCambia(" 123 456 ")
+        viewModel.verificarSegundoFactor()
+        advanceUntilIdle()
+
+        verify(repositorio).segundoPaso("el-desafio", "123 456")
+        verify(repositorio).procesarLoginExitoso(respuestaValida)
+        assertTrue(viewModel.uiState.value.accesoConcedido)
+    }
+
+    @Test
+    fun `vale tambien un codigo de recuperacion, y lo que no es ninguno no sale a la red`() = runTest {
+        entrarConContrasena()
+        advanceUntilIdle()
+        whenever(repositorio.segundoPaso(any(), any())).thenReturn(Response.success(respuestaValida))
+
+        viewModel.onCodigoCambia("12345")
+        viewModel.verificarSegundoFactor()
+        advanceUntilIdle()
+        assertEquals(MensajeUi.Recurso(R.string.segundo_paso_falta_codigo), viewModel.uiState.value.error)
+        verify(repositorio, never()).segundoPaso(any(), any())
+
+        viewModel.onCodigoCambia("abcde-23456")
+        viewModel.verificarSegundoFactor()
+        advanceUntilIdle()
+        verify(repositorio).segundoPaso("el-desafio", "abcde-23456")
+    }
+
+    @Test
+    fun `un codigo incorrecto ensena el mensaje del servidor y no entra`() = runTest {
+        entrarConContrasena()
+        advanceUntilIdle()
+        whenever(repositorio.segundoPaso(any(), any())).thenReturn(
+            Response.error(
+                401,
+                """{"status":401,"detail":"El código no es correcto."}"""
+                    .toResponseBody("application/problem+json".toMediaType())
+            )
+        )
+
+        viewModel.onCodigoCambia("000000")
+        viewModel.verificarSegundoFactor()
+        advanceUntilIdle()
+
+        assertEquals(MensajeUi.Texto("El código no es correcto."), viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.accesoConcedido)
+        verify(repositorio, never()).procesarLoginExitoso(any())
+    }
+
+    @Test
+    fun `volver deja de pedir el codigo y borra la contrasena`() = runTest {
+        entrarConContrasena()
+        advanceUntilIdle()
+
+        viewModel.volverDelSegundoFactor()
+
+        assertEquals(null, viewModel.uiState.value.desafio)
+        assertEquals("", viewModel.uiState.value.contrasena)
+    }
+
+    @Test
+    fun `a quien se le exige y no lo tiene no se le guarda la sesion y se le dice que lo active en la web`() = runTest {
+        whenever(repositorio.login(any())).thenReturn(
+            Response.success(respuestaValida.copy(segundoFactorPorActivar = true))
+        )
+        viewModel.onEmailCambia("ana@nxtime.com")
+        viewModel.onContrasenaCambia("una frase larga")
+        viewModel.entrar()
+        advanceUntilIdle()
+
+        assertEquals(MensajeUi.Recurso(R.string.login_segundo_factor_por_activar), viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.accesoConcedido)
+        verify(repositorio, never()).procesarLoginExitoso(any())
+    }
 }

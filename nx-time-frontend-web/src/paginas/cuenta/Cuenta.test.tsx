@@ -202,7 +202,11 @@ describe('mi perfil', () => {
 
 describe('ajustes', () => {
   function api(extra: Partial<Record<Ruta, Manejador>> = {}) {
-    return simularApi({ 'GET /api/v1/perfil/borrado': () => sinContenido(), ...extra });
+    return simularApi({
+      'GET /api/v1/perfil/borrado': () => sinContenido(),
+      'GET /api/v1/perfil/segundo-factor': () => ({ activo: false, obligatorio: false, codigosDeRecuperacion: 0 }),
+      ...extra,
+    });
   }
 
   it('las notificaciones: sin configurar se dice, y encenderlas cambia la tarjeta', async () => {

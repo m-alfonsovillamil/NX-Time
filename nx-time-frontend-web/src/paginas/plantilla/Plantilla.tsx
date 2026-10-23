@@ -219,6 +219,7 @@ export function Plantilla() {
   const [alta, setAlta] = useState<Alta | null>(null);
   const [ficha, setFicha] = useState<Persona | null>(null);
   const [baja, setBaja] = useState<Persona | null>(null);
+  const [sinSegundoFactor, setSinSegundoFactor] = useState<Persona | null>(null);
 
   const cambiarEstado = useMutacion(
     ({ persona, activo }: { persona: Persona; activo: boolean }) =>
@@ -227,6 +228,17 @@ export function Plantilla() {
       invalida: [CLAVES_PLANTILLA.todo],
       exito: (_r, v) => (v.activo ? P.altaHecha(v.persona.nombre ?? '') : P.bajaHecha(v.persona.nombre ?? '')),
       alTerminar: () => setBaja(null),
+    },
+  );
+
+  // Para quien ha perdido el móvil y los códigos de recuperación (ADR 051).
+  const quitarSegundoFactor = useMutacion(
+    (persona: Persona) =>
+      pedir(cliente.DELETE('/api/v1/gestor/empleados/{id}/segundo-factor', { params: { path: { id: persona.id ?? 0 } } })),
+    {
+      invalida: [CLAVES_PLANTILLA.todo],
+      exito: (_r, persona) => P.segundoFactorQuitado(persona.nombre ?? ''),
+      alTerminar: () => setSinSegundoFactor(null),
     },
   );
 
@@ -252,7 +264,12 @@ export function Plantilla() {
     {
       clave: 'estado',
       cabecera: P.estado,
-      celda: (p) => (p.activo === false ? <Insignia tono="neutro">{P.deBaja}</Insignia> : <Insignia tono="exito">{P.deAlta}</Insignia>),
+      celda: (p) => (
+        <span className="nx-acciones-fila">
+          {p.activo === false ? <Insignia tono="neutro">{P.deBaja}</Insignia> : <Insignia tono="exito">{P.deAlta}</Insignia>}
+          {p.segundoFactor === true && <Insignia tono="info">{P.conSegundoFactor}</Insignia>}
+        </span>
+      ),
     },
     ...(puedeConfigurar || puedeGestionar
       ? [
@@ -280,6 +297,11 @@ export function Plantilla() {
                       {P.darDeBaja}
                     </Boton>
                   ))}
+                {puedeGestionar && p.segundoFactor === true && (
+                  <Boton variante="texto" onClick={() => setSinSegundoFactor(p)}>
+                    {P.quitarSegundoFactor}
+                  </Boton>
+                )}
               </div>
             ),
           },
@@ -355,6 +377,32 @@ export function Plantilla() {
       >
         <p>{P.bajaTexto}</p>
         {cambiarEstado.error !== null && <Aviso>{cambiarEstado.error.message}</Aviso>}
+      </Dialogo>
+
+      <Dialogo
+        abierto={sinSegundoFactor !== null}
+        titulo={P.quitarSegundoFactorTitulo(sinSegundoFactor?.nombre ?? '')}
+        alCerrar={() => {
+          quitarSegundoFactor.reset();
+          setSinSegundoFactor(null);
+        }}
+        acciones={
+          <>
+            <Boton variante="texto" onClick={() => setSinSegundoFactor(null)}>
+              {T.app.cancelar}
+            </Boton>
+            <Boton
+              variante="peligro"
+              ocupado={quitarSegundoFactor.isPending}
+              onClick={() => sinSegundoFactor !== null && quitarSegundoFactor.mutate(sinSegundoFactor)}
+            >
+              {P.quitarSegundoFactor}
+            </Boton>
+          </>
+        }
+      >
+        <p>{P.quitarSegundoFactorTexto}</p>
+        {quitarSegundoFactor.error !== null && <Aviso>{quitarSegundoFactor.error.message}</Aviso>}
       </Dialogo>
     </div>
   );

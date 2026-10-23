@@ -64,6 +64,9 @@ class PersonalDataEraser {
         // Sus cuentas de Google o de Microsoft (ADR 036): identifican a la
         // persona en un tercero, y sin ellas tampoco se entra por ahí.
         int identidades = jdbc.update("DELETE FROM identidades_externas WHERE usuario_id = ?", usuarioId);
+        // Su segundo factor (ADR 051): el secreto y los códigos de recuperación.
+        int segundoFactor = jdbc.update("DELETE FROM segundo_factor WHERE usuario_id = ?", usuarioId)
+                + jdbc.update("DELETE FROM codigos_recuperacion WHERE usuario_id = ?", usuarioId);
         // Si era Responsable del canal de denuncias (ADR 048), deja de serlo.
         jdbc.update("UPDATE empresas SET responsable_canal_id = NULL, responsable_canal_desde = NULL "
                 + "WHERE responsable_canal_id = ?", usuarioId);
@@ -81,7 +84,8 @@ class PersonalDataEraser {
                        kiosco_pin_hash = NULL,
                        kiosco_pin_fallos = 0,
                        kiosco_pin_bloqueado_hasta = NULL,
-                       kiosco_tarjeta_version = NULL
+                       kiosco_tarjeta_version = NULL,
+                       segundo_factor_desde = NULL
                  WHERE id = ?
                 """, contrasenaInutilizable(), usuarioId);
 
@@ -92,7 +96,8 @@ class PersonalDataEraser {
                 "sesiones", sesiones,
                 "dispositivosPush", dispositivos,
                 "codigosDeAcceso", codigos,
-                "identidadesExternas", identidades);
+                "identidadesExternas", identidades,
+                "segundoFactor", segundoFactor);
     }
 
     /**

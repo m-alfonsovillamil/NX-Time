@@ -97,6 +97,9 @@
     "name" : "Perfil",
     "description" : "Datos personales del usuario autenticado, y consulta del perfil de un compañero de la misma empresa."
   }, {
+    "name" : "Segundo factor",
+    "description" : "Un código de una aplicación de autenticación al entrar con contraseña (TOTP, RFC 6238), con códigos de recuperación de un solo uso. Opcional, salvo para el operador de la plataforma, el Responsable del canal de denuncias y, si su empresa lo exige, los ADMIN y RRHH."
+  }, {
     "name" : "Ofertas internas",
     "description" : "Vacantes internas y candidaturas de la plantilla."
   }, {
@@ -1544,11 +1547,81 @@
         }
       }
     },
+    "/auth/2fa" : {
+      "post" : {
+        "tags" : [ "Autenticación" ],
+        "summary" : "Segundo paso del login: el código",
+        "description" : "Para quien tiene el segundo factor activado (ADR 051): /auth/login le devolvió solo un 'desafio', que vale cinco minutos. Con él y las 6 cifras de su aplicación de autenticación (o uno de sus códigos de recuperación, que se gasta) abre la sesión, igual que el login: con 'origen' WEB el refresh va en la cookie. Un código ya usado no vuelve a valer. Los fallos cuentan en un límite por cuenta aparte del de la contraseña.",
+        "operationId" : "segundoPaso",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SegundoPasoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Código correcto, sesión abierta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Falta el desafío o el código",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Código incorrecto o ya usado, o un desafío caducado o que ya no vale (se ha cambiado la contraseña o el segundo factor): hay que volver a entrar",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "423" : {
+            "description" : "Su empresa no está activa (ADR 046)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos con esta cuenta o desde esta IP",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/usuario/cerrar-sesiones" : {
       "post" : {
         "tags" : [ "Usuario" ],
         "summary" : "Cerrar la sesión en todos los dispositivos",
-        "description" : "Revoca todos los refresh tokens del usuario, incluido el del dispositivo desde el que se pide. El access token ya emitido sigue valiendo hasta que caduque (15 min): es un JWT y no se consulta en base, así que lo que se corta es la capacidad de renovarlo.",
+        "description" : "Revoca todos los refresh tokens del usuario, incluido el del dispositivo desde el que se pide, y desde el ADR 051 también los access tokens ya emitidos: la siguiente petición con cualquiera de ellos responde 401.",
         "operationId" : "cerrarSesiones",
         "responses" : {
           "200" : {
@@ -2074,6 +2147,271 @@
           },
           "401" : {
             "description" : "No autenticado, o la contraseña no es correcta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos con esta cuenta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/segundo-factor/desactivar" : {
+      "post" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Desactivarlo",
+        "description" : "Con la contraseña y un código (de la aplicación o de recuperación). No se puede si se me exige. Avisa por correo.",
+        "operationId" : "desactivar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambioSegundoFactorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Desactivado"
+          },
+          "400" : {
+            "description" : "Contraseña o código incorrectos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Se me exige: no lo puedo quitar",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está activo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos con esta cuenta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/segundo-factor/codigos" : {
+      "post" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Códigos de recuperación nuevos",
+        "description" : "Con un código de la aplicación. Los de antes dejan de valer. Avisa por correo.",
+        "operationId" : "regenerarCodigos",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CodigoSegundoFactorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Códigos nuevos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodigosDeRecuperacionResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Código incorrecto",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No está activo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Demasiados intentos con esta cuenta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/segundo-factor/activacion" : {
+      "post" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Empezar a activarlo",
+        "description" : "Un secreto nuevo, con la dirección otpauth:// para el QR. No se pide al entrar hasta confirmarlo con un código. Repetirlo antes de confirmar cambia el secreto.",
+        "operationId" : "iniciar",
+        "responses" : {
+          "200" : {
+            "description" : "Secreto nuevo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivacionSegundoFactorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya está activo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/perfil/segundo-factor/activacion/confirmar" : {
+      "post" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Confirmar la activación",
+        "description" : "Con la contraseña y un código del secreto nuevo. Devuelve los diez códigos de recuperación: es la única vez que se ven. La sesión desde la que se confirma pasa a contar como sesión con segundo factor: el cliente tiene que renovar el access token (/auth/refresh) para que lo diga. Avisa por correo.",
+        "operationId" : "confirmar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambioSegundoFactorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Activado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodigosDeRecuperacionResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Contraseña o código incorrectos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No hay activación empezada, o ya está activo",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -3552,7 +3890,7 @@
         "tags" : [ "Empresa" ],
         "summary" : "Dar de alta un kiosco con el código de la tablet",
         "description" : "El código que enseña la tablet al abrir /kiosco. Caduca a los 10 minutos.",
-        "operationId" : "confirmar",
+        "operationId" : "confirmar_1",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -6837,7 +7175,7 @@
         "tags" : [ "SSO" ],
         "summary" : "Empezar: manda el navegador al proveedor",
         "description" : "No es para llamarla con fetch: se navega a ella. Responde siempre con una redirección.",
-        "operationId" : "iniciar",
+        "operationId" : "iniciar_1",
         "parameters" : [ {
           "name" : "proveedor",
           "in" : "path",
@@ -7294,6 +7632,39 @@
         } ]
       }
     },
+    "/api/v1/perfil/segundo-factor" : {
+      "get" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Mi segundo factor",
+        "description" : "Si está activo, si se me exige y por qué, y cuántos códigos de recuperación me quedan.",
+        "operationId" : "estado_2",
+        "responses" : {
+          "200" : {
+            "description" : "Estado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SegundoFactorResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/perfil/mis-datos" : {
       "get" : {
         "tags" : [ "Perfil" ],
@@ -7361,7 +7732,7 @@
         "tags" : [ "Kiosco" ],
         "summary" : "¿Puedo fichar en un kiosco?",
         "description" : "Si tengo PIN, si tengo tarjeta y si el PIN está bloqueado.",
-        "operationId" : "estado_2",
+        "operationId" : "estado_3",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -10539,6 +10910,61 @@
         } ]
       }
     },
+    "/api/v1/gestor/empleados/{id}/segundo-factor" : {
+      "delete" : {
+        "tags" : [ "Segundo factor" ],
+        "summary" : "Quitar el segundo factor a alguien de la empresa",
+        "description" : "Para quien ha perdido el móvil y los códigos de recuperación: vuelve a entrar solo con la contraseña y lo activa otra vez. No a uno mismo ni a un rol por encima del propio. Le avisa por correo. Si no lo tenía, no hace nada.",
+        "operationId" : "quitar",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Quitado (o no lo tenía)"
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'empleado:gestionar', de otra empresa, uno mismo o un rol por encima",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/fichaje/{id}/pausas/{pausaId}" : {
       "delete" : {
         "tags" : [ "Fichaje" ],
@@ -11071,6 +11497,9 @@
             "type" : "string",
             "maxLength" : 255,
             "minLength" : 0
+          },
+          "exigirSegundoFactor" : {
+            "type" : "boolean"
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -11086,6 +11515,9 @@
           },
           "contactoPrivacidad" : {
             "type" : "string"
+          },
+          "exigirSegundoFactor" : {
+            "type" : "boolean"
           },
           "firmasInvalidadas" : {
             "type" : "integer",
@@ -11374,6 +11806,12 @@
           },
           "condicionesPorAceptar" : {
             "type" : "boolean"
+          },
+          "segundoFactorPorActivar" : {
+            "type" : "boolean"
+          },
+          "desafio" : {
+            "type" : "string"
           }
         }
       },
@@ -11565,6 +12003,30 @@
         },
         "required" : [ "contrasena", "email" ]
       },
+      "SegundoPasoRequest" : {
+        "type" : "object",
+        "description" : "El código del segundo factor, con el desafío que devolvió el login",
+        "properties" : {
+          "desafio" : {
+            "type" : "string",
+            "description" : "El 'desafio' de la respuesta de /auth/login. Vale cinco minutos",
+            "maxLength" : 1024,
+            "minLength" : 0
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Las 6 cifras de la aplicación de autenticación, o uno de los códigos de recuperación",
+            "example" : "123456",
+            "maxLength" : 32,
+            "minLength" : 0
+          },
+          "origen" : {
+            "type" : "string",
+            "description" : "ANDROID, IOS o WEB, como en /auth/login. Con WEB el refresh va en la cookie"
+          }
+        },
+        "required" : [ "codigo", "desafio" ]
+      },
       "ChangePasswordRequest" : {
         "type" : "object",
         "properties" : {
@@ -11720,6 +12182,70 @@
           }
         },
         "required" : [ "contrasena" ]
+      },
+      "CambioSegundoFactorRequest" : {
+        "type" : "object",
+        "description" : "La contraseña y un código del segundo factor",
+        "properties" : {
+          "contrasena" : {
+            "type" : "string",
+            "description" : "La contraseña actual de quien hace la petición",
+            "maxLength" : 256,
+            "minLength" : 0
+          },
+          "codigo" : {
+            "type" : "string",
+            "description" : "Las 6 cifras de la aplicación de autenticación (o, al desactivarlo, un código de recuperación)",
+            "example" : "123456",
+            "maxLength" : 32,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo", "contrasena" ]
+      },
+      "CodigoSegundoFactorRequest" : {
+        "type" : "object",
+        "description" : "Un código del segundo factor",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "description" : "Las 6 cifras de la aplicación de autenticación, o uno de los códigos de recuperación",
+            "example" : "123456",
+            "maxLength" : 32,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "codigo" ]
+      },
+      "CodigosDeRecuperacionResponse" : {
+        "type" : "object",
+        "description" : "Diez códigos de recuperación de un solo uso. Solo se enseñan esta vez",
+        "properties" : {
+          "codigos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "ActivacionSegundoFactorResponse" : {
+        "type" : "object",
+        "description" : "El secreto nuevo, para la aplicación de autenticación",
+        "properties" : {
+          "secreto" : {
+            "type" : "string",
+            "description" : "El secreto en Base32, para escribirlo a mano"
+          },
+          "uri" : {
+            "type" : "string",
+            "description" : "La dirección otpauth:// que lleva el QR"
+          },
+          "qr" : {
+            "type" : "string",
+            "description" : "El QR con esa dirección, en SVG"
+          }
+        }
       },
       "KioskCard" : {
         "type" : "object",
@@ -13100,6 +13626,9 @@
           "rol" : {
             "type" : "string",
             "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
+          },
+          "segundoFactor" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13780,6 +14309,34 @@
           "appEn30Dias" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "SegundoFactorResponse" : {
+        "type" : "object",
+        "description" : "El segundo factor de quien pregunta",
+        "properties" : {
+          "activo" : {
+            "type" : "boolean",
+            "description" : "Si se le pide un código al entrar con contraseña"
+          },
+          "desde" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Desde cuándo, si está activo"
+          },
+          "obligatorio" : {
+            "type" : "boolean",
+            "description" : "Si se le exige: entonces no puede desactivarlo"
+          },
+          "motivo" : {
+            "type" : "string",
+            "description" : "Por qué se le exige"
+          },
+          "codigosDeRecuperacion" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Códigos de recuperación sin usar"
           }
         }
       },

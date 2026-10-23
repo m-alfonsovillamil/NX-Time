@@ -109,6 +109,7 @@ class PlataformaIT {
     @Autowired private TimeEntryRepository timeEntryRepository;
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private com.nxtime.nxtime.service.AuthService authService;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -159,7 +160,11 @@ class PlataformaIT {
         gammaId = companyRepository.findByNombre("Gamma a medias").orElseThrow().getId();
 
         // Las sesiones, por la puerta de verdad: una desde la web y tres desde la app.
-        sesionOperadora = entrar(OPERADORA, true);
+        // La operadora tiene que entrar con segundo factor (ADR 051): por la
+        // puerta del SSO, que cuenta como tal y abre la misma sesión que el login.
+        sesionOperadora = json.valueToTree(authService.abrirSesion(
+                userRepository.findByEmail(OPERADORA).orElseThrow().getId(),
+                com.nxtime.nxtime.domain.RefreshToken.Origen.WEB));
         tokenOperadora = sesionOperadora.get("token").asText();
         tokenAdminAlfa = entrar("admin.alfa@plataforma.test", false).get("token").asText();
         tokenAna = entrar("ana@plataforma.test", false).get("token").asText();

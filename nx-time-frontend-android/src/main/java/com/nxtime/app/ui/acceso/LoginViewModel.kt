@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.annotation.StringRes
 import com.nxtime.app.data.dto.PeticionLogin
 import com.nxtime.app.data.dto.ProveedorSsoDTO
+import com.nxtime.app.data.dto.RespuestaAutenticacion
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
@@ -27,6 +28,12 @@ data class LoginUiState(
      * de mandar otro código a este correo, y se pide aquí.
      */
     val sinConfirmar: String? = null,
+    /**
+     * Contraseña buena con segundo factor (ADR 051): el desafío que hay que
+     * mandar con el código. El código va en [codigo], como el del correo:
+     * nunca se piden los dos a la vez.
+     */
+    val desafio: String? = null,
     val codigo: String = "",
     val accesoConcedido: Boolean = false,
     /**
@@ -142,9 +149,11 @@ class LoginViewModel(
                     PeticionLogin(estado.email.trim(), estado.contrasena)
                 )
                 val cuerpo = respuesta.body()
-                if (respuesta.isSuccessful && cuerpo != null) {
-                    authRepository.procesarLoginExitoso(cuerpo)
-                    _uiState.update { it.copy(cargando = false, accesoConcedido = true) }
+                if (respuesta.isSuccessful && cuerpo != null && cuerpo.faltaElCodigo) {
+                    // Falta el código del segundo factor (ADR 051): todavía no hay sesión.
+                    _uiState.update { it.copy(cargando = false, desafio = cuerpo.desafio, codigo = "") }
+                } else if (respuesta.isSuccessful && cuerpo != null) {
+                    entrarCon(cuerpo)
                 } else if (respuesta.code() == 403) {
                     // El login no da 403 por nada más (ver AuthController).
                     _uiState.update { it.copy(cargando = false, sinConfirmar = estado.email.trim()) }
@@ -161,6 +170,60 @@ class LoginViewModel(
         }
     }
 
+
+    /**
+     * Con la sesión ya abierta en el servidor. Salvo que a esta persona se le
+     * exija el segundo factor y no lo tenga (ADR 051): esa sesión solo sirve
+     * para activarlo, y eso se hace en la web. No se guarda, y se le dice.
+     */
+    private fun entrarCon(sesion: RespuestaAutenticacion) {
+        if (sesion.segundoFactorPorActivar) {
+            _uiState.update {
+                it.copy(cargando = false, error = MensajeUi.Recurso(R.string.login_segundo_factor_por_activar))
+            }
+            return
+        }
+        authRepository.procesarLoginExitoso(sesion)
+        _uiState.update { it.copy(cargando = false, accesoConcedido = true) }
+    }
+
+    /** Las 6 cifras de la aplicación, o un código de recuperación (10 letras y números, con guion o sin él). */
+    private fun codigoDelSegundoFactor(escrito: String): String? {
+        val limpio = escrito.trim()
+        val sinSeparadores = limpio.filterNot { it.isWhitespace() || it == '-' }
+        return limpio.takeIf {
+            sinSeparadores.matches(Regex("\\d{6}")) || sinSeparadores.matches(Regex("[A-Za-z0-9]{10}"))
+        }
+    }
+
+    /** El código del segundo factor; si vale, entra. */
+    fun verificarSegundoFactor() {
+        val estado = _uiState.value
+        val desafio = estado.desafio ?: return
+        val codigo = codigoDelSegundoFactor(estado.codigo) ?: run {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.segundo_paso_falta_codigo)) }
+            return
+        }
+        _uiState.update { it.copy(cargando = true, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.segundoPaso(desafio, codigo)
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    entrarCon(cuerpo)
+                } else {
+                    _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    /** Vuelve a la contraseña: el desafío caduca a los cinco minutos. */
+    fun volverDelSegundoFactor() = _uiState.update {
+        it.copy(desafio = null, codigo = "", contrasena = "", error = null)
+    }
 
     /** Canjea el código del correo; si vale, entra. */
     fun confirmar() {

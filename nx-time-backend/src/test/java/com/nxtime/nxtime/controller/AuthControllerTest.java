@@ -62,7 +62,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"aceptaCondiciones\":true,\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"ada@nxtime.test\","
-                                + "\"contrasena\":\"password123\"}"))
+                                + "\"contrasena\":\"frase de prueba 123\"}"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.email").value("ada@nxtime.test"))
                 .andExpect(jsonPath("$.token").doesNotExist());
@@ -73,7 +73,7 @@ class AuthControllerTest {
     void confirmarRegistro_devuelveLaSesion() throws Exception {
         when(authService.confirmarRegistro(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.ADMIN,
-                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid", false));
+                        RoleAuthorities.enOrden(Role.ADMIN), "Europe/Madrid", false, false));
 
         mockMvc.perform(post("/auth/registro/confirmar")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -99,7 +99,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"aceptaCondiciones\":true,\"nombreEmpresa\":\"Empresa SL\",\"nombre\":\"Ada\","
                                 + "\"apellidos\":\"Lovelace\",\"email\":\"no-es-un-email\","
-                                + "\"contrasena\":\"password123\"}"))
+                                + "\"contrasena\":\"frase de prueba 123\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -119,11 +119,11 @@ class AuthControllerTest {
     void login_datosValidos_devuelve200() throws Exception {
         when(authService.login(any()))
                 .thenReturn(new AuthenticationResponse("token", "refresh", "Ada", Role.GESTOR,
-                        RoleAuthorities.enOrden(Role.GESTOR), "Europe/Madrid", false));
+                        RoleAuthorities.enOrden(Role.GESTOR), "Europe/Madrid", false, false));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"ada@nxtime.test\",\"contrasena\":\"password123\"}"))
+                        .content("{\"email\":\"ada@nxtime.test\",\"contrasena\":\"frase de prueba 123\"}"))
                 .andExpect(status().isOk())
                 // Las authorities viajan ya en el login, y no solo en
                 // GET /perfil: el cliente arma su menu con esto antes de
@@ -138,7 +138,7 @@ class AuthControllerTest {
     void login_emailEnBlanco_devuelve400() throws Exception {
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"\",\"contrasena\":\"password123\"}"))
+                        .content("{\"email\":\"\",\"contrasena\":\"frase de prueba 123\"}"))
                 .andExpect(status().isBadRequest());
     }
 

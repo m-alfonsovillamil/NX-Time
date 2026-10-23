@@ -10,7 +10,7 @@
 
 import { chromium, devices, expect, test, type Page } from '@playwright/test';
 
-import { entrar, iniciarAunqueNoSeaLaborable, irASeccion, paginaLista } from './ayudas';
+import { entrar, entrarComoOperadora, iniciarAunqueNoSeaLaborable, irASeccion, paginaLista } from './ayudas';
 
 const DESTINO = '../docs/capturas/web';
 
@@ -147,7 +147,7 @@ test.describe('escritorio', () => {
   // Quien presta el servicio ve la instalación entera sin ser de ninguna
   // empresa (ADR 040). En la demo es Lucía, que en su empresa es una empleada.
   test('operadora: el panel de plataforma', async ({ page }) => {
-    await entrar(page, 'lucia.moreno@techcorp.demo');
+    await entrarComoOperadora(page);
     await ir(page, '/plataforma');
     await page.mouse.move(1400, 880);
     await capturar(page, 'web-13-plataforma');

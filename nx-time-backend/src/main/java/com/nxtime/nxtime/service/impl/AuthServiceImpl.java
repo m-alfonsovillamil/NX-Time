@@ -14,6 +14,7 @@ import com.nxtime.nxtime.dto.CreateManagerRequest;
 import com.nxtime.nxtime.dto.LoginRequest;
 import com.nxtime.nxtime.dto.RegisterManagerRequest;
 import com.nxtime.nxtime.dto.RegistrationPendingResponse;
+import com.nxtime.nxtime.dto.SegundoPasoRequest;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
@@ -24,10 +25,12 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.JwtService;
 import com.nxtime.nxtime.security.LimitadorDeIntentosPorCuenta;
 import com.nxtime.nxtime.security.OperadoresDePlataforma;
+import com.nxtime.nxtime.security.SegundoFactorObligatorio;
 import com.nxtime.nxtime.security.TurnoDeContrasena;
 import com.nxtime.nxtime.service.AccessCodeService;
 import com.nxtime.nxtime.service.AuthService;
 import com.nxtime.nxtime.service.CompanyLifecycleService;
+import com.nxtime.nxtime.service.SegundoFactorService;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -109,6 +112,8 @@ public class AuthServiceImpl implements AuthService {
     private final TurnoDeContrasena turnoDeContrasena;
     private final CondicionesDelServicio servicio;
     private final CompanyLifecycleService cicloDeLaEmpresa;
+    private final SegundoFactorService segundoFactor;
+    private final SegundoFactorObligatorio segundoFactorObligatorio;
 
     @Value("${application.security.jwt.refresh-expiration}")
     private long refreshExpirationMillis;
@@ -136,7 +141,9 @@ public class AuthServiceImpl implements AuthService {
             PlatformTransactionManager transacciones,
             TurnoDeContrasena turnoDeContrasena,
             CondicionesDelServicio servicio,
-            CompanyLifecycleService cicloDeLaEmpresa
+            CompanyLifecycleService cicloDeLaEmpresa,
+            SegundoFactorService segundoFactor,
+            SegundoFactorObligatorio segundoFactorObligatorio
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
@@ -152,6 +159,8 @@ public class AuthServiceImpl implements AuthService {
         this.turnoDeContrasena = turnoDeContrasena;
         this.servicio = servicio;
         this.cicloDeLaEmpresa = cicloDeLaEmpresa;
+        this.segundoFactor = segundoFactor;
+        this.segundoFactorObligatorio = segundoFactorObligatorio;
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto es una transacción
@@ -295,7 +304,7 @@ public class AuthServiceImpl implements AuthService {
             cicloDeLaEmpresa.avisarDeQueEspera(usuario.getEmpresa(), usuario);
             throw cicloDeLaEmpresa.noDisponible(usuario.getEmpresa());
         }
-        return buildAuthResponse(usuario, origenDe(request.origen()));
+        return buildAuthResponse(usuario, origenDe(request.origen()), false);
     }
 
     // SIN transacción alrededor (ADR 041), y es lo que importa de este método:
@@ -385,8 +394,55 @@ public class AuthServiceImpl implements AuthService {
         // Pendiente de aprobar o suspendida (ADR 046): 423 con lo que tiene que hacer.
         cicloDeLaEmpresa.exigirActiva(user.getEmpresa());
 
+        // Con segundo factor, la contraseña no abre sesión: falta el código
+        // (ADR 051). Lo que sale es un desafío de cinco minutos, que solo
+        // sirve para mandarlo con el código a /auth/2fa.
+        if (user.tieneSegundoFactor()) {
+            log.info("Contraseña correcta, falta el segundo factor: {}", user.getId());
+            return AuthenticationResponse.falta(jwtService.generarDesafio(user.getId(), huellaDe(user)));
+        }
+
         log.info("Login correcto: {}", user.getId());
-        return buildAuthResponse(user, origenDe(request.origen()));
+        return buildAuthResponse(user, origenDe(request.origen()), false);
+    }
+
+    /*
+     * noRollbackFor: el código de recuperación que se gasta y el correo que lo
+     * avisa tienen que quedarse aunque después algo falle, como en
+     * confirmarRegistro. Y un código incorrecto lanza.
+     */
+    @Override
+    @Transactional(noRollbackFor = BusinessException.class)
+    public AuthenticationResponse segundoPaso(SegundoPasoRequest request) {
+        // Mismo mensaje para todo lo que no sea el código: caducado,
+        // manipulado, de otra cuenta, de una contraseña que ya no es la suya.
+        BusinessException otraVez = new BusinessException(
+                "Han pasado más de cinco minutos o algo ha cambiado en la cuenta. Vuelve a entrar con tu contraseña.",
+                HttpStatus.UNAUTHORIZED);
+        JwtService.Desafio desafio = jwtService.leerDesafio(request.desafio()).orElseThrow(() -> otraVez);
+        User user = userRepository.findById(desafio.usuarioId())
+                .filter(User::isActivo)
+                .filter(usuario -> huellaDe(usuario).equals(desafio.huella()))
+                .orElseThrow(() -> otraVez);
+        cicloDeLaEmpresa.exigirActiva(user.getEmpresa());
+
+        if (!segundoFactor.verificarAlEntrar(user, request.codigo())) {
+            throw new BusinessException("El código no es correcto. Comprueba que el móvil tiene bien la hora, "
+                    + "o usa uno de tus códigos de recuperación.", HttpStatus.UNAUTHORIZED);
+        }
+        log.info("Login correcto con segundo factor: {}", user.getId());
+        return buildAuthResponse(user, origenDe(request.origen()), true);
+    }
+
+    /**
+     * Lo que el desafío tiene que seguir cumpliendo al canjearlo: la misma
+     * contraseña y el mismo segundo factor que cuando se emitió. Si en esos
+     * cinco minutos se cambia la contraseña (con «He olvidado mi contraseña»)
+     * o se quita y se vuelve a poner el segundo factor, el desafío deja de
+     * valer. Son 64 bits del hash de las dos cosas: no dice nada de ninguna.
+     */
+    static String huellaDe(User user) {
+        return hashDe(user.getContrasena() + "|" + user.getSegundoFactorDesde()).substring(0, 16);
     }
 
     /**
@@ -469,16 +525,19 @@ public class AuthServiceImpl implements AuthService {
         }
         // El sucesor conserva familia y origen: es la misma sesión, con otro
         // token.
-        TokenEmitido sucesor = issueRefreshToken(user, stored.getOrigen(), stored.getFamilia());
+        TokenEmitido sucesor = issueRefreshToken(user, stored.getOrigen(), stored.getFamilia(),
+                stored.isConSegundoFactor());
 
         stored.setRotadoEn(Instant.now());
         stored.setSustituidoPor(sucesor.fila());
         refreshTokenRepository.save(stored);
 
-        String newAccessToken = jwtService.generateToken(operadores.principalDe(user), stored.getFamilia());
+        String newAccessToken = jwtService.generateToken(operadores.principalDe(user), stored.getFamilia(),
+                stored.isConSegundoFactor());
         log.info("Access token renovado para {}", user.getId());
         return new AuthenticationResponse(newAccessToken, sucesor.token(), user.getNombre(), user.getRol(),
-                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user));
+                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user),
+                segundoFactorPorActivar(user, stored.isConSegundoFactor()));
     }
 
     @Override
@@ -503,7 +562,9 @@ public class AuthServiceImpl implements AuthService {
                 .filter(User::isActivo)
                 .orElseThrow(() -> new BadCredentialsException("La cuenta no existe o está dada de baja."));
         cicloDeLaEmpresa.exigirActiva(user.getEmpresa());
-        return buildAuthResponse(user, origen);
+        // Solo la usa el SSO, y entrar con Google o Microsoft cuenta como
+        // segundo factor: lo pone el proveedor (ADR 051).
+        return buildAuthResponse(user, origen, true);
     }
 
     @Override
@@ -630,7 +691,11 @@ public class AuthServiceImpl implements AuthService {
         // (ver AccessCodeServiceImpl), y por el mismo motivo: si alguien
         // pudo entrar con tu cuenta, lo que hay que cortar es su capacidad
         // de RENOVAR el acceso, que es lo que la hace duradera.
-        int cerradas = refreshTokenRepository.revocarTodasLasDe(user, Instant.now());
+        Instant ahora = Instant.now();
+        int cerradas = refreshTokenRepository.revocarTodasLasDe(user, ahora);
+        // Y los access tokens ya emitidos, que hasta octubre de 2026 seguían
+        // valiendo sus quince minutos (ADR 051): ver JwtAuthenticationFilter.
+        userRepository.invalidarAccesosAnterioresA(user.getId(), ahora);
         log.info("{} ha cerrado la sesión en todos sus dispositivos ({} revocadas)",
                 user.getId(), cerradas);
     }
@@ -685,20 +750,31 @@ public class AuthServiceImpl implements AuthService {
         return passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
-    private AuthenticationResponse buildAuthResponse(User user) {
-        return buildAuthResponse(user, RefreshToken.Origen.ANDROID);
-    }
-
-    private AuthenticationResponse buildAuthResponse(User user, RefreshToken.Origen origen) {
+    /**
+     * @param conSegundoFactor si esta sesión ha pasado por un segundo factor:
+     *   un código, o Google/Microsoft (ADR 051). Lo lleva el refresh, y de él
+     *   cada access token que se emita en esta sesión.
+     */
+    private AuthenticationResponse buildAuthResponse(User user, RefreshToken.Origen origen, boolean conSegundoFactor) {
         // Familia nueva en cada login: así cerrar una sesión comprometida no
         // arrastra a las demás de esa persona. El access token la lleva
         // (claim sid, ADR 034) para saber, al cambiar la contraseña, cuál es
         // la sesión que NO hay que cerrar.
         UUID familia = UUID.randomUUID();
-        String accessToken = jwtService.generateToken(operadores.principalDe(user), familia);
-        TokenEmitido refreshToken = issueRefreshToken(user, origen, familia);
+        String accessToken = jwtService.generateToken(operadores.principalDe(user), familia, conSegundoFactor);
+        TokenEmitido refreshToken = issueRefreshToken(user, origen, familia, conSegundoFactor);
         return new AuthenticationResponse(accessToken, refreshToken.token(), user.getNombre(), user.getRol(),
-                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user));
+                operadores.authoritiesDe(user), user.zona().getId(), condicionesPorAceptar(user),
+                segundoFactorPorActivar(user, conSegundoFactor));
+    }
+
+    /**
+     * Si a esta persona se le exige segundo factor y esta sesión no ha pasado
+     * por él (ADR 051): solo podrá activarlo (SegundoFactorObligatorioFilter),
+     * y el cliente la lleva directamente a hacerlo.
+     */
+    private boolean segundoFactorPorActivar(User user, boolean conSegundoFactor) {
+        return !conSegundoFactor && segundoFactorObligatorio.exigido(user);
     }
 
     /**
@@ -734,7 +810,8 @@ public class AuthServiceImpl implements AuthService {
      * {@code refresh-expiration} sigue marcando el techo, para que bajarla
      * siga sirviendo de freno global.
      */
-    private TokenEmitido issueRefreshToken(User user, RefreshToken.Origen origen, UUID familia) {
+    private TokenEmitido issueRefreshToken(User user, RefreshToken.Origen origen, UUID familia,
+            boolean conSegundoFactor) {
         String token = UUID.randomUUID().toString();
         Instant now = Instant.now();
 
@@ -747,6 +824,7 @@ public class AuthServiceImpl implements AuthService {
                 .usuario(user)
                 .familia(familia)
                 .origen(origen)
+                .conSegundoFactor(conSegundoFactor)
                 .creadoEn(now)
                 .expiraEn(now.plus(vida))
                 .build());

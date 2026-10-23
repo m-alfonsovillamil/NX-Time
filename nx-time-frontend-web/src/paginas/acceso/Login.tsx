@@ -13,6 +13,10 @@
  *   servidor responde 400, y eso ya costó un rato una vez. Ahora no puede
  *   repetirse: lo dicen los tipos generados del contrato.
  *
+ * Con el **segundo factor** activado (ADR 051), la contraseña no abre sesión:
+ * el servidor devuelve un `desafio`, y se pasa a pedir el código
+ * (`SegundoPaso`).
+ *
  * Debajo, **entrar con Google o con Microsoft** (ADR 036), si el servidor los
  * tiene configurados. No son botones: son enlaces, porque lo que hacen es
  * mandar el navegador al servidor, que lo lleva al proveedor y lo devuelve
@@ -31,6 +35,7 @@ import type { EstadoDeVuelta } from '../../rutas/rutas';
 import { mensajeDeError, mensajeDeRed } from '../../util/errores';
 import { ConfirmarCorreo } from './ConfirmarCorreo';
 import { MarcoDeAcceso } from './MarcoDeAcceso';
+import { SegundoPaso } from './SegundoPaso';
 
 export function Login() {
   const navegar = useNavigate();
@@ -45,6 +50,8 @@ export function Login() {
   const [entrando, setEntrando] = useState(false);
   /** Contraseña buena, correo sin confirmar (403, ADR 034): se pide el código que acaba de salir. */
   const [sinConfirmar, setSinConfirmar] = useState<string | null>(null);
+  /** Contraseña buena con segundo factor (ADR 051): falta el código. */
+  const [desafio, setDesafio] = useState<string | null>(null);
 
   async function entrar(evento: FormEvent) {
     evento.preventDefault();
@@ -73,12 +80,18 @@ export function Login() {
         return;
       }
 
+      if (data.desafio !== undefined) {
+        setDesafio(data.desafio);
+        return;
+      }
+
       abrirSesion({
         accessToken: data.token ?? '',
         nombre: data.nombre ?? '',
         authorities: data.authorities ?? [],
         zonaHoraria: data.zonaHoraria,
         condicionesPorAceptar: data.condicionesPorAceptar,
+        segundoFactorPorActivar: data.segundoFactorPorActivar,
       });
       navegar(desde, { replace: true });
     } catch (fallo) {
@@ -89,6 +102,18 @@ export function Login() {
   }
 
   if (sinConfirmar !== null) return <ConfirmarCorreo email={sinConfirmar} destino={desde} />;
+  if (desafio !== null) {
+    return (
+      <SegundoPaso
+        desafio={desafio}
+        destino={desde}
+        alVolver={() => {
+          setDesafio(null);
+          setContrasena('');
+        }}
+      />
+    );
+  }
 
   return (
     <MarcoDeAcceso>

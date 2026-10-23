@@ -112,6 +112,14 @@ public class Company {
     @Column(name = "baja_solicitada_por")
     private Long bajaSolicitadaPor;
 
+    /**
+     * Si sus ADMIN y RRHH tienen que entrar con segundo factor (V47, ADR 051).
+     * Lo decide un ADMIN en los ajustes de la empresa.
+     */
+    @Builder.Default
+    @Column(name = "exigir_segundo_factor", nullable = false)
+    private boolean exigirSegundoFactor = false;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

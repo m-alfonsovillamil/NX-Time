@@ -33,6 +33,7 @@ buena parte de las decisiones técnicas del proyecto.
 - [Modelo de datos](#modelo-de-datos)
 - [API](#api)
 - [Roles y permisos](#roles-y-permisos)
+- [Seguridad y privacidad](#seguridad-y-privacidad)
 - [Tests](#tests)
 - [Despliegue](#despliegue)
 - [Decisiones de diseño (ADR)](#decisiones-de-diseño-adr)
@@ -296,6 +297,7 @@ dos empresas, once usuarios y unos tres meses de fichajes y ausencias.
 | `marta.sanchez@techcorp.demo` | GESTOR |
 | `javier.lopez@techcorp.demo` | EMPLEADO |
 | `pedro.navarro@iberica.demo` | GESTOR de **otra** empresa (útil para ver el aislamiento) |
+| `lucia.moreno@techcorp.demo` | EMPLEADA y **operadora de la plataforma**: entra con segundo factor. Su clave TOTP es pública, para la demo: `NZ4HI2LNMUWWIZLNN4WWY5LDNFQS2MTG` (añádela a tu aplicación de autenticación) |
 
 ### Desarrollo
 
@@ -485,11 +487,67 @@ decide qué se enseña.
 
 ---
 
+## Seguridad y privacidad
+
+NX Time **ayuda** a una empresa a cumplir con el registro de jornada, el RGPD y
+la Ley 2/2023; no las cumple por ella. Lo que hay:
+
+**Para entrar.**
+- Contraseñas con BCrypt. Se rechazan las ~10.000 más usadas, con una lista
+  local: la contraseña no sale a ningún servicio de fuera.
+- **Segundo factor (TOTP)** con códigos de recuperación:
+  - opcional para todos;
+  - obligatorio para el operador de la plataforma y para el Responsable del
+    canal de denuncias;
+  - para ADMIN y RRHH, si su empresa lo exige.
+- Entrar con Google o Microsoft cuenta como segundo factor.
+- Límites de intentos por IP y por cuenta.
+- «Cerrar todas las sesiones» corta también los tokens ya emitidos
+  ([ADR 034](docs/adr/034-endurecimiento-de-octubre.md),
+  [051](docs/adr/051-segundo-factor-y-contrasenas.md)).
+
+**Las empresas.**
+- Se dan de alta solo con la aprobación del operador.
+- Aceptan las condiciones y el contrato de encargo, en su versión.
+- Al darse de baja se llevan sus datos, que treinta días después se borran
+  ([ADR 046](docs/adr/046-alta-con-aprobacion-y-ciclo-de-vida-de-la-empresa.md),
+  [050](docs/adr/050-una-cadena-de-auditoria-por-empresa-y-la-baja.md)).
+
+**Los datos.**
+- Cada dato tiene su plazo de conservación, aplicado cada noche.
+- Queda un registro de quién consulta datos personales de otra persona.
+- Cada persona recibe un aviso de privacidad la primera vez que entra
+  ([ADR 047](docs/adr/047-el-rgpd-dentro-del-producto.md)).
+
+**El canal de denuncias** tiene un Responsable del Sistema por empresa, acuse
+de recibo, plazos y libro-registro
+([ADR 048](docs/adr/048-el-canal-de-denuncias-y-la-ley-2-2023.md)).
+
+**El registro de jornada.**
+- Cada trabajador descarga el suyo.
+- La empresa descarga un ZIP para la Inspección.
+- La traza de auditoría va encadenada con hash, una cadena por empresa
+  ([ADR 049](docs/adr/049-el-registro-de-jornada-propio-y-para-la-inspeccion.md),
+  [050](docs/adr/050-una-cadena-de-auditoria-por-empresa-y-la-baja.md)).
+
+**Los textos legales** son públicos, en <https://nxtime-web.com/legal>: aviso
+legal, condiciones, contrato de encargo, subencargados, privacidad, cookies y
+seguridad. Son borradores serios, pendientes de revisar por un abogado.
+
+**Las vulnerabilidades** se avisan como dice [`SECURITY.md`](SECURITY.md), y
+también en `/.well-known/security.txt`.
+
+**Lo interno**, en [`docs/cumplimiento/`](docs/cumplimiento/): el registro de
+actividades, las medidas de seguridad, la conservación, la respuesta a
+incidentes, las transferencias y las plantillas para los clientes.
+
+---
+
 ## Tests
 
 ### Backend
 
-**1808 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
+**1913 tests**, todos contra PostgreSQL real — nunca H2, que miente sobre el
 dialecto y no detecta los fallos que importan (índices parciales, JSONB,
 `CHECK`).
 
@@ -512,7 +570,7 @@ empuja a escribir tests de *getters*.
 
 ### App Android
 
-**471 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
+**485 tests** de JVM, sin emulador. El CI los ejecuta junto con lint.
 
 ```bash
 ./gradlew :nx-time-frontend-android:testDevDebugUnitTest
@@ -562,7 +620,7 @@ Dos detalles del despliegue que no son evidentes y están declarados en
   conexión directa, porque PgBouncer en modo transacción no soporta `SET`, que
   las herramientas de migración necesitan.
 
-El CI ejecuta los 1808 tests contra un PostgreSQL real en cada push, con la misma
+El CI ejecuta los 1913 tests contra un PostgreSQL real en cada push, con la misma
 versión mayor que producción.
 
 ---
@@ -617,6 +675,11 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 44. [Registrar una empresa con Google o Microsoft también desde la app](docs/adr/044-registrar-empresa-con-sso-desde-la-app.md)
 45. [La sesión de la app, cifrada en el disco](docs/adr/045-la-sesion-de-la-app-cifrada.md)
 46. [El alta de empresas con aprobación, y el ciclo de vida de una empresa](docs/adr/046-alta-con-aprobacion-y-ciclo-de-vida-de-la-empresa.md)
+47. [El RGPD dentro del producto: conservación, accesos y aviso de privacidad](docs/adr/047-el-rgpd-dentro-del-producto.md)
+48. [El canal de denuncias a la altura de la Ley 2/2023](docs/adr/048-el-canal-de-denuncias-y-la-ley-2-2023.md)
+49. [El registro de jornada: el propio, y todo junto para la Inspección](docs/adr/049-el-registro-de-jornada-propio-y-para-la-inspeccion.md)
+50. [Una cadena de auditoría por empresa, y la baja de una empresa con borrado](docs/adr/050-una-cadena-de-auditoria-por-empresa-y-la-baja.md)
+51. [El segundo factor (TOTP), las contraseñas comunes y cerrar sesiones al momento](docs/adr/051-segundo-factor-y-contrasenas.md)
 
 ---
 
@@ -637,24 +700,24 @@ recargar: el refresh va en una cookie `HttpOnly`, con su protección CSRF
 ([ADR 030](docs/adr/030-la-sesion-web-en-cookie.md)). Se puede instalar como
 app y avisa con notificaciones push, igual que la app Android; en el iPhone es
 la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene dos workflows:
-`web.yml` (tipos, 406 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
+`web.yml` (tipos, 458 tests de Vitest, build y presupuesto de JS) y `e2e.yml`
 (Playwright contra el backend de verdad con Postgres y la demo: todos los
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
 
-**Hecho y sin encender: entrar con Google o con Microsoft**
+**Entrar con Google, funcionando; con Microsoft, hecho y sin encender**
 ([ADR 036](docs/adr/036-entrar-con-google-o-microsoft.md) y
 [038](docs/adr/038-sso-lo-que-faltaba.md)), en la web y en la app, para quien ya
 tiene cuenta: no crea usuarios, y la contraseña sigue valiendo. También se puede
 registrar una empresa con una de esas cuentas, desde la web, sin contraseña ni
 código; y vincularlas desde Ajustes, en la web y en la app. Lo que decide si alguien entra no es el correo sino la cuenta del
 proveedor, una vez vinculada; el correo solo sirve la primera vez, y solo si el
-proveedor lo garantiza (el de Microsoft no siempre). Está apagado hasta poner
-las credenciales de cada proveedor
+proveedor lo garantiza (el de Microsoft no siempre). Google está
+encendido en producción y probado de verdad en la web y en la app (octubre de
+2026). Microsoft está apagado hasta poner sus credenciales
 ([`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md)), y **no se ha probado contra
-Google ni contra Microsoft de verdad**: sí de punta a punta, en un navegador y
-en un emulador de Android, contra un proveedor de mentira que firma sus
-propios ID token.
+Microsoft de verdad**: sí de punta a punta, en un navegador y en un emulador de
+Android, contra un proveedor de mentira que firma sus propios ID token.
 
 **Pendiente:**
 

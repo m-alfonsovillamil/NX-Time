@@ -31,11 +31,16 @@ class AuthRepositoryImpl(
 
     override suspend fun login(peticion: PeticionLogin): Response<RespuestaAutenticacion> {
         val response = apiService.login(peticion)
-        if (response.isSuccessful && response.body() != null) {
-            procesarLoginExitoso(response.body()!!)
+        val cuerpo = response.body()
+        // Con segundo factor todavía no hay sesión que guardar (ADR 051).
+        if (response.isSuccessful && cuerpo != null && !cuerpo.faltaElCodigo && !cuerpo.segundoFactorPorActivar) {
+            procesarLoginExitoso(cuerpo)
         }
         return response
     }
+
+    override suspend fun segundoPaso(desafio: String, codigo: String): Response<RespuestaAutenticacion> =
+        apiService.segundoPaso(PeticionSegundoPaso(desafio, codigo))
 
     override suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RegistroPendienteDTO> {
         return apiService.registrarEmpresaGestor(request)

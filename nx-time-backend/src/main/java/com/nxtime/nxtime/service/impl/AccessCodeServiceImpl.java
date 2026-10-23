@@ -239,6 +239,8 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         // Quien tuviera la sesión abierta con la contraseña anterior -- que
         // puede ser justo quien la robó -- deja de tenerla.
         int cerradas = refreshTokenRepository.revocarTodasLasDe(usuario, clock.instant());
+        // Y su access token, que si no seguía valiendo hasta quince minutos (ADR 051).
+        userRepository.invalidarAccesosAnterioresA(usuario.getId(), clock.instant());
         log.info("Contraseña fijada con un código de {} para {} ({} sesiones cerradas).",
                 codigoAcceso.getTipo(), usuario.getId(), cerradas);
     }

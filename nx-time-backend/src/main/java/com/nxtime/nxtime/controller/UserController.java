@@ -66,9 +66,8 @@ public class UserController {
 
     @Operation(summary = "Cerrar la sesión en todos los dispositivos",
             description = "Revoca todos los refresh tokens del usuario, incluido el del dispositivo "
-                    + "desde el que se pide. El access token ya emitido sigue valiendo hasta que "
-                    + "caduque (15 min): es un JWT y no se consulta en base, así que lo que se corta "
-                    + "es la capacidad de renovarlo.")
+                    + "desde el que se pide, y desde el ADR 051 también los access tokens ya emitidos: "
+                    + "la siguiente petición con cualquiera de ellos responde 401.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Sesiones cerradas"),
             @ApiResponse(responseCode = "401", description = "No autenticado",

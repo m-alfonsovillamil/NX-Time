@@ -56,6 +56,14 @@ public record SimpleEmployeeDTO(
          * plantilla completa ({@code GET /gestor/plantilla}) salen también
          * gestores, RRHH y ADMIN, y sin esto no se sabría quién es quién.
          */
-        com.nxtime.nxtime.domain.Role rol
+        com.nxtime.nxtime.domain.Role rol,
+
+        /**
+         * Si entra con segundo factor (ADR 051). Es lo que dice a RRHH y a
+         * los ADMIN a quién pueden quitárselo cuando pierde el móvil, y a
+         * quién le falta si la empresa lo exige. Viene en la fila de la
+         * persona: no cuesta ninguna consulta más.
+         */
+        boolean segundoFactor
 ) {
 }

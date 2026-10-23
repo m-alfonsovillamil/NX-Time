@@ -1,17 +1,11 @@
 package com.nxtime.nxtime.kiosco;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.nxtime.nxtime.web.QrEnSvg;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.Map;
 import java.util.Optional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -78,35 +72,9 @@ public class TarjetaDeKiosco {
         }
     }
 
-    /**
-     * El QR como SVG, listo para pintar en la web, en la app o en papel.
-     *
-     * Se escribe a mano a partir de la matriz de ZXing, un rectángulo por
-     * módulo oscuro en un solo {@code path}: así ningún cliente necesita una
-     * librería de QR, y el SVG escala sin perder nitidez al imprimirlo.
-     */
+    /** El QR como SVG: ver {@link QrEnSvg}. */
     public String svg(String codigo) {
-        try {
-            BitMatrix matriz = new QRCodeWriter().encode(codigo, BarcodeFormat.QR_CODE, 0, 0, Map.of(
-                    EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M,
-                    EncodeHintType.MARGIN, 4));
-            int ancho = matriz.getWidth();
-            int alto = matriz.getHeight();
-            StringBuilder trazo = new StringBuilder();
-            for (int y = 0; y < alto; y++) {
-                for (int x = 0; x < ancho; x++) {
-                    if (matriz.get(x, y)) {
-                        trazo.append('M').append(x).append(' ').append(y).append("h1v1h-1z");
-                    }
-                }
-            }
-            return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " + ancho + " " + alto
-                    + "\" shape-rendering=\"crispEdges\" role=\"img\" aria-label=\"Tarjeta para fichar en el kiosco\">"
-                    + "<rect width=\"100%\" height=\"100%\" fill=\"#fff\"/>"
-                    + "<path fill=\"#000\" d=\"" + trazo + "\"/></svg>";
-        } catch (WriterException e) {
-            throw new IllegalStateException("No se pudo generar el QR", e);
-        }
+        return QrEnSvg.de(codigo, "Tarjeta para fichar en el kiosco");
     }
 
     private String firma(long usuarioId, int version) {

@@ -3,6 +3,8 @@
  * móvil y carga por áreas, fase W8).
  */
 
+import { createHmac } from 'node:crypto';
+
 import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
@@ -62,6 +64,70 @@ export async function entrar(page: Page, email: string): Promise<void> {
   await page.getByLabel('Contraseña').fill('demo1234');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('heading', { name: 'Mi jornada' })).toBeVisible();
+}
+
+/**
+ * La operadora de plataforma de la demo (`application-dev.yml`). Al operador se
+ * le exige el segundo factor (ADR 051): la demo se lo deja activado con un
+ * secreto conocido (`DemoDataSeeder.SECRETO_TOTP_DE_LUCIA`).
+ */
+export const OPERADORA = 'lucia.moreno@techcorp.demo';
+export const SECRETO_TOTP_DE_LUCIA = Buffer.from('nxtime-demo-lucia-2f', 'ascii');
+
+/** El código TOTP (RFC 6238: SHA-1, 6 cifras, 30 s) de un secreto, `pasos` intervalos después de ahora. */
+export function codigoTotp(secreto: Buffer, pasos = 0): string {
+  const contador = Buffer.alloc(8);
+  contador.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 1000 / 30) + pasos));
+  const hmac = createHmac('sha1', secreto).update(contador).digest();
+  const desde = (hmac[hmac.length - 1] ?? 0) & 0x0f;
+  return String((hmac.readUInt32BE(desde) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+}
+
+/** Un secreto escrito en Base32 (la clave que enseña la web al activarlo), en bytes. */
+export function deBase32(texto: string): Buffer {
+  const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bytes: number[] = [];
+  let acumulado = 0;
+  let bits = 0;
+  for (const letra of texto.replace(/\s/g, '')) {
+    acumulado = (acumulado << 5) | alfabeto.indexOf(letra);
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((acumulado >> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+/**
+ * Entrar con contraseña y código. Un código no vale dos veces (ADR 051), y dos
+ * specs seguidas pueden entrar con la misma cuenta dentro de los mismos 30
+ * segundos: si el servidor dice que no vale, se espera al código siguiente.
+ */
+export async function entrarConSegundoFactor(page: Page, email: string, secreto: Buffer): Promise<void> {
+  await page.goto('/');
+  await page.getByLabel('Correo electrónico').fill(email);
+  await page.getByLabel('Contraseña').fill('demo1234');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Código de verificación' })).toBeVisible();
+
+  for (let intento = 0; intento < 3; intento++) {
+    // Hasta el principio del intervalo siguiente, y un poco más.
+    if (intento > 0) await page.waitForTimeout(30_000 - (Date.now() % 30_000) + 500);
+    await page.getByLabel('Código', { exact: true }).fill(codigoTotp(secreto));
+    const respuesta = page.waitForResponse((r) => r.url().endsWith('/auth/2fa'));
+    await page.getByRole('button', { name: 'Verificar' }).click();
+    if ((await respuesta).ok()) break;
+  }
+  // Dentro: el menú. No «Mi jornada»: al entrar se vuelve a la página de la que
+  // se venía, que puede ser otra.
+  await expect(page.getByRole('navigation', { name: 'Menú principal' }).first()).toBeVisible();
+}
+
+/** Entra como la operadora de la demo, con su código. */
+export async function entrarComoOperadora(page: Page): Promise<void> {
+  await entrarConSegundoFactor(page, OPERADORA, SECRETO_TOTP_DE_LUCIA);
 }
 
 /**

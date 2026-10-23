@@ -7,6 +7,7 @@ import com.nxtime.nxtime.security.LimiteDeLoCaro;
 import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import com.nxtime.nxtime.security.RestAccessDeniedHandler;
 import com.nxtime.nxtime.security.RestAuthenticationEntryPoint;
+import com.nxtime.nxtime.security.SegundoFactorObligatorioFilter;
 import com.nxtime.nxtime.security.SesionWeb;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
@@ -45,6 +46,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final LoginRateLimitFilter loginRateLimitFilter;
     private final LimiteDeLoCaro limiteDeLoCaro;
+    private final SegundoFactorObligatorioFilter segundoFactorObligatorio;
     private final KioskAuthenticationFilter kioskAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
@@ -63,6 +65,7 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             LoginRateLimitFilter loginRateLimitFilter,
             LimiteDeLoCaro limiteDeLoCaro,
+            SegundoFactorObligatorioFilter segundoFactorObligatorio,
             KioskAuthenticationFilter kioskAuthenticationFilter,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             RestAccessDeniedHandler restAccessDeniedHandler,
@@ -72,6 +75,7 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.loginRateLimitFilter = loginRateLimitFilter;
         this.limiteDeLoCaro = limiteDeLoCaro;
+        this.segundoFactorObligatorio = segundoFactorObligatorio;
         this.kioskAuthenticationFilter = kioskAuthenticationFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
@@ -193,7 +197,10 @@ public class SecurityConfig {
                 .addFilterBefore(kioskAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 // Después del JWT, no antes: limita por cuenta, y hasta que el
                 // filtro del JWT no ha pasado no se sabe de quién es la petición.
-                .addFilterAfter(limiteDeLoCaro, UsernamePasswordAuthenticationFilter.class);
+                .addFilterAfter(limiteDeLoCaro, UsernamePasswordAuthenticationFilter.class)
+                // Por lo mismo, después del JWT: quien tiene que entrar con
+                // segundo factor y no lo ha hecho solo puede activarlo (ADR 051).
+                .addFilterAfter(segundoFactorObligatorio, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

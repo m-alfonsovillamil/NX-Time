@@ -13,6 +13,9 @@ interface AuthRepository {
 
     /* Funciones de Autenticación */
     suspend fun login(peticion: PeticionLogin): Response<RespuestaAutenticacion>
+
+    /** El código del segundo factor (ADR 051). Si vale, la respuesta es la sesión, como la del login. */
+    suspend fun segundoPaso(desafio: String, codigo: String): Response<RespuestaAutenticacion>
     suspend fun registrarEmpresaGestor(request: RegistroGestorRequest): Response<RegistroPendienteDTO>
 
     /** Canjea el código del registro (ADR 034). Si vale, la respuesta es la sesión, como la del login. */

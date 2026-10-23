@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/*
+  Un cambio en el segundo factor de la cuenta (ADR 051): se ha activado, se ha
+  quitado, se ha usado un código de recuperación o se han generado otros. Cada
+  uno de esos cambios lo puede hacer quien tenga la sesión de otro, y su dueño
+  tiene que enterarse.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Segundo factor', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
+
+    <th:block th:switch="${que}">
+        <p th:case="'ACTIVADO'">Se ha activado el segundo factor en tu cuenta de NX Time
+            (<span th:text="${email}">correo@ejemplo.com</span>). Desde ahora, al entrar con tu contraseña
+            te pediremos también el código de tu aplicación de autenticación.</p>
+        <p th:case="'DESACTIVADO'">Se ha desactivado el segundo factor de tu cuenta de NX Time
+            (<span th:text="${email}">correo@ejemplo.com</span>). Desde ahora basta con la contraseña para
+            entrar.</p>
+        <p th:case="'QUITADO'">Un administrador de tu empresa
+            (<span th:text="${quien}">Nombre Apellidos</span>) ha quitado el segundo factor de tu cuenta de
+            NX Time (<span th:text="${email}">correo@ejemplo.com</span>), normalmente porque has perdido el
+            móvil. Puedes volver a activarlo en <strong>Ajustes → Segundo factor</strong>.</p>
+        <p th:case="'RECUPERACION'">Se ha entrado en tu cuenta de NX Time
+            (<span th:text="${email}">correo@ejemplo.com</span>) con un código de recuperación. Te quedan
+            <strong th:text="${quedan}">9</strong>.</p>
+        <p th:case="'CODIGOS'">Se han generado códigos de recuperación nuevos para tu cuenta de NX Time
+            (<span th:text="${email}">correo@ejemplo.com</span>). Los anteriores ya no valen.</p>
+    </th:block>
+
+    <!--/* Lo que importa de este correo es el párrafo de abajo. */-->
+    <p>Si no has sido tú, entra en NX Time, cambia tu contraseña y cierra todas tus sesiones en
+        <strong>Ajustes → Cuenta</strong>. Si no puedes entrar, pulsa <strong>«¿Has olvidado tu contraseña
+        o es tu primera vez?»</strong> en la pantalla de acceso y avisa a un administrador de tu empresa.</p>
+
+    <p style="color: #6a737d;">Si has sido tú, no tienes que hacer nada.</p>
+</div>
+</body>
+</html>

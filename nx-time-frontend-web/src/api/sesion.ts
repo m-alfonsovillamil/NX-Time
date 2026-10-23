@@ -43,6 +43,12 @@ export interface Sesion {
    * 046): el marco se lo pide. Un servidor de antes no lo manda.
    */
   condicionesPorAceptar?: boolean | undefined;
+  /**
+   * Si tiene que entrar con segundo factor y esta sesión no ha pasado por él
+   * (ADR 051): hasta que lo active, el servidor no le deja hacer nada más, y
+   * la web le lleva directamente a activarlo.
+   */
+  segundoFactorPorActivar?: boolean | undefined;
 }
 
 let sesion: Sesion | null = null;

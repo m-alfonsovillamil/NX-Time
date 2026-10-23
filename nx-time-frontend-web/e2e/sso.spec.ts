@@ -28,7 +28,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { entrar } from './ayudas';
+import { entrarComoOperadora } from './ayudas';
 
 const JAVIER = 'javier.lopez@techcorp.demo';
 
@@ -132,7 +132,7 @@ test('registrar una empresa con Google, que la apruebe el operador y entrar en Â
   await expect(page.getByRole('heading', { name: 'Empresa registrada' })).toBeVisible();
 
   // La operadora la aprueba (la demo la tiene en PLATAFORMA_OPERADORES).
-  await entrar(page, 'lucia.moreno@techcorp.demo');
+  await entrarComoOperadora(page);
   await page.goto('/plataforma');
   await page.getByRole('link', { name: nombre }).click();
   await expect(page.getByRole('heading', { level: 1, name: nombre })).toBeVisible();

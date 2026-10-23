@@ -253,7 +253,7 @@ class ApiContractTest {
                 "nombre", "Gestor",
                 "apellidos", "Contract",
                 "email", EMAIL_GESTOR,
-                "contrasena", "password123"
+                "contrasena", "frase de prueba 123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -306,7 +306,7 @@ class ApiContractTest {
                 "nombre", "Otro",
                 "apellidos", "Gestor",
                 "email", "otro.gestor@nxtime.test",
-                "contrasena", "password123"
+                "contrasena", "frase de prueba 123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -326,7 +326,7 @@ class ApiContractTest {
     void login_credencialesDeGestorValidas_devuelve200ConToken() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "email", EMAIL_GESTOR,
-                "contrasena", "password123"
+                "contrasena", "frase de prueba 123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -423,7 +423,7 @@ class ApiContractTest {
                 "nombre", "Gestor",
                 "apellidos", "Otra Empresa",
                 "email", EMAIL_GESTOR_OTRA_EMPRESA,
-                "contrasena", "password123"
+                "contrasena", "frase de prueba 123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -539,7 +539,7 @@ class ApiContractTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         ResponseEntity<String> eleccion =
-                elegirContrasena(EMAIL_EMPLEADO, codigoEnviadoA(EMAIL_EMPLEADO), "password123", "203.0.113.60");
+                elegirContrasena(EMAIL_EMPLEADO, codigoEnviadoA(EMAIL_EMPLEADO), "frase de prueba 123", "203.0.113.60");
         assertThat(eleccion.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
@@ -561,7 +561,7 @@ class ApiContractTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         ResponseEntity<String> eleccion =
-                elegirContrasena(EMAIL_GESTOR2, codigoEnviadoA(EMAIL_GESTOR2), "password123", "203.0.113.61");
+                elegirContrasena(EMAIL_GESTOR2, codigoEnviadoA(EMAIL_GESTOR2), "frase de prueba 123", "203.0.113.61");
         assertThat(eleccion.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
@@ -570,7 +570,7 @@ class ApiContractTest {
     void loginEmpleado_devuelve200ConRolEmpleado() throws Exception {
         Map<String, Object> peticion = mapOf(
                 "email", EMAIL_EMPLEADO,
-                "contrasena", "password123"
+                "contrasena", "frase de prueba 123"
         );
 
         ResponseEntity<String> response = rest.postForEntity(
@@ -832,7 +832,7 @@ class ApiContractTest {
         loginHeaders.set("X-Forwarded-For", "203.0.113.56");
         ResponseEntity<String> login = rest.postForEntity(
                 url("/auth/login"),
-                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR2, "contrasena", "password123")), loginHeaders),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR2, "contrasena", "frase de prueba 123")), loginHeaders),
                 String.class
         );
         assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -1338,7 +1338,7 @@ class ApiContractTest {
     @Order(41)
     void cambiarContrasena_datosCorrectos_devuelve200_yPermiteLoginConLaNueva() throws Exception {
         Map<String, Object> peticion = mapOf(
-                "contrasenaAntigua", "password123",
+                "contrasenaAntigua", "frase de prueba 123",
                 "contrasenaNueva", "nuevaPassword123"
         );
 
@@ -3107,7 +3107,7 @@ class ApiContractTest {
 
     @Test
     @Order(154)
-    void cerrarSesionesRevocaLosRefreshTokens_peroNoElAccessTokenYaEmitido() throws Exception {
+    void cerrarSesionesRevocaLosRefreshTokens_yTambienElAccessTokenYaEmitido() throws Exception {
         // Login fresco, y del GESTOR a proposito: este test revoca TODO lo
         // de la cuenta que use, asi que no puede reutilizar un refresh
         // token del que dependa otro test.
@@ -3118,7 +3118,7 @@ class ApiContractTest {
         // propia premisa, no por el codigo.)
         ResponseEntity<String> login = rest.postForEntity(
                 url("/auth/login"),
-                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR, "contrasena", "password123")),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR, "contrasena", "frase de prueba 123")),
                         jsonHeaders()),
                 String.class
         );
@@ -3142,16 +3142,25 @@ class ApiContractTest {
         );
         assertThat(refresh.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        // Y el access token YA EMITIDO sigue valiendo hasta que caduque:
-        // es un JWT y no se consulta en base. Es la contrapartida asumida,
-        // y por eso la pantalla no promete un corte inmediato.
+        // Y el access token YA EMITIDO también, desde el ADR 051: hasta
+        // octubre de 2026 seguía valiendo hasta caducar (quince minutos).
         ResponseEntity<String> perfil = rest.exchange(
                 url("/api/v1/perfil"),
                 HttpMethod.GET,
                 new HttpEntity<>(authHeaders(acceso)),
                 String.class
         );
-        assertThat(perfil.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(perfil.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // Eso incluye el del gestor que usan los tests de después: entra otra vez.
+        ResponseEntity<String> otraVez = rest.postForEntity(
+                url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_GESTOR, "contrasena", "frase de prueba 123")),
+                        jsonHeaders()),
+                String.class
+        );
+        assertThat(otraVez.getStatusCode()).isEqualTo(HttpStatus.OK);
+        gestorToken = bodyOf(otraVez).get("token").asText();
     }
 
     // ------------------------------------------------------------------

@@ -117,10 +117,81 @@ export const cuenta = {
       faltaActual: 'Escribe tu contraseña actual.',
       cambiada: 'Contraseña cambiada.',
     },
+    /** El segundo factor (ADR 051): un código de una aplicación de autenticación al entrar. */
+    segundoFactor: {
+      titulo: 'Segundo factor',
+      descripcion:
+        'Al entrar con tu contraseña, te pediremos también un código de 6 cifras de una aplicación de autenticación (Google Authenticator, Microsoft Authenticator, tu gestor de contraseñas…). Entrar con Google o Microsoft no lo pide: ya lo hace el proveedor.',
+      activo: 'Activado',
+      desde: (dia: string) => `Desde el ${dia}`,
+      inactivo: 'No lo tienes activado.',
+      obligatorio: (motivo: string) => `${motivo}: tienes que tenerlo activado, y no lo puedes quitar.`,
+      quedan: (n: number) =>
+        n === 1 ? 'Te queda 1 código de recuperación.' : `Te quedan ${n} códigos de recuperación.`,
+      pocos: 'Te quedan pocos códigos de recuperación: genera otros.',
+      activar: 'Activarlo',
+      desactivar: 'Desactivarlo',
+      codigosNuevos: 'Códigos de recuperación nuevos',
+
+      activacion: {
+        titulo: 'Activar el segundo factor',
+        paso1: 'Abre tu aplicación de autenticación, añade una cuenta y escanea este código.',
+        qr: 'Código QR para añadir NX Time a la aplicación de autenticación',
+        sinCamara: '¿No puedes escanearlo? Escribe esta clave en la aplicación:',
+        copiarClave: 'Copiar la clave',
+        claveCopiada: 'Clave copiada.',
+        paso2: 'Después, escribe el código que te da la aplicación y tu contraseña.',
+        codigo: 'Código de la aplicación',
+        contrasena: 'Tu contraseña',
+        faltaCodigo: 'Escribe el código de 6 cifras que te da la aplicación.',
+        faltaContrasena: 'Escribe tu contraseña.',
+        confirmar: 'Activar',
+        preparando: 'Preparando…',
+      },
+
+      recuperacion: {
+        titulo: 'Tus códigos de recuperación',
+        explicacion:
+          'Guárdalos en un sitio seguro (tu gestor de contraseñas, o impresos). Cada uno sirve una vez para entrar si pierdes el móvil. No los volverás a ver.',
+        copiar: 'Copiarlos',
+        copiados: 'Códigos copiados.',
+        descargar: 'Descargarlos',
+        guardados: 'Los he guardado',
+        listo: 'Listo',
+        fichero: (codigos: readonly string[]) =>
+          `Códigos de recuperación de NX Time\nCada uno sirve una vez.\n\n${codigos.join('\n')}\n`,
+      },
+
+      desactivacion: {
+        titulo: '¿Desactivar el segundo factor?',
+        explicacion: 'Volverá a bastar con tu contraseña para entrar. Escríbela, y un código de la aplicación o de recuperación.',
+        codigo: 'Código',
+        contrasena: 'Tu contraseña',
+        confirmar: 'Desactivar',
+        hecho: 'Segundo factor desactivado.',
+      },
+
+      regenerar: {
+        titulo: 'Códigos de recuperación nuevos',
+        explicacion: 'Los que tienes ahora dejarán de valer. Escribe un código de la aplicación.',
+        codigo: 'Código de la aplicación',
+        confirmar: 'Generar',
+      },
+
+      /** La pantalla de quien está obligado y aún no lo tiene. */
+      obligado: {
+        titulo: 'Activa el segundo factor',
+        explicacion: (motivo: string) =>
+          `${motivo}, así que para entrar en NX Time necesitas, además de la contraseña, un código de una aplicación de autenticación. Actívalo ahora: son dos minutos.`,
+        sinMotivo: 'Para seguir, necesitas activar el segundo factor.',
+        salir: 'Salir',
+      },
+    },
+
     cerrarTodas: {
       boton: 'Cerrar sesión en todos los dispositivos',
       detalle:
-        'Se cerrará también aquí. Las sesiones abiertas en otros sitios dejan de poder renovarse y caducan en unos minutos.',
+        'Se cerrará también aquí, y en los demás sitios donde la tengas abierta, al momento.',
       confirmar: 'Cerrar todas',
       titulo: '¿Cerrar la sesión en todos los dispositivos?',
     },

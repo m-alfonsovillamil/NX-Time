@@ -89,6 +89,8 @@ class AltaConAprobacionIT {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private com.nxtime.nxtime.service.AuthService authService;
 
     private final ObjectMapper json = new ObjectMapper();
     private static final AtomicInteger IP = new AtomicInteger(1);
@@ -102,7 +104,10 @@ class AltaConAprobacionIT {
             userRepository.save(User.builder().nombre("Olga").apellidos("Operadora").email(OPERADOR)
                     .contrasena(passwordEncoder.encode(CONTRASENA)).rol(Role.ADMIN).empresa(suya).activo(true).build());
         }
-        tokenOperador = token(entrar(OPERADOR));
+        // El operador tiene que entrar con segundo factor (ADR 051): por la
+        // puerta del SSO, que cuenta como tal y abre la misma sesión que el login.
+        tokenOperador = authService.abrirSesion(userRepository.findByEmail(OPERADOR).orElseThrow().getId(),
+                com.nxtime.nxtime.domain.RefreshToken.Origen.ANDROID).token();
     }
 
     // ------------------------------------------------------------------

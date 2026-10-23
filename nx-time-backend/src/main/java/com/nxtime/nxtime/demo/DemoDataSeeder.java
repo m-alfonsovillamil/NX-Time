@@ -26,6 +26,7 @@ import com.nxtime.nxtime.domain.NoticeType;
 import com.nxtime.nxtime.domain.Project;
 import com.nxtime.nxtime.domain.ProjectAssignment;
 import com.nxtime.nxtime.domain.Role;
+import com.nxtime.nxtime.domain.SegundoFactor;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
@@ -46,7 +47,9 @@ import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
 import com.nxtime.nxtime.repository.ProjectRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
+import com.nxtime.nxtime.repository.SegundoFactorRepository;
 import com.nxtime.nxtime.repository.UserRepository;
+import com.nxtime.nxtime.security.totp.SecretosTotp;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -104,6 +107,17 @@ public class DemoDataSeeder implements CommandLineRunner {
     private static final ZoneId MADRID_ZONE = ZoneId.of(Company.ZONA_POR_DEFECTO);
     private static final String DEMO_PASSWORD = "demo1234";
 
+    /**
+     * El secreto TOTP de Lucía, la operadora de plataforma de la demo
+     * ({@code application-dev.yml}). Al operador se le exige el segundo factor
+     * (ADR 051), así que sin esto la demo no tendría panel de plataforma. Es
+     * público, como la contraseña: los e2e calculan con él el código para
+     * entrar ({@code e2e/ayudas.ts}), y cualquiera puede añadirlo a su
+     * aplicación de autenticación (en Base32,
+     * {@code NZ4HI2LNMUWWIZLNN4WWY5LDNFQS2MTG}).
+     */
+    public static final byte[] SECRETO_TOTP_DE_LUCIA = "nxtime-demo-lucia-2f".getBytes(StandardCharsets.US_ASCII);
+
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
     private final TimeEntryRepository timeEntryRepository;
@@ -124,6 +138,8 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final OvertimeService overtimeService;
     private final ProjectAllocationService projectAllocationService;
     private final PasswordEncoder passwordEncoder;
+    private final SegundoFactorRepository segundoFactorRepository;
+    private final SecretosTotp secretosTotp;
 
     public DemoDataSeeder(
             CompanyRepository companyRepository,
@@ -145,7 +161,9 @@ public class DemoDataSeeder implements CommandLineRunner {
             ComplaintMessageRepository complaintMessageRepository,
             OvertimeService overtimeService,
             ProjectAllocationService projectAllocationService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SegundoFactorRepository segundoFactorRepository,
+            SecretosTotp secretosTotp
     ) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
@@ -167,6 +185,20 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.overtimeService = overtimeService;
         this.projectAllocationService = projectAllocationService;
         this.passwordEncoder = passwordEncoder;
+        this.segundoFactorRepository = segundoFactorRepository;
+        this.secretosTotp = secretosTotp;
+    }
+
+    /** Le deja el segundo factor ya activado, con un secreto conocido (ver {@link #SECRETO_TOTP_DE_LUCIA}). */
+    private void darSegundoFactor(User usuario, byte[] secreto) {
+        Instant ahora = Instant.now();
+        segundoFactorRepository.save(SegundoFactor.builder()
+                .usuarioId(usuario.getId())
+                .secretoCifrado(secretosTotp.cifrar(usuario.getId(), secreto))
+                .creadoEn(ahora)
+                .confirmadoEn(ahora)
+                .build());
+        userRepository.marcarSegundoFactor(usuario.getId(), ahora);
     }
 
     @Override
@@ -196,6 +228,7 @@ public class DemoDataSeeder implements CommandLineRunner {
                 crearUsuario("Carlos", "Ruiz Alonso", "carlos.ruiz@techcorp.demo", Role.EMPLEADO, techCorp),
                 crearUsuario("Lucía", "Moreno Vega", "lucia.moreno@techcorp.demo", Role.EMPLEADO, techCorp)
         );
+        darSegundoFactor(empleadosTech.get(3), SECRETO_TOTP_DE_LUCIA);
 
         Company consultoraIberica = crearEmpresa("Consultora Ibérica");
         User gestorIberica = crearUsuario("Pedro", "Navarro Cid", "pedro.navarro@iberica.demo", Role.GESTOR, consultoraIberica);

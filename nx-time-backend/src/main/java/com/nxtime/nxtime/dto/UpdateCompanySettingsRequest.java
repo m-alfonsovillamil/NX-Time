@@ -12,6 +12,9 @@ import jakarta.validation.constraints.Size;
  * @param contactoPrivacidad a quién se dirige la plantilla para ejercer sus
  *   derechos del RGPD: un correo o un enlace https (V44, ADR 047). Vacío o
  *   null lo quita.
+ * @param exigirSegundoFactor exigir el segundo factor a los ADMIN y RRHH
+ *   (ADR 051). Null lo deja como está, para que un cliente que no lo conozca
+ *   no lo apague sin querer.
  */
 public record UpdateCompanySettingsRequest(
         @NotBlank(message = "El nombre de la empresa es obligatorio.")
@@ -23,5 +26,12 @@ public record UpdateCompanySettingsRequest(
         String zonaHoraria,
 
         @Size(max = 255, message = "El contacto de privacidad no puede pasar de 255 caracteres.")
-        String contactoPrivacidad) {
+        String contactoPrivacidad,
+
+        Boolean exigirSegundoFactor) {
+
+    /** Lo de antes del ADR 051: el segundo factor, como esté. */
+    public UpdateCompanySettingsRequest(String nombre, String zonaHoraria, String contactoPrivacidad) {
+        this(nombre, zonaHoraria, contactoPrivacidad, null);
+    }
 }

@@ -128,6 +128,20 @@ fun LoginScreen(
                 return@Column
             }
 
+            // Contraseña buena con segundo factor (ADR 051): el código.
+            if (estado.desafio != null) {
+                SegundoPasoFormulario(
+                    codigo = estado.codigo,
+                    onCodigoCambia = viewModel::onCodigoCambia,
+                    onVerificar = viewModel::verificarSegundoFactor,
+                    onVolver = viewModel::volverDelSegundoFactor,
+                    cargando = estado.cargando,
+                    error = estado.error
+                )
+                Spacer(Modifier.height(48.dp))
+                return@Column
+            }
+
             estado.error?.let { BannerError(mensaje = it.resolver()) }
 
             OutlinedTextField(

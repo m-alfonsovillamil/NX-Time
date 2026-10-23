@@ -22,7 +22,15 @@ public interface AuthService {
     /** Canjea el código del registro y abre la sesión, como el login. */
     AuthenticationResponse confirmarRegistro(ConfirmRegistrationRequest request);
 
+    /**
+     * Con la contraseña. Si la persona tiene segundo factor, no abre sesión:
+     * devuelve solo un desafío ({@link AuthenticationResponse#desafio()}) para
+     * {@link #segundoPaso} (ADR 051).
+     */
     AuthenticationResponse login(LoginRequest request);
+
+    /** El código del segundo factor, con el desafío del login: abre la sesión (ADR 051). */
+    AuthenticationResponse segundoPaso(com.nxtime.nxtime.dto.SegundoPasoRequest request);
 
     /**
      * Comprueba la contraseña de quien ya tiene sesión, sin abrir otra (lo

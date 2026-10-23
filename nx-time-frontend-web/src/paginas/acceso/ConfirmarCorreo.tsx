@@ -38,6 +38,7 @@ export function ConfirmarCorreo({ email, destino = '/fichar' }: { email: string;
           authorities: sesion.authorities ?? [],
           zonaHoraria: sesion.zonaHoraria,
           condicionesPorAceptar: sesion.condicionesPorAceptar,
+          segundoFactorPorActivar: sesion.segundoFactorPorActivar,
         });
         navegar(destino, { replace: true });
       },

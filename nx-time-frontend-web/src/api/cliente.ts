@@ -174,6 +174,7 @@ interface RespuestaDeSesion {
   authorities?: string[];
   zonaHoraria?: string;
   condicionesPorAceptar?: boolean;
+  segundoFactorPorActivar?: boolean;
 }
 
 async function pedirTokensNuevos(): Promise<string | null> {
@@ -205,6 +206,7 @@ async function pedirTokensNuevos(): Promise<string | null> {
       authorities: cuerpo.authorities ?? sesionActual()?.authorities ?? [],
       zonaHoraria: cuerpo.zonaHoraria ?? sesionActual()?.zonaHoraria,
       condicionesPorAceptar: cuerpo.condicionesPorAceptar,
+      segundoFactorPorActivar: cuerpo.segundoFactorPorActivar,
     });
     return cuerpo.token;
   } catch {
@@ -212,6 +214,15 @@ async function pedirTokensNuevos(): Promise<string | null> {
     // refresh caducado desde aquí, y en los dos casos hay que volver a entrar.
     return null;
   }
+}
+
+/**
+ * Renueva el access token a propósito: tras activar el segundo factor, la
+ * sesión pasa a contar como sesión con él (ADR 051), y el token nuevo es el
+ * que lo dice.
+ */
+export function renovarSesion(): Promise<string | null> {
+  return refrescar();
 }
 
 /** Una sola renovación en vuelo por pestaña: quien llega después espera a esta. */
@@ -260,6 +271,25 @@ export async function tokenParaReintentar(tokenQueFallo: string | undefined): Pr
 /* El cliente                                                          */
 /* ------------------------------------------------------------------ */
 
+/** Lo que dice el servidor a quien tiene que activar el segundo factor y no lo ha hecho (ADR 051). */
+export const SEGUNDO_FACTOR_OBLIGATORIO = 'SEGUNDO_FACTOR_OBLIGATORIO';
+
+/**
+ * Un 403 por no tener el segundo factor que se le exige: la sesión lo apunta,
+ * y la web le lleva a activarlo. Es lo que cubre una sesión que empezó antes
+ * de que se lo exigieran (su empresa lo ha pedido mientras estaba dentro).
+ */
+async function mirarSiFaltaElSegundoFactor(respuesta: Response): Promise<void> {
+  const actual = sesionActual();
+  if (actual === null || actual.segundoFactorPorActivar === true) return;
+  try {
+    const cuerpo = (await respuesta.clone().json()) as { codigo?: unknown };
+    if (cuerpo.codigo === SEGUNDO_FACTOR_OBLIGATORIO) abrirSesion({ ...actual, segundoFactorPorActivar: true });
+  } catch {
+    // Un 403 sin JSON (un proxy): no es esto.
+  }
+}
+
 const autenticacion: Middleware = {
   async onRequest({ request }) {
     const sesion = sesionActual();
@@ -271,6 +301,7 @@ const autenticacion: Middleware = {
 
   async onResponse({ request, response }) {
     anotarRespuesta(response.status);
+    if (response.status === 403) await mirarSiFaltaElSegundoFactor(response);
     if (response.status !== 401) return response;
 
     // `/auth/*` no se reintenta: un 401 ahí son credenciales malas o un

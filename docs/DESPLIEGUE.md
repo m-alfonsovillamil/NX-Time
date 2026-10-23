@@ -76,6 +76,40 @@ El `tr -d '\r\n'` importa: en Windows `openssl` parte la salida en líneas y dej
 retornos de carro, que no son base64 válidos. La aplicación falla al arrancar con
 `Illegal base64 character`.
 
+### El segundo factor (ADR 051)
+
+| Variable | Valor |
+|---|---|
+| `TOTP_CLAVE` | genera una nueva (ver abajo) |
+
+**Obligatoria, como `JWT_SECRET`: sin ella la aplicación no arranca**, y
+tampoco con la de desarrollo que trae `application.yml`. Con ella se cifran en
+la base los secretos del segundo factor. **Créala en Render antes de desplegar
+la versión que la pide.**
+
+```bash
+openssl rand -base64 32 | tr -d '\r\n'
+```
+
+**No la cambies** salvo que se haya filtrado: cambiarla deja inservibles todos
+los segundos factores activados, y cada persona tendría que pedir que se lo
+quiten y volver a activarlo. Guárdala en el gestor de contraseñas, junto a
+`JWT_SECRET`.
+
+**Si el operador pierde el móvil y los códigos de recuperación**, no hay nadie
+por encima que se lo quite desde la aplicación. Se hace en la base, con el
+correo del operador:
+
+```sql
+BEGIN;
+DELETE FROM codigos_recuperacion WHERE usuario_id = (SELECT id FROM usuarios WHERE email = 'operador@ejemplo.com');
+DELETE FROM segundo_factor      WHERE usuario_id = (SELECT id FROM usuarios WHERE email = 'operador@ejemplo.com');
+UPDATE usuarios SET segundo_factor_desde = NULL   WHERE email = 'operador@ejemplo.com';
+COMMIT;
+```
+
+Al entrar después, la web le lleva directamente a activarlo otra vez.
+
 ### Cuántos proxies hay delante
 
 | Variable | Valor |

@@ -1,6 +1,6 @@
 # Medidas de seguridad (RGPD, art. 32)
 
-Lo que hay a 17/10/2026, y lo que el contrato de encargo promete y todavía
+Lo que hay a 23/10/2026, y lo que el contrato de encargo promete y todavía
 depende de algo pendiente. **El anexo del contrato de encargo (`/legal/encargo`)
 no puede prometer más que esta página.** Si una medida cambia, se cambian las
 dos y se sube `application.legal.version`.
@@ -9,7 +9,9 @@ dos y se sube `application.legal.version`.
 
 | Medida | Dónde |
 |---|---|
-| Contraseñas con BCrypt, como mucho 72 bytes | `ApplicationConfig`, `CabeEnBcrypt` |
+| Contraseñas con BCrypt, como mucho 72 bytes, y ninguna de las ~10.000 más usadas | `ApplicationConfig`, `CabeEnBcrypt`, `NoEsComun` (ADR 051) |
+| Segundo factor (TOTP) opcional para todos; obligatorio para el operador, el Responsable del canal y, si la empresa lo exige, ADMIN y RRHH. Secreto cifrado con AES-GCM, códigos de un solo uso, códigos de recuperación y aviso por correo de cada cambio | `security/totp`, `SegundoFactorServiceImpl` (ADR 051) |
+| «Cerrar todas las sesiones» corta también los access tokens ya emitidos | `JwtAuthenticationFilter` (ADR 051) |
 | Límite por IP (entradas, registro, códigos, consultas públicas) y por cuenta con espera exponencial | `LoginRateLimitFilter`, `LimitadorDeIntentosPorCuenta` |
 | Cuenta de baja comprobada después de la contraseña (sin pistas de tiempo) | `ApplicationConfig` (J1) |
 | Códigos de un solo uso, 5 intentos y caducidad | `AccessCodeServiceImpl` |
@@ -27,6 +29,8 @@ dos y se sube `application.legal.version`.
 | App: sesión cifrada con el almacén de claves, sin copias de seguridad, sin tráfico en claro en producción | ADR 045, `network_security_config` |
 | Dependencias vigiladas (Dependabot), CodeQL, acciones y contenedores fijados | `.github/` (J1) |
 | Copias diarias cifradas (AES-256), 30 días, con la frase fuera de OneDrive | `scripts/copia-neon.ps1` (J2) |
+| Conservación automática de cada dato, cada noche | `ConservacionDeDatos` (ADR 047) |
+| Registro de solo inserción de los accesos a datos personales de otra persona | V44, `accesos_a_datos` (ADR 047) |
 
 ## Prometido y pendiente (antes de la primera empresa real)
 
@@ -37,6 +41,3 @@ dos y se sube `application.legal.version`.
 | La frase de las copias creada y guardada en un gestor de contraseñas; copias viejas sin cifrar borradas | Pendiente (J2) | Miguel |
 | Neon: `nxtime_app` fuera de `neon_superuser`, restauración de prueba hecha, lista blanca de IPs | Pendiente (J2) | Miguel |
 | Sentry en la región de la UE | Por confirmar (`DESPLIEGUE.md` apunta a `ingest.de`) | Miguel |
-| Segundo factor (TOTP) en NX Time, obligatorio para el operador | Plan J, J8 | Código |
-| Conservación automática de cada dato | Plan J, J5 | Código |
-| Registro de accesos a datos personales de otra persona | Plan J, J5 | Código |

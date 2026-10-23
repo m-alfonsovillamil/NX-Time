@@ -1,6 +1,7 @@
 /**
  * Los ajustes de la empresa: el nombre, la zona horaria (fase Z2, ADR 032) y
- * el contacto de privacidad que ve la plantilla (ADR 047).
+ * el contacto de privacidad que ve la plantilla (ADR 047), y si se exige el
+ * segundo factor a ADMIN y RRHH (ADR 051).
  *
  * Solo la ve ADMIN (`empresa:configurar`). La zona decide a qué día pertenece
  * cada fichaje de todo el histórico, así que cambiarla pide confirmación: una
@@ -167,6 +168,53 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
   );
 }
 
+/**
+ * Exigir el segundo factor a ADMIN y RRHH (ADR 051). Aparte del formulario de
+ * arriba, con su propio botón: no tiene nada que ver con el nombre ni con la
+ * zona, y cambiarlo no debe pasar por la confirmación de la zona. El servidor
+ * guarda los ajustes enteros, así que se mandan los guardados.
+ */
+function ExigirSegundoFactor({ ajustes }: { ajustes: Ajustes }) {
+  const S = A.segundoFactor;
+  const [exigir, setExigir] = useState(ajustes.exigirSegundoFactor === true);
+  const guardar = useMutacion(
+    (valor: boolean) =>
+      pedir(
+        cliente.PUT('/api/v1/empresa/ajustes', {
+          body: {
+            nombre: ajustes.nombre ?? '',
+            zonaHoraria: ajustes.zonaHoraria ?? PENINSULA,
+            contactoPrivacidad: ajustes.contactoPrivacidad ?? '',
+            exigirSegundoFactor: valor,
+          },
+        }),
+      ),
+    { invalida: [CLAVE_AJUSTES], exito: (r) => (r.exigirSegundoFactor === true ? S.exigido : S.noExigido) },
+  );
+
+  return (
+    <Tarjeta titulo={S.titulo} icono="candado" descripcion={S.texto}>
+      <div className="nx-columna">
+        <label className="nx-casilla">
+          <input type="checkbox" checked={exigir} onChange={(e) => setExigir(e.target.checked)} />
+          <span>{S.exigir}</span>
+        </label>
+        <div>
+          <Boton
+            variante="secundario"
+            ocupado={guardar.isPending}
+            disabled={exigir === (ajustes.exigirSegundoFactor === true)}
+            onClick={() => guardar.mutate(exigir)}
+          >
+            {S.guardar}
+          </Boton>
+        </div>
+        {guardar.error !== null && <Aviso>{guardar.error.message}</Aviso>}
+      </div>
+    </Tarjeta>
+  );
+}
+
 export function AjustesEmpresa() {
   const ajustes = useQuery({
     queryKey: CLAVE_AJUSTES,
@@ -184,6 +232,9 @@ export function AjustesEmpresa() {
               <Formulario key={`${datos.nombre}|${datos.zonaHoraria}|${datos.contactoPrivacidad ?? ''}`} ajustes={datos} />
             )}
           </EstadoDeConsulta>
+          {ajustes.data !== undefined && (
+            <ExigirSegundoFactor key={String(ajustes.data.exigirSegundoFactor)} ajustes={ajustes.data} />
+          )}
           <CanalDeDenunciasAjustes />
           {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}
           <Tarjeta titulo={A.accesosTitulo} icono="candado" descripcion={A.accesosTexto}>
