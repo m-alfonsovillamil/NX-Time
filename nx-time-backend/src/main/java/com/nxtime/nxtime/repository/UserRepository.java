@@ -39,6 +39,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u.email from usuarios u where u.email in :correos")
     java.util.Set<String> correosQueYaExisten(@Param("correos") Collection<String> correos);
 
+    /** Los códigos de empleado que ya hay en la empresa, en mayúsculas, como los compara V49 (ADR 053). */
+    @Query("select upper(u.codigoEmpleado) from usuarios u where u.empresa.id = :empresaId and u.codigoEmpleado is not null")
+    java.util.Set<String> codigosDeEmpleado(@Param("empresaId") long empresaId);
+
+    /** Quién de la empresa, que no sea {@code id}, tiene ya ese código (sin distinguir mayúsculas). */
+    @Query("select u.nombre from usuarios u where u.empresa.id = :empresaId and u.id <> :id "
+            + "and upper(u.codigoEmpleado) = upper(:codigo)")
+    List<String> conElCodigoDeEmpleado(@Param("empresaId") long empresaId, @Param("codigo") String codigo,
+            @Param("id") long id);
+
     List<User> findByEmpresa(Company empresa);
 
     List<User> findByEmpresaAndRol(Company empresa, Role rol);

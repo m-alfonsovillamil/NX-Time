@@ -54,7 +54,9 @@ public record PersonalDataExport(
     public record Persona(
             long id, String nombre, String apellidos, String email, String rol, String empresa,
             String departamento, String puesto, LocalDate fechaNacimiento, BigDecimal horasSemanales,
-            boolean activo, Instant fechaBaja, String zonaHoraria) {
+            boolean activo, Instant fechaBaja, String zonaHoraria,
+            /* Su número en el ERP o en nóminas (ADR 053): también es un dato suyo. */
+            String codigoEmpleado) {
     }
 
     public record Fichaje(

@@ -62,3 +62,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [050](050-una-cadena-de-auditoria-por-empresa-y-la-baja.md) | Una cadena de auditoría por empresa, y la baja de una empresa con borrado |
 | [051](051-segundo-factor-y-contrasenas.md) | El segundo factor (TOTP), las contraseñas comunes y cerrar sesiones al momento |
 | [052](052-importar-la-plantilla-y-los-roles.md) | Importar la plantilla, invitaciones en tandas y cambiar el rol |
+| [053](053-el-codigo-de-empleado.md) | El código de empleado |

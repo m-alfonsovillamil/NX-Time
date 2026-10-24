@@ -12799,6 +12799,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "codigoEmpleado" : {
+            "type" : "string",
+            "description" : "Su número en el ERP o en nóminas (ADR 053), o null"
           }
         }
       },
@@ -13920,6 +13924,11 @@
             "format" : "int32",
             "maximum" : 365,
             "minimum" : 0
+          },
+          "codigoEmpleado" : {
+            "type" : "string",
+            "description" : "Null: no tocar. Vacío: quitarlo.",
+            "maxLength" : 50
           }
         }
       },
@@ -13962,6 +13971,9 @@
           },
           "invitacionPendiente" : {
             "type" : "boolean"
+          },
+          "codigoEmpleado" : {
+            "type" : "string"
           }
         }
       },
@@ -15112,6 +15124,9 @@
             "format" : "date-time"
           },
           "zonaHoraria" : {
+            "type" : "string"
+          },
+          "codigoEmpleado" : {
             "type" : "string"
           }
         }

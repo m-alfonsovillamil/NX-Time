@@ -136,7 +136,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                         p.getEmpresa() != null ? p.getEmpresa().getNombre() : null,
                         p.getDepartamento() != null ? p.getDepartamento().getNombre() : null,
                         p.getPuesto(), p.getFechaNacimiento(), p.getHorasSemanales(),
-                        p.isActivo(), p.getFechaBaja(), p.zona().getId()),
+                        p.isActivo(), p.getFechaBaja(), p.zona().getId(), p.getCodigoEmpleado()),
 
                 timeEntryRepository.findByUsuarioOrderByHoraEntradaAsc(p).stream()
                         .map(f -> new PersonalDataExport.Fichaje(

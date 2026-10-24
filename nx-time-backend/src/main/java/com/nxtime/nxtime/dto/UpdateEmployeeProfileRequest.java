@@ -29,6 +29,11 @@ import java.math.BigDecimal;
  * @param diasVacaciones derecho anual del AÑO EN CURSO (en la zona de la empresa).
  *                       El saldo se guarda por año, así que "los días de
  *                       vacaciones" a secas no existe.
+ * @param codigoEmpleado el número de la persona en el ERP o en nóminas (V49,
+ *                       ADR 053). Este sí se puede borrar, porque null
+ *                       significa algo («la empresa no lo usa»): null es no
+ *                       tocar, y una cadena vacía lo quita. Las reglas, en
+ *                       {@link com.nxtime.nxtime.domain.CodigosDeEmpleado}.
  */
 public record UpdateEmployeeProfileRequest(
 
@@ -39,6 +44,14 @@ public record UpdateEmployeeProfileRequest(
 
         @Min(value = 0, message = "Los días de vacaciones no pueden ser negativos.")
         @Max(value = 365, message = "Los días de vacaciones no pueden superar los 365.")
-        Integer diasVacaciones
+        Integer diasVacaciones,
+
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Null: no tocar. Vacío: quitarlo.", maxLength = 50)
+        String codigoEmpleado
 ) {
+
+    /** Sin código: como era el cuerpo antes de V49. */
+    public UpdateEmployeeProfileRequest(BigDecimal horasSemanales, Integer diasVacaciones) {
+        this(horasSemanales, diasVacaciones, null);
+    }
 }

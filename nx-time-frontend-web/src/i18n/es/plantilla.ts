@@ -2,12 +2,13 @@
 export const plantilla = {
   titulo: 'Plantilla',
   tablaTitulo: 'Personas de la empresa',
-  buscar: 'Buscar por nombre o correo',
+  buscar: 'Buscar por nombre, correo o código',
   verDeBaja: 'Incluir a quien está de baja',
   vacio: 'Todavía no hay nadie en la plantilla.',
   sinResultados: 'Nadie coincide con la búsqueda.',
   nombre: 'Nombre',
   email: 'Correo',
+  codigo: 'Código',
   rol: 'Rol',
   departamento: 'Departamento',
   jornada: 'Jornada',
@@ -40,6 +41,10 @@ export const plantilla = {
   fichaAyuda: 'Los días de vacaciones se aplican al año en curso.',
   fichaHorasMal: 'La jornada tiene que ser de más de 0 y como mucho 60 horas, con un decimal como mucho.',
   fichaDiasMal: 'Los días de vacaciones tienen que estar entre 0 y 365.',
+  fichaCodigo: 'Código de empleado',
+  fichaCodigoAyuda: 'Su número en vuestro ERP o programa de nóminas, para casar las horas. Opcional.',
+  fichaCodigoMal:
+    'El código de empleado admite hasta 50 letras, números y . _ / -, sin espacios, y tiene que empezar por letra o número.',
   guardar: 'Guardar',
   fichaGuardada: 'Ficha guardada.',
 
@@ -52,10 +57,10 @@ export const plantilla = {
     boton: 'Importar desde Excel o CSV',
     titulo: 'Importar la plantilla',
     explicacion:
-      'Sube un Excel (.xlsx) o un CSV con una persona por fila. La primera fila lleva los títulos: nombre, apellidos y email, y si quieres rol, departamento, horas y vacaciones. Primero lo comprobamos, sin crear nada.',
+      'Sube un Excel (.xlsx) o un CSV con una persona por fila. La primera fila lleva los títulos: nombre, apellidos y email, y si quieres rol, departamento, horas, vacaciones y código (su número en vuestro ERP o nóminas). Primero lo comprobamos, sin crear nada.',
     ejemplo: 'Descargar un ejemplo',
     ficheroEjemplo:
-      'nombre;apellidos;email;rol;departamento;horas;vacaciones\nAna;López García;ana.lopez@tuempresa.es;empleado;;40;22\nLuis;Martín Ruiz;luis.martin@tuempresa.es;gestor;;37,5;23\n',
+      'nombre;apellidos;email;rol;departamento;horas;vacaciones;codigo\nAna;López García;ana.lopez@tuempresa.es;empleado;;40;22;000123\nLuis;Martín Ruiz;luis.martin@tuempresa.es;gestor;;37,5;23;000124\n',
     fichero: 'Fichero',
     comprobando: 'Comprobando…',
     resumen: (filas: number, conErrores: number) =>

@@ -19,5 +19,6 @@ public record FilaDeImportacion(
         @Schema(description = "El departamento, ya con el nombre que tiene en la empresa") String departamento,
         BigDecimal horasSemanales,
         Integer diasVacaciones,
-        @Schema(description = "Lo que impide darla de alta. Vacío: se puede") List<String> errores) {
+        @Schema(description = "Lo que impide darla de alta. Vacío: se puede") List<String> errores,
+        @Schema(description = "Su número en el ERP o en nóminas (ADR 053), o null") String codigoEmpleado) {
 }

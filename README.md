@@ -467,7 +467,10 @@ Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
 reparte el poder de gestión. Un ADMIN cambia el rol de cualquiera de su empresa
 menos el suyo, así que siempre queda al menos uno
 ([ADR 052](docs/adr/052-importar-la-plantilla-y-los-roles.md)). La plantilla
-entera se puede dar de alta desde un CSV o un Excel.
+entera se puede dar de alta desde un CSV o un Excel, con el **código de
+empleado** de cada persona: su número en el ERP o en nóminas, que sale en el
+Excel de horas para casarlas allí
+([ADR 053](docs/adr/053-el-codigo-de-empleado.md)).
 
 Tres permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
 corrección que pidió él mismo, ni revisa sus propias horas extra, ni valora su
@@ -684,6 +687,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 50. [Una cadena de auditoría por empresa, y la baja de una empresa con borrado](docs/adr/050-una-cadena-de-auditoria-por-empresa-y-la-baja.md)
 51. [El segundo factor (TOTP), las contraseñas comunes y cerrar sesiones al momento](docs/adr/051-segundo-factor-y-contrasenas.md)
 52. [Importar la plantilla, invitaciones en tandas y cambiar el rol](docs/adr/052-importar-la-plantilla-y-los-roles.md)
+53. [El código de empleado](docs/adr/053-el-codigo-de-empleado.md)
 
 ---
 

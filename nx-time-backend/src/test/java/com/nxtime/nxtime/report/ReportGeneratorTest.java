@@ -41,7 +41,7 @@ class ReportGeneratorTest {
                 YearMonth.of(2026, 6),
                 List.of(
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 1),
-                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30, 480 * 60, false),
+                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30, 480 * 60, false, "000123"),
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 2),
                                 LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450 * 60, false),
                         // Jornada cerrada por el sistema (Fase 9).
@@ -75,6 +75,10 @@ class ReportGeneratorTest {
             assertThat(hoja.getRow(4).getCell(1).getStringCellValue()).isEqualTo("2026-06-01");
             assertThat(hoja.getRow(4).getCell(5).getStringCellValue()).isEqualTo("8h 00m");
             assertThat(hoja.getRow(4).getCell(6).getStringCellValue()).isEmpty();
+            // El código de empleado, la última columna y como texto: con los ceros (ADR 053).
+            assertThat(hoja.getRow(3).getCell(7).getStringCellValue()).isEqualTo("Código de empleado");
+            assertThat(hoja.getRow(4).getCell(7).getStringCellValue()).isEqualTo("000123");
+            assertThat(hoja.getRow(5).getCell(7).getStringCellValue()).isEmpty();
 
             // Fila 6: la jornada con incidencia va marcada.
             assertThat(hoja.getRow(6).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");

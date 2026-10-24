@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.CodigosDeEmpleado;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.Emails;
@@ -44,8 +45,10 @@ import org.springframework.transaction.annotation.Transactional;
  *       GESTOR, RRHH o ADMIN, solo quien tiene {@code gestor:crear} (ADMIN);</li>
  *   <li>el departamento, solo con {@code departamento:gestionar}, y tiene que
  *       existir ya en la empresa;</li>
- *   <li>la jornada y las vacaciones, solo con {@code empleado:configurar}, y
- *       con los mismos límites que la ficha (0,1-60 h, 0-365 días);</li>
+ *   <li>la jornada, las vacaciones y el código de empleado, solo con
+ *       {@code empleado:configurar}, y con los mismos límites que la ficha
+ *       (0,1-60 h, 0-365 días; el código, {@link CodigosDeEmpleado}, sin
+ *       repetirse en la empresa ni en el fichero);</li>
  *   <li>el correo no puede tener cuenta ya, en ninguna empresa, ni repetirse en
  *       el fichero.</li>
  * </ul>
@@ -130,7 +133,8 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
                     .contrasena(inutilizable)
                     .rol(fila.rol())
                     .empresa(empresa)
-                    .departamento(comprobada.departamento());
+                    .departamento(comprobada.departamento())
+                    .codigoEmpleado(fila.codigoEmpleado());
             if (fila.horasSemanales() != null) {
                 nuevo.horasSemanales(fila.horasSemanales());
             }
@@ -170,6 +174,9 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
                 .collect(Collectors.toSet());
         Set<String> yaExisten = correos.isEmpty() ? Set.of() : usuarios.correosQueYaExisten(correos);
         Map<String, Integer> primeraVez = new HashMap<>();
+        boolean hayCodigos = leido.filas().stream().anyMatch(f -> !f.valor(LectorDePlantilla.CODIGO).isEmpty());
+        Set<String> codigosEnLaEmpresa = hayCodigos ? usuarios.codigosDeEmpleado(actor.getEmpresa().getId()) : Set.of();
+        Map<String, Integer> primerCodigo = new HashMap<>();
 
         List<Comprobada> resultado = new ArrayList<>();
         for (LectorDePlantilla.Fila fila : leido.filas()) {
@@ -240,6 +247,23 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
                 }
             }
 
+            String codigo = CodigosDeEmpleado.normalizar(fila.valor(LectorDePlantilla.CODIGO));
+            if (codigo != null) {
+                String problema = CodigosDeEmpleado.problema(codigo);
+                String clave = CodigosDeEmpleado.clave(codigo);
+                if (!configuraFicha) {
+                    errores.add("No puedes poner el código de empleado: deja la columna vacía.");
+                } else if (problema != null) {
+                    errores.add(problema);
+                } else if (codigosEnLaEmpresa.contains(clave)) {
+                    errores.add("El código de empleado «" + codigo + "» ya lo tiene otra persona de la empresa.");
+                } else if (primerCodigo.containsKey(clave)) {
+                    errores.add("El código de empleado está repetido: ya sale en la fila " + primerCodigo.get(clave) + ".");
+                } else {
+                    primerCodigo.put(clave, fila.numero());
+                }
+            }
+
             Integer vacaciones = null;
             String vacacionesEscritas = fila.valor(LectorDePlantilla.VACACIONES);
             if (!vacacionesEscritas.isEmpty()) {
@@ -255,7 +279,8 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
             }
 
             resultado.add(new Comprobada(new FilaDeImportacion(fila.numero(), nombre, apellidos, email, rol,
-                    departamento == null ? null : departamento.getNombre(), horas, vacaciones, List.copyOf(errores)),
+                    departamento == null ? null : departamento.getNombre(), horas, vacaciones, List.copyOf(errores),
+                    configuraFicha ? codigo : null),
                     departamento));
         }
         return resultado;

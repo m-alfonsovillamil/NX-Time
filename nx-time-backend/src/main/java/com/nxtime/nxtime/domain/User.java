@@ -94,6 +94,13 @@ public class User {
 
     private String puesto;
 
+    /**
+     * El número con el que la empresa conoce a esta persona en su ERP o en
+     * su programa de nóminas (V49, ADR 053), o null. Lo ponen RRHH y ADMIN,
+     * no la propia persona. Las reglas, en {@link CodigosDeEmpleado}.
+     */
+    private String codigoEmpleado;
+
     @ManyToOne
     @JoinColumn(name = "departamento_id")
     private Department departamento;

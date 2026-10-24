@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 /**
  * Unitarios de la ficha de empleado (Fase A).
@@ -196,7 +198,7 @@ class EmployeeProfileServiceImplTest {
 
         assertThat(empleado.getHorasSemanales()).isEqualByComparingTo("37.5");
         assertThat(ficha.horasSemanales()).isEqualByComparingTo("37.5");
-        verify(userRepository).save(empleado);
+        verify(userRepository).saveAndFlush(empleado);
         // Es un PATCH: lo que no viene, no se toca.
         verify(vacationBalanceRepository, never()).save(any());
         verify(vacationBalanceRepository, never()).findByUsuarioAndAnio(any(), anyInt());
@@ -211,6 +213,7 @@ class EmployeeProfileServiceImplTest {
         service.updateProfile(10L, new UpdateEmployeeProfileRequest(null, null), rrhh);
 
         verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
         verify(vacationBalanceRepository, never()).save(any());
     }
 
@@ -241,6 +244,69 @@ class EmployeeProfileServiceImplTest {
                 .hasMessageContaining("otra empresa");
 
         verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    // ---- El código de empleado (ADR 053) ----
+
+    @Test
+    @DisplayName("El código de empleado se guarda sin espacios alrededor")
+    void codigo_seGuardaLimpio() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        lenient().when(vacationBalanceRepository.findByAnioAndUsuarioIn(anyInt(), anyList())).thenReturn(List.of());
+        when(userRepository.conElCodigoDeEmpleado(1L, "EMP-0042", 10L)).thenReturn(List.of());
+
+        SimpleEmployeeDTO ficha = service.updateProfile(
+                10L, new UpdateEmployeeProfileRequest(null, null, "  EMP-0042 "), rrhh);
+
+        assertThat(empleado.getCodigoEmpleado()).isEqualTo("EMP-0042");
+        assertThat(ficha.codigoEmpleado()).isEqualTo("EMP-0042");
+        verify(userRepository).saveAndFlush(empleado);
+    }
+
+    @Test
+    @DisplayName("Una cadena vacía quita el código; null no lo toca")
+    void codigo_vacioLoQuita_nullNoLoToca() {
+        empleado.setCodigoEmpleado("000123");
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        lenient().when(vacationBalanceRepository.findByAnioAndUsuarioIn(anyInt(), anyList())).thenReturn(List.of());
+
+        service.updateProfile(10L, new UpdateEmployeeProfileRequest(new BigDecimal("35.0"), null, null), rrhh);
+        assertThat(empleado.getCodigoEmpleado()).isEqualTo("000123");
+
+        service.updateProfile(10L, new UpdateEmployeeProfileRequest(null, null, "   "), rrhh);
+        assertThat(empleado.getCodigoEmpleado()).isNull();
+        verify(userRepository, never()).conElCodigoDeEmpleado(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("Un código con espacios o que empieza por = da 400 y no cambia nada más")
+    void codigo_conFormatoMalo_400() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+
+        for (String malo : List.of("EMP 42", "=1+1", "-42", "x".repeat(51))) {
+            assertThatThrownBy(() -> service.updateProfile(
+                    10L, new UpdateEmployeeProfileRequest(new BigDecimal("30.0"), null, malo), rrhh))
+                    .isInstanceOfSatisfying(BusinessException.class,
+                            e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+        }
+        assertThat(empleado.getHorasSemanales()).isEqualByComparingTo("40.0");
+        verify(userRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Un código que ya tiene otra persona de la empresa da 409 diciendo quién")
+    void codigo_repetido_409() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(empleado));
+        when(userRepository.conElCodigoDeEmpleado(1L, "e001", 10L)).thenReturn(List.of("Marta"));
+
+        assertThatThrownBy(() -> service.updateProfile(
+                10L, new UpdateEmployeeProfileRequest(null, null, "e001"), rrhh))
+                .isInstanceOfSatisfying(BusinessException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessage()).contains("Marta");
+                });
+        assertThat(empleado.getCodigoEmpleado()).isNull();
     }
 
     @Test

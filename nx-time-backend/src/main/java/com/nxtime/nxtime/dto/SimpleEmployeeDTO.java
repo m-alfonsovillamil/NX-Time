@@ -71,6 +71,12 @@ public record SimpleEmployeeDTO(
          * (ADR 052): al importar una plantilla entera salen como mucho 50 al
          * día. Siempre false en «mis empleados».
          */
-        boolean invitacionPendiente
+        boolean invitacionPendiente,
+
+        /**
+         * Su número en el ERP o en nóminas (V49, ADR 053), o null. Viaja en
+         * la lista para que la ficha lo precargue y la tabla lo enseñe.
+         */
+        String codigoEmpleado
 ) {
 }
