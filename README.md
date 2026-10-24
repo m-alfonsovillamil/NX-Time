@@ -464,7 +464,10 @@ Cada rol hereda los permisos del anterior: **EMPLEADO < GESTOR < RRHH < ADMIN**.
 | **ADMIN** | crear otros gestores, instruir el canal de denuncias |
 
 Quien registra la empresa queda como **ADMIN**: es quien funda el tenant y quien
-reparte el poder de gestión.
+reparte el poder de gestión. Un ADMIN cambia el rol de cualquiera de su empresa
+menos el suyo, así que siempre queda al menos uno
+([ADR 052](docs/adr/052-importar-la-plantilla-y-los-roles.md)). La plantilla
+entera se puede dar de alta desde un CSV o un Excel.
 
 Tres permisos no siguen la jerarquía, y a propósito: **nadie resuelve la
 corrección que pidió él mismo, ni revisa sus propias horas extra, ni valora su
@@ -680,6 +683,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 49. [El registro de jornada: el propio, y todo junto para la Inspección](docs/adr/049-el-registro-de-jornada-propio-y-para-la-inspeccion.md)
 50. [Una cadena de auditoría por empresa, y la baja de una empresa con borrado](docs/adr/050-una-cadena-de-auditoria-por-empresa-y-la-baja.md)
 51. [El segundo factor (TOTP), las contraseñas comunes y cerrar sesiones al momento](docs/adr/051-segundo-factor-y-contrasenas.md)
+52. [Importar la plantilla, invitaciones en tandas y cambiar el rol](docs/adr/052-importar-la-plantilla-y-los-roles.md)
 
 ---
 
@@ -755,11 +759,6 @@ Android, contra un proveedor de mentira que firma sus propios ID token.
   sí se arregló ([ADR 041](docs/adr/041-el-acceso-bajo-carga.md)) es que eso ya
   no arrastra a quien está dentro: fichar con la sesión abierta sigue yendo en
   décimas de segundo, y a quien no cabe se le dice que vuelva a intentarlo.
-- **La cadena de auditoría es una sola para todas las empresas** de la
-  instalación. Cada empresa ve solo sus cifras y solo su traza, pero una rotura
-  la notan todas y comprobarla recorre la de todas. Lo limpio para un servicio
-  compartido es una cadena por empresa
-  ([ADR 018](docs/adr/018-la-cadena-de-auditoria-se-serializa-en-postgres.md)).
 - **El único usuario de producción es la cuenta de demostración**: `DemoDataSeeder`
   solo corre con el perfil `demo`, así que la base de Neon tiene el esquema pero
   no los datos sintéticos que sí hay en local. Lo que se ve en la demo es lo que

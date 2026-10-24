@@ -47,6 +47,55 @@ export const plantilla = {
   reactivar: 'Dar de alta',
   bajaTitulo: (quien: string) => `¿Dar de baja a ${quien}?`,
   bajaTexto: 'No se borra nada: sus fichajes se conservan y podrás volver a darle de alta cuando quieras. Mientras tanto no podrá entrar.',
+  /** Importar la plantilla desde un fichero (ADR 052). */
+  importar: {
+    boton: 'Importar desde Excel o CSV',
+    titulo: 'Importar la plantilla',
+    explicacion:
+      'Sube un Excel (.xlsx) o un CSV con una persona por fila. La primera fila lleva los títulos: nombre, apellidos y email, y si quieres rol, departamento, horas y vacaciones. Primero lo comprobamos, sin crear nada.',
+    ejemplo: 'Descargar un ejemplo',
+    ficheroEjemplo:
+      'nombre;apellidos;email;rol;departamento;horas;vacaciones\nAna;López García;ana.lopez@tuempresa.es;empleado;;40;22\nLuis;Martín Ruiz;luis.martin@tuempresa.es;gestor;;37,5;23\n',
+    fichero: 'Fichero',
+    comprobando: 'Comprobando…',
+    resumen: (filas: number, conErrores: number) =>
+      conErrores === 0
+        ? `${filas} ${filas === 1 ? 'persona' : 'personas'}, todo correcto.`
+        : `${filas} ${filas === 1 ? 'persona' : 'personas'}, ${conErrores} con errores. Corrige el fichero y vuelve a subirlo: hasta que no esté todo bien no se crea a nadie.`,
+    ignoradas: (columnas: string) => `Columnas que no reconocemos y se ignoran: ${columnas}.`,
+    tabla: 'Personas del fichero',
+    fila: 'Fila',
+    errores: 'Problemas',
+    bien: 'Correcta',
+    crear: (n: number) => `Crear ${n} ${n === 1 ? 'persona' : 'personas'}`,
+    creando: 'Creando…',
+    hecho: (creadas: number) => `${creadas} ${creadas === 1 ? 'persona creada' : 'personas creadas'}.`,
+    invitaciones: (enCamino: number, pendientes: number) =>
+      pendientes > enCamino
+        ? `Les estamos mandando el correo para elegir contraseña a ${enCamino}. Las otras ${pendientes - enCamino} esperan: salen como mucho 50 invitaciones al día. Mañana, pulsa «Mandar las invitaciones» en esta página.`
+        : `Les estamos mandando el correo para elegir contraseña.`,
+    otro: 'Importar otro fichero',
+  },
+  /** Las invitaciones de alta que esperan cupo (ADR 052). */
+  invitaciones: {
+    aviso: (pendientes: number, cupo: number) =>
+      cupo > 0
+        ? `${pendientes} ${pendientes === 1 ? 'persona espera' : 'personas esperan'} el correo de alta. Hoy pueden salir ${Math.min(cupo, pendientes)}.`
+        : `${pendientes} ${pendientes === 1 ? 'persona espera' : 'personas esperan'} el correo de alta. Hoy ya no caben más: vuelve mañana.`,
+    enviar: 'Mandar las invitaciones',
+    enviando: (n: number) => `Mandando ${n} ${n === 1 ? 'invitación' : 'invitaciones'}…`,
+    pendiente: 'Sin invitar todavía',
+  },
+  /** Cambiar el rol (ADR 052). */
+  cambioDeRol: {
+    boton: 'Cambiar rol',
+    titulo: (nombre: string) => `Rol de ${nombre}`,
+    etiqueta: 'Rol',
+    explicacion:
+      'Gestor: lleva un equipo y aprueba sus ausencias. RRHH: además, gestiona la plantilla, corrige fichajes y saca informes. Administración: además, configura la empresa y nombra a otros. Vale en cuanto lo guardes.',
+    guardar: 'Guardar',
+    hecho: (nombre: string, rol: string) => `${nombre} es ahora ${rol}.`,
+  },
   /** El segundo factor (ADR 051). */
   conSegundoFactor: 'Segundo factor',
   quitarSegundoFactor: 'Quitar segundo factor',

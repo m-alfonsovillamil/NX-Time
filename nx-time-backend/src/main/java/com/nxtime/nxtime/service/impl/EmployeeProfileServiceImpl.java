@@ -44,11 +44,15 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     private final OperadoresDePlataforma operadores;
     private final RegistroDeAccesos accesos;
 
+    private final com.nxtime.nxtime.repository.InvitacionPendienteRepository invitaciones;
+
     public EmployeeProfileServiceImpl(UserRepository userRepository,
                                       VacationBalanceRepository vacationBalanceRepository,
                                       DepartmentRepository departmentRepository,
                                       OperadoresDePlataforma operadores,
-                                      RegistroDeAccesos accesos) {
+                                      RegistroDeAccesos accesos,
+                                      com.nxtime.nxtime.repository.InvitacionPendienteRepository invitaciones) {
+        this.invitaciones = invitaciones;
         this.userRepository = userRepository;
         this.vacationBalanceRepository = vacationBalanceRepository;
         this.departmentRepository = departmentRepository;
@@ -79,8 +83,10 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         Map<Long, Integer> saldosPorUsuario = plantilla.isEmpty()
                 ? Map.of()
                 : saldosDelAnio(plantilla, anioActual(actor));
+        // Una consulta para toda la plantilla (ADR 052).
+        java.util.Set<Long> sinInvitar = invitaciones.usuariosConInvitacionPendiente(actor.getEmpresa().getId());
         return plantilla.stream()
-                .map(persona -> toDto(persona, saldosPorUsuario))
+                .map(persona -> toDto(persona, saldosPorUsuario, sinInvitar.contains(persona.getId())))
                 .toList();
     }
 
@@ -285,6 +291,10 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     }
 
     private SimpleEmployeeDTO toDto(User empleado, Map<Long, Integer> saldosPorUsuario) {
+        return toDto(empleado, saldosPorUsuario, false);
+    }
+
+    private SimpleEmployeeDTO toDto(User empleado, Map<Long, Integer> saldosPorUsuario, boolean invitacionPendiente) {
         return new SimpleEmployeeDTO(
                 empleado.getId(),
                 empleado.getNombre(),
@@ -298,6 +308,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getId() : null,
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getNombre() : null,
                 empleado.getRol(),
-                empleado.tieneSegundoFactor());
+                empleado.tieneSegundoFactor(),
+                invitacionPendiente);
     }
 }

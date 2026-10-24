@@ -93,4 +93,11 @@ public interface AuthService {
 
     /** Da de alta o de baja a un empleado de la misma empresa que quien gestiona. */
     void setEmployeeActive(long employeeId, boolean activo, User actingManager);
+
+    /**
+     * Cambia el rol de alguien de la empresa (ADR 052): lo hace un ADMIN, nunca
+     * sobre sí mismo, así que siempre queda al menos uno. Las authorities se
+     * resuelven en cada petición: el cambio vale desde la siguiente.
+     */
+    void cambiarRol(long usuarioId, com.nxtime.nxtime.domain.Role rol, User admin);
 }

@@ -21,4 +21,7 @@ public interface AccessCodeRepository extends JpaRepository<AccessCode, Long> {
 
     /** Para el límite de altas por empresa y día (ADR 034): los códigos de ese tipo emitidos a gente de la empresa. */
     long countByUsuario_Empresa_IdAndTipoAndCreadoEnAfter(long empresaId, AccessCodeType tipo, Instant desde);
+
+    /** Los de un tipo en toda la instalación: para no pasar del tope diario del proveedor de correo (ADR 052). */
+    long countByTipoAndCreadoEnAfter(AccessCodeType tipo, Instant desde);
 }

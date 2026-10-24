@@ -75,7 +75,8 @@ class EmployeeProfileServiceImplTest {
     void setUp() {
         service = new EmployeeProfileServiceImpl(
                 userRepository, vacationBalanceRepository, departmentRepository,
-                new OperadoresDePlataforma(""), accesos);
+                new OperadoresDePlataforma(""), accesos,
+                org.mockito.Mockito.mock(com.nxtime.nxtime.repository.InvitacionPendienteRepository.class));
         empresa = Company.builder().id(1L).nombre("Empresa Test").build();
         otraEmpresa = Company.builder().id(2L).nombre("Otra Empresa").build();
         rrhh = User.builder().id(5L).email("rrhh@nxtime.test").nombre("Elena")

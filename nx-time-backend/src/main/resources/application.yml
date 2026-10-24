@@ -178,6 +178,11 @@ application:
     # un dominio verificado en el proveedor SMTP o los correos acabarán
     # en spam.
     from: "${MAIL_FROM:no-reply@nxtime.local}"
+    # Cuántos correos de alta pueden salir en 24 horas en TODA la instalación
+    # (ADR 052). El plan gratuito de Brevo corta en 300 al día, y el resto de
+    # avisos también cuentan: 250 deja margen. Lo que no cabe espera en
+    # invitaciones_pendientes. Con un plan de pago, se sube.
+    altas-por-dia: "${CORREO_ALTAS_POR_DIA:250}"
   push:
     # Credencial de la cuenta de servicio de Firebase (Fase B5), el JSON en
     # base64. ES UN SECRETO: solo en el panel de Render. Vacía = sin push, y la

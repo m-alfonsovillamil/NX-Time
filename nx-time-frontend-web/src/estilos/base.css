@@ -1723,12 +1723,16 @@ h2 {
     border-bottom: 1px solid var(--nx-outline-variant);
   }
 
+  /* `overflow-wrap: anywhere` por los correos: uno largo
+     (nombre.apellido.apellido@empresa.es) no tiene dónde partirse y sacaba la
+     tarjeta por la derecha. Visto con la importación de plantilla (plan K). */
   .nx-tabla td {
     display: flex;
     justify-content: space-between;
     gap: 16px;
     padding: 4px 0;
     border: none;
+    overflow-wrap: anywhere;
   }
 
   .nx-tabla .nx-tabla__numerica {
@@ -1746,6 +1750,9 @@ h2 {
     color: var(--nx-on-surface-variant);
     font-weight: 600;
     text-align: left;
+    /* La etiqueta entera; lo que se parte es el dato. */
+    flex-shrink: 0;
+    overflow-wrap: normal;
   }
 }
 
