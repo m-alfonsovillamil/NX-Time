@@ -37,6 +37,16 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    # Dos mayores que no se suben solas (#185, 23/10/2026):
+    # - TypeScript 7 es el compilador reescrito en Go: rompe el build y pide
+    #   un plan propio, no un PR de Dependabot.
+    # - @types/node sigue a la versión de Node que se usa (.node-version, la
+    #   24): unos tipos de otra versión dejan usar lo que en producción no hay.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
     groups:
       npm-menores:
         patterns: ["*"]

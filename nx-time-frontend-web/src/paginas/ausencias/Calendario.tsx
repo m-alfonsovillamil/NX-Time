@@ -161,10 +161,14 @@ export function Calendario() {
                             type="button"
                             className={clases}
                             aria-pressed={dia === elegido}
-                            aria-label={resumenDelDia(dia, festivo, ausentes.length)}
                             onClick={() => setElegido(dia)}
                           >
-                            <span className="nx-calendario__numero">{Number(dia.slice(8))}</span>
+                            {/* El nombre, del contenido y no de un aria-label (WCAG 2.5.3): el
+                                nombre del festivo se ve, y con aria-label no estaba tal cual. */}
+                            <span className="nx-solo-lector">{resumenDelDia(dia, festivo, ausentes.length)}</span>
+                            <span className="nx-calendario__numero" aria-hidden="true">
+                              {Number(dia.slice(8))}
+                            </span>
                             {festivo !== undefined && (
                               <span className="nx-calendario__festivo" aria-hidden="true">
                                 {festivo.descripcion}
