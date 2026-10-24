@@ -1,0 +1,130 @@
+# La copia diaria de la base, sin depender del PC de nadie (plan K).
+#
+# Hace lo mismo que scripts/copia-neon.ps1, que corría en el PC de Miguel y se
+# quedaba sin copia los días que estaba apagado (del 19 al 23/10/2026, por
+# ejemplo):
+#   1. pg_dump de Neon en formato custom, por la conexión DIRECTA (PgBouncer no
+#      admite el estado de sesión que usa pg_dump);
+#   2. comprueba que trae los datos de las tablas que importan;
+#   3. la cifra con gpg (AES-256) y una frase que no está en ningún sitio más
+#      que en los secretos del repositorio y en el gestor de contraseñas;
+#   4. comprueba que se descifra en lo mismo;
+#   5. la sube a Cloudflare R2 (gratis hasta 10 GB) y borra las de más de 30
+#      días, dejando siempre al menos 7.
+#
+# El repositorio es PÚBLICO: los registros de esta ejecución los puede leer
+# cualquiera. Por eso no se imprime nada de la base, solo tamaños y nombres, y
+# GitHub tapa los secretos. La copia nunca se guarda como artifact.
+#
+# Hasta que estén los secretos (docs/DESPLIEGUE.md, «La copia diaria en GitHub»),
+# no hace nada y lo dice, sin fallar.
+name: Copia diaria
+
+on:
+  schedule:
+    # Hacia las 14:30 en España. GitHub retrasa los cron gratuitos a veces
+    # horas; para una copia diaria da igual.
+    - cron: '30 12 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: copia-diaria
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  copia:
+    name: Copiar, cifrar y subir
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BASE: ${{ secrets.COPIA_DATABASE_URL }}
+      FRASE: ${{ secrets.COPIA_FRASE }}
+      # El endpoint S3 completo del cubo, el que enseña Cloudflare: con
+      # jurisdicción UE lleva `.eu` y no se puede deducir del id de cuenta.
+      R2: ${{ secrets.R2_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_CUBO: ${{ secrets.R2_BUCKET }}
+      AWS_DEFAULT_REGION: auto
+      # R2 no admite todas las sumas de comprobación que la CLI de AWS manda
+      # por defecto desde 2025; así solo las pide cuando hacen falta.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      DIAS: '30'
+      MINIMO: '7'
+    steps:
+      - name: ¿Está configurada?
+        id: config
+        run: |
+          if [ -z "$BASE" ] || [ -z "$FRASE" ] || [ -z "$R2" ] || [ -z "$AWS_ACCESS_KEY_ID" ] \
+             || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$R2_CUBO" ]; then
+            echo "::notice::La copia diaria no está configurada todavía: faltan secretos (docs/DESPLIEGUE.md)."
+            echo "lista=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "lista=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      # pg_dump tiene que ser de la misma versión mayor que el servidor o más
+      # nuevo: el cliente de Ubuntu se queda atrás. El repositorio de
+      # PostgreSQL trae el último.
+      - name: Cliente de PostgreSQL
+        if: steps.config.outputs.lista == 'si'
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-18 > /dev/null
+          /usr/lib/postgresql/18/bin/pg_dump --version
+
+      - name: Copiar y comprobar
+        if: steps.config.outputs.lista == 'si'
+        run: |
+          set -euo pipefail
+          umask 077
+          NOMBRE="nxtime-$(date -u +%Y-%m-%d_%H%M%S).dump.gpg"
+          echo "NOMBRE=$NOMBRE" >> "$GITHUB_ENV"
+          /usr/lib/postgresql/18/bin/pg_dump --format=custom --file="$RUNNER_TEMP/copia.dump" "$BASE"
+          # Que pg_dump acabe bien no basta: tiene que traer los datos que importan.
+          /usr/lib/postgresql/18/bin/pg_restore --list "$RUNNER_TEMP/copia.dump" > "$RUNNER_TEMP/indice.txt"
+          for tabla in registros auditoria_fichaje usuarios empresas flyway_schema_history; do
+            grep -q "TABLE DATA public $tabla " "$RUNNER_TEMP/indice.txt" \
+              || { echo "::error::La copia no trae los datos de la tabla $tabla"; exit 1; }
+          done
+          echo "Copia: $(stat -c %s "$RUNNER_TEMP/copia.dump") bytes"
+
+      - name: Cifrar y comprobar que se descifra
+        if: steps.config.outputs.lista == 'si'
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$FRASE" > "$RUNNER_TEMP/frase"
+          gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-file "$RUNNER_TEMP/frase" \
+              --symmetric --cipher-algo AES256 --output "$RUNNER_TEMP/$NOMBRE" "$RUNNER_TEMP/copia.dump"
+          gpg --batch --yes --quiet --pinentry-mode loopback --passphrase-file "$RUNNER_TEMP/frase" \
+              --decrypt --output "$RUNNER_TEMP/comprobacion.dump" "$RUNNER_TEMP/$NOMBRE"
+          cmp "$RUNNER_TEMP/copia.dump" "$RUNNER_TEMP/comprobacion.dump"
+          rm -f "$RUNNER_TEMP/frase" "$RUNNER_TEMP/copia.dump" "$RUNNER_TEMP/comprobacion.dump"
+          echo "Cifrada: $(stat -c %s "$RUNNER_TEMP/$NOMBRE") bytes"
+
+      - name: Subir a R2 y aplicar la retención
+        if: steps.config.outputs.lista == 'si'
+        run: |
+          set -euo pipefail
+          aws s3 cp "$RUNNER_TEMP/$NOMBRE" "s3://$R2_CUBO/$NOMBRE" --endpoint-url "$R2" --only-show-errors
+          rm -f "$RUNNER_TEMP/$NOMBRE"
+          # De la más nueva a la más vieja; se borran las de más de $DIAS días,
+          # pero nunca de forma que queden menos de $MINIMO.
+          aws s3api list-objects-v2 --bucket "$R2_CUBO" --prefix nxtime- --endpoint-url "$R2" \
+              --query 'sort_by(Contents, &LastModified)[].[Key, LastModified]' --output text \
+            | sort -k2 -r > "$RUNNER_TEMP/copias.txt"
+          total=$(wc -l < "$RUNNER_TEMP/copias.txt")
+          limite=$(date -u -d "-$DIAS days" +%s)
+          n=0; borradas=0
+          while read -r clave fecha; do
+            n=$((n + 1))
+            if [ "$n" -gt "$MINIMO" ] && [ "$(date -u -d "$fecha" +%s)" -lt "$limite" ]; then
+              aws s3 rm "s3://$R2_CUBO/$clave" --endpoint-url "$R2" --only-show-errors
+              borradas=$((borradas + 1))
+            fi
+          done < "$RUNNER_TEMP/copias.txt"
+          echo "Subida $NOMBRE. En R2: $((total - borradas)) copias; borradas por antiguas: $borradas."

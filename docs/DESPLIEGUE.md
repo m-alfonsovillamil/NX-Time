@@ -544,6 +544,48 @@ violaciones**. Si se añade una fuente externa, un script de terceros o se cambi
 la URL del backend, hay que tocarla: el síntoma sería una página en blanco o sin
 estilos, con el aviso en la consola.
 
+### Desplegar solo de noche (plan K, 24/10/2026)
+
+Hasta el 24/10/2026 cada push a `main` se desplegaba en el acto, y en el plan
+gratuito desplegar el backend es reiniciarlo: un par de minutos sin servicio a
+cualquier hora, con gente fichando. Ahora el despliegue automático está
+**apagado** (`autoDeployTrigger: "off"` en `render.yaml`) y lo hace
+`.github/workflows/desplegar.yml`:
+
+- cada hora **de 23:00 a 5:59** (hora de España) mira si `main` tiene commits
+  que no se han mandado a producción: los que hay entre la etiqueta
+  `desplegado` y `main`;
+- solo sigue si los workflows del push de ese commit (CI, E2E, web, CodeQL)
+  **han acabado bien**; si alguno sigue en marcha, espera a la hora siguiente, y
+  si alguno ha fallado, no despliega y el workflow sale en rojo;
+- llama al *deploy hook* del backend si ha cambiado algo del backend
+  (`nx-time-backend/src/main`, Gradle, `Dockerfile`), al de la web si ha cambiado
+  `nx-time-frontend-web/`, y **mueve la etiqueta `desplegado`**. Un cambio solo
+  en documentación o tests no gasta minutos de build.
+
+Para un **arreglo urgente**: *Actions* → *Desplegar* → *Run workflow*, marcando
+**ahora**. Las comprobaciones se exigen igual. Con **forzar**, despliega los dos
+aunque no haya cambios (por ejemplo, si un build de Render falló y se quiere
+repetir sin commit nuevo: la etiqueta dice qué se *mandó* desplegar, no que
+Render lo terminara; Render avisa por correo si un build falla).
+
+**Puesta en marcha, una sola vez:**
+
+1. En Render, en **cada** servicio (`nxtime-backend` y `nxtime-web`):
+   *Settings* → *Build & Deploy* → **Auto-Deploy: Off**. `render.yaml` lo dice,
+   pero el panel manda si el Blueprint no se ha vuelto a sincronizar; mejor
+   comprobarlo a mano.
+2. En el mismo sitio, **Deploy Hook**: copiar la URL (es un secreto: quien la
+   tenga puede lanzar despliegues).
+3. En GitHub: *Settings* → *Secrets and variables* → *Actions* → *New repository
+   secret*: `RENDER_DEPLOY_HOOK_BACKEND` y `RENDER_DEPLOY_HOOK_WEB`.
+4. Lanzarlo a mano una vez (*Run workflow*, con **ahora**): la primera vez no hay
+   etiqueta y despliega los dos.
+
+Sin los dos secretos el workflow no hace nada y lo dice, sin fallar. Y ojo:
+**mientras no estén, con Auto-Deploy apagado no se despliega nada**; los pasos 1
+y 3 van juntos.
+
 ## 3. Compilar Android contra producción
 
 La URL del backend sale de `BuildConfig` según el sabor de compilación:
@@ -657,9 +699,53 @@ Por eso hay dos capas:
 | Capa | Cubre | Dónde |
 |---|---|---|
 | Restauración instantánea de Neon | las últimas 6 horas | consola de Neon → *Branches* → `production` → *Restore* (sobrescribe la rama y guarda el estado anterior en una rama de respaldo) |
+| Copia diaria en GitHub Actions, cifrada | 30 días, y nunca menos de 7 copias | `.github/workflows/copia-diaria.yml` → Cloudflare R2 |
 | Copia diaria propia, cifrada | 30 días, y nunca menos de 7 copias | `scripts/copia-neon.ps1` → `OneDrive\Copias NX Time` |
 
-### La copia diaria
+### La copia diaria en GitHub (plan K, 24/10/2026)
+
+La del PC solo existe los días que el PC se enciende: del 19 al 23/10/2026 no
+hubo ninguna. `.github/workflows/copia-diaria.yml` hace lo mismo cada día hacia
+las 14:30, sin depender de nadie: `pg_dump` por la conexión directa, comprueba
+que trae los datos de `registros`, `auditoria_fichaje`, `usuarios`, `empresas`
+y `flyway_schema_history`, la cifra con `gpg` (AES-256) **con la misma frase que
+la copia del PC**, comprueba que se descifra en lo mismo, la sube a un cubo de
+**Cloudflare R2** (10 GB gratis) y borra las de más de 30 días dejando siempre 7.
+
+El repositorio es público y sus registros también: el workflow no imprime nada
+de la base, solo tamaños y nombres de fichero, y la copia nunca se guarda como
+*artifact* de Actions.
+
+**Puesta en marcha, una sola vez** (la cuenta de Cloudflare es la del dominio):
+
+1. Cloudflare → *R2 Object Storage* → *Create bucket*: `nxtime-copias`, ubicación
+   *Europe (EU)* (*Specify jurisdiction* → *European Union*), para que los datos
+   no salgan de la UE.
+2. *R2* → *Manage API tokens* → *Create API token*: permiso **Object Read &
+   Write**, **solo** para ese cubo, sin caducidad o con una larga (y apuntarla).
+   Copiar el *Access Key ID*, el *Secret Access Key* y el **endpoint S3** que
+   enseña en la misma página (`https://….r2.cloudflarestorage.com`; con la
+   jurisdicción UE lleva `.eu` antes de `.r2`, y hay que usar ese).
+3. En GitHub, *Settings* → *Secrets and variables* → *Actions*, seis secretos:
+
+   | Secreto | Valor |
+   |---|---|
+   | `COPIA_DATABASE_URL` | la conexión **directa** de Neon (la de `DATABASE_URL_UNPOOLED` en `.env.local`, sin `-pooler` en el host) |
+   | `COPIA_FRASE` | la frase de las copias, **la misma** que `clave-de-las-copias.txt` (desde el gestor de contraseñas) |
+   | `R2_ENDPOINT` | el endpoint S3 del paso 2, completo, **sin** el nombre del cubo al final |
+   | `R2_ACCESS_KEY_ID` | el del token del paso 2 |
+   | `R2_SECRET_ACCESS_KEY` | el del token del paso 2 |
+   | `R2_BUCKET` | `nxtime-copias` |
+4. *Actions* → *Copia diaria* → *Run workflow*, y comprobar que acaba en verde y
+   que la copia aparece en el cubo.
+5. Bajarla y restaurarla una vez con `scripts/probar-restauracion.sh` (descifra
+   con la frase del PC: si es la misma, funciona).
+
+Sin los seis secretos el workflow no hace nada y lo dice, sin fallar. Y si un
+día falla, GitHub manda un correo a quien lo tenga activado en *Settings* →
+*Notifications* → *Actions*.
+
+### La copia diaria del PC
 
 > **Cifrada desde el 17/10/2026** (plan J). La copia lleva los datos de todas las
 > empresas, y OneDrive es un proveedor más. `copia-neon.ps1` la cifra con `gpg`
