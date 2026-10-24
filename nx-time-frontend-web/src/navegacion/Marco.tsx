@@ -240,7 +240,7 @@ function MenuDeUsuario({ nombre }: { nombre: string }) {
   return (
     <details className="nx-menu-usuario" open={abierto} onToggle={(e) => setAbierto(e.currentTarget.open)}>
       <summary aria-label={N.usuario.menu(nombre)}>
-        {nombre !== '' ? <Iniciales nombre={nombre} tamano="s" /> : <Icono nombre="persona" />}
+        {nombre !== '' ? <Iniciales nombre={nombre} tamano="s" sinTexto /> : <Icono nombre="persona" />}
         <span className="nx-menu-usuario__nombre">{nombre}</span>
       </summary>
       <div className="nx-menu-usuario__opciones">

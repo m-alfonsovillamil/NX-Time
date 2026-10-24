@@ -60,7 +60,7 @@ export const historial = {
     total: (repartido: string, neto: string) => `Repartido: ${repartido} de ${neto}`,
     minutos: (proyecto: string) => `Minutos en ${proyecto}`,
     todoAqui: 'Todo aquí',
-    todoEn: (proyecto: string) => `Todo en ${proyecto}`,
+    todoEn: (proyecto: string) => `Todo aquí: ${proyecto}`,
     faltan: (texto: string) => `Faltan ${texto} por repartir.`,
     deMas: (texto: string) => `${texto} más de lo fichado: hará falta que lo apruebe un gestor.`,
     seAplicaYa: 'Se aplicará al momento.',

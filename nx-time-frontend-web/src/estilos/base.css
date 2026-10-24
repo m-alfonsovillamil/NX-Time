@@ -2182,6 +2182,11 @@ h2 {
   line-height: 1;
 }
 
+/* Las iniciales que no son texto (ver Iniciales, `sinTexto`). */
+.nx-iniciales--css::before {
+  content: attr(data-iniciales);
+}
+
 .nx-iniciales--s {
   width: 28px;
   height: 28px;

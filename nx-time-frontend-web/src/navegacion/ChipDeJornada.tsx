@@ -53,10 +53,21 @@ export function ChipDeJornada() {
   const tiempo = jornada === null ? null : minutos(Math.floor(segundosDeJornada(jornada) / 60));
 
   return (
-    <Link to="/fichar" className={`nx-chip-jornada nx-chip-jornada--${estado}`} aria-label={J.ir(texto, tiempo)}>
+    // El nombre sale del contenido y no de un aria-label (WCAG 2.5.3, la regla
+    // label-content-name-mismatch de axe): lo que se ve, oculto al lector, y la
+    // frase entera solo para él. Con aria-label, «Trabajando 1 h 05 min» no
+    // estaba tal cual dentro de «Trabajando, 1 h 05 min. Ir a Mi jornada».
+    <Link to="/fichar" className={`nx-chip-jornada nx-chip-jornada--${estado}`}>
       <span className="nx-chip-jornada__punto" aria-hidden="true" />
-      <span className="nx-chip-jornada__estado">{texto}</span>
-      {tiempo !== null && <span className="nx-chip-jornada__tiempo">{tiempo}</span>}
+      <span className="nx-chip-jornada__estado" aria-hidden="true">
+        {texto}
+      </span>
+      {tiempo !== null && (
+        <span className="nx-chip-jornada__tiempo" aria-hidden="true">
+          {tiempo}
+        </span>
+      )}
+      <span className="nx-solo-lector">{J.ir(texto, tiempo)}</span>
     </Link>
   );
 }

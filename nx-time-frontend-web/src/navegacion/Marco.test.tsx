@@ -187,8 +187,8 @@ describe('el estado de la jornada en la barra superior', () => {
     };
     pintarMarco('EMPLEADO', '/historial', { 'GET /api/v1/fichaje/activo': () => jornada });
 
-    const chip = await screen.findByRole('link', { name: /Ir a Mi jornada/ });
-    expect(chip.getAttribute('aria-label')).toBe(N.jornada.ir(N.jornada.enPausa, '1h 05m'));
+    // El nombre accesible entero, que sale del contenido (WCAG 2.5.3).
+    expect(await screen.findByRole('link', { name: N.jornada.ir(N.jornada.enPausa, '1h 05m') })).toBeTruthy();
   });
 
   it('en Mi jornada no sale: el cronómetro ya está en la página', async () => {

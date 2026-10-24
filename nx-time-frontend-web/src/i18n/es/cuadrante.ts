@@ -66,7 +66,7 @@ export const cuadrante = {
   firmas: {
     /** El registro propio en PDF, sin pedírselo a nadie (art. 34.9 ET; plan J, J7). */
     descargar: 'Descargar PDF',
-    descargarDe: (mes: string) => `Descargar el registro de ${mes} en PDF`,
+    descargarDe: (mes: string) => `Descargar PDF de ${mes}`,
     titulo: 'Firma mensual',
     explicacion:
       'Al terminar cada mes, firmas que tu registro horario es correcto. Si después se corrige un fichaje de ese mes, la firma queda sin efecto y te lo pedirá otra vez.',
