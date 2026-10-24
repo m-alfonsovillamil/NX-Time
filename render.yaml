@@ -18,6 +18,11 @@ services:
     plan: free
     region: frankfurt   # el más cercano a España de los disponibles
     branch: main
+    # No despliega al hacer push: reiniciar el backend son un par de minutos
+    # sin servicio, y de día hay gente fichando. Lo despliega de noche
+    # .github/workflows/desplegar.yml con el deploy hook (plan K). Entre
+    # comillas: `off` a secas es un booleano en YAML.
+    autoDeployTrigger: "off"
 
     # Render reinicia el servicio si esto deja de responder. Es el
     # endpoint de Actuator de la Fase 7, público y sin detalles
@@ -186,6 +191,8 @@ services:
     name: nxtime-web
     runtime: static
     branch: main
+    # Lo mismo que el backend: va junto a él, de noche (desplegar.yml).
+    autoDeployTrigger: "off"
     # Con rootDir, Render solo despliega cuando cambia algo dentro de este
     # directorio: un cambio en el backend no reconstruye la web.
     rootDir: nx-time-frontend-web

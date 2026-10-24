@@ -1,0 +1,144 @@
+# Desplegar solo de noche (plan K).
+#
+# Hasta ahora Render desplegaba cada push a main en el acto. En el plan
+# gratuito eso es reiniciar el backend: un par de minutos sin servicio a
+# media mañana, con gente fichando. Con una empresa de verdad no vale.
+#
+# Ahora, en Render, el despliegue automático está APAGADO (render.yaml y el
+# panel, ver docs/DESPLIEGUE.md) y lo hace esto:
+#
+#   - cada hora de la noche mira si main tiene commits que no están en
+#     producción (los que hay entre la etiqueta `desplegado` y main);
+#   - si las comprobaciones de ese commit han acabado bien, llama al «deploy
+#     hook» del backend y/o de la web, cada uno solo si ha cambiado algo
+#     suyo (las horas de build del plan gratuito son pocas);
+#   - y mueve la etiqueta `desplegado` a ese commit.
+#
+# Para un arreglo urgente: Actions → «Desplegar» → Run workflow, marcando
+# «ahora». Las comprobaciones se exigen igual.
+#
+# La etiqueta dice qué se MANDÓ desplegar, no que Render lo terminara: si
+# un build falla, Render avisa por correo y el commit siguiente lo vuelve a
+# intentar. Para repetirlo sin commit nuevo, el botón manual con «forzar».
+#
+# Sin los secretos RENDER_DEPLOY_HOOK_BACKEND y RENDER_DEPLOY_HOOK_WEB no
+# hace nada y lo dice, sin fallar.
+name: Desplegar
+
+on:
+  schedule:
+    # De 21:17 a 4:17 UTC, que cubre la ventana de noche en hora de verano y
+    # de invierno; la hora de Madrid se comprueba dentro.
+    - cron: '17 21-23,0-4 * * *'
+  workflow_dispatch:
+    inputs:
+      ahora:
+        description: 'Desplegar ya, aunque sea de día'
+        type: boolean
+        default: false
+      forzar:
+        description: 'Desplegar backend y web aunque no haya cambios'
+        type: boolean
+        default: false
+
+concurrency:
+  group: desplegar
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  desplegar:
+    name: Desplegar si toca
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Leer las comprobaciones del commit y mover la etiqueta `desplegado`.
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+      HOOK_WEB: ${{ secrets.RENDER_DEPLOY_HOOK_WEB }}
+      AHORA: ${{ inputs.ahora || false }}
+      FORZAR: ${{ inputs.forzar || false }}
+      # De 23:00 a 5:59, hora de España.
+      DESDE: '23'
+      HASTA: '5'
+    steps:
+      - name: Decidir y desplegar
+        run: |
+          set -euo pipefail
+          if [ -z "$HOOK_BACKEND" ] || [ -z "$HOOK_WEB" ]; then
+            echo "::notice::El despliegue nocturno no está configurado todavía: faltan los deploy hooks (docs/DESPLIEGUE.md)."
+            exit 0
+          fi
+
+          hora=$(TZ=Europe/Madrid date +%-H)
+          if [ "$AHORA" != "true" ] && [ "$hora" -lt "$DESDE" ] && [ "$hora" -gt "$HASTA" ]; then
+            echo "Son las $hora en España: fuera de la ventana de noche. No se despliega."
+            exit 0
+          fi
+
+          sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          desplegado=$(gh api "repos/$REPO/git/ref/tags/desplegado" --jq .object.sha 2>/dev/null || true)
+          echo "main: $sha · desplegado: ${desplegado:-ninguno}"
+          if [ "$sha" = "$desplegado" ] && [ "$FORZAR" != "true" ]; then
+            echo "Producción ya está en main. Nada que hacer."
+            exit 0
+          fi
+
+          # Solo se despliega un commit cuyas comprobaciones han acabado bien.
+          # Si alguna sigue en marcha, se espera a la hora siguiente. Solo las
+          # del push: las programadas (keep-alive, esta misma) también corren
+          # sobre el último commit de main y no dicen nada de él.
+          gh api --paginate "repos/$REPO/actions/runs?head_sha=$sha&event=push" \
+              --jq '.workflow_runs[] | [.status, (.conclusion // "-"), .name] | @tsv' > comprobaciones.tsv
+          if [ ! -s comprobaciones.tsv ]; then
+            echo "::warning::El commit $sha no tiene comprobaciones todavía. Se espera a la hora siguiente."
+            exit 0
+          fi
+          if awk -F'\t' '$1 != "completed"' comprobaciones.tsv | grep -q .; then
+            echo "Hay comprobaciones sin terminar en $sha. Se espera a la hora siguiente."
+            exit 0
+          fi
+          malas=$(awk -F'\t' '$2 != "success" && $2 != "skipped" && $2 != "neutral" { print $3 }' comprobaciones.tsv)
+          if [ -n "$malas" ]; then
+            echo "::error::No se despliega $sha: han fallado comprobaciones: $(echo "$malas" | paste -sd, -)"
+            exit 1
+          fi
+
+          # Qué hay que desplegar. Sin etiqueta (la primera vez) o forzando, las dos.
+          backend=si; web=si
+          if [ -n "$desplegado" ] && [ "$FORZAR" != "true" ]; then
+            gh api "repos/$REPO/compare/$desplegado...$sha" --jq '.files[].filename' > cambios.txt
+            backend=no; web=no
+            grep -qE '^(Dockerfile|gradlew|settings\.gradle\.kts|gradle/|nx-time-backend/build\.gradle\.kts|nx-time-backend/src/main/)' cambios.txt && backend=si
+            grep -q '^nx-time-frontend-web/' cambios.txt && web=si
+            # La comparación de GitHub corta en 300 ficheros: si llega al tope,
+            # mejor desplegar de más que de menos.
+            if [ "$(wc -l < cambios.txt)" -ge 300 ]; then backend=si; web=si; fi
+          fi
+          echo "Backend: $backend · web: $web"
+
+          # El backend primero: la web nueva puede usar algo que solo tiene el
+          # backend nuevo; al revés no pasa, el backend no rompe la web vieja.
+          llamar() {
+            codigo=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$2")
+            case "$codigo" in
+              2*) echo "Pedido el despliegue de $1." ;;
+              *) echo "::error::El deploy hook de $1 ha respondido $codigo."; exit 1 ;;
+            esac
+          }
+          if [ "$backend" = si ]; then llamar backend "$HOOK_BACKEND"; fi
+          if [ "$web" = si ]; then llamar web "$HOOK_WEB"; fi
+
+          # La etiqueta, aunque no hubiera nada que desplegar (cambios solo en
+          # docs o tests): así no se vuelve a mirar el mismo tramo.
+          if [ -n "$desplegado" ]; then
+            gh api -X PATCH "repos/$REPO/git/refs/tags/desplegado" -f sha="$sha" -F force=true > /dev/null
+          else
+            gh api -X POST "repos/$REPO/git/refs" -f ref=refs/tags/desplegado -f sha="$sha" > /dev/null
+          fi
+          echo "Etiqueta desplegado → $sha"
