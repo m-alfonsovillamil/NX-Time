@@ -64,6 +64,13 @@ public record SimpleEmployeeDTO(
          * quién le falta si la empresa lo exige. Viene en la fila de la
          * persona: no cuesta ninguna consulta más.
          */
-        boolean segundoFactor
+        boolean segundoFactor,
+
+        /**
+         * Si la cuenta existe pero aún no le ha llegado el correo de alta
+         * (ADR 052): al importar una plantilla entera salen como mucho 50 al
+         * día. Siempre false en «mis empleados».
+         */
+        boolean invitacionPendiente
 ) {
 }

@@ -35,6 +35,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
+    /** Cuáles de estos correos ya tienen cuenta, en cualquier empresa: para importar una plantilla de una vez (ADR 052). */
+    @Query("select u.email from usuarios u where u.email in :correos")
+    java.util.Set<String> correosQueYaExisten(@Param("correos") Collection<String> correos);
+
     List<User> findByEmpresa(Company empresa);
 
     List<User> findByEmpresaAndRol(Company empresa, Role rol);

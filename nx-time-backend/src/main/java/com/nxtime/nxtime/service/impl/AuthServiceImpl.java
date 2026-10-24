@@ -738,6 +738,29 @@ public class AuthServiceImpl implements AuthService {
         log.info("{} {} por {}", activo ? "Reactivado" : "Dado de baja", employee.getId(), actingManager.getId());
     }
 
+    @Override
+    @Transactional
+    public void cambiarRol(long usuarioId, Role rol, User admin) {
+        User persona = userRepository.findById(usuarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));
+        if (persona.getEmpresa().getId() != admin.getEmpresa().getId()) {
+            throw new TenantAccessException("No puedes gestionar empleados de otra empresa.");
+        }
+        // Como dar de baja: el propio rol no se toca. Así quien lo cambia
+        // sigue siendo ADMIN, y la empresa nunca se queda sin ninguno.
+        if (persona.getId() == admin.getId()) {
+            throw new BusinessException("No puedes cambiarte el rol a ti mismo. Pídeselo a otro administrador.",
+                    HttpStatus.FORBIDDEN);
+        }
+        if (persona.getRol() == rol) {
+            return;
+        }
+        Role antes = persona.getRol();
+        persona.setRol(rol);
+        userRepository.save(persona);
+        log.info("{} ha cambiado el rol de {}: {} -> {}", admin.getId(), persona.getId(), antes, rol);
+    }
+
     /**
      * La contraseña de una cuenta recién creada, hasta que su dueño elija
      * la suya con el código de alta.

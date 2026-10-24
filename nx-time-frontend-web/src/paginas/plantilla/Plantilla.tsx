@@ -34,6 +34,7 @@ import { T } from '../../i18n/es';
 import { kiosco } from '../../i18n/es/kiosco';
 import { plantilla } from '../../i18n/es/plantilla';
 import { CLAVES_PLANTILLA } from './claves';
+import { AvisoDeInvitaciones, CambiarRol, ImportarPlantilla } from './ImportarPlantilla';
 
 const P = plantilla;
 
@@ -220,6 +221,8 @@ export function Plantilla() {
   const [ficha, setFicha] = useState<Persona | null>(null);
   const [baja, setBaja] = useState<Persona | null>(null);
   const [sinSegundoFactor, setSinSegundoFactor] = useState<Persona | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [conRolNuevo, setConRolNuevo] = useState<Persona | null>(null);
 
   const cambiarEstado = useMutacion(
     ({ persona, activo }: { persona: Persona; activo: boolean }) =>
@@ -268,6 +271,7 @@ export function Plantilla() {
         <span className="nx-acciones-fila">
           {p.activo === false ? <Insignia tono="neutro">{P.deBaja}</Insignia> : <Insignia tono="exito">{P.deAlta}</Insignia>}
           {p.segundoFactor === true && <Insignia tono="info">{P.conSegundoFactor}</Insignia>}
+          {p.invitacionPendiente === true && <Insignia tono="aviso">{P.invitaciones.pendiente}</Insignia>}
         </span>
       ),
     },
@@ -297,6 +301,11 @@ export function Plantilla() {
                       {P.darDeBaja}
                     </Boton>
                   ))}
+                {puede('gestor:crear') && (
+                  <Boton variante="texto" onClick={() => setConRolNuevo(p)}>
+                    {P.cambioDeRol.boton}
+                  </Boton>
+                )}
                 {puedeGestionar && p.segundoFactor === true && (
                   <Boton variante="texto" onClick={() => setSinSegundoFactor(p)}>
                     {P.quitarSegundoFactor}
@@ -316,6 +325,11 @@ export function Plantilla() {
         acciones={
           <>
             {puede('empleado:crear') && <Boton onClick={() => setAlta('empleado')}>{P.nuevoEmpleado}</Boton>}
+            {puede('empleado:crear') && (
+              <Boton variante="secundario" onClick={() => setImportando(true)}>
+                {P.importar.boton}
+              </Boton>
+            )}
             {puede('gestor:crear') && (
               <Boton variante="secundario" onClick={() => setAlta('gestor')}>
                 {P.nuevoGestor}
@@ -329,6 +343,8 @@ export function Plantilla() {
           </>
         }
       />
+
+      {puede('empleado:crear') && <AvisoDeInvitaciones />}
 
       <section className="nx-tarjeta">
         <div className="nx-filtros">
@@ -348,6 +364,19 @@ export function Plantilla() {
           }}
         </EstadoDeConsulta>
       </section>
+
+      <Dialogo abierto={importando} titulo={P.importar.titulo} alCerrar={() => setImportando(false)} acciones={null}>
+        {importando && <ImportarPlantilla alTerminar={() => setImportando(false)} />}
+      </Dialogo>
+
+      <Dialogo
+        abierto={conRolNuevo !== null}
+        titulo={P.cambioDeRol.titulo(conRolNuevo?.nombre ?? '')}
+        alCerrar={() => setConRolNuevo(null)}
+        acciones={null}
+      >
+        {conRolNuevo !== null && <CambiarRol persona={conRolNuevo} alTerminar={() => setConRolNuevo(null)} />}
+      </Dialogo>
 
       <Dialogo abierto={alta !== null} titulo={alta === 'gestor' ? P.nuevoGestor : P.nuevoEmpleado} alCerrar={() => setAlta(null)} acciones={null}>
         {alta !== null && <FormularioDeAlta tipo={alta} alTerminar={() => setAlta(null)} />}

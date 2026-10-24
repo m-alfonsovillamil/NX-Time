@@ -951,6 +951,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gestor/plantilla/invitaciones/enviar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mandar las invitaciones pendientes
+         * @description Empieza a mandar, en segundo plano, las que quepan hoy. Si ya se están mandando, no hace nada más. Llamarla otra vez al día siguiente manda las siguientes.
+         */
+        post: operations["enviarInvitaciones"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gestor/plantilla/importar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Importar la plantilla desde un CSV o un Excel
+         * @description Una persona por fila, con la fila de títulos delante: nombre, apellidos y email, y si se quiere rol, departamento, horas y vacaciones. CSV en UTF-8 o Windows-1252, separado por punto y coma, coma o tabulador; o .xlsx (la primera hoja). Como mucho 500 personas. Con simular=true (por defecto) solo comprueba y devuelve cada fila con sus errores. Con simular=false crea a todas, o a ninguna si alguna fila tiene errores, y empieza a mandar las invitaciones de alta que quepan hoy (50 al día por empresa): las demás quedan pendientes. Cada fila pide los permisos de quien importa: roles por encima de EMPLEADO, gestor:crear; departamento, departamento:gestionar; horas y vacaciones, empleado:configurar.
+         */
+        post: operations["importar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gestor/gestores": {
         parameters: {
             query?: never;
@@ -1738,6 +1778,26 @@ export interface paths {
          * @description Aceptarlo lo hace descontar de la bolsa anual de 80 h. Justificarlo lo archiva sin consumir bolsa, y entonces la explicación es obligatoria: decir que once horas trabajadas no cuentan es la decisión que hay que motivar. Nadie revisa las suyas propias, tenga el rol que tenga.
          */
         patch: operations["revisar"];
+        trace?: never;
+    };
+    "/api/v1/gestor/empleados/{id}/rol": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar el rol de alguien de la empresa
+         * @description EMPLEADO, GESTOR, RRHH o ADMIN. Solo un ADMIN, y nunca el suyo: así siempre queda al menos un ADMIN. Vale desde la siguiente petición de esa persona.
+         */
+        patch: operations["cambiarRol"];
         trace?: never;
     };
     "/api/v1/gestor/empleados/{id}/ficha": {
@@ -2576,6 +2636,26 @@ export interface paths {
          * @description Todas las personas de la empresa, de cualquier rol y de alta o de baja, con su rol y su departamento. 'mis-empleados' solo trae a los EMPLEADO; esta es la lista de quien administra la plantilla (RRHH y ADMIN), que también pone departamento a los gestores.
          */
         get: operations["getPlantilla"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gestor/plantilla/invitaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Las invitaciones de alta pendientes
+         * @description Cuántas cuentas esperan su correo de alta y cuántas pueden salir todavía hoy.
+         */
+        get: operations["invitaciones"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4110,6 +4190,72 @@ export interface components {
         JustifyIncidentRequest: {
             texto: string;
         };
+        /** @description Las invitaciones de alta de la empresa */
+        EstadoInvitacionesResponse: {
+            /**
+             * Format: int64
+             * @description Cuentas creadas a las que aún no les ha llegado el correo de alta
+             */
+            pendientes?: number;
+            /**
+             * Format: int32
+             * @description Cuántas pueden salir todavía hoy
+             */
+            cupoHoy?: number;
+            /**
+             * Format: int32
+             * @description Cuántas se están mandando ahora mismo, en segundo plano
+             */
+            enCamino?: number;
+        };
+        /** @description Una fila del fichero de plantilla */
+        FilaDeImportacion: {
+            /**
+             * Format: int32
+             * @description Su número en el fichero (la de los títulos es la 1)
+             */
+            fila?: number;
+            nombre?: string;
+            apellidos?: string;
+            email?: string;
+            /**
+             * @description EMPLEADO si la columna no está o va vacía
+             * @enum {string}
+             */
+            rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
+            /** @description El departamento, ya con el nombre que tiene en la empresa */
+            departamento?: string;
+            horasSemanales?: number;
+            /** Format: int32 */
+            diasVacaciones?: number;
+            /** @description Lo que impide darla de alta. Vacío: se puede */
+            errores?: string[];
+        };
+        /** @description Lo que ha salido de leer (y, si no es una simulación, importar) un fichero de plantilla */
+        ImportacionPlantillaResponse: {
+            /** @description true si no se ha creado nada: solo se ha comprobado */
+            simulada?: boolean;
+            /**
+             * Format: int32
+             * @description Personas en el fichero
+             */
+            filas?: number;
+            /**
+             * Format: int32
+             * @description Filas con algún error
+             */
+            conErrores?: number;
+            /**
+             * Format: int32
+             * @description Personas creadas (0 al simular)
+             */
+            creadas?: number;
+            /** @description Columnas del fichero que no se han reconocido y se han ignorado */
+            columnasIgnoradas?: string[];
+            detalle?: components["schemas"]["FilaDeImportacion"][];
+            /** @description Tras importar: los correos de alta. Null al simular */
+            invitaciones?: components["schemas"]["EstadoInvitacionesResponse"];
+        };
         CreateManagerRequest: {
             nombre: string;
             apellidos: string;
@@ -4518,6 +4664,14 @@ export interface components {
             /** Format: date-time */
             fechaRevision?: string;
         };
+        /** @description El rol nuevo */
+        CambioDeRolRequest: {
+            /**
+             * @description EMPLEADO, GESTOR, RRHH o ADMIN
+             * @enum {string}
+             */
+            rol: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
+        };
         UpdateEmployeeProfileRequest: {
             horasSemanales?: number;
             /** Format: int32 */
@@ -4538,6 +4692,7 @@ export interface components {
             /** @enum {string} */
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             segundoFactor?: boolean;
+            invitacionPendiente?: boolean;
         };
         UpdateEmployeeStatusRequest: {
             activo: boolean;
@@ -8234,6 +8389,91 @@ export interface operations {
             };
         };
     };
+    enviarInvitaciones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Las que se están mandando, y las que quedan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EstadoInvitacionesResponse"];
+                };
+            };
+            /** @description Sin la authority 'empleado:crear' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    importar: {
+        parameters: {
+            query?: {
+                simular?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    fichero: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Comprobado (y, si no era una simulación, importado) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportacionPlantillaResponse"];
+                };
+            };
+            /** @description El fichero no se puede leer, le faltan columnas, pasa de 500 personas, o (al importar) alguna fila tiene errores */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'empleado:crear' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     createManager: {
         parameters: {
             query?: never;
@@ -10473,6 +10713,57 @@ export interface operations {
             };
         };
     };
+    cambiarRol: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CambioDeRolRequest"];
+            };
+        };
+        responses: {
+            /** @description Cambiado (o ya lo tenía) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Falta el rol o no existe */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin 'gestor:crear', de otra empresa o el propio */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     updateEmployeeProfile: {
         parameters: {
             query?: never;
@@ -12379,6 +12670,35 @@ export interface operations {
                 };
             };
             /** @description Sin la authority 'empleado:gestionar' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    invitaciones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EstadoInvitacionesResponse"];
+                };
+            };
+            /** @description Sin la authority 'empleado:crear' */
             403: {
                 headers: {
                     [name: string]: unknown;

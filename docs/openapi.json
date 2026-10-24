@@ -85,6 +85,9 @@
     "name" : "Kiosco",
     "description" : "La tablet de fichaje compartida: emparejarla, identificarse y fichar. Con 'Authorization: Kiosco <token>', salvo las dos de emparejar."
   }, {
+    "name" : "Plantilla",
+    "description" : "Importar la plantilla desde un fichero, las invitaciones de alta pendientes y el rol de cada persona."
+  }, {
     "name" : "Horas extra",
     "description" : "Excesos de jornada detectados y bolsa anual del art. 35.2 ET."
   }, {
@@ -3202,6 +3205,117 @@
         } ]
       }
     },
+    "/api/v1/gestor/plantilla/invitaciones/enviar" : {
+      "post" : {
+        "tags" : [ "Plantilla" ],
+        "summary" : "Mandar las invitaciones pendientes",
+        "description" : "Empieza a mandar, en segundo plano, las que quepan hoy. Si ya se están mandando, no hace nada más. Llamarla otra vez al día siguiente manda las siguientes.",
+        "operationId" : "enviarInvitaciones",
+        "responses" : {
+          "200" : {
+            "description" : "Las que se están mandando, y las que quedan",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstadoInvitacionesResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empleado:crear'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/gestor/plantilla/importar" : {
+      "post" : {
+        "tags" : [ "Plantilla" ],
+        "summary" : "Importar la plantilla desde un CSV o un Excel",
+        "description" : "Una persona por fila, con la fila de títulos delante: nombre, apellidos y email, y si se quiere rol, departamento, horas y vacaciones. CSV en UTF-8 o Windows-1252, separado por punto y coma, coma o tabulador; o .xlsx (la primera hoja). Como mucho 500 personas. Con simular=true (por defecto) solo comprueba y devuelve cada fila con sus errores. Con simular=false crea a todas, o a ninguna si alguna fila tiene errores, y empieza a mandar las invitaciones de alta que quepan hoy (50 al día por empresa): las demás quedan pendientes. Cada fila pide los permisos de quien importa: roles por encima de EMPLEADO, gestor:crear; departamento, departamento:gestionar; horas y vacaciones, empleado:configurar.",
+        "operationId" : "importar",
+        "parameters" : [ {
+          "name" : "simular",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "fichero" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "fichero" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Comprobado (y, si no era una simulación, importado)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportacionPlantillaResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "El fichero no se puede leer, le faltan columnas, pasa de 500 personas, o (al importar) alguna fila tiene errores",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empleado:crear'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/gestores" : {
       "post" : {
         "tags" : [ "Gestión" ],
@@ -6026,6 +6140,71 @@
         } ]
       }
     },
+    "/api/v1/gestor/empleados/{id}/rol" : {
+      "patch" : {
+        "tags" : [ "Plantilla" ],
+        "summary" : "Cambiar el rol de alguien de la empresa",
+        "description" : "EMPLEADO, GESTOR, RRHH o ADMIN. Solo un ADMIN, y nunca el suyo: así siempre queda al menos un ADMIN. Vale desde la siguiente petición de esa persona.",
+        "operationId" : "cambiarRol",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CambioDeRolRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Cambiado (o ya lo tenía)"
+          },
+          "400" : {
+            "description" : "Falta el rol o no existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'gestor:crear', de otra empresa o el propio",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/empleados/{id}/ficha" : {
       "patch" : {
         "tags" : [ "Gestión" ],
@@ -8517,6 +8696,39 @@
           },
           "403" : {
             "description" : "Sin la authority 'empleado:gestionar'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/gestor/plantilla/invitaciones" : {
+      "get" : {
+        "tags" : [ "Plantilla" ],
+        "summary" : "Las invitaciones de alta pendientes",
+        "description" : "Cuántas cuentas esperan su correo de alta y cuántas pueden salir todavía hoy.",
+        "operationId" : "invitaciones",
+        "responses" : {
+          "200" : {
+            "description" : "Estado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstadoInvitacionesResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'empleado:crear'",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -12526,6 +12738,112 @@
         },
         "required" : [ "texto" ]
       },
+      "EstadoInvitacionesResponse" : {
+        "type" : "object",
+        "description" : "Las invitaciones de alta de la empresa",
+        "properties" : {
+          "pendientes" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Cuentas creadas a las que aún no les ha llegado el correo de alta"
+          },
+          "cupoHoy" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Cuántas pueden salir todavía hoy"
+          },
+          "enCamino" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Cuántas se están mandando ahora mismo, en segundo plano"
+          }
+        }
+      },
+      "FilaDeImportacion" : {
+        "type" : "object",
+        "description" : "Una fila del fichero de plantilla",
+        "properties" : {
+          "fila" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Su número en el fichero (la de los títulos es la 1)"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "apellidos" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "rol" : {
+            "type" : "string",
+            "description" : "EMPLEADO si la columna no está o va vacía",
+            "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
+          },
+          "departamento" : {
+            "type" : "string",
+            "description" : "El departamento, ya con el nombre que tiene en la empresa"
+          },
+          "horasSemanales" : {
+            "type" : "number"
+          },
+          "diasVacaciones" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "errores" : {
+            "type" : "array",
+            "description" : "Lo que impide darla de alta. Vacío: se puede",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "ImportacionPlantillaResponse" : {
+        "type" : "object",
+        "description" : "Lo que ha salido de leer (y, si no es una simulación, importar) un fichero de plantilla",
+        "properties" : {
+          "simulada" : {
+            "type" : "boolean",
+            "description" : "true si no se ha creado nada: solo se ha comprobado"
+          },
+          "filas" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Personas en el fichero"
+          },
+          "conErrores" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Filas con algún error"
+          },
+          "creadas" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Personas creadas (0 al simular)"
+          },
+          "columnasIgnoradas" : {
+            "type" : "array",
+            "description" : "Columnas del fichero que no se han reconocido y se han ignorado",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "detalle" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FilaDeImportacion"
+            }
+          },
+          "invitaciones" : {
+            "$ref" : "#/components/schemas/EstadoInvitacionesResponse",
+            "description" : "Tras importar: los correos de alta. Null al simular"
+          }
+        }
+      },
       "CreateManagerRequest" : {
         "type" : "object",
         "properties" : {
@@ -13577,6 +13895,18 @@
           }
         }
       },
+      "CambioDeRolRequest" : {
+        "type" : "object",
+        "description" : "El rol nuevo",
+        "properties" : {
+          "rol" : {
+            "type" : "string",
+            "description" : "EMPLEADO, GESTOR, RRHH o ADMIN",
+            "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
+          }
+        },
+        "required" : [ "rol" ]
+      },
       "UpdateEmployeeProfileRequest" : {
         "type" : "object",
         "properties" : {
@@ -13628,6 +13958,9 @@
             "enum" : [ "EMPLEADO", "GESTOR", "RRHH", "ADMIN" ]
           },
           "segundoFactor" : {
+            "type" : "boolean"
+          },
+          "invitacionPendiente" : {
             "type" : "boolean"
           }
         }
