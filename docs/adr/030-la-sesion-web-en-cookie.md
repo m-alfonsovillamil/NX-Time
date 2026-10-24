@@ -31,6 +31,10 @@ allí la cookie no funcionaría y el CORS no lo admite.
 
 ### El refresh, en una cookie que JavaScript no ve
 
+> Desde el 17/10/2026 (plan J) las dos cookies llevan el prefijo `__Secure-`:
+> `__Secure-nx_refresh` y `__Secure-nx_csrf`. Los nombres de abajo se
+> aceptaron los siete días de una sesión web, y dejaron de valer el 24/10/2026.
+
 El login con `origen: WEB` ya no devuelve el refresh en el cuerpo: lo pone en la
 cookie `nx_refresh`, `HttpOnly; Secure; SameSite=Strict; Path=/auth`, sin
 `Domain` (solo la ve la API) y con la vida del refresh web (12 h, ADR 019). Solo

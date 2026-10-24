@@ -301,12 +301,12 @@ describe('el aviso de «el servidor está despertando»', () => {
 });
 
 describe('la cookie CSRF', () => {
-  it('se lee con el nombre nuevo y, si no está, con el de antes del 17/10/2026', () => {
+  it('se lee con el nombre nuevo, y la de antes del 17/10/2026 ya no cuenta', () => {
     expect(valorCsrf()).toBe(CSRF);
 
     cookieCsrf(null);
     document.cookie = 'nx_csrf=de-antes';
-    expect(valorCsrf()).toBe('de-antes');
+    expect(valorCsrf()).toBeNull();
 
     cookieCsrf('la-nueva');
     expect(valorCsrf()).toBe('la-nueva');

@@ -116,11 +116,11 @@ let refrescoEnVuelo: Promise<string | null> | null = null;
 
 /**
  * Con el prefijo `__Secure-` desde el 17/10/2026 (plan J): el navegador no
- * acepta una cookie con ese nombre si no llega por HTTPS. La de antes se sigue
- * leyendo mientras quede alguna sesión que la tenga (una sesión web dura siete
- * días); después, fuera.
+ * acepta una cookie con ese nombre si no llega por HTTPS. La de antes
+ * (`nx_csrf`) se leyó los siete días que dura una sesión web; desde el
+ * 24/10/2026, no.
  */
-const COOKIES_CSRF = ['__Secure-nx_csrf', 'nx_csrf'];
+const COOKIE_CSRF = '__Secure-nx_csrf';
 const CABECERA_CSRF = 'X-CSRF-Token';
 
 /**
@@ -137,11 +137,8 @@ export function valorCsrf(): string | null {
     const [nombre, ...valor] = trozo.trim().split('=');
     if (nombre !== undefined) valores.set(nombre, valor.join('='));
   }
-  for (const nombre of COOKIES_CSRF) {
-    const texto = valores.get(nombre);
-    if (texto !== undefined && texto !== '') return decodeURIComponent(texto);
-  }
-  return null;
+  const texto = valores.get(COOKIE_CSRF);
+  return texto !== undefined && texto !== '' ? decodeURIComponent(texto) : null;
 }
 
 /**
