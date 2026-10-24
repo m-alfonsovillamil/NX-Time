@@ -176,8 +176,8 @@ class SesionWebIT {
     class NombresDeAntes {
 
         @Test
-        @DisplayName("siguen renovando la sesión, y la respuesta las cambia por las nuevas y borra las viejas")
-        void siguenValiendoYSeCambian() throws Exception {
+        @DisplayName("ya no valen: se aceptaron los siete días de una sesión web, hasta el 24/10/2026")
+        void yaNoValen() throws Exception {
             ResponseEntity<String> entrada = login("WEB");
             String refresh = valor(entrada, "__Secure-nx_refresh");
             String csrf = valor(entrada, "__Secure-nx_csrf");
@@ -190,10 +190,9 @@ class SesionWebIT {
             ResponseEntity<String> renovada =
                     rest.exchange("/auth/refresh", HttpMethod.POST, new HttpEntity<>(cabeceras), String.class);
 
-            assertThat(renovada.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(valor(renovada, "__Secure-nx_refresh")).isNotBlank();
-            assertThat(setCookie(renovada, "nx_refresh").orElseThrow()).contains("Max-Age=0");
-            assertThat(setCookie(renovada, "nx_csrf").orElseThrow()).contains("Max-Age=0");
+            // Sin la cookie con el nombre de ahora, no hay sesión que renovar.
+            assertThat(renovada.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(setCookie(renovada, "__Secure-nx_refresh")).isEmpty();
         }
     }
 

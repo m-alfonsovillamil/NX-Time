@@ -54,9 +54,7 @@ export function Cookies() {
         </table>
       </div>
       <p>
-        Son nuestras, solo viajan por conexiones cifradas y no se comparten con nadie. Si ves las mismas sin el prefijo
-        «__Secure-» (<code>nx_refresh</code>, <code>nx_csrf</code>), son las de antes del 17 de octubre de 2026: se borran
-        solas al entrar.
+        Son nuestras, solo viajan por conexiones cifradas y no se comparten con nadie.
       </p>
 
       <h2>Almacenamiento del navegador</h2>

@@ -75,19 +75,14 @@ public class SesionWeb {
      * puede plantar una con el mismo nombre. __Host- sería aún mejor, pero
      * exige Path=/ y ningún Domain, y estas dos no cumplen: el refresh va solo
      * en /auth y el CSRF tiene que verse desde el otro subdominio.
+     *
+     * Los nombres de antes (nx_refresh, nx_csrf) se aceptaron siete días, lo
+     * que dura una sesión web, para no echar a nadie al cambiar. Desde el
+     * 24/10/2026 ya no: una cookie sin el prefijo la puede plantar cualquiera.
      */
     public static final String COOKIE_REFRESH = "__Secure-nx_refresh";
     public static final String COOKIE_CSRF = "__Secure-nx_csrf";
     public static final String CABECERA_CSRF = "X-CSRF-Token";
-
-    /**
-     * Los nombres de antes. Se siguen leyendo, y se borran al emitir las
-     * nuevas, para que quien tenía la sesión abierta al cambiar no tenga que
-     * volver a entrar. Una sesión web dura siete días: pasado ese plazo desde
-     * el despliegue se pueden quitar (y el {@code nx_csrf} de la web también).
-     */
-    static final String COOKIE_REFRESH_ANTIGUA = "nx_refresh";
-    static final String COOKIE_CSRF_ANTIGUA = "nx_csrf";
 
     /** Las dos rutas que usan la cookie del refresh, y ninguna más. */
     private static final String RUTA_REFRESH = "/auth";
@@ -116,23 +111,16 @@ public class SesionWeb {
     public void emitir(HttpServletResponse respuesta, String refreshToken) {
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh(COOKIE_REFRESH, refreshToken, vida).toString());
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieCsrf(COOKIE_CSRF, valorAleatorio(), vida).toString());
-        borrarLasAntiguas(respuesta);
     }
 
     /** Al cerrar sesión: las cookies, caducadas. */
     public void borrar(HttpServletResponse respuesta) {
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh(COOKIE_REFRESH, "", Duration.ZERO).toString());
         respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieCsrf(COOKIE_CSRF, "", Duration.ZERO).toString());
-        borrarLasAntiguas(respuesta);
-    }
-
-    private void borrarLasAntiguas(HttpServletResponse respuesta) {
-        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieRefresh(COOKIE_REFRESH_ANTIGUA, "", Duration.ZERO).toString());
-        respuesta.addHeader(HttpHeaders.SET_COOKIE, cookieCsrf(COOKIE_CSRF_ANTIGUA, "", Duration.ZERO).toString());
     }
 
     public Optional<String> refreshDeLaCookie(HttpServletRequest peticion) {
-        return valorDe(peticion, COOKIE_REFRESH).or(() -> valorDe(peticion, COOKIE_REFRESH_ANTIGUA));
+        return valorDe(peticion, COOKIE_REFRESH);
     }
 
     /**
@@ -143,7 +131,7 @@ public class SesionWeb {
      */
     public void comprobarCsrf(HttpServletRequest peticion) {
         String cabecera = peticion.getHeader(CABECERA_CSRF);
-        Optional<String> cookie = valorDe(peticion, COOKIE_CSRF).or(() -> valorDe(peticion, COOKIE_CSRF_ANTIGUA));
+        Optional<String> cookie = valorDe(peticion, COOKIE_CSRF);
         boolean coinciden = cabecera != null && cookie.isPresent()
                 && MessageDigest.isEqual(
                         cabecera.getBytes(StandardCharsets.UTF_8),
