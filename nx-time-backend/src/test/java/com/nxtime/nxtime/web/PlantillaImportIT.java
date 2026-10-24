@@ -196,6 +196,79 @@ class PlantillaImportIT {
     }
 
     @Test
+    @DisplayName("El código de empleado se importa, y no puede repetirse ni en el fichero ni en la empresa (ADR 053)")
+    void importaElCodigoDeEmpleado() {
+        Company empresa = empresa();
+        User admin = persona(empresa, Role.ADMIN);
+        User conCodigo = persona(empresa, Role.EMPLEADO);
+        conCodigo.setCodigoEmpleado("E-001");
+        userRepository.save(conCodigo);
+        // En otra empresa el mismo código no molesta: cada una numera a su gente.
+        User deOtra = persona(empresa(), Role.EMPLEADO);
+        deOtra.setCodigoEmpleado("000777");
+        userRepository.save(deOtra);
+
+        JsonNode simulada = cuerpo(subir(token(admin), """
+                nombre;apellidos;email;Nº empleado
+                Luis;Martín;luis.cod@importadora.test;000777
+                Eva;Ruiz;eva.cod@importadora.test;e-001
+                Pau;Gil;pau.cod@importadora.test;=HYPERLINK("x")
+                Sara;Ríos;sara.cod@importadora.test;000777
+                """, true));
+        assertThat(errores(simulada, 2)).isEmpty();
+        assertThat(simulada.get("detalle").get(0).get("codigoEmpleado").asText()).isEqualTo("000777");
+        assertThat(errores(simulada, 3)).anyMatch(e -> e.contains("ya lo tiene otra persona"));
+        assertThat(errores(simulada, 4)).anyMatch(e -> e.contains("empezar por letra o número"));
+        assertThat(errores(simulada, 5)).anyMatch(e -> e.contains("repetido") && e.contains("fila 2"));
+
+        ResponseEntity<String> respuesta = subir(token(admin), """
+                nombre;apellidos;email;codigo empleado
+                Luis;Martín;luis.cod@importadora.test;000777
+                Eva;Ruiz;eva.cod@importadora.test;
+                """, false);
+        assertThat(respuesta.getStatusCode().value()).as(respuesta.getBody()).isEqualTo(200);
+        assertThat(userRepository.findByEmail("luis.cod@importadora.test").orElseThrow().getCodigoEmpleado())
+                .isEqualTo("000777");
+        assertThat(userRepository.findByEmail("eva.cod@importadora.test").orElseThrow().getCodigoEmpleado()).isNull();
+    }
+
+    @Test
+    @DisplayName("La ficha pone y quita el código; repetido en la empresa, aunque cambien las mayúsculas, da 409 (ADR 053)")
+    void fichaConCodigoDeEmpleado() {
+        Company empresa = empresa();
+        String rrhh = token(persona(empresa, Role.RRHH));
+        User marta = persona(empresa, Role.EMPLEADO);
+        User luis = persona(empresa, Role.EMPLEADO);
+
+        ResponseEntity<String> puesto = ficha(rrhh, marta, "{\"codigoEmpleado\":\" emp-01 \"}");
+        assertThat(puesto.getStatusCode().value()).as(puesto.getBody()).isEqualTo(200);
+        assertThat(cuerpo(puesto).get("codigoEmpleado").asText()).isEqualTo("emp-01");
+
+        ResponseEntity<String> repetido = ficha(rrhh, luis, "{\"codigoEmpleado\":\"EMP-01\"}");
+        assertThat(repetido.getStatusCode().value()).isEqualTo(409);
+        assertThat(cuerpo(repetido).get("detail").asText()).contains("Ana");
+
+        ResponseEntity<String> malo = ficha(rrhh, luis, "{\"codigoEmpleado\":\"con espacio\"}");
+        assertThat(malo.getStatusCode().value()).isEqualTo(400);
+
+        // Lo que importa de verdad es el índice de V49: aunque alguien se
+        // salte la comprobación, la base no deja dos iguales.
+        luis.setCodigoEmpleado("Emp-01");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> userRepository.saveAndFlush(luis))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+        ResponseEntity<String> quitado = ficha(rrhh, marta, "{\"codigoEmpleado\":\"\"}");
+        assertThat(quitado.getStatusCode().value()).isEqualTo(200);
+        assertThat(cuerpo(quitado).get("codigoEmpleado").isNull()).isTrue();
+        assertThat(userRepository.findById(marta.getId()).orElseThrow().getCodigoEmpleado()).isNull();
+    }
+
+    private ResponseEntity<String> ficha(String token, User persona, String cuerpo) {
+        return rest.exchange("/api/v1/gestor/empleados/" + persona.getId() + "/ficha", HttpMethod.PATCH,
+                new HttpEntity<>(cuerpo, cabeceras(token, MediaType.APPLICATION_JSON)), String.class);
+    }
+
+    @Test
     @DisplayName("Con una fila mala no se crea nadie: o todas o ninguna")
     void todasONinguna() {
         Company empresa = empresa();

@@ -11,7 +11,7 @@ import { cerrarSesion } from '../../api/sesion';
 import { plantilla } from '../../i18n/es/plantilla';
 import { json, pintar, problema, sesionDe, sinContenido, simularApi } from '../../pruebas/api';
 import { Departamentos } from './Departamentos';
-import { Plantilla, filtrar, horasValidas } from './Plantilla';
+import { Plantilla, codigoValido, filtrar, horasValidas } from './Plantilla';
 
 const P = plantilla;
 const D = plantilla.departamentos;
@@ -53,6 +53,17 @@ describe('reglas de la plantilla', () => {
     expect(horasValidas('0')).toBeNull();
     expect(horasValidas('61')).toBeNull();
     expect(horasValidas('37,25')).toBeNull();
+  });
+
+  it('el código de empleado: las mismas reglas que el servidor', () => {
+    expect(codigoValido(' 000123 ')).toBe('000123');
+    expect(codigoValido('MAD/17_b.2-x')).toBe('MAD/17_b.2-x');
+    expect(codigoValido('Ñ-01')).toBe('Ñ-01');
+    expect(codigoValido('  ')).toBe('');
+    expect(codigoValido('EMP 12')).toBeNull();
+    expect(codigoValido('=1+1')).toBeNull();
+    expect(codigoValido('-42')).toBeNull();
+    expect(codigoValido('x'.repeat(51))).toBeNull();
   });
 
   it('buscar por nombre o correo; quien está de baja solo si se pide', () => {
@@ -139,8 +150,62 @@ describe('plantilla', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: P.guardar }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(llamadas.a('PATCH', '/api/v1/gestor/empleados/5/ficha').map((l) => l.cuerpo)).toEqual([{ horasSemanales: 37.5, diasVacaciones: 22 }]);
+    expect(llamadas.a('PATCH', '/api/v1/gestor/empleados/5/ficha').map((l) => l.cuerpo)).toEqual([
+      { horasSemanales: 37.5, diasVacaciones: 22, codigoEmpleado: '' },
+    ]);
     expect(llamadas.a('PATCH', '/api/v1/departamentos/empleados/5').map((l) => l.cuerpo)).toEqual([{ departamentoId: 2 }]);
+  });
+
+  /* ADR 053: el número de la persona en el ERP o en nóminas. */
+  it('la ficha pone el código de empleado; uno con espacios no se manda, y el repetido lo dice el servidor', async () => {
+    let veces = 0;
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/plantilla': () => PLANTILLA,
+      'GET /api/v1/departamentos': () => [],
+      'PATCH /api/v1/gestor/empleados/{id}/ficha': () =>
+        ++veces === 1 ? problema(409, 'El código de empleado «000123» ya lo tiene Javier.') : json(PLANTILLA[1], 200),
+    });
+    pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
+
+    const fila = (await screen.findByRole('group', { name: P.accionesDe('Marta') })) as HTMLElement;
+    await userEvent.click(within(fila).getByRole('button', { name: P.editarFicha }));
+    const dialogo = await screen.findByRole('dialog', { name: P.fichaTitulo('Marta') });
+    const codigo = within(dialogo).getByLabelText(P.fichaCodigo);
+
+    await userEvent.type(codigo, 'EMP 12');
+    await userEvent.click(within(dialogo).getByRole('button', { name: P.guardar }));
+    expect((await within(dialogo).findByRole('alert')).textContent).toBe(P.fichaCodigoMal);
+
+    await userEvent.clear(codigo);
+    await userEvent.type(codigo, ' 000123 ');
+    await userEvent.click(within(dialogo).getByRole('button', { name: P.guardar }));
+    expect((await within(dialogo).findByRole('alert')).textContent).toBe('El código de empleado «000123» ya lo tiene Javier.');
+    await userEvent.click(within(dialogo).getByRole('button', { name: P.guardar }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(llamadas.a('PATCH', '/api/v1/gestor/empleados/5/ficha').map((l) => l.cuerpo)).toEqual([
+      { horasSemanales: 40, diasVacaciones: 22, codigoEmpleado: '000123' },
+      { horasSemanales: 40, diasVacaciones: 22, codigoEmpleado: '000123' },
+    ]);
+  });
+
+  it('la columna del código solo sale si alguien lo tiene, y se puede buscar por él', async () => {
+    simularApi({ 'GET /api/v1/gestor/plantilla': () => [PLANTILLA[0], persona(5, 'Marta', { codigoEmpleado: 'EMP-0042' })] });
+    pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
+
+    expect(await screen.findByRole('cell', { name: 'EMP-0042' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: P.codigo })).toBeTruthy();
+    await userEvent.type(screen.getByLabelText(P.buscar), 'emp-00');
+    await waitFor(() => expect(screen.queryByRole('cell', { name: 'Javier' })).toBeNull());
+    expect(screen.getByRole('cell', { name: 'Marta' })).toBeTruthy();
+  });
+
+  it('sin códigos en la empresa no hay columna vacía', async () => {
+    simularApi({ 'GET /api/v1/gestor/plantilla': () => PLANTILLA });
+    pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
+
+    expect(await screen.findByRole('cell', { name: 'Marta' })).toBeTruthy();
+    expect(screen.queryByRole('columnheader', { name: P.codigo })).toBeNull();
   });
 
   it('dar de baja se confirma; reactivar va directo', async () => {

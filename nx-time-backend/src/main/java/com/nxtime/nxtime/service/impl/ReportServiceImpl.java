@@ -158,7 +158,8 @@ public class ReportServiceImpl implements ReportService {
                 // En SEGUNDOS, sin truncar: el total del informe se
                 // agrega a partir de aquí (ver ReportRow).
                 segundosNetos,
-                fichaje.isJornadaIncompleta());
+                fichaje.isJornadaIncompleta(),
+                fichaje.getUsuario().getCodigoEmpleado());
     }
 
     private static Instant inicioDelMes(YearMonth mes, ZoneId zona) {

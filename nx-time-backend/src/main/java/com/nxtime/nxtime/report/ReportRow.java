@@ -34,8 +34,16 @@ public record ReportRow(
         LocalTime horaSalida,
         long minutosPausa,
         long segundosNetos,
-        boolean incidencia
+        boolean incidencia,
+        /** Su número en el ERP o en nóminas (ADR 053), o null. */
+        String codigoEmpleado
 ) {
+
+    /** Sin código de empleado. */
+    public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
+            long minutosPausa, long segundosNetos, boolean incidencia) {
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, null);
+    }
 
     /**
      * Minutos trabajados de ESTA jornada, truncados. Vale para mostrar

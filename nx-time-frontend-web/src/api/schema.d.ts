@@ -4230,6 +4230,8 @@ export interface components {
             diasVacaciones?: number;
             /** @description Lo que impide darla de alta. Vacío: se puede */
             errores?: string[];
+            /** @description Su número en el ERP o en nóminas (ADR 053), o null */
+            codigoEmpleado?: string;
         };
         /** @description Lo que ha salido de leer (y, si no es una simulación, importar) un fichero de plantilla */
         ImportacionPlantillaResponse: {
@@ -4676,6 +4678,8 @@ export interface components {
             horasSemanales?: number;
             /** Format: int32 */
             diasVacaciones?: number;
+            /** @description Null: no tocar. Vacío: quitarlo. */
+            codigoEmpleado?: string;
         };
         SimpleEmployeeDTO: {
             /** Format: int64 */
@@ -4693,6 +4697,7 @@ export interface components {
             rol?: "EMPLEADO" | "GESTOR" | "RRHH" | "ADMIN";
             segundoFactor?: boolean;
             invitacionPendiente?: boolean;
+            codigoEmpleado?: string;
         };
         UpdateEmployeeStatusRequest: {
             activo: boolean;
@@ -5256,6 +5261,7 @@ export interface components {
             /** Format: date-time */
             fechaBaja?: string;
             zonaHoraria?: string;
+            codigoEmpleado?: string;
         };
         PersonalDataExport: {
             /** Format: date-time */

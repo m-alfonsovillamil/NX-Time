@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.domain.CodigosDeEmpleado;
 import com.nxtime.nxtime.domain.Department;
 import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.Role;
@@ -25,6 +26,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,9 +106,38 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
 
         int anio = anioActual(actor);
 
+        // El código antes que nada: si no vale, no se cambia tampoco lo demás.
+        boolean cambiaCodigo = request.codigoEmpleado() != null;
+        String codigo = CodigosDeEmpleado.normalizar(request.codigoEmpleado());
+        if (cambiaCodigo) {
+            String problema = CodigosDeEmpleado.problema(codigo);
+            if (problema != null) {
+                throw new BusinessException(problema, HttpStatus.BAD_REQUEST);
+            }
+            if (codigo != null) {
+                List<String> conEse = userRepository.conElCodigoDeEmpleado(
+                        empleado.getEmpresa().getId(), codigo, empleado.getId());
+                if (!conEse.isEmpty()) {
+                    throw new BusinessException("El código de empleado «" + codigo + "» ya lo tiene "
+                            + conEse.get(0) + ".", HttpStatus.CONFLICT);
+                }
+            }
+            empleado.setCodigoEmpleado(codigo);
+        }
+
         if (request.horasSemanales() != null) {
             empleado.setHorasSemanales(request.horasSemanales());
-            userRepository.save(empleado);
+        }
+        if (cambiaCodigo || request.horasSemanales() != null) {
+            // saveAndFlush: si otra petición ha puesto el mismo código a la
+            // vez, salta aquí el índice único de V49 y no al cerrar la
+            // transacción, donde ya no se puede explicar.
+            try {
+                userRepository.saveAndFlush(empleado);
+            } catch (DataIntegrityViolationException e) {
+                throw new BusinessException("El código de empleado «" + codigo + "» ya lo tiene otra persona.",
+                        HttpStatus.CONFLICT);
+            }
         }
 
         if (request.diasVacaciones() != null) {
@@ -122,9 +153,10 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
             vacationBalanceRepository.save(saldo);
         }
 
-        log.info("{} ha configurado la ficha de {} (horas={}, dias={}, anio={})",
+        log.info("{} ha configurado la ficha de {} (horas={}, dias={}, anio={}, codigo={})",
                 actor.getId(), empleado.getId(),
-                request.horasSemanales(), request.diasVacaciones(), anio);
+                request.horasSemanales(), request.diasVacaciones(), anio,
+                cambiaCodigo ? (codigo == null ? "quitado" : "cambiado") : "sin tocar");
 
         return toDto(empleado, saldosDelAnio(List.of(empleado), anio));
     }
@@ -309,6 +341,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 empleado.getDepartamento() != null ? empleado.getDepartamento().getNombre() : null,
                 empleado.getRol(),
                 empleado.tieneSegundoFactor(),
-                invitacionPendiente);
+                invitacionPendiente,
+                empleado.getCodigoEmpleado());
     }
 }

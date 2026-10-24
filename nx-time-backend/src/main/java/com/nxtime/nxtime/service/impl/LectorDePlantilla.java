@@ -53,6 +53,7 @@ final class LectorDePlantilla {
     static final String DEPARTAMENTO = "departamento";
     static final String HORAS = "horas";
     static final String VACACIONES = "vacaciones";
+    static final String CODIGO = "codigo";
 
     /** Cómo puede llamarse cada columna, ya sin tildes ni mayúsculas. */
     private static final Map<String, String> SINONIMOS = Map.ofEntries(
@@ -73,7 +74,27 @@ final class LectorDePlantilla {
             Map.entry("jornada semanal", HORAS),
             Map.entry("vacaciones", VACACIONES),
             Map.entry("dias de vacaciones", VACACIONES),
-            Map.entry("dias vacaciones", VACACIONES));
+            Map.entry("dias vacaciones", VACACIONES),
+            // El código de empleado (ADR 053), con los nombres que le dan los
+            // ERP y los programas de nóminas al exportar.
+            Map.entry("codigo", CODIGO),
+            Map.entry("codigo de empleado", CODIGO),
+            Map.entry("codigo empleado", CODIGO),
+            Map.entry("cod empleado", CODIGO),
+            Map.entry("cod. empleado", CODIGO),
+            Map.entry("n empleado", CODIGO),
+            Map.entry("no empleado", CODIGO),
+            Map.entry("no. empleado", CODIGO),
+            Map.entry("nº empleado", CODIGO),
+            Map.entry("n.º empleado", CODIGO),
+            Map.entry("nº de empleado", CODIGO),
+            Map.entry("numero de empleado", CODIGO),
+            Map.entry("numero empleado", CODIGO),
+            Map.entry("numero de personal", CODIGO),
+            Map.entry("matricula", CODIGO),
+            Map.entry("id empleado", CODIGO),
+            Map.entry("personnel number", CODIGO),
+            Map.entry("employee id", CODIGO));
 
     /** Una fila leída: su número en el fichero (la cabecera es la 1) y sus valores por columna. */
     record Fila(int numero, Map<String, String> valores) {

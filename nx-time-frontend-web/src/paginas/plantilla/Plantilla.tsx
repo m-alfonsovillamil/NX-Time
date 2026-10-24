@@ -52,7 +52,8 @@ export function filtrar(personas: readonly Persona[], texto: string, conBajas: b
   return personas.filter(
     (p) =>
       (conBajas || p.activo !== false) &&
-      (buscado === '' || `${p.nombre ?? ''} ${p.email ?? ''}`.toLocaleLowerCase('es').includes(buscado)),
+      (buscado === '' ||
+        `${p.nombre ?? ''} ${p.email ?? ''} ${p.codigoEmpleado ?? ''}`.toLocaleLowerCase('es').includes(buscado)),
   );
 }
 
@@ -134,12 +135,23 @@ export function horasValidas(texto: string): number | null {
   return horas > 0 && horas <= 60 ? horas : null;
 }
 
+/**
+ * El código de empleado, limpio, si vale (ADR 053): las mismas reglas que el
+ * servidor. '' es «sin código»; null, que no vale.
+ */
+export function codigoValido(texto: string): string | null {
+  const limpio = texto.trim();
+  if (limpio === '') return '';
+  return limpio.length <= 50 && /^[\p{L}\p{N}][\p{L}\p{N}._/-]*$/u.test(limpio) ? limpio : null;
+}
+
 function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTerminar: () => void }) {
   const { puede } = useSesion();
   const conDepartamento = puede('departamento:gestionar');
   const [horas, setHoras] = useState(String(persona.horasSemanales ?? 40).replace('.', ','));
   const [dias, setDias] = useState(String(persona.diasVacaciones ?? 22));
   const [departamento, setDepartamento] = useState(persona.departamentoId !== undefined ? String(persona.departamentoId) : '');
+  const [codigo, setCodigo] = useState(persona.codigoEmpleado ?? '');
   const [error, setError] = useState<string | null>(null);
 
   const departamentos = useQuery({
@@ -149,9 +161,25 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
   });
 
   const guardar = useMutacion(
-    async ({ horasSemanales, diasVacaciones, departamentoId }: { horasSemanales: number; diasVacaciones: number; departamentoId: number | null }) => {
+    async ({
+      horasSemanales,
+      diasVacaciones,
+      departamentoId,
+      codigoEmpleado,
+    }: {
+      horasSemanales: number;
+      diasVacaciones: number;
+      departamentoId: number | null;
+      codigoEmpleado: string;
+    }) => {
       const id = persona.id ?? 0;
-      await pedir(cliente.PATCH('/api/v1/gestor/empleados/{id}/ficha', { params: { path: { id } }, body: { horasSemanales, diasVacaciones } }));
+      // El código siempre: vacío lo quita (en este PATCH, null sería «no tocar»).
+      await pedir(
+        cliente.PATCH('/api/v1/gestor/empleados/{id}/ficha', {
+          params: { path: { id } },
+          body: { horasSemanales, diasVacaciones, codigoEmpleado },
+        }),
+      );
       const antes = persona.departamentoId ?? null;
       if (conDepartamento && departamentoId !== antes) {
         // Sin departamentoId (el campo ausente llega como null) se le saca del que tuviera.
@@ -172,8 +200,10 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
     if (horasSemanales === null) return setError(P.fichaHorasMal);
     const diasVacaciones = Number(dias);
     if (!/^\d{1,3}$/.test(dias.trim()) || diasVacaciones > 365) return setError(P.fichaDiasMal);
+    const codigoEmpleado = codigoValido(codigo);
+    if (codigoEmpleado === null) return setError(P.fichaCodigoMal);
     setError(null);
-    guardar.mutate({ horasSemanales, diasVacaciones, departamentoId: departamento === '' ? null : Number(departamento) });
+    guardar.mutate({ horasSemanales, diasVacaciones, departamentoId: departamento === '' ? null : Number(departamento), codigoEmpleado });
   }
 
   const mensaje = error ?? guardar.error?.message ?? null;
@@ -183,6 +213,16 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
         <Campo id="ficha-horas" etiqueta={P.fichaHoras} inputMode="decimal" value={horas} onChange={(e) => setHoras(e.target.value)} />
         <Campo id="ficha-dias" etiqueta={P.fichaDias} ayuda={P.fichaAyuda} inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value)} />
       </div>
+      <Campo
+        id="ficha-codigo"
+        etiqueta={P.fichaCodigo}
+        ayuda={P.fichaCodigoAyuda}
+        autoComplete="off"
+        spellCheck={false}
+        maxLength={50}
+        value={codigo}
+        onChange={(e) => setCodigo(e.target.value)}
+      />
       {conDepartamento && (
         <Selector
           id="ficha-departamento"
@@ -360,7 +400,16 @@ export function Plantilla() {
             if (personas.length === 0) return <Vacio titulo={P.vacio} />;
             const vistas = ordenar(filtrar(personas, texto, conBajas));
             if (vistas.length === 0) return <Vacio titulo={P.sinResultados} />;
-            return <Tabla titulo={P.tablaTitulo} columnas={columnas} filas={vistas} claveDeFila={(p) => p.id ?? 0} />;
+            // La columna del código solo si la empresa lo usa (ADR 053): si no, sería una columna vacía.
+            const conCodigo = personas.some((p) => (p.codigoEmpleado ?? '') !== '');
+            const columnasVistas = conCodigo
+              ? [
+                  ...columnas.slice(0, 1),
+                  { clave: 'codigo', cabecera: P.codigo, celda: (p: Persona) => p.codigoEmpleado ?? '' },
+                  ...columnas.slice(1),
+                ]
+              : columnas;
+            return <Tabla titulo={P.tablaTitulo} columnas={columnasVistas} filas={vistas} claveDeFila={(p) => p.id ?? 0} />;
           }}
         </EstadoDeConsulta>
       </section>

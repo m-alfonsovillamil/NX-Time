@@ -97,6 +97,9 @@ export function ImportarPlantilla({ alTerminar }: { alTerminar: () => void }) {
     { clave: 'nombre', cabecera: P.nombre, celda: (f) => `${f.nombre ?? ''} ${f.apellidos ?? ''}`.trim() },
     { clave: 'email', cabecera: P.email, celda: (f) => f.email },
     { clave: 'rol', cabecera: P.rol, celda: (f) => P.roles[f.rol ?? ''] ?? f.rol },
+    ...((comprobado?.detalle ?? []).some((f) => (f.codigoEmpleado ?? '') !== '')
+      ? [{ clave: 'codigo', cabecera: P.codigo, celda: (f: Fila) => f.codigoEmpleado ?? '' }]
+      : []),
     {
       clave: 'errores',
       cabecera: I.errores,
