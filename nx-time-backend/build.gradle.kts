@@ -58,7 +58,7 @@ dependencies {
     // Las tarjetas QR del kiosco (fase K1, ADR 033). Solo el núcleo de ZXing,
     // que calcula la matriz: el SVG se escribe a mano, así la web y la app no
     // necesitan ninguna librería para pintarlo. Apache 2.0.
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
 
     // Notificaciones por email (Fase 10). Thymeleaf solo se usa para
     // renderizar las plantillas de correo, no para servir vistas web:
@@ -75,7 +75,7 @@ dependencies {
     // classpath Spring MVC empieza a RESPONDER EN XML a todo cliente que acepte
     // XML. Lo cazó ApiContractTest: 121 tests leyendo "<" donde esperaban JSON.
     // FirebaseMessaging no necesita ninguno de los dos.
-    implementation("com.google.firebase:firebase-admin:9.9.0") {
+    implementation("com.google.firebase:firebase-admin:9.11.0") {
         exclude(group = "com.google.cloud", module = "google-cloud-storage")
         exclude(group = "com.google.cloud", module = "google-cloud-firestore")
     }
@@ -83,7 +83,7 @@ dependencies {
     // FirebaseOptions lee la credencial con JacksonFactory. Sin él, el primer
     // despliegue con credencial se cayó con ClassNotFoundException (26/09/2026).
     // Misma versión que el google-http-client que trae firebase-admin.
-    implementation("com.google.http-client:google-http-client-jackson2:2.1.0")
+    implementation("com.google.http-client:google-http-client-jackson2:2.2.0")
 
     // Caché (Fase 10): Caffeine como implementación. Se usa para el
     // calendario laboral (ver HolidayCalendar) -- los festivos cambian
@@ -105,8 +105,8 @@ dependencies {
     // Boot 3 ("-jakarta"); con Boot 4 sería sentry-spring-boot-4. Con
     // sentry-logback, cada log.error se convierte en un evento. Sin DSN
     // (SENTRY_DSN vacía, como en local y en los tests) no envía nada.
-    implementation("io.sentry:sentry-spring-boot-4-starter:8.59.0")
-    implementation("io.sentry:sentry-logback:8.59.0")
+    implementation("io.sentry:sentry-spring-boot-4-starter:8.61.0")
+    implementation("io.sentry:sentry-logback:8.61.0")
 
     // Documentación de la API (Swagger UI / OpenAPI), Fase 6. La linea
     // mayor de springdoc va con la de Spring Boot: 2.x para Boot 3, 3.x para
@@ -117,8 +117,8 @@ dependencies {
     // Lombok: getters/setters/constructores en las entidades JPA. No genera
     // equals/hashCode (eso se escribe a mano, basado solo en el id: ver
     // auditoría, antipatrón de equals/hashCode sobre relaciones lazy).
-    compileOnly("org.projectlombok:lombok:1.18.34")
-    annotationProcessor("org.projectlombok:lombok:1.18.34")
+    compileOnly("org.projectlombok:lombok:1.18.48")
+    annotationProcessor("org.projectlombok:lombok:1.18.48")
 
     // MapStruct: mapeo entidad -> DTO, sustituye a las funciones de
     // extensión de Kotlin (toDTO(), toRegistroEquipoDTO()...) dispersas.
@@ -140,8 +140,8 @@ dependencies {
     // TestRestTemplate se construye con el RestTemplateBuilder, que en la 4 vive aqui.
     testImplementation("org.springframework.boot:spring-boot-restclient")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-    testCompileOnly("org.projectlombok:lombok:1.18.34")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.34")
+    testCompileOnly("org.projectlombok:lombok:1.18.48")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.48")
     // testImplementation y no testRuntimeOnly: hace falta en compilacion
     // para el TestExecutionListener que limpia las bases de datos que deja
     // la suite (ver LimpiezaDeBasesDeTest).

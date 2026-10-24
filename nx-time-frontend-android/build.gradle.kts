@@ -226,7 +226,7 @@ dependencies {
     /*
      * Esta es la librería que hace funcionar el "desugaring"
      */
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     /*
      * Dependencias de Retrofit:
@@ -248,7 +248,7 @@ dependencies {
      * la 2.8.5, anterior a `JsonParser.parseString` (2.8.6), así que
      * heredarla en silencio hacía que ese fichero no compilara.
      */
-    implementation("com.google.code.gson:gson:2.13.2")
+    implementation("com.google.code.gson:gson:2.14.0")
 
     /*
      * Jetpack Compose. El BOM fija de una vez las versiones de todas las
@@ -286,7 +286,7 @@ dependencies {
      * Microsoft (ADR 036). No un WebView: Google lo rechaza, y en la pestaña
      * la persona ve la dirección de la página en la que escribe su contraseña.
      */
-    implementation("androidx.browser:browser:1.9.0")
+    implementation("androidx.browser:browser:1.10.0")
     // La actividad vacía en la que `createComposeRule` monta la pantalla de
     // un test. Solo en debug: no llega al APK que se publica.
     debugImplementation("androidx.compose.ui:ui-test-manifest")
@@ -295,7 +295,7 @@ dependencies {
     // versión: lifecycle 2.10+, activity 1.12+ y navigation 2.10 piden
     // AGP 9.1, igual que el BOM de arriba.
     implementation("androidx.activity:activity-compose:1.11.0")
-    implementation("androidx.navigation:navigation-compose:2.9.8")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
     // collectAsStateWithLifecycle: deja de recolectar el StateFlow
     // cuando la pantalla no está visible.
@@ -308,7 +308,7 @@ dependencies {
      * hereda de ComponentActivity y el tema de arranque cuelga del de la
      * plataforma, así que nada del proyecto la usaba ya.
      */
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.19.1")
 
     /*
      * Sentry (paso 5 del piloto): los cierres de la app, con la misma
@@ -318,7 +318,7 @@ dependencies {
      * nativa (NDK), dos librerías .so que subían el APK de 2,5 a 6,2 MB
      * para capturar cierres de un código nativo que la app no tiene.
      */
-    implementation("io.sentry:sentry-android-core:8.59.0")
+    implementation("io.sentry:sentry-android-core:8.61.0")
 
     /*
      * Entrar con huella (paso 6).
@@ -348,7 +348,7 @@ dependencies {
      * desde que se escribió. Desde la 1.3.0, FragmentActivity usa el registro
      * de resultados moderno y no tiene ese límite.
      */
-    implementation("androidx.fragment:fragment-ktx:1.8.9")
+    implementation("androidx.fragment:fragment-ktx:1.9.1")
 
     /*
      * Recordatorio de fichar (paso 7).
@@ -359,7 +359,7 @@ dependencies {
      * exacto pediría permiso aparte desde Android 12 para una precisión
      * que aquí no aporta nada.
      */
-    implementation("androidx.work:work-runtime-ktx:2.11.2")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
 
     // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
     // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
@@ -369,7 +369,7 @@ dependencies {
     // La tarjeta del kiosco (ADR 033): el QR se dibuja aquí a partir de su
     // código, con el núcleo de ZXing, el mismo que usa el backend. Sin cámara
     // ni lector: la app solo lo ENSEÑA, lo lee la tablet. Apache 2.0.
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
 
     /*
      * NO se añade androidx.security:security-crypto. Llegó a estar aquí
@@ -386,9 +386,9 @@ dependencies {
      */
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // Turbine: para afirmar sobre lo que va emitiendo un StateFlow.
-    testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("app.cash.turbine:turbine:1.2.1")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
 
     /*
@@ -409,7 +409,7 @@ dependencies {
     // En la app, WorkManager lo arranca androidx.startup al crearse el
     // proceso; en un test de Robolectric no hay tal arranque, y cerrar la
     // sesión (que cancela el recordatorio de fichar) lo encontraba sin iniciar.
-    testImplementation("androidx.work:work-testing:2.11.2")
+    testImplementation("androidx.work:work-testing:2.12.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
