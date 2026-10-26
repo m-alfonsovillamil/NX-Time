@@ -689,6 +689,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 52. [Importar la plantilla, invitaciones en tandas y cambiar el rol](docs/adr/052-importar-la-plantilla-y-los-roles.md)
 53. [El código de empleado](docs/adr/053-el-codigo-de-empleado.md)
 54. [Fichar sin conexión: la hora del móvil, 72 h y la jornada que cerró el sistema](docs/adr/054-fichar-sin-conexion.md)
+55. [Presencial o a distancia: opcional por empresa y nunca obligatoria para fichar](docs/adr/055-presencial-o-a-distancia.md)
 
 ---
 

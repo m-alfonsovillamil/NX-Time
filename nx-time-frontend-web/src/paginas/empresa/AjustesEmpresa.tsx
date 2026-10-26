@@ -215,6 +215,51 @@ function ExigirSegundoFactor({ ajustes }: { ajustes: Ajustes }) {
   );
 }
 
+/**
+ * Preguntar presencial o a distancia al entrar (ADR 055). Como el segundo
+ * factor: su propio botón, y se mandan los ajustes guardados.
+ */
+function PreguntarModalidad({ ajustes }: { ajustes: Ajustes }) {
+  const M = A.modalidad;
+  const [preguntar, setPreguntar] = useState(ajustes.preguntarModalidad === true);
+  const guardar = useMutacion(
+    (valor: boolean) =>
+      pedir(
+        cliente.PUT('/api/v1/empresa/ajustes', {
+          body: {
+            nombre: ajustes.nombre ?? '',
+            zonaHoraria: ajustes.zonaHoraria ?? PENINSULA,
+            contactoPrivacidad: ajustes.contactoPrivacidad ?? '',
+            preguntarModalidad: valor,
+          },
+        }),
+      ),
+    { invalida: [CLAVE_AJUSTES], exito: (r) => (r.preguntarModalidad === true ? M.preguntada : M.noPreguntada) },
+  );
+
+  return (
+    <Tarjeta titulo={M.titulo} icono="maletin" descripcion={M.texto}>
+      <div className="nx-columna">
+        <label className="nx-casilla">
+          <input type="checkbox" checked={preguntar} onChange={(e) => setPreguntar(e.target.checked)} />
+          <span>{M.preguntar}</span>
+        </label>
+        <div>
+          <Boton
+            variante="secundario"
+            ocupado={guardar.isPending}
+            disabled={preguntar === (ajustes.preguntarModalidad === true)}
+            onClick={() => guardar.mutate(preguntar)}
+          >
+            {M.guardar}
+          </Boton>
+        </div>
+        {guardar.error !== null && <Aviso>{guardar.error.message}</Aviso>}
+      </div>
+    </Tarjeta>
+  );
+}
+
 export function AjustesEmpresa() {
   const ajustes = useQuery({
     queryKey: CLAVE_AJUSTES,
@@ -234,6 +279,9 @@ export function AjustesEmpresa() {
           </EstadoDeConsulta>
           {ajustes.data !== undefined && (
             <ExigirSegundoFactor key={String(ajustes.data.exigirSegundoFactor)} ajustes={ajustes.data} />
+          )}
+          {ajustes.data !== undefined && (
+            <PreguntarModalidad key={String(ajustes.data.preguntarModalidad)} ajustes={ajustes.data} />
           )}
           <CanalDeDenunciasAjustes />
           {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}

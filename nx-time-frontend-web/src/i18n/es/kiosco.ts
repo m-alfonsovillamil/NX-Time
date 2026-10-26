@@ -102,4 +102,6 @@ export const kiosco = {
   distintivo: (nombre: string) => `Kiosco · ${nombre}`,
   /** Se fichó en la app sin conexión y llegó después (ADR 054). */
   distintivoSinConexion: 'Sin conexión',
+  /** Se trabajó a distancia (ADR 055). Presencial no se marca: es lo de siempre. */
+  distintivoADistancia: 'A distancia',
 } as const;

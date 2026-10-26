@@ -47,7 +47,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
     public CompanySettingsResponse leer(User actor) {
         Company empresa = suEmpresa(actor);
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
-                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0);
+                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0, empresa.isPreguntarModalidad());
     }
 
     /**
@@ -80,6 +80,11 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
         if (request.exigirSegundoFactor() != null) {
             exigirSegundoFactor(empresa, request.exigirSegundoFactor(), actor);
         }
+        if (request.preguntarModalidad() != null && request.preguntarModalidad() != empresa.isPreguntarModalidad()) {
+            log.info("{} {} preguntar presencial o a distancia en la empresa {}.", actor.getId(),
+                    request.preguntarModalidad() ? "empieza a" : "deja de", empresa.getId());
+            empresa.setPreguntarModalidad(request.preguntarModalidad());
+        }
         companyRepository.saveAndFlush(empresa);
 
         int invalidadas = 0;
@@ -92,7 +97,8 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
                     actor.getId(), empresa.getId(), zona, invalidadas);
         }
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
-                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), invalidadas);
+                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), invalidadas,
+                empresa.isPreguntarModalidad());
     }
 
     /**

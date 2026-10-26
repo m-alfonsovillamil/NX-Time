@@ -54,8 +54,25 @@ public record CorrectionResponse(
          * solicitud que solo reparte lleva las mismas horas propuestas que las
          * actuales, y sin esto diría "de 09:00-18:00 a 09:00-18:00".
          */
-        List<ProjectShare> repartoPropuesto
+        List<ProjectShare> repartoPropuesto,
+
+        /** Presencial o a distancia del fichaje, y la que se pide poner, o null si no se toca (ADR 055). */
+        com.nxtime.nxtime.domain.Modalidad modalidadActual,
+        com.nxtime.nxtime.domain.Modalidad modalidadPropuesta
 ) {
+    /** Lo de antes del ADR 055: sin modalidad. */
+    public CorrectionResponse(long id, long fichajeId, SimpleUserDTO empleado, SimpleUserDTO solicitante,
+            Instant horaEntradaActual, Instant horaSalidaActual, Instant horaEntradaPropuesta,
+            Instant horaSalidaPropuesta, Instant pausaInicioPropuesta, Instant pausaFinPropuesta, String motivo,
+            CorrectionStatus estado, SimpleUserDTO aprobador, Instant fechaResolucion, String comentarioResolucion,
+            String motivoDisputa, Instant creadoEn, boolean puedoResolver, boolean puedoDisputar,
+            List<ProjectShare> repartoPropuesto) {
+        this(id, fichajeId, empleado, solicitante, horaEntradaActual, horaSalidaActual, horaEntradaPropuesta,
+                horaSalidaPropuesta, pausaInicioPropuesta, pausaFinPropuesta, motivo, estado, aprobador,
+                fechaResolucion, comentarioResolucion, motivoDisputa, creadoEn, puedoResolver, puedoDisputar,
+                repartoPropuesto, null, null);
+    }
+
     public record ProjectShare(long proyectoId, String codigo, long minutos) {
     }
 }

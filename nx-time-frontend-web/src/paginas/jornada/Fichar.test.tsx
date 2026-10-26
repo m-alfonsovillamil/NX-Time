@@ -230,6 +230,26 @@ describe('antes de iniciar', () => {
       expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([{ tipo: 'INICIO', proyectoId: 2 }]),
     );
   });
+
+  /* ADR 055: solo si la empresa lo pregunta, y la elegida se recuerda en el navegador. */
+  it('si la empresa lo pregunta, pide presencial o a distancia y lo manda', async () => {
+    const llamadas = api({
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, preguntarModalidad: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+    const dialogo = await screen.findByRole('dialog', { name: F.modalidad.titulo });
+    await userEvent.click(within(dialogo).getByRole('button', { name: F.modalidad.A_DISTANCIA }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([
+        { tipo: 'INICIO', modalidad: 'A_DISTANCIA' },
+      ]),
+    );
+    expect(localStorage.getItem('nx-ultima-modalidad')).toBe('A_DISTANCIA');
+  });
 });
 
 describe('mi tiempo', () => {

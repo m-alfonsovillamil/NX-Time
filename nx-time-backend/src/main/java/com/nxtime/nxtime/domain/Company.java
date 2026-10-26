@@ -120,6 +120,14 @@ public class Company {
     @Column(name = "exigir_segundo_factor", nullable = false)
     private boolean exigirSegundoFactor = false;
 
+    /**
+     * Si al entrar se pregunta presencial o a distancia (V51, ADR 055). Lo
+     * decide un ADMIN en los ajustes de la empresa.
+     */
+    @Builder.Default
+    @Column(name = "preguntar_modalidad", nullable = false)
+    private boolean preguntarModalidad = false;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

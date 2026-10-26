@@ -9,6 +9,7 @@
  *   servidor avisará a quien aprueba ausencias.
  * - **¿En qué proyecto?** Solo con dos o más proyectos disponibles: con uno o
  *   ninguno decide el servidor (ADR 017).
+ * - **¿Presencial o a distancia?** Solo si la empresa lo pregunta (ADR 055).
  */
 
 import { useState, type FormEvent } from 'react';
@@ -56,6 +57,77 @@ export function ConfirmarFin({
         {pausa > 0 && <li>{F.confirmarFin.pausa(duracion(pausa))}</li>}
       </ul>
       <p className="nx-sutil">{F.confirmarFin.aviso}</p>
+    </Dialogo>
+  );
+}
+
+export type Modalidad = 'PRESENCIAL' | 'A_DISTANCIA';
+
+const CLAVE_ULTIMA_MODALIDAD = 'nx-ultima-modalidad';
+
+/** La última elegida en este navegador, para ofrecerla primero. Sin almacenamiento, ninguna. */
+export function ultimaModalidad(): Modalidad | null {
+  try {
+    const guardada = localStorage.getItem(CLAVE_ULTIMA_MODALIDAD);
+    return guardada === 'PRESENCIAL' || guardada === 'A_DISTANCIA' ? guardada : null;
+  } catch {
+    return null;
+  }
+}
+
+function recordarModalidad(modalidad: Modalidad) {
+  try {
+    localStorage.setItem(CLAVE_ULTIMA_MODALIDAD, modalidad);
+  } catch {
+    // Sin almacenamiento (ventana privada): la próxima vez no se ofrece primero, nada más.
+  }
+}
+
+/**
+ * Presencial o a distancia (ADR 055). Dos botones y no una casilla: es una
+ * pregunta de cada día, y la que se eligió la última vez va como principal.
+ */
+export function ElegirModalidad({
+  abierto,
+  alElegir,
+  alCancelar,
+}: {
+  abierto: boolean;
+  alElegir: (modalidad: Modalidad) => void;
+  alCancelar: () => void;
+}) {
+  const ultima = ultimaModalidad() ?? 'PRESENCIAL';
+  const elegir = (modalidad: Modalidad) => {
+    recordarModalidad(modalidad);
+    alElegir(modalidad);
+  };
+  const opciones: Modalidad[] = ultima === 'PRESENCIAL' ? ['PRESENCIAL', 'A_DISTANCIA'] : ['A_DISTANCIA', 'PRESENCIAL'];
+  return (
+    <Dialogo
+      abierto={abierto}
+      titulo={F.modalidad.titulo}
+      alCerrar={alCancelar}
+      acciones={
+        <>
+          <Boton variante="texto" onClick={alCancelar}>
+            {T.app.cancelar}
+          </Boton>
+          {opciones
+            .slice()
+            .reverse()
+            .map((modalidad) => (
+              <Boton
+                key={modalidad}
+                {...(modalidad === ultima ? {} : { variante: 'secundario' as const })}
+                onClick={() => elegir(modalidad)}
+              >
+                {F.modalidad[modalidad]}
+              </Boton>
+            ))}
+        </>
+      }
+    >
+      <p>{F.modalidad.texto}</p>
     </Dialogo>
   );
 }

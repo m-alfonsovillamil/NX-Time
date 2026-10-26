@@ -28,10 +28,19 @@ public record UpdateCompanySettingsRequest(
         @Size(max = 255, message = "El contacto de privacidad no puede pasar de 255 caracteres.")
         String contactoPrivacidad,
 
-        Boolean exigirSegundoFactor) {
+        Boolean exigirSegundoFactor,
+
+        /** Preguntar presencial o a distancia al entrar (ADR 055). Null lo deja como está. */
+        Boolean preguntarModalidad) {
 
     /** Lo de antes del ADR 051: el segundo factor, como esté. */
     public UpdateCompanySettingsRequest(String nombre, String zonaHoraria, String contactoPrivacidad) {
-        this(nombre, zonaHoraria, contactoPrivacidad, null);
+        this(nombre, zonaHoraria, contactoPrivacidad, null, null);
+    }
+
+    /** Lo de antes del ADR 055: la modalidad, como esté. */
+    public UpdateCompanySettingsRequest(String nombre, String zonaHoraria, String contactoPrivacidad,
+            Boolean exigirSegundoFactor) {
+        this(nombre, zonaHoraria, contactoPrivacidad, exigirSegundoFactor, null);
     }
 }

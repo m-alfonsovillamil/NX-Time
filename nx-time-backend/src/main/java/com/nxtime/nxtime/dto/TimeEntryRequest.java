@@ -15,10 +15,22 @@ public record TimeEntryRequest(
          * con un solo proyecto asignado se usa ese, y sin ninguno se ficha sin
          * proyecto. Las demás acciones lo ignoran.
          */
-        Long proyectoId
+        Long proyectoId,
+
+        /**
+         * Solo en INICIO, y solo si la empresa la pregunta: presencial o a
+         * distancia (ADR 055). Opcional aunque la pregunte: una app que no la
+         * conoce tiene que poder fichar igual, y la jornada queda sin ella.
+         */
+        com.nxtime.nxtime.domain.Modalidad modalidad
 ) {
     /** Lo que mandan las acciones sin proyecto y las versiones de la app anteriores a la 1.4. */
     public TimeEntryRequest(TimeEntryAction tipo) {
-        this(tipo, null);
+        this(tipo, null, null);
+    }
+
+    /** Lo de antes del ADR 055: sin modalidad. */
+    public TimeEntryRequest(TimeEntryAction tipo, Long proyectoId) {
+        this(tipo, proyectoId, null);
     }
 }

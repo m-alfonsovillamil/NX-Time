@@ -35,7 +35,9 @@ public class ExcelReportGenerator {
             "Empleado", "Fecha", "Entrada", "Salida", "Pausa (min)", "Tiempo efectivo", "Incidencia",
             // La última y no junto al nombre (ADR 053): quien ya leyera este
             // Excel por posición de columna no nota el cambio.
-            "Código de empleado"
+            "Código de empleado",
+            // Igual, al final (ADR 055). Vacía si la empresa no la pregunta.
+            "Modalidad"
     };
 
     /**
@@ -47,7 +49,7 @@ public class ExcelReportGenerator {
      * contenido real de cada columna -- un nombre completo, una fecha ISO, una
      * hora "HH:mm" -- y son de sobra.
      */
-    private static final int[] ANCHOS = {28, 12, 10, 10, 12, 16, 20, 20};
+    private static final int[] ANCHOS = {28, 12, 10, 10, 12, 16, 20, 20, 14};
 
     /**
      * Filas que se quedan en memoria antes de ir volcándose al disco.
@@ -136,6 +138,7 @@ public class ExcelReportGenerator {
             fila.createCell(6).setCellValue(linea.incidencia() ? "Cierre automático" : "");
             // Como texto: «000123» como número perdería los ceros.
             fila.createCell(7).setCellValue(linea.codigoEmpleado() == null ? "" : linea.codigoEmpleado());
+            fila.createCell(8).setCellValue(com.nxtime.nxtime.domain.Modalidad.texto(linea.modalidad()));
         }
         return numeroFila;
     }
