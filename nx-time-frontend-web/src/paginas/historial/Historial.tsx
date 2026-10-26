@@ -88,7 +88,7 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
     {
       clave: 'entrada',
       cabecera: H.entrada,
-      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} origen={j.origen} />,
+      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} origen={j.origen} modalidad={j.modalidad} />,
     },
     {
       clave: 'salida',
@@ -119,7 +119,7 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
       celda: (j) => {
         // Una jornada abierta se cierra fichando, no corrigiendo: el servidor la rechaza.
         if (j.id === undefined || j.horaEntrada === undefined || j.horaSalida === undefined) return null;
-        const cerrada = { id: j.id, horaEntrada: j.horaEntrada, horaSalida: j.horaSalida };
+        const cerrada = { id: j.id, horaEntrada: j.horaEntrada, horaSalida: j.horaSalida, modalidad: j.modalidad };
         return (
           <div className="nx-acciones-fila" role="group" aria-label={H.accionesDe(fechaLarga(new Date(j.horaEntrada)))}>
             <Boton variante="texto" onClick={() => alRepartir(cerrada.id)}>

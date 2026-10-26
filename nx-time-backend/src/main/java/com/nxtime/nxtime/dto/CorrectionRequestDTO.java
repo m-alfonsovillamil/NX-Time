@@ -53,8 +53,17 @@ public record CorrectionRequestDTO(
          */
         @Valid
         @Size(max = 50, message = "El reparto no puede tener más de 50 líneas.")
-        List<ProjectShare> reparto
+        List<ProjectShare> reparto,
+
+        /** Presencial o a distancia que se pide poner (ADR 055), o null si no se toca. */
+        com.nxtime.nxtime.domain.Modalidad modalidad
 ) {
+
+    /** Lo de antes del ADR 055: sin tocar la modalidad. */
+    public CorrectionRequestDTO(Instant horaEntrada, Instant horaSalida, String motivo, Instant pausaInicio,
+            Instant pausaFin, List<ProjectShare> reparto) {
+        this(horaEntrada, horaSalida, motivo, pausaInicio, pausaFin, reparto, null);
+    }
 
     /** Para las solicitudes que solo tocan horas, que son todas las de antes. */
     public CorrectionRequestDTO(Instant horaEntrada, Instant horaSalida, String motivo) {
@@ -80,6 +89,6 @@ public record CorrectionRequestDTO(
     /** Lo que mandan las correcciones que no tocan proyectos. */
     public CorrectionRequestDTO(
             Instant horaEntrada, Instant horaSalida, String motivo, Instant pausaInicio, Instant pausaFin) {
-        this(horaEntrada, horaSalida, motivo, pausaInicio, pausaFin, null);
+        this(horaEntrada, horaSalida, motivo, pausaInicio, pausaFin, null, null);
     }
 }

@@ -25,6 +25,7 @@ import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
+import { historial } from '../../i18n/es/historial';
 import { revisiones } from '../../i18n/es/revisiones';
 import { diaEnEmpresa, fechaCorta, hora, horaDeSalida, horaEnEmpresa, minutos } from '../../util/fechas';
 
@@ -47,6 +48,10 @@ export function cambiosDe(c: Correccion): string[] {
   }
   if (c.pausaInicioPropuesta && c.pausaFinPropuesta) {
     lineas.push(C.soloPausa(hora(c.pausaInicioPropuesta), hora(c.pausaFinPropuesta)));
+  }
+  if (c.modalidadPropuesta !== undefined && c.modalidadPropuesta !== c.modalidadActual) {
+    const nombre = (m: string | undefined) => (m === undefined ? '—' : (historial.correccion.modalidades[m] ?? m));
+    lineas.push(C.modalidad(nombre(c.modalidadActual), nombre(c.modalidadPropuesta)));
   }
   const reparto = c.repartoPropuesto ?? [];
   if (reparto.length > 0) {

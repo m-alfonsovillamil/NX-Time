@@ -296,9 +296,10 @@ public class TimeEntryController {
     @PreAuthorize("hasAuthority('fichaje:leer')")
     @GetMapping("/hoy")
     public ResponseEntity<TodayStatusResponse> getHoy(Authentication authentication) {
+        boolean modalidad = timeEntryService.preguntaModalidad(authentication.getName());
         return ResponseEntity.ok(timeEntryService.motivoNoLaborableHoy(authentication.getName())
-                .map(motivo -> new TodayStatusResponse(false, motivo.texto()))
-                .orElse(new TodayStatusResponse(true, null)));
+                .map(motivo -> new TodayStatusResponse(false, motivo.texto(), modalidad))
+                .orElse(new TodayStatusResponse(true, null, modalidad)));
     }
 
     @Operation(summary = "Historial de fichajes propio",

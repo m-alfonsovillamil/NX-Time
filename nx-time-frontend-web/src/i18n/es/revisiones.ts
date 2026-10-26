@@ -43,6 +43,7 @@ export const revisiones = {
     deA: (antes: string, despues: string) => `De ${antes} a ${despues}`,
     soloPausa: (inicio: string, fin: string) => `Añadir una pausa de ${inicio} a ${fin}`,
     reparto: (texto: string) => `Reparto por proyecto: ${texto}`,
+    modalidad: (antes: string, despues: string) => `${antes} → ${despues}`,
     motivo: (texto: string) => `Motivo: ${texto}`,
     noAcepta: (texto: string) => `No lo acepta: ${texto}`,
     comentario: (texto: string) => `Respuesta: ${texto}`,
