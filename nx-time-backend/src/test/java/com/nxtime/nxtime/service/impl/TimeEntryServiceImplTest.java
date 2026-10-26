@@ -425,7 +425,7 @@ class TimeEntryServiceImplTest {
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         TimeEntry entry = TimeEntry.builder().id(1L).usuario(empleado).empresa(empresa).horaEntrada(Instant.now()).build();
         when(timeEntryRepository.findTeamHistory(eq(empresa), any(Pageable.class))).thenReturn(Paginas.page(List.of(entry)));
-        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, null, 0L, 0L, null, false);
+        TeamTimeEntryDTO dto = new TeamTimeEntryDTO(1L, Instant.now(), null, null, null, null, 0L, 0L, null, false, null, false);
         when(timeEntryMapper.toTeamDTO(entry)).thenReturn(dto);
 
         List<TeamTimeEntryDTO> result = service.getTeamHistory(gestor.getEmail(), null, PageRequest.of(0, 50)).getContent();
@@ -609,5 +609,98 @@ class TimeEntryServiceImplTest {
 
         assertThatThrownBy(() -> service.getAuditTrail(rrhh.getEmail(), 99L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    // ---- Con reloj fijo y sin conexión (ADR 054) ----
+
+    private static final Instant AHORA = Instant.parse("2026-10-26T15:00:00Z");
+
+    private TimeEntryServiceImpl conReloj() {
+        var snapshotSerializer = new TimeEntrySnapshotSerializer(new ObjectMapper());
+        var proyectos = org.mockito.Mockito.mock(com.nxtime.nxtime.service.ProjectAllocationService.class);
+        return new TimeEntryServiceImpl(
+                timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper,
+                eventPublisher, snapshotSerializer, nonWorkingDayService, proyectos,
+                new IncompleteTimeEntryCloser(timeEntryRepository, eventPublisher, snapshotSerializer, proyectos),
+                java.time.Clock.fixed(AHORA, java.time.ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("Con conexión, la hora es la del reloj del servidor y el origen el que dice el cliente")
+    void conConexion_horaDelRelojYOrigen() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+
+        TimeEntry result = conReloj().registerTimeEntry(empleado.getEmail(),
+                new TimeEntryRequest(TimeEntryAction.INICIO), com.nxtime.nxtime.domain.OrigenDelFichaje.WEB);
+
+        assertThat(result.getHoraEntrada()).isEqualTo(AHORA);
+        assertThat(result.getOrigen()).isEqualTo(com.nxtime.nxtime.domain.OrigenDelFichaje.WEB);
+    }
+
+    @Test
+    @DisplayName("Sin conexión, la salida lleva la hora en que ocurrió, y la auditoría lo dice")
+    void sinConexion_salidaConSuHora() {
+        TimeEntry abierta = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(AHORA.minus(9, ChronoUnit.HOURS)).build();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(abierta));
+        Instant ocurrido = AHORA.minus(2, ChronoUnit.HOURS);
+
+        TimeEntry result = conReloj().registrarSinConexion(empleado, new TimeEntryRequest(TimeEntryAction.FIN),
+                ocurrido, "Fichado sin conexión", false);
+
+        assertThat(result.getHoraSalida()).isEqualTo(ocurrido);
+        ArgumentCaptor<TimeEntryAuditEvent> traza = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher).publishEvent(traza.capture());
+        assertThat(traza.getValue().auditRow().getMotivo()).isEqualTo("Fichado sin conexión");
+    }
+
+    @Test
+    @DisplayName("Sin conexión, una pausa anterior a la entrada se rechaza")
+    void sinConexion_ordenImposible() {
+        TimeEntry abierta = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(AHORA.minus(1, ChronoUnit.HOURS)).build();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.of(abierta));
+
+        assertThatThrownBy(() -> conReloj().registrarSinConexion(empleado,
+                new TimeEntryRequest(TimeEntryAction.PAUSA_INICIO), AHORA.minus(2, ChronoUnit.HOURS), null, false))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("anterior al último");
+        verify(timeEntryRepository, never()).save(any(TimeEntry.class));
+    }
+
+    @Test
+    @DisplayName("Sin conexión, la salida de una jornada que cerró el sistema la reabre y la cierra con su hora")
+    void sinConexion_reabreLaQueCerroElSistema() {
+        Instant entrada = AHORA.minus(30, ChronoUnit.HOURS);
+        TimeEntry cerrada = TimeEntry.builder().id(5L).usuario(empleado).empresa(empresa)
+                .horaEntrada(entrada).horaSalida(entrada.plus(16, ChronoUnit.HOURS)).jornadaIncompleta(true).build();
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+        when(timeEntryRepository.findFirstByUsuarioAndAnuladoFalseOrderByHoraEntradaDesc(empleado))
+                .thenReturn(Optional.of(cerrada));
+        Instant salida = entrada.plus(8, ChronoUnit.HOURS);
+
+        TimeEntry result = conReloj().registrarSinConexion(empleado, new TimeEntryRequest(TimeEntryAction.FIN),
+                salida, null, false);
+
+        assertThat(result.getHoraSalida()).isEqualTo(salida);
+        assertThat(result.isJornadaIncompleta()).isFalse();
+        // Dos filas: la reapertura (del sistema) y la salida (de la persona).
+        ArgumentCaptor<TimeEntryAuditEvent> traza = ArgumentCaptor.forClass(TimeEntryAuditEvent.class);
+        verify(eventPublisher, org.mockito.Mockito.times(2)).publishEvent(traza.capture());
+        assertThat(traza.getAllValues().get(0).auditRow().getModificadoPor()).isNull();
+        assertThat(traza.getAllValues().get(1).auditRow().getModificadoPor()).isEqualTo(empleado);
+    }
+
+    @Test
+    @DisplayName("Sin conexión y pasadas 72 h, la jornada queda marcada para revisar")
+    void sinConexion_llegaTarde() {
+        when(timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(empleado)).thenReturn(Optional.empty());
+
+        TimeEntry result = conReloj().registrarSinConexion(empleado, new TimeEntryRequest(TimeEntryAction.INICIO),
+                AHORA.minus(80, ChronoUnit.HOURS), null, true);
+
+        assertThat(result.isRevisarPorLlegarTarde()).isTrue();
+        assertThat(result.getOrigen()).isEqualTo(com.nxtime.nxtime.domain.OrigenDelFichaje.APP_SIN_CONEXION);
     }
 }

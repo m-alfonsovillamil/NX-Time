@@ -227,7 +227,9 @@ public class SecurityConfig {
         // X-CSRF-Token: la que manda la web al renovar o cerrar la sesión con
         // la cookie (ADR 030). Sin ella aquí, el preflight la rechazaría.
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "Accept", "Accept-Language", "X-Request-Id", SesionWeb.CABECERA_CSRF));
+                "Authorization", "Content-Type", "Accept", "Accept-Language", "X-Request-Id", SesionWeb.CABECERA_CSRF,
+                // Desde dónde se ficha (ADR 054): «web» o «android».
+                "X-Cliente"));
 
         // Lo que el navegador puede LEER de la respuesta, que no es lo mismo
         // que lo que recibe. Sin declararlas aquí, el JavaScript no las ve

@@ -40,6 +40,18 @@ public record TeamTimeEntryDTO(
         String kiosco,
 
         /** La cerró el sistema por falta de fichaje de salida. Ver {@link TimeEntryResponse}. */
-        boolean cerradaPorElSistema
+        boolean cerradaPorElSistema,
+
+        /**
+         * Desde dónde se abrió la jornada (ADR 054): WEB, APP, KIOSCO o
+         * APP_SIN_CONEXION. Null en lo anterior a octubre de 2026.
+         */
+        com.nxtime.nxtime.domain.OrigenDelFichaje origen,
+
+        /**
+         * Le llegó un fichaje sin conexión pasadas 72 h y nadie la ha dado por
+         * buena todavía (ADR 054). Cuenta como incidencia.
+         */
+        boolean revisarPorLlegarTarde
 ) {
 }

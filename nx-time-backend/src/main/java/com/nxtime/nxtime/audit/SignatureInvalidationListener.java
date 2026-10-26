@@ -47,7 +47,8 @@ public class SignatureInvalidationListener {
             AuditAction.RECHAZO_CORRECCION,
             AuditAction.DISPUTA,
             AuditAction.PROYECTO_CAMBIADO,
-            AuditAction.REPARTO_PROYECTOS);
+            AuditAction.REPARTO_PROYECTOS,
+            AuditAction.DADO_POR_BUENO);
 
     private final MonthlySignatureService signatureService;
     private final ObjectMapper objectMapper;

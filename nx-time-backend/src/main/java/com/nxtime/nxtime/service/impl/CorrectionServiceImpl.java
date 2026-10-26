@@ -490,6 +490,10 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .horaEntrada(entrada)
                 .horaSalida(salida)
                 .segundosPausaAcumulados(original.getSegundosPausaAcumulados())
+                // Desde dónde se fichó no cambia por corregir la hora (ADR 054).
+                // revisarPorLlegarTarde no se hereda, como jornadaIncompleta:
+                // corregirla es una forma de revisarla.
+                .origen(original.getOrigen())
                 .registroOriginal(original)
                 .build();
     }

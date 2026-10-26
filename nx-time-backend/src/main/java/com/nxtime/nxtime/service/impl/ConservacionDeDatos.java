@@ -42,6 +42,8 @@ public class ConservacionDeDatos {
     static final Duration DISPOSITIVOS = Duration.ofDays(365);
     static final Duration EJECUCIONES = Duration.ofDays(365);
     static final Duration CANDIDATURAS = Duration.ofDays(365);
+    /** Lo recibido sin conexión solo sirve para no aplicarlo dos veces (ADR 054): la app reintenta horas, no meses. */
+    static final Duration FICHAJES_RECIBIDOS = Duration.ofDays(30);
     /** El registro de jornada se conserva cuatro años (art. 34.9 ET); después, nadie lo necesita. */
     static final int ANIOS_DEL_REGISTRO = 4;
     /** Ley 2/2023, art. 32.3: sin investigación, a los tres meses se suprime el contenido. */
@@ -89,6 +91,9 @@ public class ConservacionDeDatos {
 
         paso(hecho, "dispositivosPush", () -> jdbc.update(
                 "DELETE FROM dispositivos_push WHERE visto_en < ?", antes(ahora, DISPOSITIVOS)));
+
+        paso(hecho, "fichajesRecibidos", () -> jdbc.update(
+                "DELETE FROM fichajes_recibidos WHERE recibido_en < ?", antes(ahora, FICHAJES_RECIBIDOS)));
 
         paso(hecho, "ejecucionesDeTareas", () -> jdbc.update(
                 "DELETE FROM ejecuciones_tarea WHERE inicio < ?", antes(ahora, EJECUCIONES)));

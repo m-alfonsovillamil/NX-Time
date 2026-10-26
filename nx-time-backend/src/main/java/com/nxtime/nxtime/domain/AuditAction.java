@@ -50,5 +50,13 @@ public enum AuditAction {
     PROYECTO_CAMBIADO,
 
     /** Se han repartido a mano las horas de la jornada entre proyectos. */
-    REPARTO_PROYECTOS
+    REPARTO_PROYECTOS,
+
+    // --- 10/2026: fichar sin conexión (ADR 054) ---
+
+    /**
+     * Un gestor ha dado por buena una jornada a la que llegó un fichaje sin
+     * conexión pasadas 72 h. No cambia las horas: quita la marca.
+     */
+    DADO_POR_BUENO
 }

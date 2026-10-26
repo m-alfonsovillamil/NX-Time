@@ -66,6 +66,17 @@ public class ProjectAllocationServiceImpl implements ProjectAllocationService {
     }
 
     @Override
+    public void alReabrir(TimeEntry registro) {
+        List<ProjectSegment> tramos = segmentRepository.findByRegistroOrderByInicioAsc(registro);
+        if (tramos.isEmpty()) {
+            return;
+        }
+        ProjectSegment ultimo = tramos.get(tramos.size() - 1);
+        ultimo.setFin(null);
+        segmentRepository.save(ultimo);
+    }
+
+    @Override
     public void alCambiarPausas(TimeEntry registro) {
         // Con la jornada abierta no hay neto todavía: se calculará al cerrar.
         if (registro.getHoraSalida() != null) {

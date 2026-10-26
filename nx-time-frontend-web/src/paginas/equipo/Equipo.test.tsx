@@ -10,6 +10,7 @@ import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
 import { equipo } from '../../i18n/es/equipo';
 import { historial } from '../../i18n/es/historial';
+import { kiosco as K } from '../../i18n/es/kiosco';
 import { json, pintar, sesionDe, sinContenido, simularApi } from '../../pruebas/api';
 import { cambiosDeHora, leerInstantanea } from './DialogoAuditoria';
 import { HistorialEquipo } from './HistorialEquipo';
@@ -91,6 +92,31 @@ describe('historial del equipo', () => {
 
     await screen.findByRole('cell', { name: 'Javier' });
     expect(screen.getAllByText(historial.cerradaPorElSistema)).toHaveLength(1);
+  });
+
+  /* ADR 054: lo fichado sin conexión lleva su distintivo, y lo que llegó tarde se da por bueno. */
+  it('lo que llegó sin conexión pasadas 72 h se marca, y un GESTOR lo da por bueno', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/mis-empleados': () => EMPLEADOS,
+      'GET /api/v1/fichaje/gestor/historial': () => ({
+        contenido: [
+          fila(10, 2, 'Javier', { origen: 'APP_SIN_CONEXION', revisarPorLlegarTarde: true }),
+          fila(11, 3, 'Ana', { origen: 'APP_SIN_CONEXION' }),
+        ],
+        hayMas: false,
+      }),
+      'POST /api/v1/fichaje/{id}/dar-por-bueno': () => json({ id: 10 }),
+    });
+    pintar(<HistorialEquipo />, { sesion: sesionDe('GESTOR') });
+
+    await screen.findByRole('cell', { name: 'Javier' });
+    expect(screen.getAllByText(K.distintivoSinConexion)).toHaveLength(2);
+    expect(screen.getAllByText(E.revisarTarde)).toHaveLength(1);
+    // Solo en la que hay que revisar.
+    expect(screen.getAllByRole('button', { name: E.darPorBueno })).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole('button', { name: E.darPorBueno }));
+    await waitFor(() => expect(llamadas.a('POST', '/api/v1/fichaje/10/dar-por-bueno')).toHaveLength(1));
   });
 
   /* ADR 015: la corrección del fichaje de otra persona la aprueba ella. */

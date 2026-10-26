@@ -187,6 +187,12 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
             return (delSistema == 1 ? "Una jornada la cerró" : delSistema + " jornadas las cerró")
                     + " el sistema porque faltaba la salida. Pide que se corrijan antes de firmar.";
         }
+        // ADR 054: lo que llegó sin conexión pasadas 72 h no lo ha comprobado nadie.
+        long tarde = fichajes.stream().filter(TimeEntry::isRevisarPorLlegarTarde).count();
+        if (tarde > 0) {
+            return (tarde == 1 ? "A una jornada le llegó" : "A " + tarde + " jornadas les llegó")
+                    + " un fichaje sin conexión con más de tres días de retraso. Pide que lo revisen antes de firmar.";
+        }
         return null;
     }
 

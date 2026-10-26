@@ -11,6 +11,9 @@ import com.nxtime.nxtime.dto.ClockProjectsResponse;
 import com.nxtime.nxtime.dto.CorrectionRequestDTO;
 import com.nxtime.nxtime.dto.CorrectionResponse;
 import com.nxtime.nxtime.dto.SetAllocationsRequest;
+import com.nxtime.nxtime.dto.SinConexionDtos;
+import com.nxtime.nxtime.domain.OrigenDelFichaje;
+import com.nxtime.nxtime.service.impl.RecepcionDeFichajesSinConexion;
 import com.nxtime.nxtime.dto.TeamTimeEntryDTO;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.dto.TimeEntryResponse;
@@ -49,6 +52,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -71,18 +75,21 @@ public class TimeEntryController {
     private final CorrectionService correctionService;
     private final AddedPauseService addedPauseService;
     private final AllocationEditService allocationEditService;
+    private final RecepcionDeFichajesSinConexion sinConexion;
 
     public TimeEntryController(
             TimeEntryService timeEntryService,
             TimeEntryMapper timeEntryMapper,
             CorrectionService correctionService,
             AddedPauseService addedPauseService,
-            AllocationEditService allocationEditService) {
+            AllocationEditService allocationEditService,
+            RecepcionDeFichajesSinConexion sinConexion) {
         this.timeEntryService = timeEntryService;
         this.timeEntryMapper = timeEntryMapper;
         this.correctionService = correctionService;
         this.addedPauseService = addedPauseService;
         this.allocationEditService = allocationEditService;
+        this.sinConexion = sinConexion;
     }
 
     @Operation(summary = "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
@@ -105,9 +112,58 @@ public class TimeEntryController {
     @PreAuthorize("hasAuthority('fichaje:escribir')")
     @PostMapping
     public ResponseEntity<TimeEntryResponse> registerTimeEntry(
-            @Valid @RequestBody TimeEntryRequest request, Authentication authentication) {
-        var entry = timeEntryService.registerTimeEntry(authentication.getName(), request);
+            @Valid @RequestBody TimeEntryRequest request,
+            @RequestHeader(name = "X-Cliente", required = false) String cliente,
+            Authentication authentication) {
+        var entry = timeEntryService.registerTimeEntry(authentication.getName(), request,
+                OrigenDelFichaje.deCabecera(cliente));
         return ResponseEntity.ok(timeEntryMapper.toResponse(entry));
+    }
+
+    @Operation(summary = "Enviar los fichajes hechos sin conexión",
+            description = "La app los manda al volver la red, en el orden en que se hicieron (ADR 054). Cada uno se "
+                    + "aplica con la hora en que ocurrió y en su propia transacción: un rechazo no deshace los "
+                    + "anteriores. Repetir un fichaje con el mismo 'idCliente' devuelve lo mismo que la primera vez, "
+                    + "con 'yaRecibido'. Lo que llega pasadas 72 h se aplica para revisar (A_REVISAR).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Un resultado por fichaje, en el mismo orden",
+                    content = @Content(schema = @Schema(implementation = SinConexionDtos.EnvioResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Lista vacía, de más de 50, o un fichaje sin sus datos",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Sin la authority 'fichaje:escribir'",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('fichaje:escribir')")
+    @PostMapping("/sin-conexion")
+    public ResponseEntity<SinConexionDtos.EnvioResponse> enviarSinConexion(
+            @Valid @RequestBody SinConexionDtos.EnvioRequest request, Authentication authentication) {
+        var resultados = sinConexion.recibir(authentication.getName(), request.fichajes());
+        var jornada = timeEntryService.getActiveTimeEntry(authentication.getName())
+                .map(timeEntryMapper::toResponse)
+                .orElse(null);
+        return ResponseEntity.ok(new SinConexionDtos.EnvioResponse(resultados, jornada));
+    }
+
+    @Operation(summary = "Dar por buena una jornada que llegó tarde",
+            description = "Quita la marca de una jornada a la que llegó un fichaje sin conexión pasadas 72 h "
+                    + "(ADR 054). No cambia las horas: si no valen, lo que toca es una corrección.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Revisada",
+                    content = @Content(schema = @Schema(implementation = TimeEntryResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Sin 'correccion:aprobar', de otra empresa, o propia "
+                    + "habiendo alguien más que pueda revisarla",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "No existe",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No tiene nada que revisar, o sigue abierta",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('correccion:aprobar')")
+    @PostMapping("/{id}/dar-por-bueno")
+    public ResponseEntity<TimeEntryResponse> darPorBueno(@PathVariable long id, Authentication authentication) {
+        return ResponseEntity.ok(timeEntryMapper.toResponse(timeEntryService.darPorBueno(authentication.getName(), id)));
     }
 
     @Operation(summary = "Consultar la jornada activa", description = "204 si no hay ninguna jornada abierta.")
