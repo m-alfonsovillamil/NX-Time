@@ -19,10 +19,10 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { cliente } from '../../api/cliente';
-import { pedir, useListaPaginada } from '../../api/consultas';
+import { pedir, useListaPaginada, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { Boton, Selector } from '../../componentes/Basicos';
+import { Aviso, Boton, Insignia, Selector } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
 import { SalidaDeJornada } from '../../componentes/SalidaDeJornada';
@@ -44,9 +44,11 @@ const TAMANO = 50;
 interface Acciones {
   alCorregir: ((j: JornadaCerrada, persona: string) => void) | null;
   alAuditar: ((fichajeId: number) => void) | null;
+  /** Quita la marca de lo que llegó sin conexión pasadas 72 h (ADR 054). */
+  alDarPorBueno: ((fichajeId: number) => void) | null;
 }
 
-function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Columna<Fila>[] {
+function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }: Acciones): Columna<Fila>[] {
   const todas: (Columna<Fila> | null)[] = [
     { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha) },
     conPersona
@@ -64,7 +66,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
     {
       clave: 'entrada',
       cabecera: E.entrada,
-      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} />,
+      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} />,
     },
     {
       clave: 'salida',
@@ -73,7 +75,14 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
         f.horaSalida === undefined ? (
           E.enCurso
         ) : (
-          <SalidaDeJornada salida={horaDeSalida(f.horaEntrada, f.horaSalida)} cerradaPorElSistema={f.cerradaPorElSistema} />
+          <span className="nx-con-distintivo">
+            <SalidaDeJornada salida={horaDeSalida(f.horaEntrada, f.horaSalida)} cerradaPorElSistema={f.cerradaPorElSistema} />
+            {f.revisarPorLlegarTarde === true && (
+              <span title={E.revisarTardeDetalle}>
+                <Insignia tono="aviso">{E.revisarTarde}</Insignia>
+              </span>
+            )}
+          </span>
         ),
     },
     {
@@ -91,7 +100,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
         f.horaSalida === undefined ? '—' : duracion(segundosTrabajados(f.horaEntrada, f.horaSalida, f.segundosPausaAcumulados ?? 0)),
       numerica: true,
     },
-    alCorregir !== null || alAuditar !== null
+    alCorregir !== null || alAuditar !== null || alDarPorBueno !== null
       ? {
           clave: 'acciones',
           cabecera: E.acciones,
@@ -114,6 +123,11 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar }: Acciones): Col
                 {alAuditar !== null && (
                   <Boton variante="texto" onClick={() => alAuditar(id)}>
                     {E.verAuditoria}
+                  </Boton>
+                )}
+                {alDarPorBueno !== null && cerrada !== null && f.revisarPorLlegarTarde === true && (
+                  <Boton variante="texto" onClick={() => alDarPorBueno(id)}>
+                    {E.darPorBueno}
                   </Boton>
                 )}
               </div>
@@ -148,7 +162,17 @@ function Jornadas({ personaId, nombre, acciones }: { personaId: number | null; n
 
   return (
     <>
-      <Tabla titulo={E.tablaTitulo} columnas={columnas(personaId === null, acciones)} filas={lista.elementos} claveDeFila={(f) => f.id ?? 0} />
+      <Tabla
+        titulo={E.tablaTitulo}
+        columnas={columnas(personaId === null, {
+          ...acciones,
+          // Solo si hay algo que revisar: un GESTOR puede dar por bueno, pero
+          // una columna de acciones siempre vacía no le dice nada.
+          alDarPorBueno: lista.elementos.some((f) => f.revisarPorLlegarTarde === true) ? acciones.alDarPorBueno : null,
+        })}
+        filas={lista.elementos}
+        claveDeFila={(f) => f.id ?? 0}
+      />
       <FinDeLista
         hayMas={lista.hasNextPage}
         cargando={lista.isFetchingNextPage}
@@ -176,9 +200,16 @@ export function HistorialEquipo() {
   const personaId = Number.isInteger(elegida) && elegida > 0 ? elegida : null;
   const nombre = personaId !== null ? (personas.find((p) => p.id === personaId)?.nombre ?? null) : null;
 
+  const darPorBueno = useMutacion(
+    (fichajeId: number) =>
+      pedir(cliente.POST('/api/v1/fichaje/{id}/dar-por-bueno', { params: { path: { id: fichajeId } } })),
+    { invalida: [CLAVE_EQUIPO], exito: E.dadoPorBueno },
+  );
+
   const acciones: Acciones = {
     alCorregir: puede('fichaje:corregir') ? (jornada, persona) => setCorrigiendo({ jornada, persona }) : null,
     alAuditar: puede('fichaje:auditoria') ? setAuditando : null,
+    alDarPorBueno: puede('correccion:aprobar') ? (id) => darPorBueno.mutate(id) : null,
   };
 
   return (
@@ -202,6 +233,7 @@ export function HistorialEquipo() {
             />
           </div>
         )}
+        {darPorBueno.error !== null && <Aviso>{darPorBueno.error.message}</Aviso>}
         <Jornadas personaId={personaId} nombre={nombre} acciones={acciones} />
       </section>
 

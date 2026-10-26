@@ -1,6 +1,8 @@
 package com.nxtime.nxtime.domain;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -110,6 +112,22 @@ public class TimeEntry {
     @ManyToOne
     @JoinColumn(name = "kiosco_id")
     private Kiosk kiosco;
+
+    /**
+     * Desde dónde se abrió la jornada (V50, ADR 054), o null si es anterior a
+     * V50 o el cliente no lo dijo.
+     */
+    @Enumerated(EnumType.STRING)
+    private OrigenDelFichaje origen;
+
+    /**
+     * Un fichaje sin conexión la tocó llegando pasadas 72 h (ADR 054): las
+     * horas son las del móvil, pero nadie las ha comprobado. Como
+     * {@link #jornadaIncompleta}, cuenta como incidencia y no deja firmar el
+     * mes hasta que un gestor la da por buena o la corrige.
+     */
+    @Builder.Default
+    private boolean revisarPorLlegarTarde = false;
 
     @Version
     private long version;

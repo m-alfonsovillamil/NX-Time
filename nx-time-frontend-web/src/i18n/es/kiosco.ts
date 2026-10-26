@@ -100,4 +100,6 @@ export const kiosco = {
   },
 
   distintivo: (nombre: string) => `Kiosco · ${nombre}`,
+  /** Se fichó en la app sin conexión y llegó después (ADR 054). */
+  distintivoSinConexion: 'Sin conexión',
 } as const;

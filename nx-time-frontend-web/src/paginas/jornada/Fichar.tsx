@@ -97,7 +97,9 @@ export function Fichar() {
   // escritura por terminada hasta haber invalidado, así que un segundo clic no
   // puede salir con el estado de antes (fichar la salida dos veces, por ejemplo).
   const fichar = useMutacion(
-    (peticion: { tipo: Tipo; proyectoId?: number }) => pedir(cliente.POST('/api/v1/fichaje', { body: peticion })),
+    // X-Cliente: queda dicho que se fichó desde la web (ADR 054).
+    (peticion: { tipo: Tipo; proyectoId?: number }) =>
+      pedir(cliente.POST('/api/v1/fichaje', { body: peticion, headers: { 'X-Cliente': 'web' } })),
     {
       invalida: TRAS_CAMBIAR_TIEMPO,
       alTerminar: () => {

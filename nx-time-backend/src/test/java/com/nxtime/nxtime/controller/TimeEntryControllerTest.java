@@ -69,14 +69,17 @@ class TimeEntryControllerTest {
     @MockitoBean
     private com.nxtime.nxtime.service.AllocationEditService allocationEditService;
 
+    @MockitoBean
+    private com.nxtime.nxtime.service.impl.RecepcionDeFichajesSinConexion sinConexion;
+
     @Test
     @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
     @DisplayName("POST /fichaje con la authority correcta y cuerpo válido devuelve 200")
     void registerTimeEntry_conAuthorityYCuerpoValido_devuelve200() throws Exception {
         TimeEntry entry = TimeEntry.builder().id(1L).build();
-        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
+        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any(), any())).thenReturn(entry);
         when(timeEntryMapper.toResponse(entry))
-                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null, null, false));
+                .thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null, null, false, null, false));
 
         mockMvc.perform(post("/api/v1/fichaje")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +124,7 @@ class TimeEntryControllerTest {
         TimeEntry fichaje = TimeEntry.builder().id(9L).build();
         when(timeEntryService.getHistory(eq("empleado@nxtime.test"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(fichaje), PageRequest.of(0, 50), 51));
-        when(timeEntryMapper.toResponse(fichaje)).thenReturn(new TimeEntryResponse(9L, Instant.now(), null, false, 0, 0, null, null, false));
+        when(timeEntryMapper.toResponse(fichaje)).thenReturn(new TimeEntryResponse(9L, Instant.now(), null, false, 0, 0, null, null, false, null, false));
 
         mockMvc.perform(get("/api/v1/fichaje/historial"))
                 .andExpect(status().isOk())
@@ -162,15 +165,77 @@ class TimeEntryControllerTest {
     @DisplayName("POST /fichaje con proyectoId lo pasa al servicio; sin él, también vale")
     void registerTimeEntry_conProyecto() throws Exception {
         TimeEntry entry = TimeEntry.builder().id(1L).build();
-        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any())).thenReturn(entry);
-        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null, null, false));
+        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any(), any())).thenReturn(entry);
+        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null, null, false, null, false));
 
         mockMvc.perform(post("/api/v1/fichaje").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tipo\":\"INICIO\",\"proyectoId\":7}"))
                 .andExpect(status().isOk());
 
         verify(timeEntryService).registerTimeEntry("empleado@nxtime.test",
-                new com.nxtime.nxtime.dto.TimeEntryRequest(com.nxtime.nxtime.domain.TimeEntryAction.INICIO, 7L));
+                new com.nxtime.nxtime.dto.TimeEntryRequest(com.nxtime.nxtime.domain.TimeEntryAction.INICIO, 7L), null);
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
+    @DisplayName("POST /fichaje con X-Cliente dice desde dónde se fichó (ADR 054)")
+    void registerTimeEntry_conCabeceraDeCliente() throws Exception {
+        TimeEntry entry = TimeEntry.builder().id(1L).build();
+        when(timeEntryService.registerTimeEntry(eq("empleado@nxtime.test"), any(), any())).thenReturn(entry);
+        when(timeEntryMapper.toResponse(entry)).thenReturn(new TimeEntryResponse(1L, Instant.now(), null, false, 0, 0, null, null, false, null, false));
+
+        mockMvc.perform(post("/api/v1/fichaje").contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Cliente", "android")
+                        .content("{\"tipo\":\"INICIO\"}"))
+                .andExpect(status().isOk());
+
+        verify(timeEntryService).registerTimeEntry("empleado@nxtime.test",
+                new com.nxtime.nxtime.dto.TimeEntryRequest(com.nxtime.nxtime.domain.TimeEntryAction.INICIO),
+                com.nxtime.nxtime.domain.OrigenDelFichaje.APP);
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
+    @DisplayName("POST /fichaje/sin-conexion devuelve un resultado por fichaje y la jornada abierta")
+    void sinConexion_devuelveResultados() throws Exception {
+        java.util.UUID id = java.util.UUID.randomUUID();
+        when(sinConexion.recibir(eq("empleado@nxtime.test"), any())).thenReturn(List.of(
+                new com.nxtime.nxtime.dto.SinConexionDtos.Resultado(id,
+                        com.nxtime.nxtime.domain.FichajeRecibido.Resultado.APLICADO, false, null, 3L, Instant.now())));
+        when(timeEntryService.getActiveTimeEntry("empleado@nxtime.test")).thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/api/v1/fichaje/sin-conexion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fichajes\":[{\"idCliente\":\"" + id + "\",\"tipo\":\"INICIO\","
+                                + "\"horaDelDispositivo\":\"2026-10-26T07:00:00Z\",\"msDesdeElFichaje\":3600000}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultados[0].resultado").value("APLICADO"))
+                .andExpect(jsonPath("$.resultados[0].registroId").value(3))
+                .andExpect(jsonPath("$.jornada").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:escribir")
+    @DisplayName("POST /fichaje/sin-conexion con la lista vacía o sin hora devuelve 400")
+    void sinConexion_validacion() throws Exception {
+        mockMvc.perform(post("/api/v1/fichaje/sin-conexion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fichajes\":[]}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/v1/fichaje/sin-conexion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fichajes\":[{\"idCliente\":\"" + java.util.UUID.randomUUID()
+                                + "\",\"tipo\":\"INICIO\"}]}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "fichaje:leer")
+    @DisplayName("POST /fichaje/sin-conexion sin 'fichaje:escribir' y dar por bueno sin 'correccion:aprobar' devuelven 403")
+    void sinConexionYDarPorBueno_sinAuthority_devuelven403() throws Exception {
+        mockMvc.perform(post("/api/v1/fichaje/sin-conexion").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fichajes\":[{\"idCliente\":\"" + java.util.UUID.randomUUID()
+                                + "\",\"tipo\":\"INICIO\",\"horaDelDispositivo\":\"2026-10-26T07:00:00Z\"}]}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/fichaje/5/dar-por-bueno"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

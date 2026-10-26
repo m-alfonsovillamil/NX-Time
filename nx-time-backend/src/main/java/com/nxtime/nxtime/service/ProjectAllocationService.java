@@ -34,6 +34,13 @@ public interface ProjectAllocationService {
     /** La jornada se acaba de cerrar (salida fichada o cierre nocturno). */
     void alCerrar(TimeEntry registro);
 
+    /**
+     * Una jornada que cerró el sistema vuelve a estar abierta, porque llegó sin
+     * conexión un fichaje de antes de ese cierre (ADR 054): el último tramo
+     * vuelve a quedar en curso. El reparto se rehace al cerrarla de nuevo.
+     */
+    void alReabrir(TimeEntry registro);
+
     /** Han cambiado las pausas de la jornada (pausa añadida o deshecha). */
     void alCambiarPausas(TimeEntry registro);
 

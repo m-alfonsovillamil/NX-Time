@@ -6,6 +6,7 @@ import com.nxtime.nxtime.config.CacheConfig;
 import com.nxtime.nxtime.domain.AuditAction;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Kiosk;
+import com.nxtime.nxtime.domain.OrigenDelFichaje;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.TimeEntryAction;
 import com.nxtime.nxtime.domain.TimeEntryAudit;
@@ -26,9 +27,12 @@ import com.nxtime.nxtime.repository.TimeEntryAuditRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.TimeEntryService;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -82,7 +87,9 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     private final NonWorkingDayService nonWorkingDayService;
     private final ProjectAllocationService projectAllocationService;
     private final IncompleteTimeEntryCloser cierreDeOlvidadas;
+    private final Clock clock;
 
+    @Autowired
     public TimeEntryServiceImpl(
             TimeEntryRepository timeEntryRepository,
             TimeEntryAuditRepository timeEntryAuditRepository,
@@ -94,6 +101,24 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             ProjectAllocationService projectAllocationService,
             IncompleteTimeEntryCloser cierreDeOlvidadas
     ) {
+        this(timeEntryRepository, timeEntryAuditRepository, userRepository, timeEntryMapper, eventPublisher,
+                snapshotSerializer, nonWorkingDayService, projectAllocationService, cierreDeOlvidadas,
+                Clock.systemUTC());
+    }
+
+    /** Con un reloj fijo, para los tests. */
+    TimeEntryServiceImpl(
+            TimeEntryRepository timeEntryRepository,
+            TimeEntryAuditRepository timeEntryAuditRepository,
+            UserRepository userRepository,
+            TimeEntryMapper timeEntryMapper,
+            ApplicationEventPublisher eventPublisher,
+            TimeEntrySnapshotSerializer snapshotSerializer,
+            NonWorkingDayService nonWorkingDayService,
+            ProjectAllocationService projectAllocationService,
+            IncompleteTimeEntryCloser cierreDeOlvidadas,
+            Clock clock
+    ) {
         this.timeEntryRepository = timeEntryRepository;
         this.timeEntryAuditRepository = timeEntryAuditRepository;
         this.userRepository = userRepository;
@@ -103,6 +128,24 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         this.nonWorkingDayService = nonWorkingDayService;
         this.projectAllocationService = projectAllocationService;
         this.cierreDeOlvidadas = cierreDeOlvidadas;
+        this.clock = clock;
+    }
+
+    /**
+     * Cuándo y desde dónde se ficha (ADR 054). Con conexión, ahora; sin
+     * conexión, la hora en que ocurrió, que puede ser de hace horas.
+     *
+     * @param motivo      lo que añade a la auditoría (de dónde sale la hora), o null
+     * @param sinConexion llegó de la cola del móvil: se comprueba el orden y se
+     *                    puede reabrir una jornada que cerró el sistema
+     * @param llegaTarde  llegó pasadas 72 h: la jornada queda para revisar
+     */
+    record Momento(Instant instante, OrigenDelFichaje origen, String motivo, boolean sinConexion,
+            boolean llegaTarde) {
+
+        static Momento ahora(Instant ahora, OrigenDelFichaje origen) {
+            return new Momento(ahora, origen, null, false, false);
+        }
     }
 
     // Desde la Fase 3 (PostgreSQL + IDENTITY) esto SÍ es una transacción
@@ -117,9 +160,33 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
             key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#userEmail)")
     public TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request) {
+        return registerTimeEntry(userEmail, request, null);
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
+            key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#userEmail)")
+    public TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request, OrigenDelFichaje origen) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + userEmail));
-        return registrar(user, request, null);
+        return registrar(user, request, null, Momento.ahora(clock.instant(), origen));
+    }
+
+    /**
+     * Un fichaje que se hizo sin conexión y llega ahora (ADR 054). Las mismas
+     * reglas que con conexión, con la hora en que ocurrió. Lo llama
+     * {@link RecepcionDeFichajesSinConexion}, que pone la transacción y decide
+     * la hora y si llega tarde.
+     */
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
+            key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#persona.email)")
+    public TimeEntry registrarSinConexion(User persona, TimeEntryRequest request, Instant ocurrido, String motivo,
+            boolean llegaTarde) {
+        return registrar(persona, request, null,
+                new Momento(ocurrido, OrigenDelFichaje.APP_SIN_CONEXION, motivo, true, llegaTarde));
     }
 
     /**
@@ -132,13 +199,21 @@ public class TimeEntryServiceImpl implements TimeEntryService {
     @CacheEvict(cacheNames = CacheConfig.DASHBOARD,
             key = "T(com.nxtime.nxtime.config.CacheConfig).clavePanelPersonal(#persona.email)")
     public TimeEntry registrarDesdeKiosco(User persona, Kiosk kiosco, TimeEntryRequest request) {
-        return registrar(persona, request, kiosco);
+        return registrar(persona, request, kiosco, Momento.ahora(clock.instant(), OrigenDelFichaje.KIOSCO));
     }
 
-    private TimeEntry registrar(User user, TimeEntryRequest request, Kiosk kiosco) {
+    private TimeEntry registrar(User user, TimeEntryRequest request, Kiosk kiosco, Momento momento) {
+        Instant cuando = momento.instante();
         TimeEntry activeEntry = timeEntryRepository.findByUsuarioAndHoraSalidaIsNull(user).orElse(null);
 
-        if (activeEntry != null && IncompleteTimeEntryCloser.estaOlvidada(activeEntry, Instant.now())) {
+        if (activeEntry == null && momento.sinConexion() && request.tipo() != TimeEntryAction.INICIO) {
+            // La salida (o una pausa) de una jornada que el proceso de las
+            // 3:00 cerró mientras el móvil no tenía red: ese cierre era un
+            // tope, y ahora llega el dato de verdad.
+            activeEntry = reabrirSiLaCerroElSistema(user, cuando).orElse(null);
+        }
+
+        if (activeEntry != null && IncompleteTimeEntryCloser.estaOlvidada(activeEntry, cuando)) {
             // Una jornada que se quedó abierta más del límite ya no se puede
             // seguir como si nada: se cierra aquí como la cerraría el proceso
             // de las 3:00, con la salida en el tope y marcada para corregir.
@@ -160,9 +235,17 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             activeEntry = null;
         }
 
+        if (momento.sinConexion()) {
+            comprobarElOrden(user, activeEntry, request.tipo(), cuando);
+        }
+
         // Instantánea de "antes" para la auditoría: se toma ya, antes de
         // que ninguna de las ramas de abajo mute activeEntry.
         String beforeJson = (activeEntry != null) ? toJson(activeEntry) : null;
+        if (activeEntry != null && momento.llegaTarde()) {
+            activeEntry.setRevisarPorLlegarTarde(true);
+        }
+        LocalDate dia = cuando.atZone(user.zona()).toLocalDate();
 
         AuditAction accion;
         String motivoAuditoria = null;
@@ -171,16 +254,18 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 if (activeEntry != null) {
                     throw new BusinessException("Ya hay una jornada activa.");
                 }
-                Project proyecto = proyectoAlIniciar(user, request.proyectoId());
+                Project proyecto = proyectoAlIniciar(user, request.proyectoId(), dia);
                 motivoAuditoria = proyecto != null ? "Proyecto: " + proyecto.getCodigo() : null;
                 TimeEntry newEntry = TimeEntry.builder()
                         .usuario(user)
                         .empresa(user.getEmpresa())
-                        .horaEntrada(Instant.now())
+                        .horaEntrada(cuando)
                         .kiosco(kiosco)
+                        .origen(momento.origen())
+                        .revisarPorLlegarTarde(momento.llegaTarde())
                         .build();
                 accion = AuditAction.CREACION;
-                avisarSiNoEsLaborable(user);
+                avisarSiNoEsLaborable(user, dia);
                 TimeEntry creada = timeEntryRepository.save(newEntry);
                 if (proyecto != null) {
                     projectAllocationService.abrirTramo(creada, proyecto);
@@ -194,7 +279,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 if (activeEntry.isEnPausa()) {
                     throw new BusinessException("No se puede finalizar la jornada mientras está en pausa.");
                 }
-                activeEntry.setHoraSalida(Instant.now());
+                activeEntry.setHoraSalida(cuando);
                 accion = AuditAction.MODIFICACION;
                 TimeEntry cerrada = timeEntryRepository.save(activeEntry);
                 // Con la salida ya hay neto: se reparte entre proyectos (ADR 017).
@@ -209,7 +294,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new BusinessException("La jornada ya está en pausa.");
                 }
                 activeEntry.setEnPausa(true);
-                activeEntry.setInicioPausaActual(Instant.now());
+                activeEntry.setInicioPausaActual(cuando);
                 accion = AuditAction.MODIFICACION;
                 yield timeEntryRepository.save(activeEntry);
             }
@@ -227,8 +312,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new IllegalStateException("No se encontró el inicio de la pausa para el fichaje " + activeEntry.getId());
                 }
 
-                Instant ahora = Instant.now();
-                Duration duracionPausa = Duration.between(inicioPausa, ahora);
+                Duration duracionPausa = Duration.between(inicioPausa, cuando);
 
                 activeEntry.setSegundosPausaAcumulados(activeEntry.getSegundosPausaAcumulados() + duracionPausa.getSeconds());
                 // La pausa cae entera en el tramo en curso: no se puede cambiar
@@ -249,12 +333,13 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 .accion(accion)
                 .valorAnterior(beforeJson)
                 .valorNuevo(toJson(result))
-                .motivo(conKiosco(motivoAuditoria, kiosco))
+                .motivo(juntar(conKiosco(motivoAuditoria, kiosco), momento.motivo()))
                 .build();
         eventPublisher.publishEvent(new TimeEntryAuditEvent(auditRow));
 
-        log.info("Fichaje {} registrado para {} (fichaje id={}{})", request.tipo(), user.getId(), result.getId(),
-                kiosco == null ? "" : ", kiosco " + kiosco.getId());
+        log.info("Fichaje {} registrado para {} (fichaje id={}{}{})", request.tipo(), user.getId(), result.getId(),
+                kiosco == null ? "" : ", kiosco " + kiosco.getId(),
+                momento.sinConexion() ? ", sin conexión" : "");
         return result;
     }
 
@@ -272,6 +357,81 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         return motivo == null ? desde : motivo + " · " + desde;
     }
 
+    private static String juntar(String motivo, String mas) {
+        if (mas == null) {
+            return motivo;
+        }
+        return motivo == null ? mas : motivo + " · " + mas;
+    }
+
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    static String hora(Instant instante, ZoneId zona) {
+        return HORA.format(instante.atZone(zona));
+    }
+
+    /**
+     * Lo que llega sin conexión no puede caer antes de lo que ya consta (ADR
+     * 054): una pausa anterior a la entrada, o una entrada que pisa la jornada
+     * anterior, no son un fichaje sino un reloj mal puesto o una cola
+     * desordenada. Con conexión no hace falta: la hora es la del servidor y
+     * siempre va hacia delante.
+     */
+    private void comprobarElOrden(User user, TimeEntry abierta, TimeEntryAction tipo, Instant cuando) {
+        if (abierta != null) {
+            Instant ultimo = abierta.isEnPausa() && abierta.getInicioPausaActual() != null
+                    ? abierta.getInicioPausaActual() : abierta.getHoraEntrada();
+            if (cuando.isBefore(ultimo)) {
+                throw new BusinessException("Este fichaje (" + hora(cuando, user.zona())
+                        + ") es anterior al último de esa jornada (" + hora(ultimo, user.zona()) + ").");
+            }
+            return;
+        }
+        if (tipo != TimeEntryAction.INICIO) {
+            return; // sin jornada abierta, la máquina de estados ya lo rechaza
+        }
+        timeEntryRepository.findFirstByUsuarioAndAnuladoFalseOrderByHoraEntradaDesc(user)
+                .filter(anterior -> anterior.getHoraSalida() != null && cuando.isBefore(anterior.getHoraSalida()))
+                .ifPresent(anterior -> {
+                    throw new BusinessException("Esta entrada (" + hora(cuando, user.zona())
+                            + ") se solapa con la jornada anterior, que acaba el "
+                            + hora(anterior.getHoraSalida(), user.zona()) + ". Pide que te la corrijan.");
+                });
+    }
+
+    /**
+     * Si la última jornada la cerró el proceso de las 3:00 y este fichaje cae
+     * dentro de ella, se vuelve a abrir (ADR 054): la salida del cierre era un
+     * tope a falta de dato, y el dato ha llegado. Queda en la auditoría como
+     * acción del sistema, igual que el cierre.
+     */
+    private Optional<TimeEntry> reabrirSiLaCerroElSistema(User user, Instant cuando) {
+        return timeEntryRepository.findFirstByUsuarioAndAnuladoFalseOrderByHoraEntradaDesc(user)
+                .filter(TimeEntry::isJornadaIncompleta)
+                .filter(ultima -> ultima.getHoraSalida() != null
+                        && cuando.isAfter(ultima.getHoraEntrada())
+                        && cuando.isBefore(ultima.getHoraSalida()))
+                .map(ultima -> {
+                    String antes = toJson(ultima);
+                    ultima.setHoraSalida(null);
+                    ultima.setJornadaIncompleta(false);
+                    projectAllocationService.alReabrir(ultima);
+                    TimeEntry reabierta = timeEntryRepository.save(ultima);
+                    eventPublisher.publishEvent(new TimeEntryAuditEvent(TimeEntryAudit.builder()
+                            .registro(reabierta)
+                            .usuario(user)
+                            .modificadoPor(null) // como el cierre: lo hace el sistema
+                            .accion(AuditAction.MODIFICACION)
+                            .valorAnterior(antes)
+                            .valorNuevo(toJson(reabierta))
+                            .motivo("Reabierta: llega sin conexión un fichaje de antes del cierre automático.")
+                            .build()));
+                    log.info("Jornada {} de {} reabierta: llega sin conexión un fichaje de antes del cierre.",
+                            reabierta.getId(), user.getId());
+                    return reabierta;
+                });
+    }
+
     /**
      * En qué proyecto empieza la jornada (ADR 017).
      *
@@ -285,8 +445,8 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      *       que se cambie o se repartan.</li>
      * </ul>
      */
-    private Project proyectoAlIniciar(User user, Long proyectoId) {
-        List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, LocalDate.now(user.zona()));
+    private Project proyectoAlIniciar(User user, Long proyectoId, LocalDate dia) {
+        List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, dia);
         if (proyectoId != null) {
             return disponibles.stream()
                     .filter(p -> p.getId() == proyectoId)
@@ -321,7 +481,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             throw new BusinessException("La jornada ya está cerrada. Para repartir sus horas entre proyectos, "
                     + "hazlo desde el historial.");
         }
-        if (IncompleteTimeEntryCloser.estaOlvidada(registro, Instant.now())) {
+        if (IncompleteTimeEntryCloser.estaOlvidada(registro, clock.instant())) {
             // Como al fichar sobre una jornada olvidada (ver registrar): se
             // cierra en su tope. Abrirle un tramo ahora sería imputar a un
             // proyecto horas que caen fuera de la jornada. La excepción no
@@ -347,7 +507,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         }
 
         String antes = toJson(registro);
-        projectAllocationService.cambiarDeProyecto(registro, nuevo, Instant.now());
+        projectAllocationService.cambiarDeProyecto(registro, nuevo, clock.instant());
         eventPublisher.publishEvent(new TimeEntryAuditEvent(TimeEntryAudit.builder()
                 .registro(registro)
                 .usuario(user)
@@ -385,8 +545,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      * esperaba. El aviso sale después del commit, así que si el INICIO
      * falla no se avisa de nada.
      */
-    private void avisarSiNoEsLaborable(User user) {
-        LocalDate hoy = LocalDate.now(user.zona());
+    private void avisarSiNoEsLaborable(User user, LocalDate hoy) {
         nonWorkingDayService.motivo(user, hoy).ifPresent(motivo -> {
             List<User> destinatarios = Destinatarios.conAuthority(
                     userRepository, user.getEmpresa(), "ausencia:aprobar", user);
@@ -446,6 +605,52 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 ? timeEntryRepository.findTeamHistory(manager.getEmpresa(), pagina)
                 : timeEntryRepository.findTeamHistoryDeUsuario(manager.getEmpresa(), usuarioId, pagina);
         return fichajes.map(timeEntryMapper::toTeamDTO);
+    }
+
+    /**
+     * Quita la marca de una jornada a la que llegó un fichaje sin conexión
+     * pasadas 72 h (ADR 054): alguien que aprueba correcciones ha mirado las
+     * horas y le valen. No cambia nada más; si no le valen, lo que toca es una
+     * corrección. Como con las correcciones, no la da por buena su dueño,
+     * salvo que nadie más en la empresa pueda.
+     */
+    @Override
+    @Transactional
+    public TimeEntry darPorBueno(String actorEmail, long registroId) {
+        User actor = userRepository.findByEmail(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        TimeEntry registro = timeEntryRepository.findById(registroId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fichaje no encontrado."));
+        if (registro.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("No puedes revisar fichajes de otra empresa.");
+        }
+        if (registro.isAnulado() || !registro.isRevisarPorLlegarTarde()) {
+            throw new BusinessException("Esa jornada no tiene nada pendiente de revisar.");
+        }
+        if (registro.getHoraSalida() == null) {
+            throw new BusinessException("La jornada sigue abierta: revísala cuando se cierre.");
+        }
+        if (registro.getUsuario().getId() == actor.getId()
+                && !Destinatarios.conAuthority(userRepository, actor.getEmpresa(), "correccion:aprobar", actor)
+                        .isEmpty()) {
+            throw new BusinessException("Tu propia jornada la tiene que revisar otra persona.", HttpStatus.FORBIDDEN);
+        }
+
+        String antes = toJson(registro);
+        registro.setRevisarPorLlegarTarde(false);
+        TimeEntry revisado = timeEntryRepository.save(registro);
+        eventPublisher.publishEvent(new TimeEntryAuditEvent(TimeEntryAudit.builder()
+                .registro(revisado)
+                .usuario(revisado.getUsuario())
+                .modificadoPor(actor)
+                .accion(AuditAction.DADO_POR_BUENO)
+                .valorAnterior(antes)
+                .valorNuevo(toJson(revisado))
+                .motivo("Revisada: llegó sin conexión pasadas "
+                        + RecepcionDeFichajesSinConexion.HORAS_PARA_ACEPTARLO_SOLO + " horas.")
+                .build()));
+        log.info("Usuario {} da por buena la jornada {} (llegó sin conexión tarde).", actor.getId(), registroId);
+        return revisado;
     }
 
     // Fase 8: una corrección NUNCA sobrescribe horaEntrada/horaSalida en

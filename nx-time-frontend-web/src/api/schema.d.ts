@@ -1144,6 +1144,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fichaje/{id}/dar-por-bueno": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dar por buena una jornada que llegó tarde
+         * @description Quita la marca de una jornada a la que llegó un fichaje sin conexión pasadas 72 h (ADR 054). No cambia las horas: si no valen, lo que toca es una corrección.
+         */
+        post: operations["darPorBueno"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fichaje/{id}/correcciones": {
         parameters: {
             query?: never;
@@ -1164,6 +1184,26 @@ export interface paths {
          *     Devuelve 202 si queda pendiente y 200 si se ha aplicado: el estado de la                     respuesta dice cuál de los dos ha pasado.
          */
         post: operations["solicitarCorreccion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fichaje/sin-conexion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar los fichajes hechos sin conexión
+         * @description La app los manda al volver la red, en el orden en que se hicieron (ADR 054). Cada uno se aplica con la hora en que ocurrió y en su propia transacción: un rechazo no deshace los anteriores. Repetir un fichaje con el mismo 'idCliente' devuelve lo mismo que la primera vez, con 'yaRecibido'. Lo que llega pasadas 72 h se aplica para revisar (A_REVISAR).
+         */
+        post: operations["enviarSinConexion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4324,6 +4364,9 @@ export interface components {
             inicioPausaActual?: string;
             kiosco?: string;
             cerradaPorElSistema?: boolean;
+            /** @enum {string} */
+            origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
+            revisarPorLlegarTarde?: boolean;
         };
         ChangeProjectRequest: {
             /** Format: int64 */
@@ -4356,6 +4399,40 @@ export interface components {
             /** Format: date-time */
             pausaFin?: string;
             reparto?: components["schemas"]["ProjectShare"][];
+        };
+        EnvioSinConexionRequest: {
+            fichajes: components["schemas"]["FichajeSinConexion"][];
+        };
+        FichajeSinConexion: {
+            /** Format: uuid */
+            idCliente: string;
+            /** @enum {string} */
+            tipo: "INICIO" | "FIN" | "PAUSA_INICIO" | "PAUSA_FIN";
+            /** Format: int64 */
+            proyectoId?: number;
+            /** Format: date-time */
+            horaDelDispositivo: string;
+            /** Format: int64 */
+            msDesdeElFichaje?: number;
+        };
+        EnvioSinConexionResponse: {
+            resultados?: components["schemas"]["ResultadoSinConexion"][];
+            jornada?: components["schemas"]["TimeEntryResponse"];
+        };
+        ResultadoSinConexion: {
+            /** Format: uuid */
+            idCliente?: string;
+            /**
+             * @description APLICADO, A_REVISAR (llegó pasadas 72 h: lo tiene que dar por bueno un gestor) o RECHAZADO
+             * @enum {string}
+             */
+            resultado?: "APLICADO" | "A_REVISAR" | "RECHAZADO";
+            yaRecibido?: boolean;
+            motivo?: string;
+            /** Format: int64 */
+            registroId?: number;
+            /** Format: date-time */
+            hora?: string;
         };
         ConfirmKioskRequest: {
             codigo: string;
@@ -5444,6 +5521,9 @@ export interface components {
             segundosPausaAcumulados?: number;
             kiosco?: string;
             cerradaPorElSistema?: boolean;
+            /** @enum {string} */
+            origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
+            revisarPorLlegarTarde?: boolean;
         };
         DataAccessResponse: {
             /** Format: date-time */
@@ -5713,7 +5793,7 @@ export interface components {
             usuario?: components["schemas"]["SimpleUserDTO"];
             modificadoPor?: components["schemas"]["SimpleUserDTO"];
             /** @enum {string} */
-            accion?: "CREACION" | "MODIFICACION" | "CORRECCION" | "ANULACION" | "SOLICITUD_CORRECCION" | "RECHAZO_CORRECCION" | "DISPUTA" | "PAUSA_ANADIDA" | "PAUSA_ANULADA" | "PROYECTO_CAMBIADO" | "REPARTO_PROYECTOS";
+            accion?: "CREACION" | "MODIFICACION" | "CORRECCION" | "ANULACION" | "SOLICITUD_CORRECCION" | "RECHAZO_CORRECCION" | "DISPUTA" | "PAUSA_ANADIDA" | "PAUSA_ANULADA" | "PROYECTO_CAMBIADO" | "REPARTO_PROYECTOS" | "DADO_POR_BUENO";
             valorAnterior?: string;
             valorNuevo?: string;
             motivo?: string;
@@ -8699,7 +8779,9 @@ export interface operations {
     registerTimeEntry: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Cliente"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8929,6 +9011,55 @@ export interface operations {
             };
         };
     };
+    darPorBueno: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revisada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TimeEntryResponse"];
+                };
+            };
+            /** @description Sin 'correccion:aprobar', de otra empresa, o propia habiendo alguien más que pueda revisarla */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No tiene nada que revisar, o sigue abierta */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     solicitarCorreccion: {
         parameters: {
             query?: never;
@@ -9000,6 +9131,57 @@ export interface operations {
             };
             /** @description Jornada sin cerrar, ya corregida, o con otra solicitud viva */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    enviarSinConexion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnvioSinConexionRequest"];
+            };
+        };
+        responses: {
+            /** @description Un resultado por fichaje, en el mismo orden */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EnvioSinConexionResponse"];
+                };
+            };
+            /** @description Lista vacía, de más de 50, o un fichaje sin sus datos */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'fichaje:escribir' */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

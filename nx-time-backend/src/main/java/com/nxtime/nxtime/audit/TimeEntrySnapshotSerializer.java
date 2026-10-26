@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.audit;
 
+import com.nxtime.nxtime.domain.OrigenDelFichaje;
 import com.nxtime.nxtime.domain.TimeEntry;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,9 @@ public class TimeEntrySnapshotSerializer {
                     entry.getInicioPausaActual(),
                     entry.getSegundosPausaAcumulados(),
                     entry.isAnulado(),
-                    entry.isJornadaIncompleta()));
+                    entry.isJornadaIncompleta(),
+                    entry.getOrigen(),
+                    entry.isRevisarPorLlegarTarde()));
         } catch (JacksonException e) {
             // TimeEntrySnapshot es un record de tipos simples (long,
             // Instant, boolean): no hay forma realista de que esto falle.
@@ -57,7 +60,12 @@ public class TimeEntrySnapshotSerializer {
             Instant inicioPausaActual,
             long segundosPausaAcumulados,
             boolean anulado,
-            boolean jornadaIncompleta
+            boolean jornadaIncompleta,
+            // Desde V50 (ADR 054). Las filas anteriores no los llevan: la
+            // cadena se verifica con el texto guardado, no volviendo a
+            // serializar, así que añadir campos no rompe nada de lo de antes.
+            OrigenDelFichaje origen,
+            boolean revisarPorLlegarTarde
     ) {
     }
 }
