@@ -44,6 +44,11 @@ public class ConservacionDeDatos {
     static final Duration CANDIDATURAS = Duration.ofDays(365);
     /** Lo recibido sin conexión solo sirve para no aplicarlo dos veces (ADR 054): la app reintenta horas, no meses. */
     static final Duration FICHAJES_RECIBIDOS = Duration.ofDays(30);
+    /**
+     * Las coordenadas de cada fichaje (ADR 056), un año: lo que tarda en
+     * prescribir una reclamación de salarios (art. 59 ET). Queda el estado.
+     */
+    static final int MESES_DE_UBICACION = 12;
     /** El registro de jornada se conserva cuatro años (art. 34.9 ET); después, nadie lo necesita. */
     static final int ANIOS_DEL_REGISTRO = 4;
     /** Ley 2/2023, art. 32.3: sin investigación, a los tres meses se suprime el contenido. */
@@ -94,6 +99,14 @@ public class ConservacionDeDatos {
 
         paso(hecho, "fichajesRecibidos", () -> jdbc.update(
                 "DELETE FROM fichajes_recibidos WHERE recibido_en < ?", antes(ahora, FICHAJES_RECIBIDOS)));
+
+        paso(hecho, "ubicaciones", () -> jdbc.update("""
+                UPDATE registros
+                   SET entrada_latitud = NULL, entrada_longitud = NULL, entrada_precision_m = NULL,
+                       salida_latitud = NULL, salida_longitud = NULL, salida_precision_m = NULL
+                 WHERE (entrada_latitud IS NOT NULL OR salida_latitud IS NOT NULL)
+                   AND hora_entrada < ?
+                """, Timestamp.from(ahora.atOffset(ZoneOffset.UTC).minusMonths(MESES_DE_UBICACION).toInstant())));
 
         paso(hecho, "ejecucionesDeTareas", () -> jdbc.update(
                 "DELETE FROM ejecuciones_tarea WHERE inicio < ?", antes(ahora, EJECUCIONES)));

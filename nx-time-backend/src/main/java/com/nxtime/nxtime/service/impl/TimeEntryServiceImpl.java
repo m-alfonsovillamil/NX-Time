@@ -264,6 +264,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .origen(momento.origen())
                         .revisarPorLlegarTarde(momento.llegaTarde())
                         .modalidad(modalidadAlEntrar(user, request, kiosco))
+                        .ubicacionEntrada(ubicacionAlFichar(user, request, kiosco))
                         .build();
                 accion = AuditAction.CREACION;
                 avisarSiNoEsLaborable(user, dia);
@@ -281,6 +282,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                     throw new BusinessException("No se puede finalizar la jornada mientras está en pausa.");
                 }
                 activeEntry.setHoraSalida(cuando);
+                activeEntry.setUbicacionSalida(ubicacionAlFichar(user, request, kiosco));
                 accion = AuditAction.MODIFICACION;
                 TimeEntry cerrada = timeEntryRepository.save(activeEntry);
                 // Con la salida ya hay neto: se reparte entre proyectos (ADR 017).
@@ -368,6 +370,28 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             return null;
         }
         return kiosco != null ? com.nxtime.nxtime.domain.Modalidad.PRESENCIAL : request.modalidad();
+    }
+
+    /**
+     * La ubicación al entrar o salir (ADR 056): solo si la empresa la pide, y
+     * nunca en un kiosco, que ya dice dónde está. Si la pide y el cliente no la
+     * manda (una app anterior), null: no se sabe, que no es lo mismo que «no
+     * disponible».
+     */
+    static com.nxtime.nxtime.domain.PuntoDeFichaje ubicacionAlFichar(User user, TimeEntryRequest request,
+            Kiosk kiosco) {
+        if (kiosco != null || user.getEmpresa() == null || !user.getEmpresa().isUbicacionAlFichar()
+                || request.ubicacion() == null) {
+            return null;
+        }
+        return request.ubicacion().aPunto();
+    }
+
+    @Override
+    public boolean pideUbicacion(String userEmail) {
+        return userRepository.findByEmail(userEmail)
+                .map(user -> user.getEmpresa() != null && user.getEmpresa().isUbicacionAlFichar())
+                .orElse(false);
     }
 
     @Override

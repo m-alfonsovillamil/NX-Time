@@ -55,6 +55,10 @@ public record TeamTimeEntryDTO(
         boolean revisarPorLlegarTarde,
 
         /** Presencial o a distancia (ADR 055), o null si no consta. */
-        com.nxtime.nxtime.domain.Modalidad modalidad
+        com.nxtime.nxtime.domain.Modalidad modalidad,
+
+        /** Dónde se fichó (ADR 056). Ver {@link TimeEntryResponse}. */
+        UbicacionDelFichaje ubicacionEntrada,
+        UbicacionDelFichaje ubicacionSalida
 ) {
 }

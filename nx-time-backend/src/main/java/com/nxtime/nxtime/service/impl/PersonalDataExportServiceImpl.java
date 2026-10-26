@@ -143,7 +143,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                                 f.getId(), f.getHoraEntrada(), f.getHoraSalida(), f.getSegundosPausaAcumulados(),
                                 f.isAnulado(), f.isJornadaIncompleta(),
                                 f.getRegistroOriginal() != null ? f.getRegistroOriginal().getId() : null,
-                                f.getOrigen(), f.getModalidad()))
+                                f.getOrigen(), f.getModalidad(), f.getUbicacionEntrada(), f.getUbicacionSalida()))
                         .toList(),
 
                 addedPauseRepository.findByRegistro_UsuarioOrderByInicioAsc(p).stream()

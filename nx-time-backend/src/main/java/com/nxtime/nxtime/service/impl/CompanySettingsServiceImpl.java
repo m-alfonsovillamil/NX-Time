@@ -47,7 +47,8 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
     public CompanySettingsResponse leer(User actor) {
         Company empresa = suEmpresa(actor);
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
-                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0, empresa.isPreguntarModalidad());
+                empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0, empresa.isPreguntarModalidad(),
+                empresa.isUbicacionAlFichar());
     }
 
     /**
@@ -85,6 +86,13 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
                     request.preguntarModalidad() ? "empieza a" : "deja de", empresa.getId());
             empresa.setPreguntarModalidad(request.preguntarModalidad());
         }
+        if (request.ubicacionAlFichar() != null && request.ubicacionAlFichar() != empresa.isUbicacionAlFichar()) {
+            // Queda en el registro: es el momento desde el que se trata un dato
+            // personal nuevo (ADR 056), y alguien puede preguntar cuándo empezó.
+            log.info("{} {} pedir la ubicación al fichar en la empresa {}.", actor.getId(),
+                    request.ubicacionAlFichar() ? "empieza a" : "deja de", empresa.getId());
+            empresa.setUbicacionAlFichar(request.ubicacionAlFichar());
+        }
         companyRepository.saveAndFlush(empresa);
 
         int invalidadas = 0;
@@ -98,7 +106,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
         }
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
                 empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), invalidadas,
-                empresa.isPreguntarModalidad());
+                empresa.isPreguntarModalidad(), empresa.isUbicacionAlFichar());
     }
 
     /**
