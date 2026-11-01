@@ -38,6 +38,12 @@ justificar para llevar un registro de jornada.
 - **En la web**, la primera vez que se va a tomar, un diálogo dice para qué es
   antes de que pregunte el navegador. Se recuerda **por navegador**, no por persona.
   `render.yaml` pasa a `geolocation=(self)`; la API sigue con `geolocation=()`.
+- **En la app**, con `LocationManager` y sin Play Services, para que funcione en
+  cualquier Android y sin cobertura de datos. Se pregunta al GPS y a la red a la
+  vez, y vale la primera posición con 100 m de precisión o menos; si no llega, la
+  mejor que haya a los 8 segundos. Solo en primer plano. El permiso se pide una vez,
+  después de explicar para qué: quien lo deniega ficha «sin ubicación», y se cambia
+  en los ajustes del móvil.
 
 ## Consecuencias
 

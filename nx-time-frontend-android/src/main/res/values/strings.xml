@@ -273,6 +273,21 @@
     <string name="correccion_entrada">Hora de entrada</string>
     <string name="correccion_salida">Hora de salida</string>
     <string name="correccion_motivo">Motivo de la corrección</string>
+    <string name="correccion_modalidad">Presencial o a distancia</string>
+    <string name="correcciones_modalidad">%1$s → %2$s</string>
+    <string name="modalidad_titulo">¿Dónde trabajas hoy?</string>
+    <string name="modalidad_texto">Tu empresa apunta en cada jornada si se trabaja en el centro o a distancia.</string>
+    <string name="modalidad_presencial">Presencial</string>
+    <string name="modalidad_a_distancia">A distancia</string>
+    <string name="ubicacion_explicar_titulo">Tu empresa apunta dónde fichas</string>
+    <string name="ubicacion_explicar_que">Al fichar la entrada y la salida se guarda tu ubicación en ese momento, y nada más: no se te sigue durante la jornada ni en las pausas.</string>
+    <string name="ubicacion_explicar_quien">La ves tú, tu responsable y RRHH, y se borra a los 12 meses. Quien decide pedirla es tu empresa: a ella puedes preguntarle para qué la usa.</string>
+    <string name="ubicacion_explicar_permiso">Ahora el móvil te pedirá permiso. Si no se lo das, fichas igual, y el fichaje queda «sin ubicación». Podrás cambiarlo en los ajustes del móvil.</string>
+    <string name="ubicacion_explicar_entendido">Entendido</string>
+    <string name="ubicacion_sin_de">%1$s: sin ubicación</string>
+    <string name="ubicacion_precision">%1$s · ± %2$d m</string>
+    <string name="ubicacion_ver_en_mapa">Ver en el mapa</string>
+    <string name="ubicacion_ver_en_mapa_de">Ver en el mapa: %1$s</string>
     <string name="correccion_motivo_ayuda">
         Queda registrado en la auditoría junto a tu nombre. Es obligatorio.
     </string>

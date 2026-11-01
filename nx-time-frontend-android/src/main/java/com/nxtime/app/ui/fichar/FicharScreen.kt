@@ -61,6 +61,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.ProyectosParaFicharDTO
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.RadioButton
@@ -101,6 +105,18 @@ fun FicharScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     val detalle by detalleViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Lo conceda o no, se ficha: sin permiso, el fichaje queda «sin ubicación» (ADR 056).
+    val permisoDeUbicacion = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { viewModel.permisoDeUbicacionContestado() }
+    LaunchedEffect(estado.pidiendoPermisoDeUbicacion) {
+        if (estado.pidiendoPermisoDeUbicacion) {
+            permisoDeUbicacion.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+        }
+    }
 
     /*
      * Recarga al volver a la pantalla, no solo al entrar: tras añadir una
@@ -367,6 +383,38 @@ fun FicharScreen(
             }
         }
 
+        if (estado.explicandoUbicacion) {
+            AlertDialog(
+                onDismissRequest = viewModel::cancelarExplicacionDeUbicacion,
+                title = { Text(stringResource(R.string.ubicacion_explicar_titulo)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(R.string.ubicacion_explicar_que))
+                        Text(stringResource(R.string.ubicacion_explicar_quien))
+                        Text(stringResource(R.string.ubicacion_explicar_permiso))
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = viewModel::ubicacionExplicada) {
+                        Text(stringResource(R.string.ubicacion_explicar_entendido))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = viewModel::cancelarExplicacionDeUbicacion) {
+                        Text(stringResource(R.string.cancelar))
+                    }
+                }
+            )
+        }
+
+        if (estado.preguntandoModalidad) {
+            DialogoDeModalidad(
+                ultima = estado.ultimaModalidad,
+                onElegir = viewModel::elegirModalidad,
+                onCancelar = viewModel::cancelarEleccionDeModalidad
+            )
+        }
+
         estado.confirmandoInicioNoLaborable?.let { motivo ->
             AlertDialog(
                 onDismissRequest = viewModel::cancelarInicioNoLaborable,
@@ -393,6 +441,40 @@ fun FicharScreen(
             )
         }
     }
+}
+
+/**
+ * Presencial o a distancia (ADR 055). Dos botones y no una casilla: es una
+ * pregunta de cada día, y la de la última vez va como principal.
+ */
+@Composable
+private fun DialogoDeModalidad(ultima: Modalidad?, onElegir: (Modalidad) -> Unit, onCancelar: () -> Unit) {
+    val primera = ultima ?: Modalidad.PRESENCIAL
+    val segunda = if (primera == Modalidad.PRESENCIAL) Modalidad.A_DISTANCIA else Modalidad.PRESENCIAL
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(stringResource(R.string.modalidad_titulo)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.modalidad_texto))
+                Button(onClick = { onElegir(primera) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(textoDeModalidad(primera)))
+                }
+                OutlinedButton(onClick = { onElegir(segunda) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(textoDeModalidad(segunda)))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
+    )
+}
+
+private fun textoDeModalidad(modalidad: Modalidad) = when (modalidad) {
+    Modalidad.PRESENCIAL -> R.string.modalidad_presencial
+    Modalidad.A_DISTANCIA -> R.string.modalidad_a_distancia
 }
 
 /**

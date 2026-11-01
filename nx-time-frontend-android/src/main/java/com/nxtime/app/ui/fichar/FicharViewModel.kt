@@ -3,6 +3,7 @@ package com.nxtime.app.ui.fichar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.data.dto.DiaTeoricoDTO
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.OrigenDelDia
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.ProyectosParaFicharDTO
@@ -12,7 +13,9 @@ import com.nxtime.app.data.dto.TipoFichaje
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
+import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +58,13 @@ data class FicharUiState(
     val eligiendoProyectoAlIniciar: Boolean = false,
     /** Se está eligiendo a qué proyecto cambiar con la jornada abierta. */
     val cambiandoDeProyecto: Boolean = false,
+    /** Se está preguntando presencial o a distancia (ADR 055). Lo elegido la última vez va primero. */
+    val preguntandoModalidad: Boolean = false,
+    val ultimaModalidad: Modalidad? = null,
+    /** La primera vez, se dice para qué se toma la ubicación antes de pedir el permiso (ADR 056). */
+    val explicandoUbicacion: Boolean = false,
+    /** La pantalla tiene que lanzar la petición de permiso: solo ella tiene con qué. */
+    val pidiendoPermisoDeUbicacion: Boolean = false,
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -121,16 +131,55 @@ data class FicharUiState(
  */
 class FicharViewModel(
     private val authRepository: AuthRepository,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val ajustes: Ajustes,
+    private val fuenteDeUbicacion: FuenteDeUbicacion
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FicharUiState())
     val uiState: StateFlow<FicharUiState> = _uiState.asStateFlow()
 
+    /** Lo que pide la empresa, según la última respuesta de `GET /fichaje/hoy` (ADR 055 y 056). */
+    private var preguntarModalidad = false
+    private var pedirUbicacion = false
+
+    /** La elegida para la jornada que se está empezando. */
+    private var modalidadElegida: Modalidad? = null
+
+    /** Lo que queda por hacer tras explicar la ubicación y pedir el permiso. */
+    private var trasExplicarUbicacion: (() -> Unit)? = null
+
+    /**
+     * Hay un fichaje en marcha, y puede tardar unos segundos si se toma la
+     * ubicación. Volver a la pantalla (el permiso del sistema la tapa) vuelve a
+     * preguntar por la jornada: sin esto, esa respuesta reactivaría el botón a
+     * mitad de fichaje y se podría fichar dos veces.
+     */
+    private var fichando = false
+
     init {
         _uiState.update { it.copy(nombreUsuario = sessionManager.fetchUserName().orEmpty()) }
         comprobarEstadoJornada()
         cargarCuadranteDeHoy()
+        cargarLoQuePideLaEmpresa()
+    }
+
+    /**
+     * Para saber al salir si hay que tomar la ubicación; al entrar se vuelve a
+     * preguntar. Si falla no se toma, y fichar sigue funcionando.
+     */
+    private fun cargarLoQuePideLaEmpresa() {
+        viewModelScope.launch {
+            val dia = try {
+                authRepository.getEstadoDeHoy().takeIf { it.isSuccessful }?.body()
+            } catch (e: Exception) {
+                null
+            }
+            if (dia != null) {
+                preguntarModalidad = dia.preguntarModalidad
+                pedirUbicacion = dia.pedirUbicacion
+            }
+        }
     }
 
     /**
@@ -205,10 +254,13 @@ class FicharViewModel(
     }
 
     fun comprobarEstadoJornada() {
+        if (fichando) return
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
                 val respuesta = authRepository.getRegistroActivo()
+                // El fichaje que empezó mientras tanto dirá cómo queda.
+                if (fichando) return@launch
                 if (respuesta.isSuccessful) {
                     aplicarRegistro(respuesta.body())
                 } else {
@@ -217,6 +269,7 @@ class FicharViewModel(
                     }
                 }
             } catch (e: Exception) {
+                if (fichando) return@launch
                 _uiState.update {
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
@@ -241,6 +294,7 @@ class FicharViewModel(
      * no tiene sentido confirmar algo que se va a rechazar.
      */
     fun pulsarBotonPrincipal() {
+        if (fichando) return
         val estado = _uiState.value.estado
         if (estado == EstadoJornada.EN_PAUSA) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_reanuda_antes)) }
@@ -249,8 +303,44 @@ class FicharViewModel(
         if (estado == EstadoJornada.SIN_JORNADA) {
             iniciarComprobandoElDia()
         } else {
-            _uiState.update { it.copy(confirmandoFin = true, error = null) }
+            explicandoAntes {
+                _uiState.update { it.copy(confirmandoFin = true, error = null) }
+            }
         }
+    }
+
+    /**
+     * La primera vez que se va a tomar la ubicación en este móvil se dice antes
+     * para qué, y después se pide el permiso: uno pedido sin ver para qué se
+     * deniega. Quien lo denegó no vuelve a oírlo: ficha «sin ubicación», y se
+     * cambia en los ajustes del móvil.
+     */
+    private fun explicandoAntes(seguir: () -> Unit) {
+        if (pedirUbicacion && !ajustes.ubicacionExplicada) {
+            trasExplicarUbicacion = seguir
+            _uiState.update { it.copy(cargando = false, explicandoUbicacion = true) }
+        } else {
+            seguir()
+        }
+    }
+
+    /** «Entendido»: toca el permiso del sistema. */
+    fun ubicacionExplicada() {
+        ajustes.ubicacionExplicada = true
+        _uiState.update { it.copy(explicandoUbicacion = false, pidiendoPermisoDeUbicacion = true) }
+    }
+
+    /** Cancelar la explicación cancela el fichaje: se volverá a explicar la próxima vez. */
+    fun cancelarExplicacionDeUbicacion() {
+        trasExplicarUbicacion = null
+        _uiState.update { it.copy(explicandoUbicacion = false) }
+    }
+
+    /** Lo haya concedido o no: sin permiso se ficha igual (ADR 056). */
+    fun permisoDeUbicacionContestado() {
+        _uiState.update { it.copy(pidiendoPermisoDeUbicacion = false) }
+        trasExplicarUbicacion?.invoke()
+        trasExplicarUbicacion = null
     }
 
     /**
@@ -265,15 +355,22 @@ class FicharViewModel(
     private fun iniciarComprobandoElDia() {
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
-            val motivo = try {
-                authRepository.getEstadoDeHoy().body()?.takeIf { !it.laborable }?.motivo
+            val dia = try {
+                authRepository.getEstadoDeHoy().body()
             } catch (e: Exception) {
                 null
             }
-            if (motivo != null) {
-                _uiState.update { it.copy(cargando = false, confirmandoInicioNoLaborable = motivo) }
-            } else {
-                iniciarEligiendoProyecto()
+            if (dia != null) {
+                preguntarModalidad = dia.preguntarModalidad
+                pedirUbicacion = dia.pedirUbicacion
+            }
+            val motivo = dia?.takeIf { !it.laborable }?.motivo
+            explicandoAntes {
+                if (motivo != null) {
+                    _uiState.update { it.copy(cargando = false, confirmandoInicioNoLaborable = motivo) }
+                } else {
+                    iniciarEligiendoModalidad()
+                }
             }
         }
     }
@@ -281,7 +378,30 @@ class FicharViewModel(
     /** Sí, empieza la jornada aunque hoy no sea laborable. */
     fun confirmarInicioNoLaborable() {
         _uiState.update { it.copy(confirmandoInicioNoLaborable = null) }
+        iniciarEligiendoModalidad()
+    }
+
+    /** Si la empresa pregunta presencial o a distancia, antes del proyecto (ADR 055). */
+    private fun iniciarEligiendoModalidad() {
+        modalidadElegida = null
+        if (preguntarModalidad) {
+            _uiState.update {
+                it.copy(cargando = false, preguntandoModalidad = true, ultimaModalidad = ajustes.ultimaModalidad)
+            }
+        } else {
+            iniciarEligiendoProyecto()
+        }
+    }
+
+    fun elegirModalidad(modalidad: Modalidad) {
+        ajustes.ultimaModalidad = modalidad
+        modalidadElegida = modalidad
+        _uiState.update { it.copy(preguntandoModalidad = false) }
         iniciarEligiendoProyecto()
+    }
+
+    fun cancelarEleccionDeModalidad() {
+        _uiState.update { it.copy(preguntandoModalidad = false) }
     }
 
     /**
@@ -364,6 +484,7 @@ class FicharViewModel(
     }
 
     fun pulsarBotonPausa() {
+        if (fichando) return
         val estado = _uiState.value.estado
         if (estado == EstadoJornada.SIN_JORNADA) {
             _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_inicia_antes)) }
@@ -378,10 +499,16 @@ class FicharViewModel(
     }
 
     private fun registrarFichaje(tipo: TipoFichaje, proyectoId: Long? = null) {
+        fichando = true
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.registrarFichaje(PeticionFichaje(tipo, proyectoId))
+                // Solo al entrar y al salir, nunca en las pausas (ADR 056).
+                val tomarla = pedirUbicacion && (tipo == TipoFichaje.INICIO || tipo == TipoFichaje.FIN)
+                val ubicacion = if (tomarla) fuenteDeUbicacion.tomar() else null
+                val modalidad = modalidadElegida.takeIf { tipo == TipoFichaje.INICIO }
+                val respuesta = authRepository.registrarFichaje(PeticionFichaje(tipo, proyectoId, modalidad, ubicacion))
+                fichando = false
                 if (respuesta.isSuccessful) {
                     aplicarRegistro(respuesta.body())
                 } else {
@@ -390,6 +517,7 @@ class FicharViewModel(
                     }
                 }
             } catch (e: Exception) {
+                fichando = false
                 _uiState.update {
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }

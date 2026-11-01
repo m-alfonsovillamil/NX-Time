@@ -36,5 +36,12 @@ data class Registro(
      * no un dato. El historial lo dice con un distintivo, para que se pida la
      * corrección.
      */
-    val cerradaPorElSistema: Boolean = false
+    val cerradaPorElSistema: Boolean = false,
+
+    /** Presencial o a distancia, si la empresa lo pregunta (ADR 055). */
+    val modalidad: Modalidad? = null,
+
+    /** Dónde se fichó, si la empresa lo pide (ADR 056). */
+    val ubicacionEntrada: UbicacionDelFichaje? = null,
+    val ubicacionSalida: UbicacionDelFichaje? = null
 )

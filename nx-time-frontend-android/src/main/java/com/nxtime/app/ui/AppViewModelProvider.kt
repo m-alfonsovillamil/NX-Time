@@ -63,7 +63,14 @@ object AppViewModelProvider {
         initializer { LoginViewModel(app().authRepository, app().accesoSso) }
         initializer { RecuperarAccesoViewModel(app().authRepository) }
         initializer { RegistroEmpresaViewModel(app().authRepository, app().accesoSso) }
-        initializer { FicharViewModel(app().authRepository, app().sessionManager) }
+        initializer {
+            FicharViewModel(
+                app().authRepository,
+                app().sessionManager,
+                app().ajustes,
+                com.nxtime.app.data.ubicacion.UbicacionDelMovil(app())
+            )
+        }
         initializer { HistorialViewModel(app().authRepository) }
         initializer { com.nxtime.app.ui.fichar.DetalleDeTiempoViewModel(app().authRepository) }
         initializer { AusenciasViewModel(app().authRepository) }

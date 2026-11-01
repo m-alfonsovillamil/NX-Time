@@ -44,6 +44,10 @@ data class CorreccionDTO(
      */
     val repartoPropuesto: List<RepartoPropuestoDTO> = emptyList(),
 
+    /** Presencial o a distancia, antes y después (ADR 055). */
+    val modalidadActual: Modalidad? = null,
+    val modalidadPropuesta: Modalidad? = null,
+
     val motivo: String,
     val estado: String,
 

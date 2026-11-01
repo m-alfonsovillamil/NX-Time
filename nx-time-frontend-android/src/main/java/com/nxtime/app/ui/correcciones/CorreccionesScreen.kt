@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.CorreccionDTO
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoVacio
@@ -159,6 +160,13 @@ fun CorreccionesScreen(
 }
 
 @Composable
+private fun textoDe(modalidad: Modalidad?): String = when (modalidad) {
+    Modalidad.PRESENCIAL -> stringResource(R.string.modalidad_presencial)
+    Modalidad.A_DISTANCIA -> stringResource(R.string.modalidad_a_distancia)
+    null -> "—"
+}
+
+@Composable
 private fun TarjetaCorreccion(
     correccion: CorreccionDTO,
     onAprobar: (() -> Unit)? = null,
@@ -232,6 +240,16 @@ private fun TarjetaCorreccion(
                     text = stringResource(
                         R.string.correcciones_reparto,
                         correccion.repartoPropuesto.joinToString(", ") { "${it.codigo} ${it.minutos} min" }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if (correccion.modalidadPropuesta != null && correccion.modalidadPropuesta != correccion.modalidadActual) {
+                Text(
+                    text = stringResource(
+                        R.string.correcciones_modalidad,
+                        textoDe(correccion.modalidadActual),
+                        textoDe(correccion.modalidadPropuesta)
                     ),
                     style = MaterialTheme.typography.bodyMedium
                 )

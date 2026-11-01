@@ -2,6 +2,7 @@ package com.nxtime.app.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.nxtime.app.data.dto.Modalidad
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -128,6 +129,20 @@ class Ajustes(context: Context) {
             prefs.edit().putString(KEY_TOKEN_PUSH, valor).apply()
         }
 
+    /** La última elegida en este móvil, para ofrecerla primero (ADR 055). */
+    var ultimaModalidad: Modalidad?
+        get() = Modalidad.entries.firstOrNull { it.name == prefs.getString(KEY_ULTIMA_MODALIDAD, null) }
+        set(valor) {
+            prefs.edit().putString(KEY_ULTIMA_MODALIDAD, valor?.name).apply()
+        }
+
+    /** Si en este móvil ya se ha dicho para qué se toma la ubicación (ADR 056). */
+    var ubicacionExplicada: Boolean
+        get() = prefs.getBoolean(KEY_UBICACION_EXPLICADA, false)
+        set(valor) {
+            prefs.edit().putBoolean(KEY_UBICACION_EXPLICADA, valor).apply()
+        }
+
     fun cambiarTema(nuevo: Tema) {
         _tema.value = nuevo
         prefs.edit().putString(KEY_TEMA, nuevo.name).apply()
@@ -148,6 +163,8 @@ class Ajustes(context: Context) {
         private const val KEY_TOKEN_PUSH = "token_push"
         private const val KEY_HORA_ENTRADA = "recordatorio_hora_entrada"
         private const val KEY_HORA_SALIDA = "recordatorio_hora_salida"
+        private const val KEY_ULTIMA_MODALIDAD = "ultima_modalidad"
+        private const val KEY_UBICACION_EXPLICADA = "ubicacion_explicada"
 
         /** Las del plan: una jornada de oficina corriente. */
         const val HORA_ENTRADA_POR_DEFECTO = "09:30"

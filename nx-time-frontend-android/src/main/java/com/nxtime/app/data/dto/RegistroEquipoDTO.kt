@@ -26,5 +26,12 @@ data class RegistroEquipoDTO(
     val kiosco: String? = null,
 
     /** La cerró el sistema por falta de fichaje de salida. Ver [Registro.cerradaPorElSistema]. */
-    val cerradaPorElSistema: Boolean = false
+    val cerradaPorElSistema: Boolean = false,
+
+    /** Ver [Registro.modalidad]. */
+    val modalidad: Modalidad? = null,
+
+    /** Ver [Registro.ubicacionEntrada]. */
+    val ubicacionEntrada: UbicacionDelFichaje? = null,
+    val ubicacionSalida: UbicacionDelFichaje? = null
 )
