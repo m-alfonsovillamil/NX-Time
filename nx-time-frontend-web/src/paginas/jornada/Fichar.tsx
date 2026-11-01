@@ -37,11 +37,20 @@ import {
   useEstadoDeHoy,
   useJornadaActiva,
   useProyectosParaFichar,
+  type EstadoDeHoy,
   type Jornada,
 } from './consultas';
 import { DialogoPausa, type JornadaParaPausa } from './DialogoPausa';
-import { ConfirmarFin, ConfirmarNoLaborable, ElegirModalidad, ElegirProyecto, type Modalidad } from './DialogosDeFichar';
+import {
+  AvisoDeUbicacion,
+  ConfirmarFin,
+  ConfirmarNoLaborable,
+  ElegirModalidad,
+  ElegirProyecto,
+  type Modalidad,
+} from './DialogosDeFichar';
 import { Resumen } from './Resumen';
+import { tomarUbicacion, ubicacionInformada } from './ubicacion';
 
 const F = fichar;
 
@@ -90,6 +99,8 @@ export function Fichar() {
   const [preguntaModalidad, setPreguntaModalidad] = useState(false);
   const [eligiendoModalidad, setEligiendoModalidad] = useState(false);
   const [modalidad, setModalidad] = useState<Modalidad | undefined>(undefined);
+  /** Lo que queda por hacer tras enseñar para qué se toma la ubicación (ADR 056). */
+  const [trasInformar, setTrasInformar] = useState<(() => void) | null>(null);
 
   const jornada = activa.data ?? null;
   const trabajando = jornada !== null && jornada.enPausa !== true;
@@ -102,13 +113,24 @@ export function Fichar() {
   // puede salir con el estado de antes (fichar la salida dos veces, por ejemplo).
   const fichar = useMutacion(
     // X-Cliente: queda dicho que se fichó desde la web (ADR 054).
-    ({ modalidad: elegida, ...peticion }: { tipo: Tipo; proyectoId?: number; modalidad?: Modalidad | undefined }) =>
-      pedir(
+    async ({ modalidad: elegida, ...peticion }: { tipo: Tipo; proyectoId?: number; modalidad?: Modalidad | undefined }) => {
+      // Dentro de la escritura: mientras se toma, el botón sigue ocupado. Solo al
+      // entrar y al salir, nunca en las pausas (ADR 056).
+      const pedirla =
+        (peticion.tipo === 'INICIO' || peticion.tipo === 'FIN') &&
+        consultas.getQueryData<EstadoDeHoy>(CLAVES.hoy)?.pedirUbicacion === true;
+      const ubicacion = pedirla ? await tomarUbicacion() : undefined;
+      return pedir(
         cliente.POST('/api/v1/fichaje', {
-          body: { ...peticion, ...(elegida !== undefined ? { modalidad: elegida } : {}) },
+          body: {
+            ...peticion,
+            ...(elegida !== undefined ? { modalidad: elegida } : {}),
+            ...(ubicacion !== undefined ? { ubicacion } : {}),
+          },
           headers: { 'X-Cliente': 'web' },
         }),
-      ),
+      );
+    },
     {
       invalida: TRAS_CAMBIAR_TIEMPO,
       alTerminar: () => {
@@ -145,6 +167,12 @@ export function Fichar() {
     else iniciarEligiendoProyecto(undefined);
   }
 
+  /** La primera vez que se va a tomar la ubicación, se dice antes para qué. */
+  function informandoAntes(pedirla: boolean, seguir: () => void) {
+    if (pedirla && !ubicacionInformada()) setTrasInformar(() => seguir);
+    else seguir();
+  }
+
   /**
    * Antes de iniciar se pregunta si hoy es laborable, y en el momento: la
    * pestaña puede llevar abierta desde ayer. **Si la pregunta falla, se inicia
@@ -154,18 +182,22 @@ export function Fichar() {
     setComprobandoDia(true);
     let motivo: string | null = null;
     let preguntar = false;
+    let pedirla = false;
     try {
       const dia = await consultas.fetchQuery({ queryKey: CLAVES.hoy, queryFn: pedirEstadoDeHoy, staleTime: 0 });
       if (dia.laborable === false) motivo = dia.motivo ?? '';
       preguntar = dia.preguntarModalidad === true;
+      pedirla = dia.pedirUbicacion === true;
     } catch {
       // Se sigue: ver arriba. Sin respuesta tampoco se pregunta la modalidad.
     } finally {
       setComprobandoDia(false);
     }
     setPreguntaModalidad(preguntar);
-    if (motivo !== null) setNoLaborable(motivo);
-    else iniciarEligiendoModalidad(preguntar);
+    informandoAntes(pedirla, () => {
+      if (motivo !== null) setNoLaborable(motivo);
+      else iniciarEligiendoModalidad(preguntar);
+    });
   }
 
   function pulsarPrincipal(j: Jornada | null) {
@@ -174,7 +206,7 @@ export function Fichar() {
     if (j === null) void iniciar();
     // Se sabe sin preguntar: responder en el acto es mejor que tras una ida y vuelta.
     else if (j.enPausa === true) setAviso(F.reanudaAntes);
-    else setConfirmandoFin(true);
+    else informandoAntes(hoy.data?.pedirUbicacion === true, () => setConfirmandoFin(true));
   }
 
   const ocupado = fichar.isPending || comprobandoDia;
@@ -268,6 +300,7 @@ export function Fichar() {
                 jornada={j}
                 segundosTrabajados={segundos}
                 abierto={confirmandoFin && j !== null}
+                ocupado={fichar.isPending}
                 alConfirmar={() => fichar.mutate({ tipo: 'FIN' })}
                 alCancelar={() => setConfirmandoFin(false)}
               />
@@ -303,6 +336,14 @@ export function Fichar() {
           iniciarEligiendoProyecto(elegida);
         }}
         alCancelar={() => setEligiendoModalidad(false)}
+      />
+      <AvisoDeUbicacion
+        abierto={trasInformar !== null}
+        alEntendido={() => {
+          trasInformar?.();
+          setTrasInformar(null);
+        }}
+        alCancelar={() => setTrasInformar(null)}
       />
       <DialogoPausa jornada={pausaDe} alCerrar={() => setPausaDe(null)} />
     </div>

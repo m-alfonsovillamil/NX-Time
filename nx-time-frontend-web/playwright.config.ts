@@ -61,8 +61,8 @@ export default defineConfig({
     // La web es hoy el cliente de quien tenga iPhone (no hay app de iOS), así
     // que el móvil se prueba en los dos motores: Chromium como un Android, y
     // WebKit, que es el de Safari y el único que hay en un iPhone.
-    { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: /movil\.spec/ },
-    { name: 'iphone', use: { ...devices['iPhone 14'] }, testMatch: /movil\.spec/ },
+    { name: 'movil', use: { ...devices['Pixel 7'] }, testMatch: /(movil|ubicacion)\.spec/ },
+    { name: 'iphone', use: { ...devices['iPhone 14'] }, testMatch: /(movil|ubicacion)\.spec/ },
     ...(sacandoCapturas ? [{ name: 'capturas', use: { ...devices['Desktop Chrome'] }, testMatch: /capturas\.spec/ }] : []),
   ],
   webServer: {

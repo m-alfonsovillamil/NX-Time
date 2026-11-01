@@ -14,6 +14,7 @@ import { pintar, problema, sesionDe, simularApi, sinContenido, type Manejador, t
 import { segundosDeJornada } from './consultas';
 import { Fichar } from './Fichar';
 import { DialogoPausa } from './DialogoPausa';
+import { tomarUbicacion } from './ubicacion';
 
 const F = fichar;
 const HACE_UNA_HORA = () => new Date(Date.now() - 3_600_000).toISOString();
@@ -249,6 +250,145 @@ describe('antes de iniciar', () => {
       ]),
     );
     expect(localStorage.getItem('nx-ultima-modalidad')).toBe('A_DISTANCIA');
+  });
+});
+
+/* ADR 056: al entrar y al salir, si la empresa la pide, y sin ella se ficha igual. */
+describe('la ubicación al fichar', () => {
+  const getCurrentPosition = vi.fn();
+  const POSICION = { coords: { latitude: 42.2406, longitude: -8.7207, accuracy: 24.6 } };
+
+  beforeEach(() => {
+    getCurrentPosition.mockReset();
+    localStorage.removeItem('nx-ubicacion-informada');
+    vi.stubGlobal('navigator', { ...navigator, geolocation: { getCurrentPosition } });
+  });
+
+  /** La primera vez, el aviso; se pulsa «Entendido» y sigue. */
+  async function aceptarElAviso() {
+    const dialogo = await screen.findByRole('dialog', { name: F.ubicacion.titulo });
+    await userEvent.click(within(dialogo).getByRole('button', { name: F.ubicacion.entendido }));
+  }
+
+  it('la primera vez dice para qué antes de tomarla, y la manda al entrar', async () => {
+    getCurrentPosition.mockImplementation((bien: (p: unknown) => void) => bien(POSICION));
+    const llamadas = api({
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, pedirUbicacion: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+    await screen.findByRole('dialog', { name: F.ubicacion.titulo });
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    await aceptarElAviso();
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([
+        {
+          tipo: 'INICIO',
+          ubicacion: { estado: 'CAPTURADA', latitud: 42.2406, longitud: -8.7207, precisionM: 25 },
+        },
+      ]),
+    );
+    expect(localStorage.getItem('nx-ubicacion-informada')).not.toBeNull();
+  });
+
+  it('cancelar el aviso no ficha, y la segunda vez ya no se enseña', async () => {
+    getCurrentPosition.mockImplementation((bien: (p: unknown) => void) => bien(POSICION));
+    const llamadas = api({
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, pedirUbicacion: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+    const dialogo = await screen.findByRole('dialog', { name: F.ubicacion.titulo });
+    await userEvent.click(within(dialogo).getByRole('button', { name: T.app.cancelar }));
+    expect(llamadas.a('POST', '/api/v1/fichaje')).toHaveLength(0);
+
+    localStorage.setItem('nx-ubicacion-informada', '1');
+    await userEvent.click(screen.getByRole('button', { name: F.entrar }));
+
+    await waitFor(() => expect(llamadas.a('POST', '/api/v1/fichaje')).toHaveLength(1));
+  });
+
+  it('sin permiso se ficha igual, y se dice que se denegó', async () => {
+    localStorage.setItem('nx-ubicacion-informada', '1');
+    getCurrentPosition.mockImplementation((_bien: unknown, mal: (e: unknown) => void) =>
+      mal({ code: 1, PERMISSION_DENIED: 1 }),
+    );
+    const llamadas = api({
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, pedirUbicacion: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([
+        { tipo: 'INICIO', ubicacion: { estado: 'DENEGADA' } },
+      ]),
+    );
+  });
+
+  /* El navegador puede quedarse esperando a que se conteste a su pregunta de permiso. */
+  it('si nadie responde, a los 8 segundos se ficha sin ubicación', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      getCurrentPosition.mockImplementation(() => undefined);
+      const resultado = tomarUbicacion();
+      vi.advanceTimersByTime(8000);
+      await expect(resultado).resolves.toEqual({ estado: 'NO_DISPONIBLE' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('un navegador que falla al pedirla tampoco bloquea', async () => {
+    getCurrentPosition.mockImplementation(() => {
+      throw new Error('sin geolocalización');
+    });
+    await expect(tomarUbicacion()).resolves.toEqual({ estado: 'NO_DISPONIBLE' });
+  });
+
+  it('también al salir, y en las pausas no', async () => {
+    localStorage.setItem('nx-ubicacion-informada', '1');
+    getCurrentPosition.mockImplementation((bien: (p: unknown) => void) => bien(POSICION));
+    const llamadas = api({
+      'GET /api/v1/fichaje/activo': () => abierta(),
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, pedirUbicacion: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await waitFor(() => expect(llamadas.a('GET', '/api/v1/fichaje/hoy')).toHaveLength(1));
+    await userEvent.click(await screen.findByRole('button', { name: F.pausar }));
+    await waitFor(() => expect(llamadas.a('POST', '/api/v1/fichaje')).toHaveLength(1));
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+
+    await userEvent.click(await screen.findByRole('button', { name: F.salir }));
+    const dialogo = await screen.findByRole('dialog', { name: F.confirmarFin.titulo });
+    await userEvent.click(within(dialogo).getByRole('button', { name: F.confirmarFin.si }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([
+        { tipo: 'PAUSA_INICIO' },
+        { tipo: 'FIN', ubicacion: { estado: 'CAPTURADA', latitud: 42.2406, longitud: -8.7207, precisionM: 25 } },
+      ]),
+    );
+  });
+
+  it('si la empresa no la pide, ni se pregunta ni se toma', async () => {
+    const llamadas = api({ 'POST /api/v1/fichaje': () => abierta() });
+    pintar(<Fichar />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+
+    await waitFor(() => expect(llamadas.a('POST', '/api/v1/fichaje').map((l) => l.cuerpo)).toEqual([{ tipo: 'INICIO' }]));
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

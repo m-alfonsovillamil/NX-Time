@@ -87,6 +87,21 @@ export const empresa = {
       preguntada: 'Desde ahora se pregunta presencial o a distancia al entrar.',
       noPreguntada: 'Ya no se pregunta presencial o a distancia.',
     },
+    // ADR 056.
+    ubicacion: {
+      titulo: 'Ubicación al fichar',
+      texto:
+        'Se guarda dónde está cada persona al fichar la entrada y la salida, para los trabajos fuera del centro. Solo en esos dos momentos: no hay seguimiento. La ven la persona, su gestor, RRHH y los administradores; no sale en el Excel ni en el PDF, y se borra a los 12 meses. Quien no la dé ficha igual. En los kioscos no se pide.',
+      pedir: 'Pedir la ubicación al entrar y al salir',
+      guardar: 'Aplicar',
+      pedida: 'Desde ahora se pide la ubicación al fichar.',
+      noPedida: 'Ya no se pide la ubicación al fichar. La que ya se tomó se borra a sus 12 meses.',
+      confirmarTitulo: '¿Pedir la ubicación al fichar?',
+      confirmarLey:
+        'Vuestra empresa es la responsable de este dato. Antes de encenderlo tenéis que informar, de forma expresa, clara e inequívoca, a la plantilla y a sus representantes (art. 90 de la LOPDGDD).',
+      confirmarImpacto: 'Se pide a toda la empresa. Valorad también si hace falta una evaluación de impacto (art. 35 del RGPD).',
+      confirmar: 'Pedir la ubicación',
+    },
     guardar: 'Guardar',
     guardado: 'Ajustes guardados.',
     confirmarTitulo: '¿Cambiar la zona horaria?',

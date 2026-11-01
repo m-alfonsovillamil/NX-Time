@@ -39,7 +39,9 @@ export function Encargo() {
         <li>
           <strong>Datos:</strong> identificativos y de contacto (nombre, apellidos, correo, fecha de nacimiento, foto
           si se sube), laborales (puesto, departamento, rol, jornada contratada, saldo de vacaciones, cuadrante),
-          el registro de jornada (horas de entrada, salida y pausas, correcciones con su autor y su motivo, firmas),
+          el registro de jornada (horas de entrada, salida y pausas, desde dónde se ficha —web, app o kiosco, y si fue
+          sin conexión—, si se trabaja en presencial o a distancia cuando la responsable lo pregunta, correcciones con
+          su autor y su motivo, firmas),
           ausencias y sus motivos, horas extra, currículos, lo que se cuente en el canal de denuncias, y datos técnicos
           (IP y dispositivo con que se ficha, sesiones, avisos).
         </li>
@@ -47,7 +49,12 @@ export function Encargo() {
           <strong>Datos especialmente protegidos:</strong> el servicio no los pide, pero pueden aparecer en el motivo de
           una ausencia (por ejemplo, de salud) o en una denuncia. La responsable decide si los recoge y cómo.
         </li>
-        <li>No se registra la ubicación.</li>
+        <li>
+          <strong>Ubicación al fichar:</strong> solo si la responsable la activa, y solo al fichar la entrada y la salida
+          (no hay seguimiento). Se guarda redondeada a unos 11 metros y se borra a los 12 meses. Si la persona no la da,
+          ficha igual. Corresponde a la responsable decidir si es necesaria, informar antes a la plantilla y a sus
+          representantes (art. 90 LOPDGDD) y valorar la evaluación de impacto.
+        </li>
         <li>
           <strong>El canal de denuncias:</strong> el encargado solo aporta la herramienta. No recibe, no lee y no
           gestiona las comunicaciones: lo hace el Responsable del Sistema Interno de Información que designe la

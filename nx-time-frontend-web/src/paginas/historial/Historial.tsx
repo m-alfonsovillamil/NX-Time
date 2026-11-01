@@ -24,6 +24,8 @@ import { Aviso, Boton, Campo } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
 import { SalidaDeJornada } from '../../componentes/SalidaDeJornada';
+import { UbicacionDeFichaje } from '../../componentes/UbicacionDeFichaje';
+import { fichar as F } from '../../i18n/es/fichar';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -88,7 +90,12 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
     {
       clave: 'entrada',
       cabecera: H.entrada,
-      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} origen={j.origen} modalidad={j.modalidad} />,
+      celda: (j) => (
+        <>
+          <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} origen={j.origen} modalidad={j.modalidad} />
+          <UbicacionDeFichaje ubicacion={j.ubicacionEntrada} momento={F.ubicacion.entradaDeLas(hora(j.horaEntrada))} />
+        </>
+      ),
     },
     {
       clave: 'salida',
@@ -97,7 +104,10 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
         j.horaSalida === undefined ? (
           H.enCurso
         ) : (
-          <SalidaDeJornada salida={horaDeSalida(j.horaEntrada, j.horaSalida)} cerradaPorElSistema={j.cerradaPorElSistema} />
+          <>
+            <SalidaDeJornada salida={horaDeSalida(j.horaEntrada, j.horaSalida)} cerradaPorElSistema={j.cerradaPorElSistema} />
+            <UbicacionDeFichaje ubicacion={j.ubicacionSalida} momento={F.ubicacion.salidaDeLas(hora(j.horaSalida))} />
+          </>
         ),
     },
     {

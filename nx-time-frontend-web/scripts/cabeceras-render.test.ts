@@ -31,6 +31,10 @@ describe('las cabeceras de render.yaml que copia vite preview', () => {
     expect(cabeceras['Permissions-Policy']).toContain('camera=(self)');
   });
 
+  it('la ubicación al fichar está permitida, solo a la propia web (ADR 056)', () => {
+    expect(cabecerasDeRender(RENDER_YAML)['Permissions-Policy']).toContain('geolocation=(self)');
+  });
+
   it('las de otras rutas (la caché de /assets) no se aplican a toda la web', () => {
     const cabeceras = cabecerasDeRender(RENDER_YAML);
 

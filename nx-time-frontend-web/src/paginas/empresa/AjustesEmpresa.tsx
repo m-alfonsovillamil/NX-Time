@@ -1,7 +1,8 @@
 /**
  * Los ajustes de la empresa: el nombre, la zona horaria (fase Z2, ADR 032) y
  * el contacto de privacidad que ve la plantilla (ADR 047), y si se exige el
- * segundo factor a ADMIN y RRHH (ADR 051).
+ * segundo factor a ADMIN y RRHH (ADR 051), si se pregunta presencial o a
+ * distancia (ADR 055) y si se pide la ubicación al fichar (ADR 056).
  *
  * Solo la ve ADMIN (`empresa:configurar`). La zona decide a qué día pertenece
  * cada fichaje de todo el histórico, así que cambiarla pide confirmación: una
@@ -260,6 +261,77 @@ function PreguntarModalidad({ ajustes }: { ajustes: Ajustes }) {
   );
 }
 
+/**
+ * Pedir la ubicación al entrar y al salir (ADR 056). Como la modalidad, salvo
+ * que encenderla pide confirmación: apagarla no obliga a nada, y encenderla
+ * obliga a informar antes a la plantilla.
+ */
+function PedirUbicacion({ ajustes }: { ajustes: Ajustes }) {
+  const U = A.ubicacion;
+  const guardada = ajustes.ubicacionAlFichar === true;
+  const [pedirla, setPedirla] = useState(guardada);
+  const [confirmando, setConfirmando] = useState(false);
+  const guardar = useMutacion(
+    (valor: boolean) =>
+      pedir(
+        cliente.PUT('/api/v1/empresa/ajustes', {
+          body: {
+            nombre: ajustes.nombre ?? '',
+            zonaHoraria: ajustes.zonaHoraria ?? PENINSULA,
+            contactoPrivacidad: ajustes.contactoPrivacidad ?? '',
+            ubicacionAlFichar: valor,
+          },
+        }),
+      ),
+    {
+      invalida: [CLAVE_AJUSTES],
+      exito: (r) => (r.ubicacionAlFichar === true ? U.pedida : U.noPedida),
+      alTerminar: () => setConfirmando(false),
+    },
+  );
+
+  return (
+    <Tarjeta titulo={U.titulo} icono="ubicacion" descripcion={U.texto}>
+      <div className="nx-columna">
+        <label className="nx-casilla">
+          <input type="checkbox" checked={pedirla} onChange={(e) => setPedirla(e.target.checked)} />
+          <span>{U.pedir}</span>
+        </label>
+        <div>
+          <Boton
+            variante="secundario"
+            ocupado={guardar.isPending && !confirmando}
+            disabled={pedirla === guardada}
+            onClick={() => (pedirla ? setConfirmando(true) : guardar.mutate(false))}
+          >
+            {U.guardar}
+          </Boton>
+        </div>
+        {guardar.error !== null && !confirmando && <Aviso>{guardar.error.message}</Aviso>}
+      </div>
+      <Dialogo
+        abierto={confirmando}
+        titulo={U.confirmarTitulo}
+        alCerrar={() => setConfirmando(false)}
+        acciones={
+          <>
+            <Boton variante="texto" onClick={() => setConfirmando(false)}>
+              {T.app.cancelar}
+            </Boton>
+            <Boton ocupado={guardar.isPending} onClick={() => guardar.mutate(true)}>
+              {U.confirmar}
+            </Boton>
+          </>
+        }
+      >
+        <p>{U.confirmarLey}</p>
+        <p>{U.confirmarImpacto}</p>
+        {guardar.error !== null && <Aviso>{guardar.error.message}</Aviso>}
+      </Dialogo>
+    </Tarjeta>
+  );
+}
+
 export function AjustesEmpresa() {
   const ajustes = useQuery({
     queryKey: CLAVE_AJUSTES,
@@ -278,10 +350,13 @@ export function AjustesEmpresa() {
             )}
           </EstadoDeConsulta>
           {ajustes.data !== undefined && (
-            <ExigirSegundoFactor key={String(ajustes.data.exigirSegundoFactor)} ajustes={ajustes.data} />
+            <ExigirSegundoFactor key={`segundo-factor-${ajustes.data.exigirSegundoFactor}`} ajustes={ajustes.data} />
           )}
           {ajustes.data !== undefined && (
-            <PreguntarModalidad key={String(ajustes.data.preguntarModalidad)} ajustes={ajustes.data} />
+            <PreguntarModalidad key={`modalidad-${ajustes.data.preguntarModalidad}`} ajustes={ajustes.data} />
+          )}
+          {ajustes.data !== undefined && (
+            <PedirUbicacion key={`ubicacion-${ajustes.data.ubicacionAlFichar}`} ajustes={ajustes.data} />
           )}
           <CanalDeDenunciasAjustes />
           {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}

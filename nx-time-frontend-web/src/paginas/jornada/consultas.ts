@@ -15,6 +15,7 @@ import { pedir, pedirOpcional } from '../../api/consultas';
 import type { components } from '../../api/schema';
 
 export type Jornada = components['schemas']['TimeEntryResponse'];
+export type EstadoDeHoy = components['schemas']['TodayStatusResponse'];
 export type ProyectosParaFichar = components['schemas']['ClockProjectsResponse'];
 export type HorasDelDia = components['schemas']['DailyHoursResponse'];
 

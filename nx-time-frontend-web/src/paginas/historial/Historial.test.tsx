@@ -54,6 +54,35 @@ afterEach(() => {
 });
 
 describe('los recientes', () => {
+  /* ADR 056: un enlace, para que las coordenadas solo salgan si alguien pulsa. */
+  it('dónde se fichó: la precisión y el enlace al mapa, «sin ubicación» o nada', async () => {
+    api({
+      'GET /api/v1/fichaje/historial': () => ({
+        contenido: [
+          {
+            ...MARTES,
+            ubicacionEntrada: { estado: 'CAPTURADA', latitud: 42.2406, longitud: -8.7207, precisionM: 25 },
+            ubicacionSalida: { estado: 'DENEGADA' },
+          },
+          // Pasados los 12 meses queda el estado, sin coordenadas.
+          { ...LUNES, ubicacionEntrada: { estado: 'CAPTURADA' } },
+        ],
+        hayMas: false,
+      }),
+    });
+    pintar(<Historial />, { sesion: sesionDe('EMPLEADO') });
+
+    const tabla = await screen.findByRole('table', { name: H.tablaTitulo });
+    const [martes, lunes] = within(tabla).getAllByRole('row').slice(1) as [HTMLElement, HTMLElement];
+    const enlace = within(martes).getByRole('link', { name: /^Ver en el mapa: entrada de las / });
+    expect(enlace.getAttribute('href')).toBe('https://www.openstreetmap.org/?mlat=42.2406&mlon=-8.7207#map=17/42.2406/-8.7207');
+    expect(enlace.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(within(martes).getByText(/± 25 m/)).toBeTruthy();
+    expect(within(martes).getByText('Sin ubicación')).toBeTruthy();
+    expect(within(lunes).queryByRole('link', { name: /Ver en el mapa/ })).toBeNull();
+    expect(within(lunes).queryByText('Sin ubicación')).toBeNull();
+  });
+
   /* La salida de una jornada que cerró el sistema es un tope, no un dato: se dice. */
   it('la jornada que cerró el sistema lleva su distintivo, y las demás no', async () => {
     api({

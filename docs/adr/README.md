@@ -65,3 +65,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [053](053-el-codigo-de-empleado.md) | El código de empleado |
 | [054](054-fichar-sin-conexion.md) | Fichar sin conexión |
 | [055](055-presencial-o-a-distancia.md) | Presencial o a distancia |
+| [056](056-la-ubicacion-al-fichar.md) | La ubicación al fichar |

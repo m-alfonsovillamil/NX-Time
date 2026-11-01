@@ -123,7 +123,10 @@ export function Privacidad() {
       <ul>
         <li>No vendemos datos ni los usamos para publicidad.</li>
         <li>No tomamos decisiones automatizadas sobre ti.</li>
-        <li>No registramos tu ubicación: ni la web ni la app la piden.</li>
+        <li>
+          No seguimos dónde estás. Solo si tu empresa lo activa, se guarda tu ubicación al fichar la entrada y la salida;
+          de ese dato es responsable ella, y nosotros lo tratamos por su encargo.
+        </li>
       </ul>
     </>
   );

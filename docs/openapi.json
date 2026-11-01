@@ -11856,6 +11856,9 @@
           },
           "preguntarModalidad" : {
             "type" : "boolean"
+          },
+          "ubicacionAlFichar" : {
+            "type" : "boolean"
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -11880,6 +11883,9 @@
             "format" : "int32"
           },
           "preguntarModalidad" : {
+            "type" : "boolean"
+          },
+          "ubicacionAlFichar" : {
             "type" : "boolean"
           }
         }
@@ -13126,9 +13132,39 @@
           "modalidad" : {
             "type" : "string",
             "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "ubicacion" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
           }
         },
         "required" : [ "tipo" ]
+      },
+      "UbicacionDelFichaje" : {
+        "type" : "object",
+        "properties" : {
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "CAPTURADA", "DENEGADA", "NO_DISPONIBLE" ]
+          },
+          "latitud" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 90,
+            "minimum" : -90
+          },
+          "longitud" : {
+            "type" : "number",
+            "format" : "double",
+            "maximum" : 180,
+            "minimum" : -180
+          },
+          "precisionM" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "estado" ]
       },
       "TimeEntryResponse" : {
         "type" : "object",
@@ -13176,6 +13212,12 @@
           "modalidad" : {
             "type" : "string",
             "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "ubicacionEntrada" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
+          },
+          "ubicacionSalida" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
           }
         }
       },
@@ -13316,6 +13358,9 @@
           "modalidad" : {
             "type" : "string",
             "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "ubicacion" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
           }
         },
         "required" : [ "horaDelDispositivo", "idCliente", "tipo" ]
@@ -15217,6 +15262,12 @@
           "modalidad" : {
             "type" : "string",
             "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "ubicacionEntrada" : {
+            "$ref" : "#/components/schemas/PuntoDeFichaje"
+          },
+          "ubicacionSalida" : {
+            "$ref" : "#/components/schemas/PuntoDeFichaje"
           }
         }
       },
@@ -15531,6 +15582,27 @@
           }
         }
       },
+      "PuntoDeFichaje" : {
+        "type" : "object",
+        "properties" : {
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "CAPTURADA", "DENEGADA", "NO_DISPONIBLE" ]
+          },
+          "latitud" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "longitud" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "precisionM" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "SaldoVacaciones" : {
         "type" : "object",
         "properties" : {
@@ -15765,6 +15837,9 @@
           },
           "preguntarModalidad" : {
             "type" : "boolean"
+          },
+          "pedirUbicacion" : {
+            "type" : "boolean"
           }
         }
       },
@@ -15880,6 +15955,12 @@
           "modalidad" : {
             "type" : "string",
             "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "ubicacionEntrada" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
+          },
+          "ubicacionSalida" : {
+            "$ref" : "#/components/schemas/UbicacionDelFichaje"
           }
         }
       },
