@@ -11,6 +11,8 @@ import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.UbicacionDelFichaje
 import com.nxtime.app.data.session.Ajustes
+import com.nxtime.app.data.sinconexion.ColaEnMemoria
+import com.nxtime.app.data.sinconexion.EntornoFalso
 import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.TipoFichaje
@@ -81,7 +83,9 @@ class FicharScreenTest {
             repositorio,
             sesion,
             Ajustes(RuntimeEnvironment.getApplication()),
-            FuenteDeUbicacion { UbicacionDelFichaje(EstadoUbicacion.CAPTURADA, 42.2406, -8.7207, 25) }
+            FuenteDeUbicacion { UbicacionDelFichaje(EstadoUbicacion.CAPTURADA, 42.2406, -8.7207, 25) },
+            ColaEnMemoria(),
+            EntornoFalso()
         )
         val detalleViewModel = DetalleDeTiempoViewModel(repositorio)
         pantalla.setContent {

@@ -470,6 +470,10 @@ class AuthRepositoryImpl(
         return apiService.cerrarTodasLasSesiones()
     }
 
+    override suspend fun enviarFichajesSinConexion(
+        peticion: com.nxtime.app.data.dto.EnvioSinConexionRequest
+    ) = apiService.enviarFichajesSinConexion(peticion)
+
     override suspend fun cerrarSesionRemota(refreshToken: String): Response<Unit> {
         return apiService.cerrarSesionRemota(RefreshTokenRequest(refreshToken))
     }

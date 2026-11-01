@@ -275,6 +275,20 @@
     <string name="correccion_motivo">Motivo de la corrección</string>
     <string name="correccion_modalidad">Presencial o a distancia</string>
     <string name="correcciones_modalidad">%1$s → %2$s</string>
+    <plurals name="sin_conexion_pendientes">
+        <item quantity="one">Sin conexión: %1$d fichaje se enviará al volver la red</item>
+        <item quantity="other">Sin conexión: %1$d fichajes se enviarán al volver la red</item>
+    </plurals>
+    <plurals name="sin_conexion_salir_texto">
+        <item quantity="one">Tienes %1$d fichaje sin enviar. Se queda guardado en este móvil y se enviará cuando vuelvas a entrar con tu cuenta. Hasta entonces, tu empresa no lo verá.</item>
+        <item quantity="other">Tienes %1$d fichajes sin enviar. Se quedan guardados en este móvil y se enviarán cuando vuelvas a entrar con tu cuenta. Hasta entonces, tu empresa no los verá.</item>
+    </plurals>
+    <string name="sin_conexion_salir_titulo">¿Cerrar sesión con fichajes sin enviar?</string>
+    <string name="sin_conexion_cola_llena">No se ha podido guardar el fichaje en el móvil: hay demasiados sin enviar. Conéctate para mandarlos.</string>
+    <string name="sin_conexion_rechazado">No se ha aceptado tu fichaje del %1$s</string>
+    <string name="sin_conexion_a_revisar">Tu fichaje del %1$s llegó tarde: lo tiene que revisar tu responsable</string>
+    <string name="sin_conexion_distintivo">Sin conexión</string>
+    <string name="sin_conexion_revisar_distintivo">A revisar: llegó tarde</string>
     <string name="modalidad_titulo">¿Dónde trabajas hoy?</string>
     <string name="modalidad_texto">Tu empresa apunta en cada jornada si se trabaja en el centro o a distancia.</string>
     <string name="modalidad_presencial">Presencial</string>

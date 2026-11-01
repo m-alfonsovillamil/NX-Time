@@ -42,6 +42,11 @@ class NxTimeApplication : Application() {
      */
     lateinit var ajustes: Ajustes
 
+    /** Los fichajes hechos sin conexión y cómo se mandan (ADR 054). */
+    lateinit var colaDeFichajes: com.nxtime.app.data.sinconexion.ColaDeFichajes
+    lateinit var entornoDelMovil: com.nxtime.app.data.sinconexion.EntornoDelMovil
+    lateinit var envioDeFichajes: com.nxtime.app.data.sinconexion.EnvioDeFichajes
+
     /** Cuándo este móvil recibe push y cuándo deja de recibirlos (Fase B5). */
     lateinit var registroDePush: RegistroDePush
 
@@ -85,6 +90,13 @@ class NxTimeApplication : Application() {
         authRepository = AuthRepositoryImpl(apiService, sessionManager) {
             registroDePush.registrarSiToca()
         }
+
+        // 4.1. Fichar sin conexión (ADR 054).
+        colaDeFichajes = com.nxtime.app.data.sinconexion.ColaEnPreferencias(this)
+        entornoDelMovil = com.nxtime.app.data.sinconexion.EntornoAndroid(this)
+        envioDeFichajes = com.nxtime.app.data.sinconexion.EnvioDeFichajes(
+            authRepository, colaDeFichajes, entornoDelMovil, sessionManager::correoDeLaSesion
+        )
 
         // 5. Push (Fase B5). Al arrancar con sesión se vuelve a registrar: Google
         //    puede haber cambiado el token, y así el servidor sabe que sigue vivo.

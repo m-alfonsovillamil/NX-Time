@@ -232,6 +232,10 @@ interface AuthRepository {
      */
     suspend fun cerrarSesionRemota(refreshToken: String): Response<Unit>
 
+    suspend fun enviarFichajesSinConexion(
+        peticion: com.nxtime.app.data.dto.EnvioSinConexionRequest
+    ): Response<com.nxtime.app.data.dto.EnvioSinConexionResponse>
+
 
     /**
      * Llama al ApiService para crear un nuevo co-gestor.

@@ -741,9 +741,9 @@ Android, contra un proveedor de mentira que firma sus propios ID token.
   no ve si algo se solapa o se sale de la pantalla. Eso sigue siendo cosa de las
   capturas, que se sacan a mano en un emulador. La web sí lo tiene (Playwright,
   con axe y la comprobación de que nada se sale por los lados).
-- **No se puede fichar sin conexión**: ni la app ni la web guardan el fichaje
-  para mandarlo después. Sin cobertura (una obra, un sótano) hay que esperar a
-  tenerla o usar el kiosco de la entrada.
+- **Sin conexión solo se ficha desde la app Android**
+  ([ADR 054](docs/adr/054-fichar-sin-conexion.md)): la web y el kiosco siguen
+  necesitando red, y la hora de lo que llega así la mide el móvil.
 - **Solo está en español**, en la app y en la web.
 - **Toda petición a la API carga dos veces a quien la hace**, una en el filtro
   del token y otra en el servicio: cuatro consultas fijas antes de hacer nada.

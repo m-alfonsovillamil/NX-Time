@@ -9,6 +9,8 @@ import com.nxtime.app.data.dto.EstadoUbicacion
 import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.UbicacionDelFichaje
 import com.nxtime.app.data.session.Ajustes
+import com.nxtime.app.data.sinconexion.ColaEnMemoria
+import com.nxtime.app.data.sinconexion.EntornoFalso
 import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.Registro
@@ -83,11 +85,170 @@ class FicharViewModelTest {
             .toResponseBody("application/problem+json".toMediaType())
     )
 
-    private fun nuevoViewModel() = FicharViewModel(repositorio, sesion, ajustes, fuente)
+    private val cola = ColaEnMemoria()
+    private val entorno = EntornoFalso()
+
+    private fun nuevoViewModel() = FicharViewModel(repositorio, sesion, ajustes, fuente, cola, entorno)
 
     private suspend fun viewModelCon(activo: Registro?): FicharViewModel {
         whenever(repositorio.getRegistroActivo()).thenReturn(Response.success(activo))
         return nuevoViewModel()
+    }
+
+    /** ADR 054: sin red el fichaje se guarda con la hora de pulsar, y la pantalla sigue como si nada. */
+    @Test
+    fun `sin red la entrada se guarda en la cola y la pantalla se pone a trabajar`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        entorno.red = false
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        verify(repositorio, never()).registrarFichaje(any())
+        val guardado = cola.fichajes.single()
+        assertEquals(TipoFichaje.INICIO, guardado.tipo)
+        assertEquals("ana@x", guardado.dueno)
+        assertEquals("2026-10-26T07:00:00Z", guardado.horaDelDispositivo)
+        assertEquals(1, entorno.envios)
+        val estado = viewModel.uiState.value
+        assertEquals(EstadoJornada.TRABAJANDO, estado.estado)
+        assertEquals(1, estado.fichajesPendientes)
+        assertNull(estado.error)
+    }
+
+    /** La hora es la de pulsar: lo que tarde el GPS no cuenta. */
+    @Test
+    fun `la hora guardada es la de pulsar, no la de cuando responde el GPS`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        whenever(ajustes.empresaPideUbicacion).thenReturn(true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(true)
+        entorno.red = false
+        whenever(repositorio.getRegistroActivo()).thenReturn(Response.success(null))
+        val viewModel = FicharViewModel(repositorio, sesion, ajustes, FuenteDeUbicacion {
+            delay(5_000)
+            entorno.hora = entorno.hora.plusSeconds(5)
+            posicion
+        }, cola, entorno)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertEquals("2026-10-26T07:00:00Z", cola.fichajes.single().horaDelDispositivo)
+        assertEquals(posicion, cola.fichajes.single().ubicacion)
+    }
+
+    @Test
+    fun `si la peticion falla sin respuesta tambien se guarda`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        whenever(repositorio.registrarFichaje(any())).thenAnswer { throw java.io.IOException("se corto") }
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertEquals(1, cola.fichajes.size)
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    @Test
+    fun `un error del servidor se ensena y no se guarda`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        whenever(repositorio.registrarFichaje(any())).thenReturn(error(409, "Ya hay una jornada activa."))
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertTrue(cola.fichajes.isEmpty())
+        assertNotNull(viewModel.uiState.value.error)
+    }
+
+    /** Si saliera antes, una salida podría llegar antes que su entrada, y se rechazaría. */
+    @Test
+    fun `con algo en la cola lo nuevo va detras aunque haya red`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        entorno.red = false
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        entorno.red = true
+        viewModel.pulsarBotonPrincipal()
+        viewModel.confirmarFinDeJornada()
+        advanceUntilIdle()
+
+        verify(repositorio, never()).registrarFichaje(any())
+        assertEquals(listOf(TipoFichaje.INICIO, TipoFichaje.FIN), cola.fichajes.map { it.tipo })
+        assertEquals(EstadoJornada.SIN_JORNADA, viewModel.uiState.value.estado)
+    }
+
+    @Test
+    fun `al abrir sin red se parte de la ultima jornada que dijo el servidor`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        cola.guardarUltimaJornada("ana@x", registro())
+        entorno.red = false
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+        verify(repositorio, never()).getRegistroActivo()
+    }
+
+    /** Sin red hay que saber igual si la empresa la pide: se guardó la última vez. */
+    @Test
+    fun `sin red se respeta lo que pidio la empresa la ultima vez`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        whenever(ajustes.empresaPreguntaModalidad).thenReturn(true)
+        entorno.red = false
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.preguntandoModalidad)
+    }
+
+    @Test
+    fun `al volver a abrir con la cola llena de cosas se lanza el envio`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        cola.anadir(
+            com.nxtime.app.data.dto.FichajePendiente(
+                idCliente = "a", dueno = "ana@x", tipo = TipoFichaje.INICIO,
+                horaDelDispositivo = "2026-10-26T07:00:00Z", elapsedAlFichar = 1, arranqueAlFichar = 5
+            )
+        )
+
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        assertEquals(1, entorno.envios)
+        // Lo del servidor más lo de la cola: la entrada aún no ha llegado.
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    @Test
+    fun `lo que manda el envio refresca la pantalla, y un aviso se puede descartar`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        val aviso = com.nxtime.app.data.dto.AvisoDeEnvio(
+            "a", "ana@x", TipoFichaje.FIN, "2026-10-26T07:00:00Z", aRevisar = false, motivo = "No"
+        )
+
+        cola.anadirAvisos(listOf(aviso))
+        advanceUntilIdle()
+        assertEquals(listOf(aviso), viewModel.uiState.value.avisosDeEnvio)
+
+        viewModel.descartarAvisoDeEnvio("a")
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.avisosDeEnvio.isEmpty())
     }
 
     /** ADR 056: al entrar y al salir, explicada antes la primera vez, y sin ella se ficha igual. */
@@ -197,7 +358,7 @@ class FicharViewModelTest {
         val viewModel = FicharViewModel(repositorio, sesion, ajustes, FuenteDeUbicacion {
             delay(5_000)
             posicion
-        })
+        }, cola, entorno)
         advanceUntilIdle()
 
         viewModel.pulsarBotonPrincipal()

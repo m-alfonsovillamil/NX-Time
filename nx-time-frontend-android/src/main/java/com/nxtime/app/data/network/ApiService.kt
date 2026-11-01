@@ -146,6 +146,12 @@ interface ApiService {
     @GET("api/v1/fichaje/hoy")
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
 
+    /** Los fichajes hechos sin conexión, al volver la red (ADR 054). */
+    @POST("api/v1/fichaje/sin-conexion")
+    suspend fun enviarFichajesSinConexion(
+        @Body peticion: com.nxtime.app.data.dto.EnvioSinConexionRequest
+    ): Response<com.nxtime.app.data.dto.EnvioSinConexionResponse>
+
     // X-Cliente: queda dicho que se fichó desde la app (ADR 054).
     @Headers("X-Cliente: android")
     @POST("api/v1/fichaje")

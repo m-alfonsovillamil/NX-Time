@@ -68,7 +68,9 @@ object AppViewModelProvider {
                 app().authRepository,
                 app().sessionManager,
                 app().ajustes,
-                com.nxtime.app.data.ubicacion.UbicacionDelMovil(app())
+                com.nxtime.app.data.ubicacion.UbicacionDelMovil(app()),
+                app().colaDeFichajes,
+                app().entornoDelMovil
             )
         }
         initializer { HistorialViewModel(app().authRepository) }

@@ -673,6 +673,10 @@ fun NxTimeNavHost(
                 AjustesScreen(
                     onVolver = navController::navigateUp,
                     onIrContrasena = { navController.navigate(Pantalla.CONTRASENA.ruta) },
+                    fichajesPendientes = (androidx.compose.ui.platform.LocalContext.current.applicationContext
+                        as com.nxtime.app.NxTimeApplication).let { app ->
+                        app.sessionManager.correoDeLaSesion()?.let { app.colaDeFichajes.pendientes(it).size } ?: 0
+                    },
                     onCerrarSesion = {
                         perfilViewModel.cerrarSesion()
                         entrarA(Pantalla.LOGIN)

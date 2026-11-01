@@ -321,6 +321,14 @@ private fun TarjetaJornada(
                     tono = TonoDeInsignia.AVISO
                 )
             }
+            if (registro.origen == "APP_SIN_CONEXION") {
+                Spacer(Modifier.height(6.dp))
+                Insignia(texto = stringResource(R.string.sin_conexion_distintivo))
+            }
+            if (registro.revisarPorLlegarTarde) {
+                Spacer(Modifier.height(6.dp))
+                Insignia(texto = stringResource(R.string.sin_conexion_revisar_distintivo), tono = TonoDeInsignia.AVISO)
+            }
             if (registro.modalidad == Modalidad.A_DISTANCIA) {
                 Spacer(Modifier.height(6.dp))
                 Insignia(texto = stringResource(R.string.modalidad_a_distancia))
