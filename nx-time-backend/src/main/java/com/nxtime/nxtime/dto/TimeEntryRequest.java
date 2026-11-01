@@ -22,15 +22,27 @@ public record TimeEntryRequest(
          * distancia (ADR 055). Opcional aunque la pregunte: una app que no la
          * conoce tiene que poder fichar igual, y la jornada queda sin ella.
          */
-        com.nxtime.nxtime.domain.Modalidad modalidad
+        com.nxtime.nxtime.domain.Modalidad modalidad,
+
+        /**
+         * En INICIO y FIN, si la empresa la pide: dónde se fichó, o por qué no
+         * se sabe (ADR 056). Null si el cliente no la conoce: se ficha igual.
+         */
+        @jakarta.validation.Valid
+        UbicacionDelFichaje ubicacion
 ) {
+    /** Lo de antes del ADR 056: sin ubicación. */
+    public TimeEntryRequest(TimeEntryAction tipo, Long proyectoId, com.nxtime.nxtime.domain.Modalidad modalidad) {
+        this(tipo, proyectoId, modalidad, null);
+    }
+
     /** Lo que mandan las acciones sin proyecto y las versiones de la app anteriores a la 1.4. */
     public TimeEntryRequest(TimeEntryAction tipo) {
-        this(tipo, null, null);
+        this(tipo, null, null, null);
     }
 
     /** Lo de antes del ADR 055: sin modalidad. */
     public TimeEntryRequest(TimeEntryAction tipo, Long proyectoId) {
-        this(tipo, proyectoId, null);
+        this(tipo, proyectoId, null, null);
     }
 }

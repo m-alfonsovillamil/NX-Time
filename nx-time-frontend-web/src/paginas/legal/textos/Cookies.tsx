@@ -18,6 +18,8 @@ const ALMACENAMIENTO: readonly [string, string][] = [
   ['nx-menu-abiertos', 'Qué apartados del menú tienes desplegados.'],
   ['nx-push-token', 'Si has activado los avisos en este navegador, para poder apagarlos.'],
   ['nx-kiosco-token', 'Solo en una tablet usada como kiosco: la credencial del kiosco.'],
+  ['nx-ultima-modalidad', 'Si tu empresa pregunta presencial o a distancia, lo último que elegiste, para ofrecerlo primero.'],
+  ['nx-ubicacion-informada', 'Si tu empresa pide la ubicación al fichar, que ya has visto para qué. No guarda ninguna ubicación.'],
 ];
 
 export function Cookies() {

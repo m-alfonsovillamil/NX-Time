@@ -10,6 +10,8 @@
  * - **¿En qué proyecto?** Solo con dos o más proyectos disponibles: con uno o
  *   ninguno decide el servidor (ADR 017).
  * - **¿Presencial o a distancia?** Solo si la empresa lo pregunta (ADR 055).
+ * - **Para qué se toma la ubicación.** Solo la primera vez, y solo si la empresa
+ *   la pide (ADR 056): antes de que pregunte el navegador, no después.
  */
 
 import { useState, type FormEvent } from 'react';
@@ -20,6 +22,7 @@ import { T } from '../../i18n/es';
 import { fichar } from '../../i18n/es/fichar';
 import { duracion, hora } from '../../util/fechas';
 import type { Jornada, ProyectosParaFichar } from './consultas';
+import { recordarUbicacionInformada } from './ubicacion';
 
 const F = fichar;
 
@@ -27,12 +30,15 @@ export function ConfirmarFin({
   jornada,
   segundosTrabajados,
   abierto,
+  ocupado,
   alConfirmar,
   alCancelar,
 }: {
   jornada: Jornada | null;
   segundosTrabajados: number;
   abierto: boolean;
+  /** Tomar la ubicación puede tardar unos segundos: que no se pulse dos veces. */
+  ocupado: boolean;
   alConfirmar: () => void;
   alCancelar: () => void;
 }) {
@@ -47,7 +53,9 @@ export function ConfirmarFin({
           <Boton variante="texto" onClick={alCancelar}>
             {F.confirmarFin.no}
           </Boton>
-          <Boton onClick={alConfirmar}>{F.confirmarFin.si}</Boton>
+          <Boton ocupado={ocupado} onClick={alConfirmar}>
+            {F.confirmarFin.si}
+          </Boton>
         </>
       }
     >
@@ -128,6 +136,43 @@ export function ElegirModalidad({
       }
     >
       <p>{F.modalidad.texto}</p>
+    </Dialogo>
+  );
+}
+
+export function AvisoDeUbicacion({
+  abierto,
+  alEntendido,
+  alCancelar,
+}: {
+  abierto: boolean;
+  alEntendido: () => void;
+  alCancelar: () => void;
+}) {
+  return (
+    <Dialogo
+      abierto={abierto}
+      titulo={F.ubicacion.titulo}
+      alCerrar={alCancelar}
+      acciones={
+        <>
+          <Boton variante="texto" onClick={alCancelar}>
+            {T.app.cancelar}
+          </Boton>
+          <Boton
+            onClick={() => {
+              recordarUbicacionInformada();
+              alEntendido();
+            }}
+          >
+            {F.ubicacion.entendido}
+          </Boton>
+        </>
+      }
+    >
+      <p>{F.ubicacion.texto}</p>
+      <p>{F.ubicacion.quien}</p>
+      <p>{F.ubicacion.permiso}</p>
     </Dialogo>
   );
 }

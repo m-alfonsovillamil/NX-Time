@@ -38,6 +38,9 @@ public interface TimeEntryService {
     /** Si su empresa pregunta presencial o a distancia al entrar (ADR 055). */
     boolean preguntaModalidad(String userEmail);
 
+    /** Si su empresa pide la ubicación al entrar y al salir (ADR 056). */
+    boolean pideUbicacion(String userEmail);
+
     /**
      * El mismo fichaje, para quien se identificó en un kiosco (ADR 033): las
      * mismas reglas y la misma auditoría, con el kiosco dicho en el motivo.

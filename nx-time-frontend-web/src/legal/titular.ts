@@ -15,4 +15,4 @@ export const TITULAR = {
 } as const;
 
 /** La versión de las condiciones del servicio y del contrato de encargo que se acepta al registrarse. */
-export const VERSION_CONDICIONES = "2026-10-18";
+export const VERSION_CONDICIONES = "2026-11-01";

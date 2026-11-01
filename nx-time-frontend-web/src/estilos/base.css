@@ -3043,6 +3043,12 @@ h2 {
   gap: 4px 8px;
 }
 
+/* Debajo de la hora: dónde se fichó (ADR 056). */
+.nx-ubicacion {
+  display: block;
+  margin-top: 2px;
+}
+
 /* Una celda con dos cosas, una encima de otra (la insignia y su motivo). */
 .nx-celda-apilada {
   display: flex;

@@ -287,7 +287,7 @@ services:
       # camera=() el navegador ni siquiera llegaba a pedir permiso.
       - path: /*
         name: Permissions-Policy
-        value: camera=(self), microphone=(), geolocation=(), payment=()
+        value: camera=(self), microphone=(), geolocation=(self), payment=()
       - path: /*
         name: X-Frame-Options
         value: DENY

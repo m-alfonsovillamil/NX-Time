@@ -75,6 +75,13 @@ public record TimeEntryResponse(
         boolean revisarPorLlegarTarde,
 
         /** Presencial o a distancia (ADR 055), o null si no consta. */
-        com.nxtime.nxtime.domain.Modalidad modalidad
+        com.nxtime.nxtime.domain.Modalidad modalidad,
+
+        /**
+         * Dónde se fichó la entrada y la salida (ADR 056), o null si la empresa
+         * no la pide. Pasados 12 meses, el estado sin coordenadas.
+         */
+        UbicacionDelFichaje ubicacionEntrada,
+        UbicacionDelFichaje ubicacionSalida
 ) {
 }

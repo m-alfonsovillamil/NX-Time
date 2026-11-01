@@ -51,13 +51,15 @@ public final class SinConexionDtos {
             @NotNull Instant horaDelDispositivo,
             @PositiveOrZero Long msDesdeElFichaje,
             /** Solo en INICIO: presencial o a distancia (ADR 055). */
-            com.nxtime.nxtime.domain.Modalidad modalidad
+            com.nxtime.nxtime.domain.Modalidad modalidad,
+            /** En INICIO y FIN: la ubicación tomada al fichar, sin red también (ADR 056). */
+            @Valid com.nxtime.nxtime.dto.UbicacionDelFichaje ubicacion
     ) {
 
         /** Lo de antes del ADR 055: sin modalidad. */
         public Fichaje(UUID idCliente, TimeEntryAction tipo, Long proyectoId, Instant horaDelDispositivo,
                 Long msDesdeElFichaje) {
-            this(idCliente, tipo, proyectoId, horaDelDispositivo, msDesdeElFichaje, null);
+            this(idCliente, tipo, proyectoId, horaDelDispositivo, msDesdeElFichaje, null, null);
         }
     }
 

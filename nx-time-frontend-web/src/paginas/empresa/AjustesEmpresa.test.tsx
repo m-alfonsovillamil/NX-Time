@@ -74,6 +74,45 @@ describe('ajustes de la empresa', () => {
     ]);
   });
 
+  /* ADR 056: encenderla obliga a informar antes a la plantilla, y apagarla no obliga a nada. */
+  it('pedir la ubicación recuerda el art. 90 antes de guardar, y quitarla no pregunta', async () => {
+    let guardados: object = { ...AJUSTES, ubicacionAlFichar: false };
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => guardados,
+      'PUT /api/v1/empresa/ajustes': ({ cuerpo }) => {
+        guardados = { ...(cuerpo as object), firmasInvalidadas: 0 };
+        return guardados;
+      },
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    await userEvent.click(await screen.findByLabelText(A.ubicacion.pedir));
+    const tarjeta = screen.getByLabelText(A.ubicacion.pedir).closest('.nx-columna') as HTMLElement;
+    await userEvent.click(within(tarjeta).getByRole('button', { name: A.ubicacion.guardar }));
+
+    const dialogo = await screen.findByRole('dialog', { name: A.ubicacion.confirmarTitulo });
+    expect(within(dialogo).getByText(A.ubicacion.confirmarLey)).toBeTruthy();
+    expect(llamadas.a('PUT', '/api/v1/empresa/ajustes')).toEqual([]);
+
+    await userEvent.click(within(dialogo).getByRole('button', { name: A.ubicacion.confirmar }));
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
+        { nombre: 'Talleres Ana', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: '', ubicacionAlFichar: true },
+      ]),
+    );
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const casilla = await screen.findByLabelText(A.ubicacion.pedir);
+    await waitFor(() => expect((casilla as HTMLInputElement).checked).toBe(true));
+    await userEvent.click(casilla);
+    const tarjetaOtraVez = casilla.closest('.nx-columna') as HTMLElement;
+    await userEvent.click(within(tarjetaOtraVez).getByRole('button', { name: A.ubicacion.guardar }));
+
+    await waitFor(() => expect(llamadas.a('PUT', '/api/v1/empresa/ajustes')).toHaveLength(2));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(llamadas.a('PUT', '/api/v1/empresa/ajustes')[1]?.cuerpo).toMatchObject({ ubicacionAlFichar: false });
+  });
+
   it('el contacto de privacidad se guarda recortado, y desde aquí se llega a los accesos (ADR 047)', async () => {
     const llamadas = simularApi({
       'GET /api/v1/empresa/ajustes': () => ({ ...AJUSTES, contactoPrivacidad: 'viejo@talleres.es' }),

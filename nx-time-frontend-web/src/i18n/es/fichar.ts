@@ -44,6 +44,22 @@ export const fichar = {
     PRESENCIAL: 'Presencial',
     A_DISTANCIA: 'A distancia',
   },
+  // ADR 056: solo si la empresa la pide.
+  ubicacion: {
+    titulo: 'Tu empresa apunta dónde fichas',
+    texto:
+      'Al fichar la entrada y la salida se guarda tu ubicación en ese momento, y nada más: no se te sigue durante la jornada ni en las pausas.',
+    quien:
+      'La ves tú, tu responsable y RRHH, y se borra a los 12 meses. Quien decide pedirla es tu empresa: a ella puedes preguntarle para qué la usa.',
+    permiso: 'Ahora el navegador te pedirá permiso. Si no se lo das, fichas igual, y el fichaje queda «sin ubicación».',
+    entendido: 'Entendido',
+    sin: 'Sin ubicación',
+    precision: (metros: number) => `± ${metros} m`,
+    verEnElMapa: 'Ver en el mapa',
+    verEnElMapaDe: (momento: string) => `Ver en el mapa: ${momento}`,
+    entradaDeLas: (hora: string) => `entrada de las ${hora}`,
+    salidaDeLas: (hora: string) => `salida de las ${hora}`,
+  },
 
   proyecto: {
     elegirTitulo: '¿En qué proyecto vas a trabajar?',

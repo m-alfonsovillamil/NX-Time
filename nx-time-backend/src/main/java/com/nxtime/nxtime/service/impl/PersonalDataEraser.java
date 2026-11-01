@@ -175,6 +175,15 @@ class PersonalDataEraser {
         // quedan: dicen qué registro aceptó la persona, que es lo que se guarda.
         jdbc.update("UPDATE firmas_mensuales SET ip = NULL WHERE usuario_id = ? AND ip IS NOT NULL", usuarioId);
 
+        // Dónde fichó (ADR 056): fuera las coordenadas, queda el estado. No
+        // están en la auditoría, así que aquí se van de verdad.
+        jdbc.update("""
+                UPDATE registros
+                   SET entrada_latitud = NULL, entrada_longitud = NULL, entrada_precision_m = NULL,
+                       salida_latitud = NULL, salida_longitud = NULL, salida_precision_m = NULL
+                 WHERE usuario_id = ? AND (entrada_latitud IS NOT NULL OR salida_latitud IS NOT NULL)
+                """, usuarioId);
+
         // Canal de denuncias: solo el lado del DENUNCIANTE. Los mensajes del
         // instructor exigen autor identificado (CHECK de V13), y si esta
         // persona instruyó expedientes, esos siguen apuntando a su fila, que

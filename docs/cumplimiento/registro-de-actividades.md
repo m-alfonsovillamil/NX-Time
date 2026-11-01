@@ -3,7 +3,7 @@
 RGPD, artículo 30. Titular: Miguel Alfonso Villamil (NIF y contacto en
 `application.titular`, `nx-time-backend/src/main/resources/application.yml`).
 Sin delegado de protección de datos: no es obligatorio (art. 37) para este
-tamaño ni para esta actividad. Actualizado: 17/10/2026.
+tamaño ni para esta actividad. Actualizado: 1/11/2026.
 
 ## 1. Como responsable (art. 30.1)
 
@@ -53,7 +53,7 @@ tamaño ni para esta actividad. Actualizado: 17/10/2026.
 | | |
 |---|---|
 | Responsables | Cada empresa cliente aprobada en el panel de plataforma (la lista y su contacto están en él) |
-| Categorías de tratamiento | Registro de jornada (fichajes, pausas, correcciones con autor y motivo, firma mensual), ausencias y sus motivos, cuadrantes, horas extra, reparto de horas por proyecto, analítica de absentismo y puntualidad, kioscos (PIN y tarjeta QR), avisos (en la app, por correo y push), canal interno de denuncias, ofertas internas y currículos, fotos de perfil, borrados a petición |
+| Categorías de tratamiento | Registro de jornada (fichajes con su origen, pausas, correcciones con autor y motivo, firma mensual; si la empresa lo activa, presencial o a distancia y ubicación al entrar y al salir), ausencias y sus motivos, cuadrantes, horas extra, reparto de horas por proyecto, analítica de absentismo y puntualidad, kioscos (PIN y tarjeta QR), avisos (en la app, por correo y push), canal interno de denuncias, ofertas internas y currículos, fotos de perfil, borrados a petición |
 | Datos de categorías especiales | Posibles en motivos de ausencia (salud) y en denuncias; no se piden |
 | Subencargados | `/legal/subencargados` |
 | Transferencias | Ver [transferencias](transferencias.md) |

@@ -12,7 +12,14 @@ package com.nxtime.nxtime.dto;
  * @param firmasInvalidadas cuántas firmas mensuales cayeron por el cambio de
  *   zona que acaba de guardarse; 0 al leer y si la zona no cambió
  * @param preguntarModalidad si al entrar se pregunta presencial o a distancia (ADR 055)
+ * @param ubicacionAlFichar si se pide la ubicación al entrar y al salir (ADR 056)
  */
 public record CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,
-        boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad) {
+        boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad, boolean ubicacionAlFichar) {
+
+    /** Lo de antes del ADR 056. */
+    public CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,
+            boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad) {
+        this(nombre, zonaHoraria, contactoPrivacidad, exigirSegundoFactor, firmasInvalidadas, preguntarModalidad, false);
+    }
 }

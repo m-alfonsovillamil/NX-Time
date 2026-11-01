@@ -13,6 +13,7 @@ siguiente. El resumen de cada pasada queda en `/estado/tareas`.
 |---|---|---|---|
 | Registro de jornada y su auditoría | 4 años desde el fichaje (los conserva la empresa) | Art. 34.9 ET | Se queda; lo que se quita es quién era (fila siguiente) |
 | Persona dada de baja | Anonimizada cuando han pasado 4 años de su último fichaje y de su baja, aunque nadie lo pida | Fin del plazo del ET | Sí (`ConservacionDeDatos`); a petición, como antes (ADR 016) |
+| Ubicación al fichar (coordenadas y precisión) | 12 meses desde el fichaje; queda el estado, sin coordenadas | Sirve para comprobar el fichaje cerca de cuando se hizo; no es parte del registro del art. 34.9 ET (ADR 056) | Sí (`ConservacionDeDatos`); también al anonimizar (`PersonalDataEraser`) |
 | Registro de empresa sin confirmar | 48 horas | No hay relación | Sí (`UnconfirmedRegistrationCleaner`) |
 | Empresa rechazada | En el acto | No hay relación | Sí (ADR 046) |
 | Empresa que se da de baja | 30 días desde que la pide un ADMIN (para llevarse los datos; se puede cancelar) | Condiciones, punto 9 | Sí (`borrar_empresa`, ADR 050); queda solo su nombre en `empresas_borradas` y las lápidas de su tramo común |

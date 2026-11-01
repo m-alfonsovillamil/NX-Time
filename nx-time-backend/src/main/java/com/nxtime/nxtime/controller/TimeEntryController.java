@@ -297,9 +297,10 @@ public class TimeEntryController {
     @GetMapping("/hoy")
     public ResponseEntity<TodayStatusResponse> getHoy(Authentication authentication) {
         boolean modalidad = timeEntryService.preguntaModalidad(authentication.getName());
+        boolean ubicacion = timeEntryService.pideUbicacion(authentication.getName());
         return ResponseEntity.ok(timeEntryService.motivoNoLaborableHoy(authentication.getName())
-                .map(motivo -> new TodayStatusResponse(false, motivo.texto(), modalidad))
-                .orElse(new TodayStatusResponse(true, null, modalidad)));
+                .map(motivo -> new TodayStatusResponse(false, motivo.texto(), modalidad, ubicacion))
+                .orElse(new TodayStatusResponse(true, null, modalidad, ubicacion)));
     }
 
     @Operation(summary = "Historial de fichajes propio",

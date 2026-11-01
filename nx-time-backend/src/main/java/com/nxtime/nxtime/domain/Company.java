@@ -128,6 +128,14 @@ public class Company {
     @Column(name = "preguntar_modalidad", nullable = false)
     private boolean preguntarModalidad = false;
 
+    /**
+     * Si se pide la ubicación al entrar y al salir (V52, ADR 056). Lo decide
+     * un ADMIN, después de informar a la plantilla (art. 90 LOPDGDD).
+     */
+    @Builder.Default
+    @Column(name = "ubicacion_al_fichar", nullable = false)
+    private boolean ubicacionAlFichar = false;
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

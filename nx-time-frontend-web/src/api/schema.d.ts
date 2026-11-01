@@ -3853,6 +3853,7 @@ export interface components {
             contactoPrivacidad?: string;
             exigirSegundoFactor?: boolean;
             preguntarModalidad?: boolean;
+            ubicacionAlFichar?: boolean;
         };
         CompanySettingsResponse: {
             nombre?: string;
@@ -3862,6 +3863,7 @@ export interface components {
             /** Format: int32 */
             firmasInvalidadas?: number;
             preguntarModalidad?: boolean;
+            ubicacionAlFichar?: boolean;
         };
         ScheduleTemplateRequest: {
             nombre: string;
@@ -4355,6 +4357,17 @@ export interface components {
             proyectoId?: number;
             /** @enum {string} */
             modalidad?: "PRESENCIAL" | "A_DISTANCIA";
+            ubicacion?: components["schemas"]["UbicacionDelFichaje"];
+        };
+        UbicacionDelFichaje: {
+            /** @enum {string} */
+            estado: "CAPTURADA" | "DENEGADA" | "NO_DISPONIBLE";
+            /** Format: double */
+            latitud?: number;
+            /** Format: double */
+            longitud?: number;
+            /** Format: int32 */
+            precisionM?: number;
         };
         TimeEntryResponse: {
             /** Format: int64 */
@@ -4377,6 +4390,8 @@ export interface components {
             revisarPorLlegarTarde?: boolean;
             /** @enum {string} */
             modalidad?: "PRESENCIAL" | "A_DISTANCIA";
+            ubicacionEntrada?: components["schemas"]["UbicacionDelFichaje"];
+            ubicacionSalida?: components["schemas"]["UbicacionDelFichaje"];
         };
         ChangeProjectRequest: {
             /** Format: int64 */
@@ -4428,6 +4443,7 @@ export interface components {
             msDesdeElFichaje?: number;
             /** @enum {string} */
             modalidad?: "PRESENCIAL" | "A_DISTANCIA";
+            ubicacion?: components["schemas"]["UbicacionDelFichaje"];
         };
         EnvioSinConexionResponse: {
             resultados?: components["schemas"]["ResultadoSinConexion"][];
@@ -5286,6 +5302,8 @@ export interface components {
             origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
             /** @enum {string} */
             modalidad?: "PRESENCIAL" | "A_DISTANCIA";
+            ubicacionEntrada?: components["schemas"]["PuntoDeFichaje"];
+            ubicacionSalida?: components["schemas"]["PuntoDeFichaje"];
         };
         FirmaMensual: {
             /** Format: int32 */
@@ -5389,6 +5407,16 @@ export interface components {
             /** Format: date */
             hasta?: string;
         };
+        PuntoDeFichaje: {
+            /** @enum {string} */
+            estado?: "CAPTURADA" | "DENEGADA" | "NO_DISPONIBLE";
+            /** Format: double */
+            latitud?: number;
+            /** Format: double */
+            longitud?: number;
+            /** Format: int32 */
+            precisionM?: number;
+        };
         SaldoVacaciones: {
             /** Format: int32 */
             anio?: number;
@@ -5491,6 +5519,7 @@ export interface components {
             laborable?: boolean;
             motivo?: string;
             preguntarModalidad?: boolean;
+            pedirUbicacion?: boolean;
         };
         PaginaDTOTimeEntryResponse: {
             contenido?: components["schemas"]["TimeEntryResponse"][];
@@ -5545,6 +5574,8 @@ export interface components {
             revisarPorLlegarTarde?: boolean;
             /** @enum {string} */
             modalidad?: "PRESENCIAL" | "A_DISTANCIA";
+            ubicacionEntrada?: components["schemas"]["UbicacionDelFichaje"];
+            ubicacionSalida?: components["schemas"]["UbicacionDelFichaje"];
         };
         DataAccessResponse: {
             /** Format: date-time */

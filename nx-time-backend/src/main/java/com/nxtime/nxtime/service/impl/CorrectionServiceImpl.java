@@ -500,6 +500,9 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .origen(original.getOrigen())
                 // Presencial o a distancia, igual salvo que la solicitud la cambie (ADR 055).
                 .modalidad(original.getModalidad())
+                // Dónde se fichó no cambia por corregir la hora (ADR 056).
+                .ubicacionEntrada(original.getUbicacionEntrada())
+                .ubicacionSalida(original.getUbicacionSalida())
                 .registroOriginal(original)
                 .build();
     }

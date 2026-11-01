@@ -1,5 +1,8 @@
 package com.nxtime.nxtime.domain;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -135,6 +138,25 @@ public class TimeEntry {
      */
     @Enumerated(EnumType.STRING)
     private Modalidad modalidad;
+
+    /**
+     * Dónde se fichó la entrada y la salida (V52, ADR 056), o null si la
+     * empresa no la pide. Fuera de la auditoría a propósito: se borra a los 12
+     * meses, y lo que entra en la auditoría no se puede borrar.
+     */
+    @Embedded
+    @AttributeOverride(name = "estado", column = @Column(name = "entrada_ubicacion"))
+    @AttributeOverride(name = "latitud", column = @Column(name = "entrada_latitud"))
+    @AttributeOverride(name = "longitud", column = @Column(name = "entrada_longitud"))
+    @AttributeOverride(name = "precisionM", column = @Column(name = "entrada_precision_m"))
+    private PuntoDeFichaje ubicacionEntrada;
+
+    @Embedded
+    @AttributeOverride(name = "estado", column = @Column(name = "salida_ubicacion"))
+    @AttributeOverride(name = "latitud", column = @Column(name = "salida_latitud"))
+    @AttributeOverride(name = "longitud", column = @Column(name = "salida_longitud"))
+    @AttributeOverride(name = "precisionM", column = @Column(name = "salida_precision_m"))
+    private PuntoDeFichaje ubicacionSalida;
 
     @Version
     private long version;

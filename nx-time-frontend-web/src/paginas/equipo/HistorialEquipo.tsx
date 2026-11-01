@@ -26,6 +26,8 @@ import { Aviso, Boton, Insignia, Selector } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { ConKiosco } from '../../componentes/ConKiosco';
 import { SalidaDeJornada } from '../../componentes/SalidaDeJornada';
+import { UbicacionDeFichaje } from '../../componentes/UbicacionDeFichaje';
+import { fichar as F } from '../../i18n/es/fichar';
 import { ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Iniciales } from '../../componentes/Iniciales';
 import { Tabla, type Columna } from '../../componentes/Tabla';
@@ -66,7 +68,12 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
     {
       clave: 'entrada',
       cabecera: E.entrada,
-      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} modalidad={f.modalidad} />,
+      celda: (f) => (
+        <>
+          <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} modalidad={f.modalidad} />
+          <UbicacionDeFichaje ubicacion={f.ubicacionEntrada} momento={F.ubicacion.entradaDeLas(hora(f.horaEntrada))} />
+        </>
+      ),
     },
     {
       clave: 'salida',
@@ -82,6 +89,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
                 <Insignia tono="aviso">{E.revisarTarde}</Insignia>
               </span>
             )}
+            <UbicacionDeFichaje ubicacion={f.ubicacionSalida} momento={F.ubicacion.salidaDeLas(hora(f.horaSalida))} />
           </span>
         ),
     },

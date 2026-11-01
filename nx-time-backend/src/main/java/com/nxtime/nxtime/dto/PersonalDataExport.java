@@ -63,7 +63,10 @@ public record PersonalDataExport(
             long id, Instant horaEntrada, Instant horaSalida, long segundosPausa,
             boolean anulado, boolean jornadaIncompleta, Long corrigeAlFichaje,
             /* Desde dónde se fichó (ADR 054) y presencial o a distancia (ADR 055). */
-            com.nxtime.nxtime.domain.OrigenDelFichaje origen, com.nxtime.nxtime.domain.Modalidad modalidad) {
+            com.nxtime.nxtime.domain.OrigenDelFichaje origen, com.nxtime.nxtime.domain.Modalidad modalidad,
+            /* Dónde fichó la entrada y la salida (ADR 056), mientras se conserve. */
+            com.nxtime.nxtime.domain.PuntoDeFichaje ubicacionEntrada,
+            com.nxtime.nxtime.domain.PuntoDeFichaje ubicacionSalida) {
     }
 
     public record PausaAnadida(

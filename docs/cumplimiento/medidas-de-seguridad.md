@@ -19,7 +19,8 @@ dos y se sube `application.legal.version`.
 | Permisos por authority y aislamiento por empresa en cada consulta | `RoleAuthorities`, servicios |
 | Access token de 15 min con `iss`/`aud`; refresh rotado, revocable, con detección de reutilización | `JwtServiceImpl`, `AuthServiceImpl` |
 | Sesión web en cookie `HttpOnly`, `Secure`, `SameSite=Strict`, prefijo `__Secure-`, con CSRF de doble envío y Origin | `SesionWeb` (ADR 030) |
-| Cabeceras: HSTS, CSP, `Permissions-Policy` sin cámara (salvo kiosco), micrófono ni ubicación | `SecurityConfig` |
+| Cabeceras: HSTS, CSP, `Permissions-Policy` sin cámara (salvo kiosco) ni micrófono; ubicación solo para la propia web, y la API sin ella (ADR 056) | `SecurityConfig`, `render.yaml` |
+| La ubicación al fichar se guarda redondeada a 4 decimales (unos 11 m), solo al entrar y al salir, fuera de la auditoría, y se borra a los 12 meses | `PuntoDeFichaje`, `ConservacionDeDatos` |
 | Tope de 1 MB en los cuerpos que no son subidas | `TopeDelCuerpo` |
 | Traza de auditoría de solo inserción, encadenada con hash y verificada cada noche | V3, V5, V28, `VerificadorDeAuditoria` |
 | Firma mensual con huella, invalidada si algo cambia | V33 |

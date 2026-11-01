@@ -22,12 +22,15 @@ alta.
 > interés legítimo en organizar el trabajo, art. 6.1.f.]
 >
 > **Qué datos:** identificativos y de contacto, puesto y departamento, jornada,
-> fichajes (con la hora y la dirección IP del dispositivo, pero no la
-> ubicación), correcciones y su autor, ausencias y su motivo, firma mensual del
-> registro.
+> fichajes (con la hora, la dirección IP del dispositivo y desde dónde se fichó:
+> web, app o kiosco), [si se usa: si se trabaja en presencial o a distancia],
+> [si se usa: la ubicación en el momento de fichar la entrada y la salida, sin
+> seguimiento durante la jornada], correcciones y su autor, ausencias y su
+> motivo, firma mensual del registro.
 >
-> **Cuánto tiempo:** el registro de jornada, cuatro años. El resto, mientras dure
-> la relación laboral y después el tiempo de prescripción de las acciones.
+> **Cuánto tiempo:** el registro de jornada, cuatro años. [Si se usa: la
+> ubicación al fichar, 12 meses.] El resto, mientras dure la relación laboral y
+> después el tiempo de prescripción de las acciones.
 >
 > **Quién más los trata:** la herramienta NX Time, que presta [titular] como
 > encargado del tratamiento, con sus proveedores (lista en
@@ -40,7 +43,9 @@ alta.
 ## 2. Evaluación de impacto: guion (RGPD, art. 35)
 
 Recomendable si se usa el canal de denuncias, si los motivos de ausencia pueden
-revelar salud, o si se usa la analítica de absentismo y puntualidad.
+revelar salud, si se usa la analítica de absentismo y puntualidad, o si se pide
+la ubicación al fichar (en ese caso, además, hay que informar antes a la
+plantilla y a sus representantes: art. 90 LOPDGDD).
 
 1. **Descripción:** qué módulos se usan y quién accede (roles).
 2. **Necesidad y proporcionalidad:** el registro es obligatorio; ¿hacen falta
