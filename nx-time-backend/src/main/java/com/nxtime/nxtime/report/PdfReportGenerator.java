@@ -90,11 +90,18 @@ public class PdfReportGenerator {
     }
 
     private PdfPTable tablaDeJornadas(MonthlyReport informe) {
-        PdfPTable tabla = new PdfPTable(CABECERAS.length);
+        // La modalidad (ADR 055), solo si alguna jornada la tiene: a una
+        // empresa que no la pregunta no le sirve una columna vacía.
+        boolean conModalidad = informe.filas().stream().anyMatch(fila -> fila.modalidad() != null);
+        String[] cabeceras = conModalidad
+                ? java.util.stream.Stream.concat(java.util.Arrays.stream(CABECERAS), java.util.stream.Stream.of("Modalidad"))
+                        .toArray(String[]::new)
+                : CABECERAS;
+        PdfPTable tabla = new PdfPTable(cabeceras.length);
         tabla.setWidthPercentage(100);
         tabla.setSpacingBefore(10);
 
-        for (String cabecera : CABECERAS) {
+        for (String cabecera : cabeceras) {
             PdfPCell celda = new PdfPCell(new Phrase(cabecera, CABECERA_TABLA));
             celda.setBackgroundColor(new Color(31, 111, 235));
             celda.setPadding(5);
@@ -112,6 +119,9 @@ public class PdfReportGenerator {
             tabla.addCell(celdaTexto(fila.horaSalida().toString(), fuente));
             tabla.addCell(celdaTexto(fila.minutosPausa() + " min", fuente));
             tabla.addCell(celdaTexto(fila.duracionLegible(), fuente));
+            if (conModalidad) {
+                tabla.addCell(celdaTexto(com.nxtime.nxtime.domain.Modalidad.texto(fila.modalidad()), fuente));
+            }
         }
 
         return tabla;

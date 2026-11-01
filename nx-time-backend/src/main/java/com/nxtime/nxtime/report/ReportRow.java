@@ -36,13 +36,22 @@ public record ReportRow(
         long segundosNetos,
         boolean incidencia,
         /** Su número en el ERP o en nóminas (ADR 053), o null. */
-        String codigoEmpleado
+        String codigoEmpleado,
+        /** Presencial o a distancia (ADR 055), o null si no consta. */
+        com.nxtime.nxtime.domain.Modalidad modalidad
 ) {
 
     /** Sin código de empleado. */
     public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
             long minutosPausa, long segundosNetos, boolean incidencia) {
-        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, null);
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, null, null);
+    }
+
+    /** Sin modalidad (lo de antes del ADR 055). */
+    public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
+            long minutosPausa, long segundosNetos, boolean incidencia, String codigoEmpleado) {
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, codigoEmpleado,
+                null);
     }
 
     /**

@@ -163,6 +163,7 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .horaSalidaPropuesta(request.horaSalida())
                 .pausaInicioPropuesta(request.pausaInicio())
                 .pausaFinPropuesta(request.pausaFin())
+                .modalidadPropuesta(request.modalidad())
                 .motivo(request.motivo().trim())
                 .estado(CorrectionStatus.PENDIENTE)
                 .creadoEn(Instant.now())
@@ -398,6 +399,9 @@ public class CorrectionServiceImpl implements CorrectionService {
 
         TimeEntry copia = copiaCorregidaDe(
                 original, solicitud.getHoraEntradaPropuesta(), solicitud.getHoraSalidaPropuesta());
+        if (solicitud.getModalidadPropuesta() != null) {
+            copia.setModalidad(solicitud.getModalidadPropuesta());
+        }
         if (solicitud.proponePausa()) {
             copia.setSegundosPausaAcumulados(copia.getSegundosPausaAcumulados()
                     + Duration.between(solicitud.getPausaInicioPropuesta(),
@@ -494,6 +498,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 // revisarPorLlegarTarde no se hereda, como jornadaIncompleta:
                 // corregirla es una forma de revisarla.
                 .origen(original.getOrigen())
+                // Presencial o a distancia, igual salvo que la solicitud la cambie (ADR 055).
+                .modalidad(original.getModalidad())
                 .registroOriginal(original)
                 .build();
     }
@@ -601,6 +607,9 @@ public class CorrectionServiceImpl implements CorrectionService {
                 .horaEntrada(solicitud.getHoraEntradaPropuesta())
                 .horaSalida(solicitud.getHoraSalidaPropuesta())
                 .segundosPausaAcumulados(pausa)
+                .origen(solicitud.getRegistro().getOrigen())
+                .modalidad(solicitud.getModalidadPropuesta() != null
+                        ? solicitud.getModalidadPropuesta() : solicitud.getRegistro().getModalidad())
                 .build());
     }
 
@@ -746,6 +755,8 @@ public class CorrectionServiceImpl implements CorrectionService {
                 solicitud.getCreadoEn(),
                 puedeResolver(solicitud, actor),
                 puedeDisputar(solicitud, actor),
-                reparto);
+                reparto,
+                fichaje.getModalidad(),
+                solicitud.getModalidadPropuesta());
     }
 }

@@ -72,6 +72,9 @@ public record TimeEntryResponse(
          * Le llegó un fichaje sin conexión pasadas 72 h y nadie la ha dado por
          * buena todavía (ADR 054). Cuenta como incidencia.
          */
-        boolean revisarPorLlegarTarde
+        boolean revisarPorLlegarTarde,
+
+        /** Presencial o a distancia (ADR 055), o null si no consta. */
+        com.nxtime.nxtime.domain.Modalidad modalidad
 ) {
 }

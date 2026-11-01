@@ -77,6 +77,16 @@ export const empresa = {
       exigido: 'Desde ahora, administradores y RRHH tendrán que entrar con segundo factor.',
       noExigido: 'Ya no se exige el segundo factor.',
     },
+    // ADR 055.
+    modalidad: {
+      titulo: 'Presencial o a distancia',
+      texto:
+        'Al entrar, cada persona dice si trabaja en el centro o a distancia, y queda en su jornada, en el Excel de horas y en el PDF mensual. En los kioscos se apunta presencial.',
+      preguntar: 'Preguntar presencial o a distancia al entrar',
+      guardar: 'Aplicar',
+      preguntada: 'Desde ahora se pregunta presencial o a distancia al entrar.',
+      noPreguntada: 'Ya no se pregunta presencial o a distancia.',
+    },
     guardar: 'Guardar',
     guardado: 'Ajustes guardados.',
     confirmarTitulo: '¿Cambiar la zona horaria?',

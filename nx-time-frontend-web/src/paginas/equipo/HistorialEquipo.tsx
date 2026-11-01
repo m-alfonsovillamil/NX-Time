@@ -66,7 +66,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
     {
       clave: 'entrada',
       cabecera: E.entrada,
-      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} />,
+      celda: (f) => <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} modalidad={f.modalidad} />,
     },
     {
       clave: 'salida',
@@ -111,7 +111,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
             // Una jornada abierta se cierra fichando: el servidor rechaza corregirla.
             const cerrada =
               f.horaEntrada !== undefined && f.horaSalida !== undefined
-                ? { id, horaEntrada: f.horaEntrada, horaSalida: f.horaSalida }
+                ? { id, horaEntrada: f.horaEntrada, horaSalida: f.horaSalida, modalidad: f.modalidad }
                 : null;
             return (
               <div className="nx-acciones-fila" role="group" aria-label={E.accionesDe(quien, fechaCorta(f.fecha))}>

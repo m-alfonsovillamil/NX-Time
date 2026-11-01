@@ -83,6 +83,10 @@ public class CorrectionRequest {
 
     private Instant pausaFinPropuesta;
 
+    /** Presencial o a distancia que se pide poner (V51, ADR 055), o null si no se toca. */
+    @Enumerated(EnumType.STRING)
+    private Modalidad modalidadPropuesta;
+
     private String motivo;
 
     @Enumerated(EnumType.STRING)

@@ -263,6 +263,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                         .kiosco(kiosco)
                         .origen(momento.origen())
                         .revisarPorLlegarTarde(momento.llegaTarde())
+                        .modalidad(modalidadAlEntrar(user, request, kiosco))
                         .build();
                 accion = AuditAction.CREACION;
                 avisarSiNoEsLaborable(user, dia);
@@ -355,6 +356,25 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         }
         String desde = "Desde el kiosco «" + kiosco.getNombre() + "» (id " + kiosco.getId() + ")";
         return motivo == null ? desde : motivo + " · " + desde;
+    }
+
+    /**
+     * Presencial o a distancia (ADR 055): solo si la empresa la pregunta. En
+     * un kiosco es presencial por definición. Si la pregunta y no llega (una
+     * app anterior), la jornada queda sin ella: no se deja de fichar por eso.
+     */
+    static com.nxtime.nxtime.domain.Modalidad modalidadAlEntrar(User user, TimeEntryRequest request, Kiosk kiosco) {
+        if (user.getEmpresa() == null || !user.getEmpresa().isPreguntarModalidad()) {
+            return null;
+        }
+        return kiosco != null ? com.nxtime.nxtime.domain.Modalidad.PRESENCIAL : request.modalidad();
+    }
+
+    @Override
+    public boolean preguntaModalidad(String userEmail) {
+        return userRepository.findByEmail(userEmail)
+                .map(user -> user.getEmpresa() != null && user.getEmpresa().isPreguntarModalidad())
+                .orElse(false);
     }
 
     private static String juntar(String motivo, String mas) {

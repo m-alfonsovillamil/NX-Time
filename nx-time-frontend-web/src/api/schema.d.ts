@@ -3819,6 +3819,10 @@ export interface components {
             puedoResolver?: boolean;
             puedoDisputar?: boolean;
             repartoPropuesto?: components["schemas"]["ProjectShare"][];
+            /** @enum {string} */
+            modalidadActual?: "PRESENCIAL" | "A_DISTANCIA";
+            /** @enum {string} */
+            modalidadPropuesta?: "PRESENCIAL" | "A_DISTANCIA";
         };
         ProjectShare: {
             /** Format: int64 */
@@ -3848,6 +3852,7 @@ export interface components {
             zonaHoraria: string;
             contactoPrivacidad?: string;
             exigirSegundoFactor?: boolean;
+            preguntarModalidad?: boolean;
         };
         CompanySettingsResponse: {
             nombre?: string;
@@ -3856,6 +3861,7 @@ export interface components {
             exigirSegundoFactor?: boolean;
             /** Format: int32 */
             firmasInvalidadas?: number;
+            preguntarModalidad?: boolean;
         };
         ScheduleTemplateRequest: {
             nombre: string;
@@ -4347,6 +4353,8 @@ export interface components {
             tipo: "INICIO" | "FIN" | "PAUSA_INICIO" | "PAUSA_FIN";
             /** Format: int64 */
             proyectoId?: number;
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         TimeEntryResponse: {
             /** Format: int64 */
@@ -4367,6 +4375,8 @@ export interface components {
             /** @enum {string} */
             origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
             revisarPorLlegarTarde?: boolean;
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         ChangeProjectRequest: {
             /** Format: int64 */
@@ -4399,6 +4409,8 @@ export interface components {
             /** Format: date-time */
             pausaFin?: string;
             reparto?: components["schemas"]["ProjectShare"][];
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         EnvioSinConexionRequest: {
             fichajes: components["schemas"]["FichajeSinConexion"][];
@@ -4414,6 +4426,8 @@ export interface components {
             horaDelDispositivo: string;
             /** Format: int64 */
             msDesdeElFichaje?: number;
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         EnvioSinConexionResponse: {
             resultados?: components["schemas"]["ResultadoSinConexion"][];
@@ -5268,6 +5282,10 @@ export interface components {
             jornadaIncompleta?: boolean;
             /** Format: int64 */
             corrigeAlFichaje?: number;
+            /** @enum {string} */
+            origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         FirmaMensual: {
             /** Format: int32 */
@@ -5472,6 +5490,7 @@ export interface components {
         TodayStatusResponse: {
             laborable?: boolean;
             motivo?: string;
+            preguntarModalidad?: boolean;
         };
         PaginaDTOTimeEntryResponse: {
             contenido?: components["schemas"]["TimeEntryResponse"][];
@@ -5524,6 +5543,8 @@ export interface components {
             /** @enum {string} */
             origen?: "WEB" | "APP" | "KIOSCO" | "APP_SIN_CONEXION";
             revisarPorLlegarTarde?: boolean;
+            /** @enum {string} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA";
         };
         DataAccessResponse: {
             /** Format: date-time */

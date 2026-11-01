@@ -16,7 +16,7 @@ import { useState, type FormEvent } from 'react';
 
 import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
-import { AreaDeTexto, Aviso, Boton, Campo } from '../../componentes/Basicos';
+import { AreaDeTexto, Aviso, Boton, Campo, Selector } from '../../componentes/Basicos';
 import { Dialogo } from '../../componentes/Dialogo';
 import { T } from '../../i18n/es';
 import { historial } from '../../i18n/es/historial';
@@ -29,7 +29,14 @@ export interface JornadaCerrada {
   id: number;
   horaEntrada: string;
   horaSalida: string;
+  /**
+   * Presencial o a distancia (ADR 055). Solo si la jornada la tiene se puede
+   * corregir: es la señal de que la empresa la pregunta.
+   */
+  modalidad?: string | undefined;
 }
+
+type Modalidad = 'PRESENCIAL' | 'A_DISTANCIA';
 
 function Formulario({
   jornada,
@@ -45,10 +52,11 @@ function Formulario({
   const [salida, setSalida] = useState(horaEnEmpresa(jornada.horaSalida));
   const [salidaOtroDia, setSalidaOtroDia] = useState(diasEntre(dia, diaEnEmpresa(jornada.horaSalida)) > 0);
   const [motivo, setMotivo] = useState('');
+  const [modalidad, setModalidad] = useState(jornada.modalidad ?? '');
   const [error, setError] = useState<string | null>(null);
 
   const pedirCorreccion = useMutacion(
-    (cuerpo: { horaEntrada: string; horaSalida: string; motivo: string }) =>
+    (cuerpo: { horaEntrada: string; horaSalida: string; motivo: string; modalidad?: Modalidad }) =>
       pedir(cliente.POST('/api/v1/fichaje/{id}/correcciones', { params: { path: { id: jornada.id } }, body: cuerpo })),
     {
       invalida: [...TRAS_CAMBIAR_TIEMPO, ['correcciones'], ['equipo']],
@@ -66,7 +74,14 @@ function Formulario({
     // salida para una entrada de las 22:52 es correcto; desmarcarla, no.
     if (horaSalida <= horaEntrada) return setError(C.salidaAnterior);
     setError(null);
-    pedirCorreccion.mutate({ horaEntrada, horaSalida, motivo: motivo.trim() });
+    // Solo si cambia: sin ella, la solicitud no toca la modalidad.
+    const cambiaModalidad = (modalidad === 'PRESENCIAL' || modalidad === 'A_DISTANCIA') && modalidad !== jornada.modalidad;
+    pedirCorreccion.mutate({
+      horaEntrada,
+      horaSalida,
+      motivo: motivo.trim(),
+      ...(cambiaModalidad ? { modalidad } : {}),
+    });
   }
 
   const mensaje = error ?? pedirCorreccion.error?.message ?? null;
@@ -83,6 +98,15 @@ function Formulario({
         <input type="checkbox" checked={salidaOtroDia} onChange={(e) => setSalidaOtroDia(e.target.checked)} />
         {C.salidaOtroDia}
       </label>
+      {jornada.modalidad !== undefined && (
+        <Selector
+          id="correccion-modalidad"
+          etiqueta={C.modalidad}
+          value={modalidad}
+          onChange={(e) => setModalidad(e.target.value)}
+          opciones={Object.entries(C.modalidades).map(([valor, texto]) => ({ valor, texto }))}
+        />
+      )}
       <AreaDeTexto
         id="correccion-motivo"
         etiqueta={C.motivo}

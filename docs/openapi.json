@@ -11765,6 +11765,14 @@
             "items" : {
               "$ref" : "#/components/schemas/ProjectShare"
             }
+          },
+          "modalidadActual" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
+          },
+          "modalidadPropuesta" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },
@@ -11845,6 +11853,9 @@
           },
           "exigirSegundoFactor" : {
             "type" : "boolean"
+          },
+          "preguntarModalidad" : {
+            "type" : "boolean"
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -11867,6 +11878,9 @@
           "firmasInvalidadas" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "preguntarModalidad" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13108,6 +13122,10 @@
           "proyectoId" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         },
         "required" : [ "tipo" ]
@@ -13154,6 +13172,10 @@
           },
           "revisarPorLlegarTarde" : {
             "type" : "boolean"
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },
@@ -13245,6 +13267,10 @@
             },
             "maxItems" : 50,
             "minItems" : 0
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         },
         "required" : [ "horaEntrada", "horaSalida", "motivo" ]
@@ -13286,6 +13312,10 @@
             "type" : "integer",
             "format" : "int64",
             "minimum" : 0
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         },
         "required" : [ "horaDelDispositivo", "idCliente", "tipo" ]
@@ -15179,6 +15209,14 @@
           "corrigeAlFichaje" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "origen" : {
+            "type" : "string",
+            "enum" : [ "WEB", "APP", "KIOSCO", "APP_SIN_CONEXION" ]
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },
@@ -15724,6 +15762,9 @@
           },
           "motivo" : {
             "type" : "string"
+          },
+          "preguntarModalidad" : {
+            "type" : "boolean"
           }
         }
       },
@@ -15835,6 +15876,10 @@
           },
           "revisarPorLlegarTarde" : {
             "type" : "boolean"
+          },
+          "modalidad" : {
+            "type" : "string",
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },

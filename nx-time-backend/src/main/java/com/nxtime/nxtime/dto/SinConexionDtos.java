@@ -49,8 +49,16 @@ public final class SinConexionDtos {
             @NotNull TimeEntryAction tipo,
             Long proyectoId,
             @NotNull Instant horaDelDispositivo,
-            @PositiveOrZero Long msDesdeElFichaje
+            @PositiveOrZero Long msDesdeElFichaje,
+            /** Solo en INICIO: presencial o a distancia (ADR 055). */
+            com.nxtime.nxtime.domain.Modalidad modalidad
     ) {
+
+        /** Lo de antes del ADR 055: sin modalidad. */
+        public Fichaje(UUID idCliente, TimeEntryAction tipo, Long proyectoId, Instant horaDelDispositivo,
+                Long msDesdeElFichaje) {
+            this(idCliente, tipo, proyectoId, horaDelDispositivo, msDesdeElFichaje, null);
+        }
     }
 
     /**

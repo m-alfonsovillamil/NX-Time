@@ -40,7 +40,7 @@ import {
   type Jornada,
 } from './consultas';
 import { DialogoPausa, type JornadaParaPausa } from './DialogoPausa';
-import { ConfirmarFin, ConfirmarNoLaborable, ElegirProyecto } from './DialogosDeFichar';
+import { ConfirmarFin, ConfirmarNoLaborable, ElegirModalidad, ElegirProyecto, type Modalidad } from './DialogosDeFichar';
 import { Resumen } from './Resumen';
 
 const F = fichar;
@@ -86,6 +86,10 @@ export function Fichar() {
   /** Lo que la pantalla sabe sin preguntar («reanuda antes de terminar»). */
   const [aviso, setAviso] = useState<string | null>(null);
   const [comprobandoDia, setComprobandoDia] = useState(false);
+  /** Lo que dijo el servidor al comprobar el día: si hay que preguntar la modalidad (ADR 055). */
+  const [preguntaModalidad, setPreguntaModalidad] = useState(false);
+  const [eligiendoModalidad, setEligiendoModalidad] = useState(false);
+  const [modalidad, setModalidad] = useState<Modalidad | undefined>(undefined);
 
   const jornada = activa.data ?? null;
   const trabajando = jornada !== null && jornada.enPausa !== true;
@@ -98,8 +102,13 @@ export function Fichar() {
   // puede salir con el estado de antes (fichar la salida dos veces, por ejemplo).
   const fichar = useMutacion(
     // X-Cliente: queda dicho que se fichó desde la web (ADR 054).
-    (peticion: { tipo: Tipo; proyectoId?: number }) =>
-      pedir(cliente.POST('/api/v1/fichaje', { body: peticion, headers: { 'X-Cliente': 'web' } })),
+    ({ modalidad: elegida, ...peticion }: { tipo: Tipo; proyectoId?: number; modalidad?: Modalidad | undefined }) =>
+      pedir(
+        cliente.POST('/api/v1/fichaje', {
+          body: { ...peticion, ...(elegida !== undefined ? { modalidad: elegida } : {}) },
+          headers: { 'X-Cliente': 'web' },
+        }),
+      ),
     {
       invalida: TRAS_CAMBIAR_TIEMPO,
       alTerminar: () => {
@@ -124,9 +133,16 @@ export function Fichar() {
   const enCurso = proyectos.data?.enCurso;
 
   /** Con dos o más proyectos se pregunta; con uno o ninguno decide el servidor (ADR 017). */
-  function iniciarEligiendoProyecto() {
+  function iniciarEligiendoProyecto(elegida: Modalidad | undefined) {
+    setModalidad(elegida);
     if (disponibles.length >= 2) setEligiendo('empezar');
-    else fichar.mutate({ tipo: 'INICIO' });
+    else fichar.mutate({ tipo: 'INICIO', modalidad: elegida });
+  }
+
+  /** Si la empresa pregunta presencial o a distancia, antes del proyecto. */
+  function iniciarEligiendoModalidad(preguntar: boolean) {
+    if (preguntar) setEligiendoModalidad(true);
+    else iniciarEligiendoProyecto(undefined);
   }
 
   /**
@@ -137,16 +153,19 @@ export function Fichar() {
   async function iniciar() {
     setComprobandoDia(true);
     let motivo: string | null = null;
+    let preguntar = false;
     try {
       const dia = await consultas.fetchQuery({ queryKey: CLAVES.hoy, queryFn: pedirEstadoDeHoy, staleTime: 0 });
       if (dia.laborable === false) motivo = dia.motivo ?? '';
+      preguntar = dia.preguntarModalidad === true;
     } catch {
-      // Se sigue: ver arriba.
+      // Se sigue: ver arriba. Sin respuesta tampoco se pregunta la modalidad.
     } finally {
       setComprobandoDia(false);
     }
+    setPreguntaModalidad(preguntar);
     if (motivo !== null) setNoLaborable(motivo);
-    else iniciarEligiendoProyecto();
+    else iniciarEligiendoModalidad(preguntar);
   }
 
   function pulsarPrincipal(j: Jornada | null) {
@@ -257,7 +276,7 @@ export function Fichar() {
                 proyectos={proyectos.data}
                 ocupado={fichar.isPending || cambiarProyecto.isPending}
                 alElegir={(proyectoId) => {
-                  if (eligiendo === 'empezar') fichar.mutate({ tipo: 'INICIO', proyectoId });
+                  if (eligiendo === 'empezar') fichar.mutate({ tipo: 'INICIO', proyectoId, modalidad });
                   else if (j?.id !== undefined) cambiarProyecto.mutate({ fichajeId: j.id, proyectoId });
                 }}
                 alCancelar={() => setEligiendo(null)}
@@ -273,9 +292,17 @@ export function Fichar() {
         motivo={noLaborable}
         alConfirmar={() => {
           setNoLaborable(null);
-          iniciarEligiendoProyecto();
+          iniciarEligiendoModalidad(preguntaModalidad);
         }}
         alCancelar={() => setNoLaborable(null)}
+      />
+      <ElegirModalidad
+        abierto={eligiendoModalidad}
+        alElegir={(elegida) => {
+          setEligiendoModalidad(false);
+          iniciarEligiendoProyecto(elegida);
+        }}
+        alCancelar={() => setEligiendoModalidad(false)}
       />
       <DialogoPausa jornada={pausaDe} alCerrar={() => setPausaDe(null)} />
     </div>

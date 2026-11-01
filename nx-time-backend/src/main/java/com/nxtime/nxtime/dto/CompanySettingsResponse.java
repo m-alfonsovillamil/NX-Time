@@ -11,7 +11,8 @@ package com.nxtime.nxtime.dto;
  *   segundo factor (ADR 051)
  * @param firmasInvalidadas cuántas firmas mensuales cayeron por el cambio de
  *   zona que acaba de guardarse; 0 al leer y si la zona no cambió
+ * @param preguntarModalidad si al entrar se pregunta presencial o a distancia (ADR 055)
  */
 public record CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,
-        boolean exigirSegundoFactor, int firmasInvalidadas) {
+        boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad) {
 }

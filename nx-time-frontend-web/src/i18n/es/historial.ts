@@ -39,6 +39,9 @@ export const historial = {
     entrada: 'Hora de entrada',
     salida: 'Hora de salida',
     salidaOtroDia: 'La salida es del día siguiente',
+    // ADR 055.
+    modalidad: 'Presencial o a distancia',
+    modalidades: { PRESENCIAL: 'Presencial', A_DISTANCIA: 'A distancia' } as Record<string, string>,
     motivo: 'Motivo de la corrección',
     motivoAyuda: 'Queda registrado en la auditoría junto a tu nombre. Es obligatorio.',
     motivoVacio: 'Explica por qué corriges el fichaje.',

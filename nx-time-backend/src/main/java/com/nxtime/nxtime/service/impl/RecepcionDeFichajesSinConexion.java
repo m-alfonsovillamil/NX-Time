@@ -129,7 +129,7 @@ public class RecepcionDeFichajesSinConexion {
                 String motivo = "Fichado sin conexión el " + TimeEntryServiceImpl.hora(hora, persona.zona())
                         + " (" + deDonde + "), recibido el " + TimeEntryServiceImpl.hora(recibido, persona.zona());
                 TimeEntry registro = timeEntryService.registrarSinConexion(persona,
-                        new TimeEntryRequest(fichaje.tipo(), fichaje.proyectoId()), hora, motivo, tarde);
+                        new TimeEntryRequest(fichaje.tipo(), fichaje.proyectoId(), fichaje.modalidad()), hora, motivo, tarde);
                 return recibidos.save(FichajeRecibido.builder()
                         .usuarioId(usuarioId)
                         .idCliente(fichaje.idCliente())

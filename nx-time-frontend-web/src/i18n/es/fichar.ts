@@ -37,6 +37,13 @@ export const fichar = {
     texto: (motivo: string) => `${motivo}. ¿Quieres iniciar la jornada igualmente? Se avisará a tu responsable.`,
     si: 'Iniciar igualmente',
   },
+  // ADR 055: solo si la empresa lo pregunta.
+  modalidad: {
+    titulo: '¿Dónde trabajas hoy?',
+    texto: 'Tu empresa apunta en cada jornada si se trabaja en el centro o a distancia.',
+    PRESENCIAL: 'Presencial',
+    A_DISTANCIA: 'A distancia',
+  },
 
   proyecto: {
     elegirTitulo: '¿En qué proyecto vas a trabajar?',

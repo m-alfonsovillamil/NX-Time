@@ -129,6 +129,13 @@ public class TimeEntry {
     @Builder.Default
     private boolean revisarPorLlegarTarde = false;
 
+    /**
+     * Presencial o a distancia (V51, ADR 055), elegida al entrar. Null si la
+     * empresa no la pregunta o la app que fichó no la conocía.
+     */
+    @Enumerated(EnumType.STRING)
+    private Modalidad modalidad;
+
     @Version
     private long version;
 
