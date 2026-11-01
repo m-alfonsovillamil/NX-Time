@@ -64,6 +64,7 @@ import com.nxtime.app.R
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.nxtime.app.data.dto.AvisoDeEnvio
 import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.ProyectosParaFicharDTO
 import androidx.compose.foundation.selection.selectable
@@ -195,6 +196,12 @@ fun FicharScreen(
                 )
             }
 
+            AvisosSinConexion(
+                pendientes = estado.fichajesPendientes,
+                avisos = estado.avisosDeEnvio,
+                onDescartar = viewModel::descartarAvisoDeEnvio
+            )
+
             Spacer(Modifier.height(8.dp))
 
             if (estado.nombreUsuario.isNotBlank()) {
@@ -277,7 +284,8 @@ fun FicharScreen(
                  * pegado al botón de pausa, porque es donde se busca justo
                  * después de darse cuenta.
                  */
-                estado.registro?.let { registro ->
+                // Una jornada que solo existe en el móvil no tiene aún a qué añadirle nada.
+                estado.registro?.takeIf { it.id > 0 }?.let { registro ->
                     TextButton(onClick = { onAnadirPausa(registro) }) {
                         Text(stringResource(R.string.pausa_boton))
                     }
@@ -290,10 +298,12 @@ fun FicharScreen(
                  * orden en que se leen: qué estoy haciendo, qué llevo
                  * hoy, y qué llevo acumulado.
                  */
-                ProyectoEnCurso(
-                    proyectos = estado.proyectos,
-                    onCambiar = viewModel::pedirCambioDeProyecto
-                )
+                if ((estado.registro?.id ?: 0) > 0) {
+                    ProyectoEnCurso(
+                        proyectos = estado.proyectos,
+                        onCambiar = viewModel::pedirCambioDeProyecto
+                    )
+                }
                 ComposicionDeLaJornada(
                     segundosTrabajados = estado.segundosEnCurso,
                     segundosPausa = estado.registro?.segundosPausaAcumulados ?: 0,
@@ -439,6 +449,46 @@ fun FicharScreen(
                 onConfirmar = viewModel::confirmarFinDeJornada,
                 onCancelar = viewModel::cancelarFinDeJornada
             )
+        }
+    }
+}
+
+/**
+ * Lo que espera en el móvil, y lo que llegó y no entró tal cual (ADR 054). Un
+ * rechazo se queda a la vista hasta que se lee: si no, una jornada se quedaría sin
+ * su salida sin que nadie lo supiera.
+ */
+@Composable
+private fun AvisosSinConexion(pendientes: Int, avisos: List<AvisoDeEnvio>, onDescartar: (String) -> Unit) {
+    if (pendientes > 0) {
+        Text(
+            text = pluralStringResource(R.plurals.sin_conexion_pendientes, pendientes, pendientes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
+    }
+    avisos.forEach { aviso ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = stringResource(
+                        if (aviso.aRevisar) R.string.sin_conexion_a_revisar else R.string.sin_conexion_rechazado,
+                        DateFormats.fechaCorta(aviso.horaDelDispositivo) + " " + DateFormats.hora(aviso.horaDelDispositivo)
+                    ),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                aviso.motivo?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                TextButton(onClick = { onDescartar(aviso.idCliente) }) {
+                    Text(stringResource(R.string.ubicacion_explicar_entendido))
+                }
+            }
         }
     }
 }

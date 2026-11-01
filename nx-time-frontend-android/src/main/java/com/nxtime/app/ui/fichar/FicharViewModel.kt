@@ -2,7 +2,9 @@ package com.nxtime.app.ui.fichar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nxtime.app.data.dto.AvisoDeEnvio
 import com.nxtime.app.data.dto.DiaTeoricoDTO
+import com.nxtime.app.data.dto.FichajePendiente
 import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.OrigenDelDia
 import com.nxtime.app.data.dto.PeticionFichaje
@@ -15,7 +17,13 @@ import com.nxtime.app.R
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.Ajustes
 import com.nxtime.app.data.session.SessionManager
+import com.nxtime.app.data.sinconexion.ColaDeFichajes
+import com.nxtime.app.data.sinconexion.EntornoDelMovil
+import com.nxtime.app.data.sinconexion.ReglaDelEnvio
 import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
+import kotlinx.coroutines.flow.drop
+import java.io.IOException
+import java.util.UUID
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +73,10 @@ data class FicharUiState(
     val explicandoUbicacion: Boolean = false,
     /** La pantalla tiene que lanzar la petición de permiso: solo ella tiene con qué. */
     val pidiendoPermisoDeUbicacion: Boolean = false,
+    /** Cuántos fichajes esperan en el móvil a que vuelva la red (ADR 054). */
+    val fichajesPendientes: Int = 0,
+    /** Los que llegaron y no entraron tal cual: rechazados, o a revisar por llegar tarde. */
+    val avisosDeEnvio: List<AvisoDeEnvio> = emptyList(),
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -133,15 +145,17 @@ class FicharViewModel(
     private val authRepository: AuthRepository,
     private val sessionManager: SessionManager,
     private val ajustes: Ajustes,
-    private val fuenteDeUbicacion: FuenteDeUbicacion
+    private val fuenteDeUbicacion: FuenteDeUbicacion,
+    private val cola: ColaDeFichajes,
+    private val entorno: EntornoDelMovil
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FicharUiState())
     val uiState: StateFlow<FicharUiState> = _uiState.asStateFlow()
 
     /** Lo que pide la empresa, según la última respuesta de `GET /fichaje/hoy` (ADR 055 y 056). */
-    private var preguntarModalidad = false
-    private var pedirUbicacion = false
+    private var preguntarModalidad = ajustes.empresaPreguntaModalidad
+    private var pedirUbicacion = ajustes.empresaPideUbicacion
 
     /** La elegida para la jornada que se está empezando. */
     private var modalidadElegida: Modalidad? = null
@@ -162,6 +176,39 @@ class FicharViewModel(
         comprobarEstadoJornada()
         cargarCuadranteDeHoy()
         cargarLoQuePideLaEmpresa()
+        // Lo que manda el envío en segundo plano cambia la pantalla: se vuelve a preguntar.
+        viewModelScope.launch { cola.cambios.drop(1).collect { comprobarEstadoJornada() } }
+    }
+
+    private fun guardarLoQuePideLaEmpresa(dia: com.nxtime.app.data.dto.EstadoDelDiaDTO) {
+        preguntarModalidad = dia.preguntarModalidad
+        pedirUbicacion = dia.pedirUbicacion
+        ajustes.empresaPreguntaModalidad = dia.preguntarModalidad
+        ajustes.empresaPideUbicacion = dia.pedirUbicacion
+    }
+
+    /** La cola de quien tiene la sesión. Sin saber quién es, no se encola: se enseña el error de siempre. */
+    private fun pendientes(): List<FichajePendiente> =
+        sessionManager.correoDeLaSesion()?.let(cola::pendientes).orEmpty()
+
+    /** Sin red no se pregunta, ni se espera a que falle: fichar no espera a nada. */
+    private fun aplicarSinRespuesta(dueno: String) {
+        aplicarRegistro(ReglaDelEnvio.jornadaConCola(cola.ultimaJornada(dueno), cola.pendientes(dueno)))
+    }
+
+    /** Descarta un aviso del envío: ya se ha leído. */
+    fun descartarAvisoDeEnvio(idCliente: String) {
+        cola.quitarAviso(idCliente)
+    }
+
+    private fun actualizarCola() {
+        val dueno = sessionManager.correoDeLaSesion()
+        _uiState.update {
+            it.copy(
+                fichajesPendientes = dueno?.let(cola::pendientes)?.size ?: 0,
+                avisosDeEnvio = dueno?.let(cola::avisos).orEmpty()
+            )
+        }
     }
 
     /**
@@ -175,10 +222,7 @@ class FicharViewModel(
             } catch (e: Exception) {
                 null
             }
-            if (dia != null) {
-                preguntarModalidad = dia.preguntarModalidad
-                pedirUbicacion = dia.pedirUbicacion
-            }
+            if (dia != null) guardarLoQuePideLaEmpresa(dia)
         }
     }
 
@@ -255,6 +299,13 @@ class FicharViewModel(
 
     fun comprobarEstadoJornada() {
         if (fichando) return
+        actualizarCola()
+        val dueno = sessionManager.correoDeLaSesion()
+        if (dueno != null && cola.pendientes(dueno).isNotEmpty()) entorno.lanzarEnvio()
+        if (dueno != null && !entorno.hayRed()) {
+            aplicarSinRespuesta(dueno)
+            return
+        }
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             try {
@@ -262,7 +313,11 @@ class FicharViewModel(
                 // El fichaje que empezó mientras tanto dirá cómo queda.
                 if (fichando) return@launch
                 if (respuesta.isSuccessful) {
-                    aplicarRegistro(respuesta.body())
+                    val servidor = respuesta.body()
+                    if (dueno != null) cola.guardarUltimaJornada(dueno, servidor)
+                    actualizarCola()
+                    // Lo del servidor más lo que aún espera en el móvil.
+                    aplicarRegistro(if (dueno != null) ReglaDelEnvio.jornadaConCola(servidor, cola.pendientes(dueno)) else servidor)
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
@@ -270,6 +325,10 @@ class FicharViewModel(
                 }
             } catch (e: Exception) {
                 if (fichando) return@launch
+                if (e is IOException && dueno != null) {
+                    aplicarSinRespuesta(dueno)
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(cargando = false, error = ApiErrorParser.mensajeDeRed(e))
                 }
@@ -356,14 +415,11 @@ class FicharViewModel(
         _uiState.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {
             val dia = try {
-                authRepository.getEstadoDeHoy().body()
+                if (entorno.hayRed()) authRepository.getEstadoDeHoy().body() else null
             } catch (e: Exception) {
                 null
             }
-            if (dia != null) {
-                preguntarModalidad = dia.preguntarModalidad
-                pedirUbicacion = dia.pedirUbicacion
-            }
+            if (dia != null) guardarLoQuePideLaEmpresa(dia)
             val motivo = dia?.takeIf { !it.laborable }?.motivo
             explicandoAntes {
                 if (motivo != null) {
@@ -439,6 +495,7 @@ class FicharViewModel(
     fun cambiarAProyecto(proyectoId: Long) {
         val registro = _uiState.value.registro ?: return
         _uiState.update { it.copy(cambiandoDeProyecto = false) }
+        if (registro.id <= 0) return
         viewModelScope.launch {
             try {
                 val respuesta = authRepository.cambiarProyecto(registro.id, proyectoId)
@@ -501,21 +558,65 @@ class FicharViewModel(
     private fun registrarFichaje(tipo: TipoFichaje, proyectoId: Long? = null) {
         fichando = true
         _uiState.update { it.copy(cargando = true, error = null) }
+        // El momento de pulsar, antes de esperar al GPS: es la hora del fichaje si no hay red.
+        val horaAlPulsar = entorno.ahora().toString()
+        val elapsedAlPulsar = entorno.elapsedMs()
+        val arranqueAlPulsar = entorno.arranque()
         viewModelScope.launch {
+            val dueno = sessionManager.correoDeLaSesion()
+            // Solo al entrar y al salir, nunca en las pausas (ADR 056).
+            val tomarla = pedirUbicacion && (tipo == TipoFichaje.INICIO || tipo == TipoFichaje.FIN)
+            val ubicacion = if (tomarla) fuenteDeUbicacion.tomar() else null
+            val modalidad = modalidadElegida.takeIf { tipo == TipoFichaje.INICIO }
+            val encolar = {
+                val guardado = dueno != null && cola.anadir(
+                    FichajePendiente(
+                        idCliente = UUID.randomUUID().toString(),
+                        dueno = dueno,
+                        tipo = tipo,
+                        proyectoId = proyectoId,
+                        modalidad = modalidad,
+                        ubicacion = ubicacion,
+                        horaDelDispositivo = horaAlPulsar,
+                        elapsedAlFichar = elapsedAlPulsar,
+                        arranqueAlFichar = arranqueAlPulsar
+                    )
+                )
+                fichando = false
+                if (guardado) {
+                    actualizarCola()
+                    entorno.lanzarEnvio()
+                    aplicarSinRespuesta(dueno!!)
+                } else {
+                    _uiState.update {
+                        it.copy(cargando = false, error = MensajeUi.Recurso(R.string.sin_conexion_cola_llena))
+                    }
+                }
+            }
+            /*
+             * Con algo en la cola, lo nuevo va detrás aunque ya haya red: si saliera
+             * antes, llegaría al servidor en otro orden (una salida antes que su
+             * entrada) y se rechazaría.
+             */
+            if (dueno != null && (!entorno.hayRed() || cola.pendientes(dueno).isNotEmpty())) {
+                encolar()
+                return@launch
+            }
             try {
-                // Solo al entrar y al salir, nunca en las pausas (ADR 056).
-                val tomarla = pedirUbicacion && (tipo == TipoFichaje.INICIO || tipo == TipoFichaje.FIN)
-                val ubicacion = if (tomarla) fuenteDeUbicacion.tomar() else null
-                val modalidad = modalidadElegida.takeIf { tipo == TipoFichaje.INICIO }
                 val respuesta = authRepository.registrarFichaje(PeticionFichaje(tipo, proyectoId, modalidad, ubicacion))
                 fichando = false
                 if (respuesta.isSuccessful) {
+                    if (dueno != null) cola.guardarUltimaJornada(dueno, respuesta.body()?.takeIf { it.horaSalida == null })
                     aplicarRegistro(respuesta.body())
                 } else {
                     _uiState.update {
                         it.copy(cargando = false, error = ApiErrorParser.mensajeDe(respuesta))
                     }
                 }
+            } catch (e: IOException) {
+                // Sin respuesta: la petición puede no haber salido. Si no se sabe de
+                // quién es, no se encola: ver `encolar`.
+                encolar()
             } catch (e: Exception) {
                 fichando = false
                 _uiState.update {

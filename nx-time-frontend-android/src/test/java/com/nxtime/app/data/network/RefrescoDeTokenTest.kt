@@ -130,7 +130,7 @@ class RefrescoDeTokenTest {
     }
 
     @Test
-    fun `una excepcion al refrescar se trata como un fallo, no se propaga`() {
+    fun `sin red al refrescar no se cierra la sesion, ni se propaga la excepcion`() {
         val sesion = SesionFalsa()
 
         // Un Authenticator que lanza deja la petición original con una
@@ -139,6 +139,7 @@ class RefrescoDeTokenTest {
             .tokenParaReintentar("token-viejo")
 
         assertNull(resultado)
-        verify(sesion.mock).expirarSesion()
+        // ADR 054: con fichajes en la cola, cerrarla impediría mandarlos al volver la red.
+        verify(sesion.mock, org.mockito.kotlin.never()).expirarSesion()
     }
 }

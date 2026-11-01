@@ -28,6 +28,12 @@ data class RegistroEquipoDTO(
     /** La cerró el sistema por falta de fichaje de salida. Ver [Registro.cerradaPorElSistema]. */
     val cerradaPorElSistema: Boolean = false,
 
+    /** Ver [Registro.origen]. */
+    val origen: String? = null,
+
+    /** Ver [Registro.revisarPorLlegarTarde]. */
+    val revisarPorLlegarTarde: Boolean = false,
+
     /** Ver [Registro.modalidad]. */
     val modalidad: Modalidad? = null,
 

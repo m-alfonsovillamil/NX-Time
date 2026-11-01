@@ -38,6 +38,12 @@ data class Registro(
      */
     val cerradaPorElSistema: Boolean = false,
 
+    /** WEB, APP, KIOSCO o APP_SIN_CONEXION; null en lo anterior a V50 (ADR 054). */
+    val origen: String? = null,
+
+    /** Llegó pasadas 72 h: tiene que darla por buena quien aprueba correcciones (ADR 054). */
+    val revisarPorLlegarTarde: Boolean = false,
+
     /** Presencial o a distancia, si la empresa lo pregunta (ADR 055). */
     val modalidad: Modalidad? = null,
 

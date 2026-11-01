@@ -203,6 +203,21 @@ class SessionManager(
     /**
      * Obtiene el nombre del usuario guardado.
      */
+    /**
+     * El correo de quien tiene la sesión, del `sub` del token: es de quién son los
+     * fichajes de la cola (ADR 054). Sin verificar la firma, porque solo se usa
+     * para no mandar con la sesión de otro lo que fichó uno; lo que vale lo decide
+     * el servidor. Null si no hay sesión o no se puede leer.
+     */
+    fun correoDeLaSesion(): String? = try {
+        fetchAuthToken()?.split('.')?.getOrNull(1)?.let { cuerpo ->
+            val json = String(android.util.Base64.decode(cuerpo, android.util.Base64.URL_SAFE))
+            com.google.gson.JsonParser.parseString(json).asJsonObject.get("sub")?.asString
+        }
+    } catch (e: Exception) {
+        null
+    }
+
     fun fetchUserName(): String? {
         return prefs.getString(KEY_USER_NAME, null)
     }

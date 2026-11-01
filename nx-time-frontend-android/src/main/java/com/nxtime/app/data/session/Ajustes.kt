@@ -136,6 +136,19 @@ class Ajustes(context: Context) {
             prefs.edit().putString(KEY_ULTIMA_MODALIDAD, valor?.name).apply()
         }
 
+    /** Lo que pide la empresa, de la última respuesta del servidor: sin red hay que saberlo igual. */
+    var empresaPreguntaModalidad: Boolean
+        get() = prefs.getBoolean(KEY_PREGUNTA_MODALIDAD, false)
+        set(valor) {
+            prefs.edit().putBoolean(KEY_PREGUNTA_MODALIDAD, valor).apply()
+        }
+
+    var empresaPideUbicacion: Boolean
+        get() = prefs.getBoolean(KEY_PIDE_UBICACION, false)
+        set(valor) {
+            prefs.edit().putBoolean(KEY_PIDE_UBICACION, valor).apply()
+        }
+
     /** Si en este móvil ya se ha dicho para qué se toma la ubicación (ADR 056). */
     var ubicacionExplicada: Boolean
         get() = prefs.getBoolean(KEY_UBICACION_EXPLICADA, false)
@@ -165,6 +178,8 @@ class Ajustes(context: Context) {
         private const val KEY_HORA_SALIDA = "recordatorio_hora_salida"
         private const val KEY_ULTIMA_MODALIDAD = "ultima_modalidad"
         private const val KEY_UBICACION_EXPLICADA = "ubicacion_explicada"
+        private const val KEY_PREGUNTA_MODALIDAD = "empresa_pregunta_modalidad"
+        private const val KEY_PIDE_UBICACION = "empresa_pide_ubicacion"
 
         /** Las del plan: una jornada de oficina corriente. */
         const val HORA_ENTRADA_POR_DEFECTO = "09:30"

@@ -127,6 +127,9 @@ class RetrofitClient(
             // El refresh que viene NO es el que se mandó: el servidor rota en
             // cada renovación. Hay que quedarse con los dos.
             RefrescoDeToken.TokensRenovados(cuerpo.token, cuerpo.refreshToken, cuerpo.zonaHoraria)
+        } else if (respuesta.code() >= 500) {
+            // El servidor caído no dice nada de la sesión: como si no hubiera red.
+            throw java.io.IOException("El refresco ha dado ${respuesta.code()}")
         } else {
             null
         }

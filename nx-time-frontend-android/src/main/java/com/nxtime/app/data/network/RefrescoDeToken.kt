@@ -32,8 +32,9 @@ class RefrescoDeToken(
      * Cómo se piden los tokens nuevos. Se inyecta para poder probar esta clase
      * sin red: en producción es la llamada a `/auth/refresh`.
      *
-     * Recibe el refresh token actual y devuelve el par nuevo, o null si no se
-     * pudo renovar.
+     * Recibe el refresh token actual y devuelve el par nuevo, o null si **el
+     * servidor lo ha rechazado**. Si no se ha podido preguntar (sin red, o el
+     * servidor caído), lanza: eso no dice nada de la sesión.
      */
     private val pedirTokenNuevo: (String) -> TokensRenovados?
 ) {
@@ -81,10 +82,16 @@ class RefrescoDeToken(
 
         val refreshToken = sessionManager.fetchRefreshToken() ?: return null
 
+        /*
+         * Sin red no se cierra la sesión (ADR 054). Quien ficha en un sótano puede
+         * llevar horas sin cobertura y el access token caduca a los 15 minutos: si
+         * esto la cerrase, al volver la red no podría mandar lo que tiene en la cola.
+         * El 401 sigue su camino, y se reintentará.
+         */
         val nuevo = try {
             pedirTokenNuevo(refreshToken)
         } catch (e: Exception) {
-            null
+            return null
         }
 
         if (nuevo == null) {

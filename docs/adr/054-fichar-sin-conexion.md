@@ -33,6 +33,23 @@ hicieron. Cada uno lleva un `idCliente` (UUID) que genera el móvil.
   reinició entre el fichaje y el envío, porque entonces la cuenta anterior se
   pierde. La auditoría lo dice («hora del reloj del móvil, que se reinició»).
 
+**En la app.** La cola es un `SharedPreferences` propio (`ColaDeFichajes`), por
+persona: nunca se manda con la sesión de otra.
+- **Cuándo se encola:** si no hay red, o si la petición falla sin respuesta. Y si ya
+  hay algo en la cola, aunque haya red: lo nuevo no puede adelantar a lo anterior.
+  Un error del servidor se enseña como siempre.
+- **La pantalla** calcula el estado con la última jornada que dijo el servidor más
+  la cola, y dice cuántos fichajes esperan.
+- **El envío** es un trabajo de WorkManager con red y reintentos. Antes de mandar
+  despierta al servidor, y calcula `msDesdeElFichaje` justo antes del POST. Solo
+  saca un fichaje de la cola una respuesta que lo nombra. Los rechazados y los que
+  quedan a revisar se quedan a la vista hasta que se leen.
+- **Un fallo de red al renovar el token ya no cierra la sesión**, ni un 5xx: solo la
+  cierra que el servidor lo rechace. Si no, quien pasa horas sin cobertura perdería
+  la sesión justo antes de poder mandar lo que tiene.
+- **Cerrar sesión con fichajes pendientes** avisa, y no los borra: se mandan cuando
+  esa misma persona vuelve a entrar.
+
 **Lo que se acepta:**
 - **Hasta 72 h** (decisión de Miguel): se aplica con su hora, sin más.
 - **Pasadas 72 h**: se aplica con su hora, pero la jornada queda marcada
@@ -84,6 +101,12 @@ sobre un mes firmado la revisa sola, como cualquier cambio.
   que sí hay: cada jornada dice que se fichó sin conexión, la auditoría guarda
   cuándo llegó, y lo que llega tarde lo revisa una persona. Un gestor que vea a
   alguien que «nunca tiene cobertura» tiene con qué preguntar.
+- **Si se pierde la respuesta de un fichaje con red**, la app no sabe si llegó y lo
+  encola. Si había llegado, el servidor rechaza el repetido por imposible y la app
+  enseña el motivo: la jornada queda bien, con un aviso de más. El fichaje con red
+  no lleva `idCliente`, así que no se puede reconocer como repetido.
+- Sin red, si los proyectos no se habían cargado, la entrada no pregunta el
+  proyecto: decide el servidor, y se puede cambiar después.
 - Las horas extra y las incidencias de cuadrante revisan 14 días hacia atrás:
   lo que llega en 72 h se tiene en cuenta solo.
 - `TimeEntryServiceImpl` ya no usa `Instant.now()`: tiene un `Clock`, y los

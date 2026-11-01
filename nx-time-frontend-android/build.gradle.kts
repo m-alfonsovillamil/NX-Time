@@ -80,8 +80,8 @@ android {
          * (ADR 046); información legal en Ajustes; sin tráfico en claro fuera
          * del sabor dev y la tarjeta del kiosco sin capturas (plan J).
          */
-        versionCode = 18
-        versionName = "1.17"
+        versionCode = 19
+        versionName = "1.18"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         /*

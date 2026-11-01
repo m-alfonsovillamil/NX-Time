@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -77,9 +78,30 @@ fun AjustesScreen(
     onVolver: () -> Unit,
     onIrContrasena: () -> Unit,
     onCerrarSesion: () -> Unit,
+    /** Fichajes hechos sin conexión que aún no han salido del móvil (ADR 054). */
+    fichajesPendientes: Int = 0,
     viewModel: AjustesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    var trasAvisarDePendientes by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val avisandoAntes = { accion: () -> Unit ->
+        if (fichajesPendientes > 0) trasAvisarDePendientes = accion else accion()
+    }
+    trasAvisarDePendientes?.let { accion ->
+        AlertDialog(
+            onDismissRequest = { trasAvisarDePendientes = null },
+            title = { Text(stringResource(R.string.sin_conexion_salir_titulo)) },
+            text = { Text(pluralStringResource(R.plurals.sin_conexion_salir_texto, fichajesPendientes, fichajesPendientes)) },
+            confirmButton = {
+                TextButton(onClick = { trasAvisarDePendientes = null; accion() }) {
+                    Text(stringResource(R.string.nav_cerrar_sesion))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trasAvisarDePendientes = null }) { Text(stringResource(R.string.cancelar)) }
+            }
+        )
+    }
     val contexto = LocalContext.current
 
     LaunchedEffect(Unit) { viewModel.cargarSolicitudBorrado() }
@@ -167,8 +189,8 @@ fun AjustesScreen(
             Cuenta(
                 cerrando = estado.cerrandoSesiones,
                 onIrContrasena = onIrContrasena,
-                onCerrarSesion = onCerrarSesion,
-                onCerrarTodas = { viewModel.cerrarTodasLasSesiones(onCerrarSesion) }
+                onCerrarSesion = { avisandoAntes(onCerrarSesion) },
+                onCerrarTodas = { avisandoAntes { viewModel.cerrarTodasLasSesiones(onCerrarSesion) } }
             )
 
             // Solo si el servidor ofrece entrar con Google o Microsoft: sin
