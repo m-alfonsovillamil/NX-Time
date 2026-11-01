@@ -3579,6 +3579,14 @@
         "summary" : "Fichar (INICIO/FIN/PAUSA_INICIO/PAUSA_FIN)",
         "description" : "Avanza la máquina de estados del fichaje del usuario autenticado. En INICIO se puede mandar 'proyectoId' (ver GET /fichaje/proyectos); sin él, con un solo proyecto asignado se usa ese, y con varios la jornada empieza sin proyecto.",
         "operationId" : "registerTimeEntry",
+        "parameters" : [ {
+          "name" : "X-Cliente",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -3873,6 +3881,68 @@
         } ]
       }
     },
+    "/api/v1/fichaje/{id}/dar-por-bueno" : {
+      "post" : {
+        "tags" : [ "Fichaje" ],
+        "summary" : "Dar por buena una jornada que llegó tarde",
+        "description" : "Quita la marca de una jornada a la que llegó un fichaje sin conexión pasadas 72 h (ADR 054). No cambia las horas: si no valen, lo que toca es una corrección.",
+        "operationId" : "darPorBueno",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Revisada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TimeEntryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin 'correccion:aprobar', de otra empresa, o propia habiendo alguien más que pueda revisarla",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No tiene nada que revisar, o sigue abierta",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/fichaje/{id}/correcciones" : {
       "post" : {
         "tags" : [ "Fichaje" ],
@@ -3961,6 +4031,69 @@
           },
           "409" : {
             "description" : "Jornada sin cerrar, ya corregida, o con otra solicitud viva",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/fichaje/sin-conexion" : {
+      "post" : {
+        "tags" : [ "Fichaje" ],
+        "summary" : "Enviar los fichajes hechos sin conexión",
+        "description" : "La app los manda al volver la red, en el orden en que se hicieron (ADR 054). Cada uno se aplica con la hora en que ocurrió y en su propia transacción: un rechazo no deshace los anteriores. Repetir un fichaje con el mismo 'idCliente' devuelve lo mismo que la primera vez, con 'yaRecibido'. Lo que llega pasadas 72 h se aplica para revisar (A_REVISAR).",
+        "operationId" : "enviarSinConexion",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EnvioSinConexionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Un resultado por fichaje, en el mismo orden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EnvioSinConexionResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Lista vacía, de más de 50, o un fichaje sin sus datos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'fichaje:escribir'",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -13014,6 +13147,13 @@
           },
           "cerradaPorElSistema" : {
             "type" : "boolean"
+          },
+          "origen" : {
+            "type" : "string",
+            "enum" : [ "WEB", "APP", "KIOSCO", "APP_SIN_CONEXION" ]
+          },
+          "revisarPorLlegarTarde" : {
+            "type" : "boolean"
           }
         }
       },
@@ -13108,6 +13248,89 @@
           }
         },
         "required" : [ "horaEntrada", "horaSalida", "motivo" ]
+      },
+      "EnvioSinConexionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fichajes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FichajeSinConexion"
+            },
+            "maxItems" : 50,
+            "minItems" : 1
+          }
+        },
+        "required" : [ "fichajes" ]
+      },
+      "FichajeSinConexion" : {
+        "type" : "object",
+        "properties" : {
+          "idCliente" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "INICIO", "FIN", "PAUSA_INICIO", "PAUSA_FIN" ]
+          },
+          "proyectoId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "horaDelDispositivo" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "msDesdeElFichaje" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "horaDelDispositivo", "idCliente", "tipo" ]
+      },
+      "EnvioSinConexionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "resultados" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ResultadoSinConexion"
+            }
+          },
+          "jornada" : {
+            "$ref" : "#/components/schemas/TimeEntryResponse"
+          }
+        }
+      },
+      "ResultadoSinConexion" : {
+        "type" : "object",
+        "properties" : {
+          "idCliente" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "resultado" : {
+            "type" : "string",
+            "description" : "APLICADO, A_REVISAR (llegó pasadas 72 h: lo tiene que dar por bueno un gestor) o RECHAZADO",
+            "enum" : [ "APLICADO", "A_REVISAR", "RECHAZADO" ]
+          },
+          "yaRecibido" : {
+            "type" : "boolean"
+          },
+          "motivo" : {
+            "type" : "string"
+          },
+          "registroId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "hora" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
       },
       "ConfirmKioskRequest" : {
         "type" : "object",
@@ -15605,6 +15828,13 @@
           },
           "cerradaPorElSistema" : {
             "type" : "boolean"
+          },
+          "origen" : {
+            "type" : "string",
+            "enum" : [ "WEB", "APP", "KIOSCO", "APP_SIN_CONEXION" ]
+          },
+          "revisarPorLlegarTarde" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16163,7 +16393,7 @@
           },
           "accion" : {
             "type" : "string",
-            "enum" : [ "CREACION", "MODIFICACION", "CORRECCION", "ANULACION", "SOLICITUD_CORRECCION", "RECHAZO_CORRECCION", "DISPUTA", "PAUSA_ANADIDA", "PAUSA_ANULADA", "PROYECTO_CAMBIADO", "REPARTO_PROYECTOS" ]
+            "enum" : [ "CREACION", "MODIFICACION", "CORRECCION", "ANULACION", "SOLICITUD_CORRECCION", "RECHAZO_CORRECCION", "DISPUTA", "PAUSA_ANADIDA", "PAUSA_ANULADA", "PROYECTO_CAMBIADO", "REPARTO_PROYECTOS", "DADO_POR_BUENO" ]
           },
           "valorAnterior" : {
             "type" : "string"

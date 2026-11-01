@@ -88,7 +88,7 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
     {
       clave: 'entrada',
       cabecera: H.entrada,
-      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} />,
+      celda: (j) => <ConKiosco hora={hora(j.horaEntrada)} kiosco={j.kiosco} origen={j.origen} />,
     },
     {
       clave: 'salida',

@@ -13,6 +13,28 @@ public interface TimeEntryService {
 
     TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request);
 
+    /** Lo mismo, diciendo desde dónde (la cabecera {@code X-Cliente}; null si no la manda). */
+    TimeEntry registerTimeEntry(String userEmail, TimeEntryRequest request,
+            com.nxtime.nxtime.domain.OrigenDelFichaje origen);
+
+    /**
+     * Un fichaje hecho sin conexión que llega ahora, con la hora en que ocurrió
+     * (ADR 054). Las mismas reglas, más que no caiga antes de lo que ya consta;
+     * si cae dentro de una jornada que cerró el sistema, la reabre.
+     *
+     * @param motivo     qué dice la auditoría de esa hora (cuándo ocurrió y cuándo llegó)
+     * @param llegaTarde llegó pasadas 72 h: la jornada queda para revisar
+     */
+    TimeEntry registrarSinConexion(User persona, TimeEntryRequest request, java.time.Instant ocurrido,
+            String motivo, boolean llegaTarde);
+
+    /**
+     * Da por buena una jornada a la que llegó un fichaje sin conexión pasadas
+     * 72 h (ADR 054). 409 si no tiene nada que revisar o sigue abierta; 403 si
+     * es de otra empresa, o propia habiendo alguien más que pueda.
+     */
+    TimeEntry darPorBueno(String actorEmail, long registroId);
+
     /**
      * El mismo fichaje, para quien se identificó en un kiosco (ADR 033): las
      * mismas reglas y la misma auditoría, con el kiosco dicho en el motivo.

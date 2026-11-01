@@ -21,6 +21,7 @@ siguiente. El resumen de cada pasada queda en `/estado/tareas`.
 | Avisos dentro de la aplicación | 1 año | Ya no se miran | Sí |
 | Dispositivos de push sin ver | 1 año | El token ya no vale | Sí |
 | Ejecuciones de tareas programadas | 1 año | Diagnóstico | Sí |
+| Fichajes sin conexión recibidos (`fichajes_recibidos`: qué se contestó a cada uno) | 30 días | No aplicar dos veces lo que la app reenvía (ADR 054); el fichaje en sí sigue en el registro de jornada | Sí |
 | Currículos y fotos sustituidos | La noche siguiente, si ninguna candidatura los usa | Sin finalidad | Sí |
 | Candidaturas resueltas | 1 año desde la resolución | Reclamaciones del proceso | Sí |
 | Registro de accesos a datos personales | 2 años | Demostrar quién consultó qué (art. 5.2) | Sí; antes no se puede borrar (trigger de V44) |

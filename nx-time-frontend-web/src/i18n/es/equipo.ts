@@ -20,6 +20,11 @@ export const equipo = {
   enCurso: 'En curso',
   corregir: 'Corregir',
   verAuditoria: 'Auditoría',
+  // ADR 054: lo que llegó sin conexión pasadas 72 h.
+  revisarTarde: 'Llegó tarde',
+  revisarTardeDetalle: 'Se fichó sin conexión y llegó con más de tres días de retraso: revisa las horas.',
+  darPorBueno: 'Dar por bueno',
+  dadoPorBueno: 'Jornada revisada.',
 
   auditoria: {
     titulo: 'Traza de auditoría',
@@ -49,6 +54,7 @@ export const equipo = {
       PAUSA_ANULADA: 'Pausa anulada',
       PROYECTO_CAMBIADO: 'Proyecto cambiado',
       REPARTO_PROYECTOS: 'Reparto por proyectos',
+      DADO_POR_BUENO: 'Dado por bueno',
     } as Record<string, string>,
   },
 } as const;

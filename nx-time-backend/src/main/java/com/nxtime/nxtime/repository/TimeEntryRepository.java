@@ -18,6 +18,12 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     Optional<TimeEntry> findByUsuarioAndHoraSalidaIsNull(User usuario);
 
     /**
+     * La última jornada viva de la persona, abierta o cerrada. Para ordenar lo
+     * que llega sin conexión (ADR 054): no puede caer antes de ella.
+     */
+    Optional<TimeEntry> findFirstByUsuarioAndAnuladoFalseOrderByHoraEntradaDesc(User usuario);
+
+    /**
      * El fichaje que corrige a este, si alguien lo ha corregido. Sirve
      * para recorrer hacia delante la cadena de correcciones al pedir la
      * auditoría (ver {@code TimeEntryServiceImpl#getAuditTrail}).
@@ -179,8 +185,10 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      * salida (Fase 9) y que siguen sin corregir: son las incidencias
      * abiertas que RRHH tiene pendientes.
      */
-    @Query("SELECT COUNT(t) FROM registros t "
-            + "WHERE t.empresa = :empresa AND t.jornadaIncompleta = true AND t.anulado = false")
+    // Desde V50 (ADR 054), también lo que llegó sin conexión pasadas 72 h y
+    // nadie ha dado por bueno.
+    @Query("SELECT COUNT(t) FROM registros t WHERE t.empresa = :empresa AND t.anulado = false "
+            + "AND (t.jornadaIncompleta = true OR t.revisarPorLlegarTarde = true)")
     long contarIncidenciasAbiertas(@Param("empresa") Company empresa);
 
     /**
