@@ -105,14 +105,14 @@ dependencies {
     // Boot 3 ("-jakarta"); con Boot 4 sería sentry-spring-boot-4. Con
     // sentry-logback, cada log.error se convierte en un evento. Sin DSN
     // (SENTRY_DSN vacía, como en local y en los tests) no envía nada.
-    implementation("io.sentry:sentry-spring-boot-4-starter:8.61.0")
-    implementation("io.sentry:sentry-logback:8.61.0")
+    implementation("io.sentry:sentry-spring-boot-4-starter:8.62.0")
+    implementation("io.sentry:sentry-logback:8.62.0")
 
     // Documentación de la API (Swagger UI / OpenAPI), Fase 6. La linea
     // mayor de springdoc va con la de Spring Boot: 2.x para Boot 3, 3.x para
     // Boot 4. Con la que no toca, el arranque falla con un NoSuchMethodError
     // sobre alguna API interna de Spring (ya paso con la 2.6.0 y Boot 3.4).
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
 
     // Lombok: getters/setters/constructores en las entidades JPA. No genera
     // equals/hashCode (eso se escribe a mano, basado solo en el id: ver

@@ -46,7 +46,7 @@ pluginManagement {
     // `compileSdk 37`, que es una migración distinta: meterla en el
     // mismo PR haría imposible saber cuál de las dos rompió qué.
     plugins {
-        id("com.android.application") version "9.4.1"
+        id("com.android.application") version "9.5.0"
         id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
         // Push (Fase B5): lee google-services.json y genera la configuración
         // de Firebase de cada variante.

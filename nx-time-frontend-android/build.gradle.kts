@@ -236,8 +236,8 @@ dependencies {
     // Retrofit 3 arrastra OkHttp 4.12: la 5 se declara, para que no dependa
     // de que logging-interceptor la suba por su cuenta. OkHttp 5.5 es lo que
     // obliga a compilar contra Android 37.
-    implementation("com.squareup.okhttp3:okhttp:5.5.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.1")
 
     /*
      * Gson, declarado a propósito aunque converter-gson ya lo arrastre.
@@ -248,7 +248,7 @@ dependencies {
      * la 2.8.5, anterior a `JsonParser.parseString` (2.8.6), así que
      * heredarla en silencio hacía que ese fichero no compilara.
      */
-    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.code.gson:gson:2.15.0")
 
     /*
      * Jetpack Compose. El BOM fija de una vez las versiones de todas las
@@ -318,7 +318,7 @@ dependencies {
      * nativa (NDK), dos librerías .so que subían el APK de 2,5 a 6,2 MB
      * para capturar cierres de un código nativo que la app no tiene.
      */
-    implementation("io.sentry:sentry-android-core:8.61.0")
+    implementation("io.sentry:sentry-android-core:8.62.0")
 
     /*
      * Entrar con huella (paso 6).
