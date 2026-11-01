@@ -4,6 +4,7 @@ import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.CorreccionFichajeRequest
 import com.nxtime.app.data.dto.CorreccionDTO
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.UsuarioSimpleDTO
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.util.MensajeUi
@@ -22,6 +23,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import retrofit2.Response
@@ -59,6 +61,30 @@ class CorregirFichajeViewModelTest {
         motivo = "Motivo",
         estado = estado
     )
+
+    /** ADR 055: null es «no se toca», así que solo se manda si cambia. */
+    @Test
+    fun `la modalidad solo se manda si cambia`() = runTest {
+        whenever(repositorio.solicitarCorreccion(any(), any()))
+            .thenReturn(Response.success(solicitud()))
+        val captor = argumentCaptor<CorreccionFichajeRequest>()
+
+        val igual = viewModel()
+        igual.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z", Modalidad.PRESENCIAL)
+        igual.cambiarMotivo("Otra hora")
+        igual.guardar()
+        advanceUntilIdle()
+
+        val cambia = viewModel()
+        cambia.precargar("2026-09-03T07:00:00Z", "2026-09-03T15:00:00Z", Modalidad.PRESENCIAL)
+        cambia.cambiarModalidad(Modalidad.A_DISTANCIA)
+        cambia.cambiarMotivo("Estaba en casa")
+        cambia.guardar()
+        advanceUntilIdle()
+
+        verify(repositorio, times(2)).solicitarCorreccion(eq(7L), captor.capture())
+        assertEquals(listOf(null, Modalidad.A_DISTANCIA), captor.allValues.map { it.modalidad })
+    }
 
     /**
      * El 3 de septiembre España está en horario de verano (UTC+2), así

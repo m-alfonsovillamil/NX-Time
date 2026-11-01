@@ -3,6 +3,10 @@ package com.nxtime.app.ui.auditoria
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.semantics.Role
+import com.nxtime.app.data.dto.Modalidad
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,14 +52,15 @@ fun CorregirFichajeScreen(
     nombreEmpleado: String,
     entradaIso: String?,
     salidaIso: String?,
+    modalidad: Modalidad? = null,
     onCorregido: () -> Unit,
     onVolver: () -> Unit,
     viewModel: CorregirFichajeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(entradaIso, salidaIso) {
-        viewModel.precargar(entradaIso, salidaIso)
+    LaunchedEffect(entradaIso, salidaIso, modalidad) {
+        viewModel.precargar(entradaIso, salidaIso, modalidad)
     }
 
     val contexto = LocalContext.current
@@ -151,6 +156,36 @@ fun CorregirFichajeScreen(
                     checked = estado.salidaEsOtroDia,
                     onCheckedChange = viewModel::cambiarSalidaEsOtroDia
                 )
+            }
+
+            // Solo en jornadas que ya la tienen: es la señal de que la empresa la pregunta (ADR 055).
+            estado.modalidad?.let { elegida ->
+                Text(
+                    text = stringResource(R.string.correccion_modalidad),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Modalidad.entries.forEach { opcion ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = opcion == elegida,
+                                role = Role.RadioButton,
+                                onClick = { viewModel.cambiarModalidad(opcion) }
+                            )
+                            .padding(vertical = 4.dp)
+                    ) {
+                        RadioButton(selected = opcion == elegida, onClick = null)
+                        Text(
+                            text = stringResource(
+                                if (opcion == Modalidad.PRESENCIAL) R.string.modalidad_presencial
+                                else R.string.modalidad_a_distancia
+                            ),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
             }
 
             OutlinedTextField(

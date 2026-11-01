@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.CorreccionFichajeRequest
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.ui.correcciones.EstadoCorreccion
@@ -34,6 +35,12 @@ data class CorregirFichajeUiState(
      * justo la única que no se podía tocar.
      */
     val salidaEsOtroDia: Boolean = false,
+    /**
+     * Presencial o a distancia (ADR 055). Null si la jornada no la tiene, y
+     * entonces no se ofrece: es la señal de que la empresa no la pregunta.
+     */
+    val modalidad: Modalidad? = null,
+    val modalidadOriginal: Modalidad? = null,
     val motivo: String = "",
     val enviando: Boolean = false,
     val corregido: Boolean = false,
@@ -74,7 +81,8 @@ class CorregirFichajeViewModel(
      * formulario en blanco: casi siempre se corrige una sola de las dos
      * horas, y volver a teclear la otra es una invitación a equivocarse.
      */
-    fun precargar(entradaIso: String?, salidaIso: String?) {
+    fun precargar(entradaIso: String?, salidaIso: String?, modalidad: Modalidad? = null) {
+        _uiState.update { it.copy(modalidad = modalidad, modalidadOriginal = modalidad) }
         val fecha = DateFormats.fechaLocal(entradaIso) ?: return
         val entrada = DateFormats.horaYMinutoLocal(entradaIso)
         val salida = DateFormats.horaYMinutoLocal(salidaIso)
@@ -102,6 +110,9 @@ class CorregirFichajeViewModel(
 
     fun cambiarSalidaEsOtroDia(esOtroDia: Boolean) =
         _uiState.update { it.copy(salidaEsOtroDia = esOtroDia, error = null) }
+
+    fun cambiarModalidad(modalidad: Modalidad) =
+        _uiState.update { it.copy(modalidad = modalidad, error = null) }
 
     fun cambiarMotivo(motivo: String) =
         _uiState.update { it.copy(motivo = motivo, error = null) }
@@ -144,7 +155,13 @@ class CorregirFichajeViewModel(
             try {
                 val respuesta = authRepository.solicitarCorreccion(
                     fichajeId,
-                    CorreccionFichajeRequest(entrada, salida, estado.motivo.trim())
+                    CorreccionFichajeRequest(
+                        entrada,
+                        salida,
+                        estado.motivo.trim(),
+                        // Solo si cambia: null es «no se toca».
+                        estado.modalidad.takeIf { it != estado.modalidadOriginal }
+                    )
                 )
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful) {

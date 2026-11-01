@@ -5,7 +5,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.EstadoDelDiaDTO
+import com.nxtime.app.data.dto.EstadoUbicacion
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.data.dto.PeticionFichaje
+import com.nxtime.app.data.dto.UbicacionDelFichaje
+import com.nxtime.app.data.session.Ajustes
+import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.TipoFichaje
 import com.nxtime.app.data.repository.AuthRepository
@@ -51,9 +57,10 @@ class FicharScreenTest {
 
     private fun texto(id: Int): String = RuntimeEnvironment.getApplication().getString(id)
 
-    private fun montar(abierta: Registro? = null) {
+    private fun montar(abierta: Registro? = null, pide: EstadoDelDiaDTO? = null) {
         jornada = abierta
         repositorio.stub {
+            pide?.let { dia -> onBlocking { getEstadoDeHoy() } doReturn Response.success(dia) }
             onBlocking { getRegistroActivo() } doAnswer { Response.success(jornada) }
             onBlocking { registrarFichaje(any()) } doAnswer { llamada ->
                 val tipo = llamada.getArgument<PeticionFichaje>(0).tipo
@@ -70,7 +77,12 @@ class FicharScreenTest {
             }
         }
         // Fuera de la composición: dentro, cada recomposición crearía otros.
-        val viewModel = FicharViewModel(repositorio, sesion)
+        val viewModel = FicharViewModel(
+            repositorio,
+            sesion,
+            Ajustes(RuntimeEnvironment.getApplication()),
+            FuenteDeUbicacion { UbicacionDelFichaje(EstadoUbicacion.CAPTURADA, 42.2406, -8.7207, 25) }
+        )
         val detalleViewModel = DetalleDeTiempoViewModel(repositorio)
         pantalla.setContent {
             NxTimeTheme {
@@ -151,5 +163,36 @@ class FicharScreenTest {
         seVe(R.string.fichar_reanuda_antes)
         noEsta(R.string.fichar_confirmar_fin_titulo)
         assertEquals(emptyList<TipoFichaje>(), fichajes)
+    }
+
+    /** ADR 055 y 056: lo que ve quien entra si su empresa pide las dos cosas. */
+    @Test
+    fun `si la empresa pide ubicacion y modalidad se explica y se pregunta antes de fichar`() {
+        montar(pide = EstadoDelDiaDTO(laborable = true, preguntarModalidad = true, pedirUbicacion = true))
+        pantalla.waitForIdle()
+
+        tocar(R.string.fichar_iniciar)
+        seVe(R.string.ubicacion_explicar_titulo)
+        assertEquals(emptyList<TipoFichaje>(), fichajes)
+
+        // Sin la explicación no se llega a nada más: cancelar no ficha.
+        tocar(R.string.cancelar)
+        noEsta(R.string.ubicacion_explicar_titulo)
+        assertEquals(emptyList<TipoFichaje>(), fichajes)
+    }
+
+    @Test
+    fun `presencial o a distancia se pregunta con dos botones y ficha`() {
+        Ajustes(RuntimeEnvironment.getApplication()).ubicacionExplicada = true
+        montar(pide = EstadoDelDiaDTO(laborable = true, preguntarModalidad = true))
+        pantalla.waitForIdle()
+
+        tocar(R.string.fichar_iniciar)
+        seVe(R.string.modalidad_titulo)
+        tocar(R.string.modalidad_a_distancia)
+
+        pantalla.waitForIdle()
+        assertEquals(listOf(TipoFichaje.INICIO), fichajes)
+        assertEquals(Modalidad.A_DISTANCIA, Ajustes(RuntimeEnvironment.getApplication()).ultimaModalidad)
     }
 }

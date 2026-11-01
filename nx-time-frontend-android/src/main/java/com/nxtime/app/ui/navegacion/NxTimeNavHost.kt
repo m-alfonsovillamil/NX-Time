@@ -47,6 +47,7 @@ import com.nxtime.app.ui.acceso.LoginScreen
 import com.nxtime.app.ui.acceso.RecuperarAccesoScreen
 import com.nxtime.app.ui.acceso.RegistroEmpresaScreen
 import com.nxtime.app.ui.auditoria.AuditoriaScreen
+import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.ui.auditoria.CorregirFichajeScreen
 import com.nxtime.app.ui.ausencias.AusenciasScreen
 import com.nxtime.app.ui.ausencias.SolicitudScreen
@@ -152,7 +153,7 @@ enum class Pantalla(val ruta: String) {
     EMPRESA("empresa"),
     AUDITORIA("auditoria/{$ARG_FICHAJE_ID}"),
     CORRECCION("correccion/{$ARG_FICHAJE_ID}?$ARG_NOMBRE={$ARG_NOMBRE}" +
-            "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}"),
+            "&$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}&$ARG_MODALIDAD={$ARG_MODALIDAD}"),
     ANADIR_PAUSA("pausa/{$ARG_FICHAJE_ID}?$ARG_ENTRADA={$ARG_ENTRADA}&$ARG_SALIDA={$ARG_SALIDA}"),
     // Reparto de las horas de una jornada entre proyectos (ADR 017).
     REPARTO("reparto/{$ARG_FICHAJE_ID}");
@@ -183,11 +184,13 @@ enum class Pantalla(val ruta: String) {
             fichajeId: Long,
             nombre: String,
             entradaIso: String?,
-            salidaIso: String?
+            salidaIso: String?,
+            modalidad: Modalidad?
         ) = "correccion/$fichajeId" +
                 "?$ARG_NOMBRE=${codificar(nombre)}" +
                 "&$ARG_ENTRADA=${codificar(entradaIso)}" +
-                "&$ARG_SALIDA=${codificar(salidaIso)}"
+                "&$ARG_SALIDA=${codificar(salidaIso)}" +
+                "&$ARG_MODALIDAD=${codificar(modalidad?.name)}"
 
         /**
          * Añadir una pausa a posteriori (ADR 015). La entrada y la salida
@@ -217,6 +220,7 @@ const val ARG_FICHAJE_ID = "fichajeId"
 const val ARG_NOMBRE = "nombre"
 const val ARG_ENTRADA = "entrada"
 const val ARG_SALIDA = "salida"
+const val ARG_MODALIDAD = "modalidad"
 
 /**
  * Los destinos que salen en la barra de navegación.
@@ -592,7 +596,8 @@ fun NxTimeNavHost(
                                 fichajeId = registro.id,
                                 nombre = "",
                                 entradaIso = registro.horaEntrada,
-                                salidaIso = registro.horaSalida
+                                salidaIso = registro.horaSalida,
+                                modalidad = registro.modalidad
                             )
                         )
                     },
@@ -827,7 +832,8 @@ fun NxTimeNavHost(
                                 fichajeId = registro.id,
                                 nombre = registro.usuario.nombre,
                                 entradaIso = registro.horaEntrada,
-                                salidaIso = registro.horaSalida
+                                salidaIso = registro.horaSalida,
+                                modalidad = registro.modalidad
                             )
                         )
                     },
@@ -863,13 +869,15 @@ fun NxTimeNavHost(
                     navArgument(ARG_FICHAJE_ID) { type = NavType.LongType },
                     navArgument(ARG_NOMBRE) { type = NavType.StringType; defaultValue = "" },
                     navArgument(ARG_ENTRADA) { type = NavType.StringType; defaultValue = "" },
-                    navArgument(ARG_SALIDA) { type = NavType.StringType; defaultValue = "" }
+                    navArgument(ARG_SALIDA) { type = NavType.StringType; defaultValue = "" },
+                    navArgument(ARG_MODALIDAD) { type = NavType.StringType; defaultValue = "" }
                 )
             ) { entrada ->
                 CorregirFichajeScreen(
                     nombreEmpleado = entrada.arguments?.getString(ARG_NOMBRE).orEmpty(),
                     entradaIso = entrada.arguments?.getString(ARG_ENTRADA)?.ifBlank { null },
                     salidaIso = entrada.arguments?.getString(ARG_SALIDA)?.ifBlank { null },
+                    modalidad = Modalidad.entries.firstOrNull { it.name == entrada.arguments?.getString(ARG_MODALIDAD) },
                     // Tras corregir se vuelve al historial, que recarga
                     // al reanudarse (ver HistorialEquipoScreen): el
                     // fichaje corregido es OTRO registro, y dejar en

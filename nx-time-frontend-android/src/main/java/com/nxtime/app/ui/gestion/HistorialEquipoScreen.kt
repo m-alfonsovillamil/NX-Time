@@ -35,6 +35,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.Modalidad
+import com.nxtime.app.ui.components.UbicacionDeFichaje
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.RegistroEquipoDTO
 import com.nxtime.app.ui.AppViewModelProvider
@@ -246,6 +248,10 @@ private fun TarjetaJornadaEquipo(
                     tono = TonoDeInsignia.AVISO
                 )
             }
+            if (registro.modalidad == Modalidad.A_DISTANCIA) {
+                Spacer(Modifier.height(6.dp))
+                Insignia(texto = stringResource(R.string.modalidad_a_distancia))
+            }
 
             Spacer(Modifier.height(12.dp))
             HorizontalDivider()
@@ -274,6 +280,8 @@ private fun TarjetaJornadaEquipo(
                     modifier = Modifier.weight(1f)
                 )
             }
+            UbicacionDeFichaje(registro.ubicacionEntrada, stringResource(R.string.historial_entrada))
+            UbicacionDeFichaje(registro.ubicacionSalida, stringResource(R.string.historial_salida))
 
             if (registro.minutosPausaAcumulados > 0) {
                 Spacer(Modifier.height(8.dp))

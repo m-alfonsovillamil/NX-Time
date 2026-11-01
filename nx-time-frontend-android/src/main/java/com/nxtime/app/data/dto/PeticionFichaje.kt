@@ -15,5 +15,9 @@ data class PeticionFichaje(
      * decida el servidor (con un solo proyecto, ese; sin ninguno, sin proyecto).
      * Gson no manda los null, así que para el resto de acciones el JSON no cambia.
      */
-    val proyectoId: Long? = null
+    val proyectoId: Long? = null,
+    /** Solo al iniciar, si la empresa lo pregunta (ADR 055). */
+    val modalidad: Modalidad? = null,
+    /** Al iniciar y al terminar, si la empresa la pide (ADR 056). */
+    val ubicacion: UbicacionDelFichaje? = null
 )

@@ -11,6 +11,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.PATCH
 import retrofit2.http.Multipart
 import retrofit2.http.Part
@@ -145,6 +146,8 @@ interface ApiService {
     @GET("api/v1/fichaje/hoy")
     suspend fun getEstadoDeHoy(): Response<EstadoDelDiaDTO>
 
+    // X-Cliente: queda dicho que se fichó desde la app (ADR 054).
+    @Headers("X-Cliente: android")
     @POST("api/v1/fichaje")
     suspend fun registrarFichaje(
         @Body peticion: PeticionFichaje

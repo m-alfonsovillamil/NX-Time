@@ -31,6 +31,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.R
+import com.nxtime.app.data.dto.Modalidad
+import com.nxtime.app.ui.components.UbicacionDeFichaje
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.ListaConRecarga
@@ -319,6 +321,10 @@ private fun TarjetaJornada(
                     tono = TonoDeInsignia.AVISO
                 )
             }
+            if (registro.modalidad == Modalidad.A_DISTANCIA) {
+                Spacer(Modifier.height(6.dp))
+                Insignia(texto = stringResource(R.string.modalidad_a_distancia))
+            }
 
             Spacer(Modifier.height(12.dp))
             HorizontalDivider()
@@ -347,6 +353,8 @@ private fun TarjetaJornada(
                     modifier = Modifier.weight(1f)
                 )
             }
+            UbicacionDeFichaje(registro.ubicacionEntrada, stringResource(R.string.historial_entrada))
+            UbicacionDeFichaje(registro.ubicacionSalida, stringResource(R.string.historial_salida))
 
             // Solo se enseña la pausa si la hubo: una línea "Pausa: 0h 00m"
             // en cada jornada solo añade ruido.

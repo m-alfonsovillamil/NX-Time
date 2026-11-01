@@ -4,6 +4,12 @@ import app.cash.turbine.test
 import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.DiaTeoricoDTO
+import com.nxtime.app.data.dto.EstadoDelDiaDTO
+import com.nxtime.app.data.dto.EstadoUbicacion
+import com.nxtime.app.data.dto.Modalidad
+import com.nxtime.app.data.dto.UbicacionDelFichaje
+import com.nxtime.app.data.session.Ajustes
+import com.nxtime.app.data.ubicacion.FuenteDeUbicacion
 import com.nxtime.app.data.dto.PeticionFichaje
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.ResumenPersonalDTO
@@ -13,6 +19,8 @@ import com.nxtime.app.data.repository.AuthRepository
 import com.nxtime.app.data.session.SessionManager
 import com.nxtime.app.ui.util.MensajeUi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -28,6 +36,7 @@ import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import retrofit2.Response
@@ -48,6 +57,9 @@ class FicharViewModelTest {
 
     private val repositorio: AuthRepository = mock()
     private val sesion: SessionManager = mock()
+    private val ajustes: Ajustes = mock()
+    private val posicion = UbicacionDelFichaje(EstadoUbicacion.CAPTURADA, 42.2406, -8.7207, 25)
+    private val fuente: FuenteDeUbicacion = mock()
 
     @Before
     fun configurarSesion() {
@@ -71,9 +83,168 @@ class FicharViewModelTest {
             .toResponseBody("application/problem+json".toMediaType())
     )
 
+    private fun nuevoViewModel() = FicharViewModel(repositorio, sesion, ajustes, fuente)
+
     private suspend fun viewModelCon(activo: Registro?): FicharViewModel {
         whenever(repositorio.getRegistroActivo()).thenReturn(Response.success(activo))
-        return FicharViewModel(repositorio, sesion)
+        return nuevoViewModel()
+    }
+
+    /** ADR 056: al entrar y al salir, explicada antes la primera vez, y sin ella se ficha igual. */
+    private suspend fun empresaQuePide(modalidad: Boolean = false, ubicacion: Boolean = false) {
+        whenever(repositorio.getEstadoDeHoy()).thenReturn(
+            Response.success(EstadoDelDiaDTO(laborable = true, preguntarModalidad = modalidad, pedirUbicacion = ubicacion))
+        )
+        whenever(fuente.tomar()).thenReturn(posicion)
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
+    }
+
+    @Test
+    fun `la primera vez se explica la ubicacion y se pide el permiso antes de fichar`() = runTest {
+        empresaQuePide(ubicacion = true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(false)
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.explicandoUbicacion)
+        verify(repositorio, never()).registrarFichaje(any())
+
+        viewModel.ubicacionExplicada()
+        assertTrue(viewModel.uiState.value.pidiendoPermisoDeUbicacion)
+        verify(ajustes).ubicacionExplicada = true
+        verify(repositorio, never()).registrarFichaje(any())
+
+        // Lo conceda o no: de eso se ocupa la fuente, que dice DENEGADA.
+        viewModel.permisoDeUbicacionContestado()
+        advanceUntilIdle()
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO, ubicacion = posicion))
+    }
+
+    @Test
+    fun `cancelar la explicacion de la ubicacion no ficha`() = runTest {
+        empresaQuePide(ubicacion = true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(false)
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        viewModel.cancelarExplicacionDeUbicacion()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.explicandoUbicacion)
+        assertFalse(viewModel.uiState.value.cargando)
+        verify(repositorio, never()).registrarFichaje(any())
+    }
+
+    @Test
+    fun `la ubicacion se manda al salir, y en las pausas no`() = runTest {
+        empresaQuePide(ubicacion = true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(true)
+        val viewModel = viewModelCon(activo = registro())
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPausa()
+        advanceUntilIdle()
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.PAUSA_INICIO))
+        verify(fuente, never()).tomar()
+
+        viewModel.pulsarBotonPrincipal()
+        viewModel.confirmarFinDeJornada()
+        advanceUntilIdle()
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.FIN, ubicacion = posicion))
+    }
+
+    @Test
+    fun `sin permiso se ficha igual y queda dicho`() = runTest {
+        empresaQuePide(ubicacion = true)
+        val denegada = UbicacionDelFichaje(EstadoUbicacion.DENEGADA)
+        whenever(fuente.tomar()).thenReturn(denegada)
+        whenever(ajustes.ubicacionExplicada).thenReturn(true)
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO, ubicacion = denegada))
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    @Test
+    fun `si la empresa no la pide no se toma la ubicacion ni se explica`() = runTest {
+        empresaQuePide()
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.explicandoUbicacion)
+        verify(fuente, never()).tomar()
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))
+    }
+
+    /** El permiso del sistema tapa la pantalla y al volver se pregunta por la jornada: no debe reactivar el botón. */
+    @Test
+    fun `volver a la pantalla mientras se toma la ubicacion no deja fichar dos veces`() = runTest {
+        empresaQuePide(ubicacion = true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(true)
+        whenever(repositorio.getRegistroActivo()).thenReturn(Response.success(null))
+        // Lo que tarda un GPS: la respuesta llega unos segundos después.
+        val viewModel = FicharViewModel(repositorio, sesion, ajustes, FuenteDeUbicacion {
+            delay(5_000)
+            posicion
+        })
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceTimeBy(1_000)
+        viewModel.comprobarEstadoJornada()
+        advanceTimeBy(1_000)
+        assertTrue(viewModel.uiState.value.cargando)
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+
+        verify(repositorio, times(1)).registrarFichaje(any())
+    }
+
+    @Test
+    fun `si la empresa lo pregunta, la modalidad se elige y se recuerda`() = runTest {
+        empresaQuePide(modalidad = true)
+        whenever(ajustes.ultimaModalidad).thenReturn(Modalidad.A_DISTANCIA)
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.preguntandoModalidad)
+        assertEquals(Modalidad.A_DISTANCIA, viewModel.uiState.value.ultimaModalidad)
+        verify(repositorio, never()).registrarFichaje(any())
+
+        viewModel.elegirModalidad(Modalidad.PRESENCIAL)
+        advanceUntilIdle()
+
+        verify(ajustes).ultimaModalidad = Modalidad.PRESENCIAL
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.INICIO, modalidad = Modalidad.PRESENCIAL))
+    }
+
+    @Test
+    fun `la modalidad solo se manda al entrar`() = runTest {
+        empresaQuePide(modalidad = true)
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        viewModel.elegirModalidad(Modalidad.A_DISTANCIA)
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPausa()
+        advanceUntilIdle()
+
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.PAUSA_INICIO))
     }
 
     @Test
@@ -387,7 +558,7 @@ class FicharViewModelTest {
     @Test
     fun `un fallo de red no deja la pantalla cargando para siempre`() = runTest {
         whenever(repositorio.getRegistroActivo()).thenThrow(RuntimeException("sin red"))
-        val viewModel = FicharViewModel(repositorio, sesion)
+        val viewModel = nuevoViewModel()
         advanceUntilIdle()
 
         val estado = viewModel.uiState.value

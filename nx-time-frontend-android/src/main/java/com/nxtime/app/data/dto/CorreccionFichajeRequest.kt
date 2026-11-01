@@ -15,5 +15,7 @@ package com.nxtime.app.data.dto
 data class CorreccionFichajeRequest(
     val horaEntrada: String,
     val horaSalida: String,
-    val motivo: String
+    val motivo: String,
+    /** Null = no se toca (ADR 055). */
+    val modalidad: Modalidad? = null
 )
