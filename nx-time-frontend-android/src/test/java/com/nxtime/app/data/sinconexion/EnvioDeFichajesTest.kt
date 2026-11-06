@@ -2,6 +2,7 @@ package com.nxtime.app.data.sinconexion
 
 import com.nxtime.app.data.dto.EnvioSinConexionRequest
 import com.nxtime.app.data.dto.EnvioSinConexionResponse
+import com.nxtime.app.data.dto.ErrorDelEnvio
 import com.nxtime.app.data.dto.FichajePendiente
 import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.ResultadoSinConexion
@@ -11,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -92,6 +94,58 @@ class EnvioDeFichajesTest {
 
         assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
         assertEquals(1, cola.fichajes.size)
+        // Se arregla solo: no se avisa.
+        assertNull(cola.errorDelEnvio("ana@x"))
+    }
+
+    /** Antes reintentaba sin decir nada a nadie. */
+    @Test
+    fun `un rechazo que no se arregla esperando se anota con su motivo, y se sigue reintentando`() = runTest {
+        servidorDespierto()
+        cola.anadir(fichaje("a"))
+        whenever(repositorio.enviarFichajesSinConexion(any())).thenReturn(
+            Response.error(
+                403,
+                """{"status":403,"detail":"Tu cuenta está desactivada."}"""
+                    .toResponseBody("application/problem+json".toMediaType())
+            )
+        )
+
+        assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
+        assertEquals(1, cola.fichajes.size)
+        assertEquals(ErrorDelEnvio(403, "Tu cuenta está desactivada."), cola.errorDelEnvio("ana@x"))
+    }
+
+    /** La sesión ya lo dice (vuelve al login): anotarlo enseñaría un aviso viejo al volver a entrar. */
+    @Test
+    fun `una sesion caducada no se anota`() = runTest {
+        whenever(repositorio.getRegistroActivo()).thenReturn(Response.error(401, "".toResponseBody(null)))
+        cola.anadir(fichaje("a"))
+
+        assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
+        assertEquals(1, cola.fichajes.size)
+        assertNull(cola.errorDelEnvio("ana@x"))
+    }
+
+    @Test
+    fun `un rechazo al despertar el servidor tambien se anota`() = runTest {
+        whenever(repositorio.getRegistroActivo()).thenReturn(Response.error(403, "".toResponseBody(null)))
+        cola.anadir(fichaje("a"))
+
+        assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
+        assertEquals(ErrorDelEnvio(403, null), cola.errorDelEnvio("ana@x"))
+    }
+
+    @Test
+    fun `el primer envio que llega borra el rechazo anotado`() = runTest {
+        servidorDespierto()
+        cola.guardarErrorDelEnvio("ana@x", ErrorDelEnvio(403, null))
+        cola.anadir(fichaje("a"))
+        whenever(repositorio.enviarFichajesSinConexion(any()))
+            .thenReturn(Response.success(EnvioSinConexionResponse(listOf(aplicado("a")), null)))
+
+        assertEquals(ResultadoDelEnvio.TERMINADO, envio.enviar())
+        assertNull(cola.errorDelEnvio("ana@x"))
     }
 
     @Test

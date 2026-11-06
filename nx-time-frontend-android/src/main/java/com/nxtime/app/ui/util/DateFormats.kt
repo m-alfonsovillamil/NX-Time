@@ -257,6 +257,16 @@ object DateFormats {
         0L
     }
 
+    /**
+     * Lo trabajado de una jornada en pausa: de la entrada hasta que empezó la
+     * pausa en curso, menos las ya terminadas. Null si no se puede calcular.
+     */
+    fun segundosHastaLaPausa(entradaIso: String?, segundosPausa: Long, inicioPausaIso: String): Long? = try {
+        entradaIso?.let { segundosTrabajados(it, segundosPausa, Instant.parse(inicioPausaIso)) }
+    } catch (e: DateTimeParseException) {
+        null
+    }
+
     private fun formatoHorasMinutos(minutos: Long): String =
         "${minutos / 60}h ${String.format(ES, "%02dm", minutos % 60)}"
 

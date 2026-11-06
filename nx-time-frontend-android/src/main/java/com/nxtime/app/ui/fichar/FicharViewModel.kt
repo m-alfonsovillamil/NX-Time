@@ -77,6 +77,8 @@ data class FicharUiState(
     val fichajesPendientes: Int = 0,
     /** Los que llegaron y no entraron tal cual: rechazados, o a revisar por llegar tarde. */
     val avisosDeEnvio: List<AvisoDeEnvio> = emptyList(),
+    /** El servidor rechaza el envío de los pendientes y no es cosa de esperar: el motivo. */
+    val errorDelEnvio: MensajeUi? = null,
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -203,10 +205,14 @@ class FicharViewModel(
 
     private fun actualizarCola() {
         val dueno = sessionManager.correoDeLaSesion()
+        val pendientes = dueno?.let(cola::pendientes)?.size ?: 0
+        // Sin nada pendiente, un rechazo viejo ya no dice nada.
+        val rechazo = dueno?.takeIf { pendientes > 0 }?.let(cola::errorDelEnvio)
         _uiState.update {
             it.copy(
-                fichajesPendientes = dueno?.let(cola::pendientes)?.size ?: 0,
-                avisosDeEnvio = dueno?.let(cola::avisos).orEmpty()
+                fichajesPendientes = pendientes,
+                avisosDeEnvio = dueno?.let(cola::avisos).orEmpty(),
+                errorDelEnvio = rechazo?.let { r -> ApiErrorParser.mensajeConDetalle(r.detalle, r.codigo) }
             )
         }
     }
@@ -650,10 +656,12 @@ class FicharViewModel(
                  * iniciar la jornada el cronómetro tiene que arrancar en
                  * el acto.
                  *
-                 * En pausa se CONGELA en el valor que llevaba, no se
-                 * pone a cero: el tiempo trabajado no desaparece porque
-                 * el empleado se vaya a comer. Y no se recalcula, porque
-                 * durante la pausa la cuenta se dispararía.
+                 * En pausa se CONGELA en lo trabajado hasta que empezó,
+                 * no se pone a cero: el tiempo trabajado no desaparece
+                 * porque el empleado se vaya a comer. Se cuenta hasta el
+                 * `inicioPausaActual` y no hasta ahora, porque la pausa en
+                 * curso todavía no está acumulada. Sin ese dato (una
+                 * respuesta vieja) se deja el valor que llevaba.
                  *
                  * Al terminar la jornada sí vuelve a cero: lo trabajado
                  * pasa a sumar en el resumen, y dejar la cifra puesta
@@ -664,7 +672,9 @@ class FicharViewModel(
                         activo?.horaEntrada,
                         activo?.segundosPausaAcumulados ?: 0
                     )
-                    EstadoJornada.EN_PAUSA -> it.segundosEnCurso
+                    EstadoJornada.EN_PAUSA -> activo?.inicioPausaActual
+                        ?.let { inicio -> DateFormats.segundosHastaLaPausa(activo.horaEntrada, activo.segundosPausaAcumulados, inicio) }
+                        ?: it.segundosEnCurso
                     EstadoJornada.SIN_JORNADA -> 0
                 }
             )

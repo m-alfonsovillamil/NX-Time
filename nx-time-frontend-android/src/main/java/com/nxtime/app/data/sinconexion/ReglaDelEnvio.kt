@@ -6,6 +6,7 @@ import com.nxtime.app.data.dto.Registro
 import com.nxtime.app.data.dto.TipoFichaje
 import java.time.Duration
 import java.time.Instant
+import java.time.format.DateTimeParseException
 
 /** `Settings.Global.BOOT_COUNT` si el móvil no lo da: entonces no se puede saber si se reinició. */
 const val ARRANQUE_DESCONOCIDO = -1
@@ -45,13 +46,12 @@ object ReglaDelEnvio {
      * la cola, en orden. Null si no queda ninguna abierta.
      *
      * Las pausas hechas sin red se descuentan para que el cronómetro no las
-     * cuente. La pausa que ya estaba abierta en el servidor no se puede descontar
-     * al reanudar sin red, porque aquí no se sabe cuándo empezó: se ajusta al
-     * llegar la respuesta.
+     * cuente, también la que ya estaba abierta en el servidor: dice cuándo
+     * empezó (`inicioPausaActual`).
      */
     fun jornadaConCola(servidor: Registro?, cola: List<FichajePendiente>): Registro? {
         var jornada = servidor?.takeIf { it.horaSalida == null }
-        var inicioDePausa: Instant? = null
+        var inicioDePausa: Instant? = jornada?.takeIf { it.enPausa }?.inicioPausaActual?.let(::instanteONull)
         for (fichaje in cola) {
             val hora = fichaje.horaDelDispositivo
             when (fichaje.tipo) {
@@ -67,13 +67,14 @@ object ReglaDelEnvio {
                     inicioDePausa = null
                 }
                 TipoFichaje.PAUSA_INICIO -> {
-                    jornada = jornada?.copy(enPausa = true)
+                    jornada = jornada?.copy(enPausa = true, inicioPausaActual = hora)
                     inicioDePausa = Instant.parse(hora)
                 }
                 TipoFichaje.PAUSA_FIN -> {
                     val segundos = inicioDePausa?.let { Duration.between(it, Instant.parse(hora)).seconds } ?: 0
                     jornada = jornada?.copy(
                         enPausa = false,
+                        inicioPausaActual = null,
                         segundosPausaAcumulados = (jornada?.segundosPausaAcumulados ?: 0) + segundos,
                         minutosPausaAcumulados = ((jornada?.segundosPausaAcumulados ?: 0) + segundos) / 60
                     )
@@ -84,4 +85,7 @@ object ReglaDelEnvio {
         }
         return jornada
     }
+
+    private fun instanteONull(texto: String): Instant? =
+        try { Instant.parse(texto) } catch (e: DateTimeParseException) { null }
 }
