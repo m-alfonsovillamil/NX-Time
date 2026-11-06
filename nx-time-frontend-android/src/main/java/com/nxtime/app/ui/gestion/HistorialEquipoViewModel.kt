@@ -23,7 +23,15 @@ data class HistorialEquipoUiState(
     val empleadoFiltrado: EmpleadoSimpleDTO? = null,
     val registros: List<RegistroEquipoDTO> = emptyList(),
     val paginas: EstadoDePaginas = EstadoDePaginas(),
-    val error: MensajeUi? = null
+    val error: MensajeUi? = null,
+    /**
+     * Lo que falló al dar por buena una jornada. Aparte de [error], que
+     * sustituye la lista entera por la pantalla de error: un 403 al revisar
+     * una jornada no puede esconder todas las demás.
+     */
+    val errorAlRevisar: MensajeUi? = null,
+    /** Las jornadas que se están dando por buenas: su botón no se puede volver a pulsar. */
+    val revisando: Set<Long> = emptySet()
 ) {
     /**
      * Lo que se pinta. El filtro se aplica aquí, sobre lo que ya está en
@@ -110,6 +118,40 @@ class HistorialEquipoViewModel(
             }
             _uiState.update { it.copy(registros = it.registros + siguiente.nuevos, paginas = siguiente.estado) }
         }
+    }
+
+    /**
+     * Quita la marca «a revisar: llegó tarde» de una jornada que llegó sin
+     * conexión pasadas 72 h (ADR 054), como «Dar por bueno» en la web. No
+     * cambia las horas: si están mal, se corrigen.
+     *
+     * Al acabar bien se quita la marca de la tarjeta sin recargar la lista,
+     * que puede llevar varias páginas cargadas.
+     */
+    fun darPorBueno(fichajeId: Long) {
+        if (fichajeId in _uiState.value.revisando) return
+        _uiState.update { it.copy(revisando = it.revisando + fichajeId, errorAlRevisar = null) }
+        viewModelScope.launch {
+            val error = try {
+                val respuesta = authRepository.darPorBueno(fichajeId)
+                if (respuesta.isSuccessful) null else ApiErrorParser.mensajeDe(respuesta)
+            } catch (e: Exception) {
+                ApiErrorParser.mensajeDeRed(e)
+            }
+            _uiState.update { estado ->
+                estado.copy(
+                    revisando = estado.revisando - fichajeId,
+                    errorAlRevisar = error,
+                    registros = if (error != null) estado.registros else estado.registros.map {
+                        if (it.id == fichajeId) it.copy(revisarPorLlegarTarde = false) else it
+                    }
+                )
+            }
+        }
+    }
+
+    fun descartarErrorAlRevisar() {
+        _uiState.update { it.copy(errorAlRevisar = null) }
     }
 
     fun onFiltroCambia(empleado: EmpleadoSimpleDTO?) {

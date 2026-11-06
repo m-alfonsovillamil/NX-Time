@@ -69,6 +69,14 @@ object Permisos {
     fun puedeCorregirFichajes(authorities: Set<String>): Boolean =
         "fichaje:corregir" in authorities
 
+    /**
+     * Da por buena una jornada que llegó sin conexión pasadas 72 h (ADR 054).
+     * Es la misma authority que aprobar correcciones (`correccion:aprobar`):
+     * quien revisa un fichaje es quien aprueba sus cambios.
+     */
+    fun puedeDarPorBueno(authorities: Set<String>): Boolean =
+        "correccion:aprobar" in authorities
+
     /** Ve la traza de auditoría de un fichaje (`fichaje:auditoria`). */
     fun puedeVerAuditoria(authorities: Set<String>): Boolean =
         "fichaje:auditoria" in authorities
