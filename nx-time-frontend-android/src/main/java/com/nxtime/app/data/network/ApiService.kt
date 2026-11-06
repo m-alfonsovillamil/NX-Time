@@ -638,6 +638,10 @@ interface ApiService {
         @Query("tamano") tamano: Int = Paginas.TAMANO
     ): Response<PaginaDTO<RegistroEquipoDTO>>
 
+    /** Quita la marca de lo que llegó sin conexión pasadas 72 h (ADR 054). */
+    @POST("api/v1/fichaje/{id}/dar-por-bueno")
+    suspend fun darPorBueno(@Path("id") fichajeId: Long): Response<Registro>
+
     @POST("api/v1/gestor/empleados")
     suspend fun crearEmpleado(
         @Body peticion: CrearEmpleadoRequest

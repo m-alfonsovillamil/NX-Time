@@ -46,6 +46,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.Insignia
@@ -61,12 +62,15 @@ import com.nxtime.app.ui.util.resolver
  *   ADMIN, no un GESTOR. Ofrecérselo a quien no la tiene sería repetir el
  *   defecto del botón "Crear gestor", que siempre acababa en 403.
  * @param puedeAuditar ídem con `fichaje:auditoria`.
+ * @param puedeDarPorBueno ídem con `correccion:aprobar`: quitar la marca de lo
+ *   que llegó sin conexión pasadas 72 h (ADR 054).
  */
 @Composable
 fun HistorialEquipoScreen(
     onVolver: () -> Unit,
     puedeCorregir: Boolean = false,
     puedeAuditar: Boolean = false,
+    puedeDarPorBueno: Boolean = false,
     onCorregir: (RegistroEquipoDTO) -> Unit = {},
     onVerAuditoria: (RegistroEquipoDTO) -> Unit = {},
     viewModel: HistorialEquipoViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -113,6 +117,10 @@ fun HistorialEquipoScreen(
 
             else -> Column(modifier = Modifier.fillMaxSize()) {
 
+                estado.errorAlRevisar?.let { mensaje ->
+                    BannerError(mensaje = mensaje.resolver(), onReintentar = viewModel::descartarErrorAlRevisar)
+                }
+
                 if (estado.empleados.isNotEmpty()) {
                     FiltroEmpleado(
                         empleados = estado.empleados,
@@ -153,8 +161,11 @@ fun HistorialEquipoScreen(
                                 registro = registro,
                                 puedeCorregir = puedeCorregir,
                                 puedeAuditar = puedeAuditar,
+                                puedeDarPorBueno = puedeDarPorBueno,
+                                revisando = registro.id in estado.revisando,
                                 onCorregir = { onCorregir(registro) },
-                                onVerAuditoria = { onVerAuditoria(registro) }
+                                onVerAuditoria = { onVerAuditoria(registro) },
+                                onDarPorBueno = { viewModel.darPorBueno(registro.id) }
                             )
                         }
                         finDeLista(estado.paginas, viewModel::cargarMas)
@@ -213,8 +224,11 @@ private fun TarjetaJornadaEquipo(
     registro: RegistroEquipoDTO,
     puedeCorregir: Boolean,
     puedeAuditar: Boolean,
+    puedeDarPorBueno: Boolean,
+    revisando: Boolean,
     onCorregir: () -> Unit,
-    onVerAuditoria: () -> Unit
+    onVerAuditoria: () -> Unit,
+    onDarPorBueno: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -310,7 +324,9 @@ private fun TarjetaJornadaEquipo(
              * así que el botón ni se ofrece.
              */
             val jornadaCerrada = registro.horaSalida != null
-            if ((puedeCorregir && jornadaCerrada) || puedeAuditar) {
+            // Como en la web: solo cerrada, porque el servidor no revisa una abierta (409).
+            val ofrecerDarPorBueno = puedeDarPorBueno && jornadaCerrada && registro.revisarPorLlegarTarde
+            if ((puedeCorregir && jornadaCerrada) || puedeAuditar || ofrecerDarPorBueno) {
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
                 Row(
@@ -325,6 +341,11 @@ private fun TarjetaJornadaEquipo(
                     if (puedeCorregir && jornadaCerrada) {
                         TextButton(onClick = onCorregir) {
                             Text(stringResource(R.string.correccion_accion))
+                        }
+                    }
+                    if (ofrecerDarPorBueno) {
+                        TextButton(onClick = onDarPorBueno, enabled = !revisando) {
+                            Text(stringResource(R.string.equipo_dar_por_bueno))
                         }
                     }
                 }

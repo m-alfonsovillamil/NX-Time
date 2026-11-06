@@ -830,6 +830,7 @@ fun NxTimeNavHost(
                     // las tienen RRHH y ADMIN, no un GESTOR cualquiera.
                     puedeCorregir = Permisos.puedeCorregirFichajes(authorities),
                     puedeAuditar = Permisos.puedeVerAuditoria(authorities),
+                    puedeDarPorBueno = Permisos.puedeDarPorBueno(authorities),
                     onCorregir = { registro ->
                         navController.navigate(
                             Pantalla.correccion(

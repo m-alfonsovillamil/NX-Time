@@ -291,6 +291,7 @@
     <string name="sin_conexion_a_revisar">Tu fichaje del %1$s llegó tarde: lo tiene que revisar tu responsable</string>
     <string name="sin_conexion_distintivo">Sin conexión</string>
     <string name="sin_conexion_revisar_distintivo">A revisar: llegó tarde</string>
+    <string name="equipo_dar_por_bueno">Dar por bueno</string>
     <string name="modalidad_titulo">¿Dónde trabajas hoy?</string>
     <string name="modalidad_texto">Tu empresa apunta en cada jornada si se trabaja en el centro o a distancia.</string>
     <string name="modalidad_presencial">Presencial</string>

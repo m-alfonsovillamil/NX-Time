@@ -456,6 +456,10 @@ class AuthRepositoryImpl(
         return apiService.getHistorialEquipo(pagina)
     }
 
+    override suspend fun darPorBueno(fichajeId: Long): Response<Registro> {
+        return apiService.darPorBueno(fichajeId)
+    }
+
     /*  Implementación de Gestión (Gestor/Usuario)  */
 
     override suspend fun crearEmpleado(peticion: CrearEmpleadoRequest): Response<Unit> {

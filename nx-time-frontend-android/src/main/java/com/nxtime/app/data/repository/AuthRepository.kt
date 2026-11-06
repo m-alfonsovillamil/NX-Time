@@ -212,6 +212,7 @@ interface AuthRepository {
 
     /* Funciones de Historial (Gestor) */
     suspend fun getHistorialEquipo(pagina: Int = 0): Response<PaginaDTO<RegistroEquipoDTO>>
+    suspend fun darPorBueno(fichajeId: Long): Response<Registro>
     suspend fun getMisEmpleados(): Response<List<EmpleadoSimpleDTO>>
 
     /* Funciones de Gestión (Gestor/Usuario) */
