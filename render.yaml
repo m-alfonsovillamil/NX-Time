@@ -41,7 +41,8 @@ services:
       # ---------------------------------------------------------------
 
       # De Neon. Formato JDBC, p. ej.:
-      # jdbc:postgresql://ep-xxx.eu-central-1.aws.neon.tech/nxtime?sslmode=require
+      # jdbc:postgresql://ep-xxx-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory&channelBinding=require
+      # (por qué verify-full y el sslfactory: docs/DESPLIEGUE.md, «Base de datos»)
       #
       # El host va CON el sufijo "-pooler": la aplicación atiende
       # peticiones concurrentes y Neon recomienda el pooler para eso.

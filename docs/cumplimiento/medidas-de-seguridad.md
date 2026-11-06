@@ -40,5 +40,7 @@ dos y se sube `application.legal.version`.
 | Segundo factor en GitHub, Render, Neon, Cloudflare, Brevo, Google/Firebase y Sentry | Pendiente (J2) | Miguel |
 | Secretos fuera de OneDrive y rotados | Pendiente (J2) | Miguel |
 | La frase de las copias creada y guardada en un gestor de contraseñas; copias viejas sin cifrar borradas | Pendiente (J2) | Miguel |
-| Neon: `nxtime_app` fuera de `neon_superuser`, restauración de prueba hecha, lista blanca de IPs | Pendiente (J2) | Miguel |
+| Neon: `nxtime_app` fuera de `neon_superuser` | **No se puede**: Neon mete ahí a todos los roles y no deja quitarlo (V5), así que hereda `pg_write_all_data` y los `REVOKE` no valen. Lo compensan los triggers de solo inserción (V5, V43, V44, V46): los diez, activos en producción el 6/11/2026 | — |
+| Neon: restauración de prueba hecha, lista blanca de IPs | Pendiente (J2) | Miguel |
+| Conexión a Neon con `sslmode=verify-full` (con `require` no se comprueba el certificado) | Probada el 6/11/2026; falta cambiar la variable en Render (J2) | Miguel |
 | Sentry en la región de la UE | Por confirmar (`DESPLIEGUE.md` apunta a `ingest.de`) | Miguel |

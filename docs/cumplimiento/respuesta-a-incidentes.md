@@ -40,6 +40,11 @@ personales». A ENISA: la plataforma única de notificación del CRA.
 | DSN de Sentry | Render y la app | Sentry → Client Keys → revocar y crear | Los informes de la app vieja se pierden |
 | Frase de las copias | `%LOCALAPPDATA%\NX Time` + gestor de contraseñas | Crear otra; las copias viejas siguen necesitando la vieja | — |
 | Clave de firma de la app | Fuera del repositorio (ver `DESPLIEGUE.md`) | No se rota: si se pierde, otra app | Grave: guardarla bien |
+| Deploy hooks de Render | GitHub (`RENDER_DEPLOY_HOOK_BACKEND`, `RENDER_DEPLOY_HOOK_WEB`) | Render → servicio → *Settings* → *Deploy Hook* → *Regenerate*; actualizar el secreto | Con la URL, cualquiera puede desplegar (no cambiar el código) |
+| Token de R2 | GitHub (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) | Cloudflare → R2 → *Manage API tokens* → nuevo; borrar el viejo | La copia diaria falla hasta actualizarlo |
+| `COPIA_DATABASE_URL` | GitHub | Lleva la contraseña de `neondb_owner`: rotarla con ella | — |
+| Contraseña de la cuenta de demostración | `.env.local` | Cambiarla desde la propia cuenta | Solo la demo |
+| `NEON_API_KEY` (GitHub) y token de Neon AI Gateway (`.env.local`) | GitHub y `.env.local` | **No los usa nada**: revocarlos en Neon y borrar el secreto | — |
 
 ## 3. Valorar
 
