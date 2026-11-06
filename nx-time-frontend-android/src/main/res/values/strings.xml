@@ -156,6 +156,7 @@
     <string name="fichar_sin_jornada">Toca para iniciar tu jornada</string>
     <string name="fichar_desde">Trabajando desde las %1$s</string>
     <string name="fichar_en_pausa">En pausa desde las %1$s</string>
+    <string name="fichar_en_pausa_sin_hora">En pausa</string>
     <string name="fichar_reanuda_antes">Reanuda la jornada antes de finalizarla.</string>
     <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
     <string name="fichar_confirmar_fin_titulo">¿Terminas la jornada?</string>

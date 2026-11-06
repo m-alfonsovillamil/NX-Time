@@ -100,14 +100,18 @@ class EnvioDeFichajes(
     }
 
     /**
-     * Un 4xx no se arregla esperando (sesión caducada, cuenta dada de baja, una
-     * petición que el servidor no admite): se sigue reintentando, porque un fichaje
-     * no se tira, pero la pantalla lo dice. Antes reintentaba sin avisar a nadie.
-     * Un 5xx, un 408 o un 429 sí pasan solos: de esos no se avisa.
+     * Un 4xx no se arregla esperando (una cuenta sin permiso, una petición que el
+     * servidor no admite): se sigue reintentando, porque un fichaje no se tira,
+     * pero la pantalla lo dice. Antes reintentaba sin avisar a nadie.
+     *
+     * Un 5xx, un 408 o un 429 pasan solos: de esos no se avisa. Un 401 tampoco:
+     * la sesión ya ha caído y la app ha vuelto al login, y anotarlo enseñaría
+     * un «sesión caducada» viejo justo después de volver a entrar (visto en el
+     * emulador el 6/11/2026).
      */
     private fun anotarRechazo(quien: String, respuesta: Response<*>) {
         val codigo = respuesta.code()
-        if (codigo !in 400..499 || codigo == 408 || codigo == 429) return
+        if (codigo !in 400..499 || codigo in setOf(401, 408, 429)) return
         cola.guardarErrorDelEnvio(quien, ErrorDelEnvio(codigo, ApiErrorParser.detalleDe(respuesta)))
     }
 

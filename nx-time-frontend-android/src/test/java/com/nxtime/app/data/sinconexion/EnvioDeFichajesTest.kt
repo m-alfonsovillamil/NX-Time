@@ -116,13 +116,24 @@ class EnvioDeFichajesTest {
         assertEquals(ErrorDelEnvio(403, "Tu cuenta está desactivada."), cola.errorDelEnvio("ana@x"))
     }
 
+    /** La sesión ya lo dice (vuelve al login): anotarlo enseñaría un aviso viejo al volver a entrar. */
     @Test
-    fun `una sesion caducada al despertar tambien se anota`() = runTest {
+    fun `una sesion caducada no se anota`() = runTest {
         whenever(repositorio.getRegistroActivo()).thenReturn(Response.error(401, "".toResponseBody(null)))
         cola.anadir(fichaje("a"))
 
         assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
-        assertEquals(ErrorDelEnvio(401, null), cola.errorDelEnvio("ana@x"))
+        assertEquals(1, cola.fichajes.size)
+        assertNull(cola.errorDelEnvio("ana@x"))
+    }
+
+    @Test
+    fun `un rechazo al despertar el servidor tambien se anota`() = runTest {
+        whenever(repositorio.getRegistroActivo()).thenReturn(Response.error(403, "".toResponseBody(null)))
+        cola.anadir(fichaje("a"))
+
+        assertEquals(ResultadoDelEnvio.REINTENTAR, envio.enviar())
+        assertEquals(ErrorDelEnvio(403, null), cola.errorDelEnvio("ana@x"))
     }
 
     @Test

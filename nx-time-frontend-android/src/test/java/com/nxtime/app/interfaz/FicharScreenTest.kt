@@ -23,6 +23,7 @@ import com.nxtime.app.ui.fichar.FicharScreen
 import com.nxtime.app.ui.fichar.FicharViewModel
 import com.nxtime.app.ui.theme.NxTimeTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -167,6 +168,22 @@ class FicharScreenTest {
         seVe(R.string.fichar_reanuda_antes)
         noEsta(R.string.fichar_confirmar_fin_titulo)
         assertEquals(emptyList<TipoFichaje>(), fichajes)
+    }
+
+    /** Antes decía la hora de la entrada: la app no tenía la de la pausa. */
+    @Test
+    fun `en pausa dice desde cuando es la pausa, no la entrada`() {
+        montar(
+            abierta = Registro(
+                id = 1, horaEntrada = "2026-08-29T07:00:00Z", horaSalida = null, enPausa = true,
+                inicioPausaActual = "2026-08-29T09:30:00Z"
+            )
+        )
+
+        val hora = com.nxtime.app.ui.util.DateFormats.hora("2026-08-29T09:30:00Z")
+        assertTrue(hora.startsWith("11:30")) // 09:30 UTC son las 11:30 en Madrid en agosto
+        pantalla.onNodeWithText(RuntimeEnvironment.getApplication().getString(R.string.fichar_en_pausa, hora))
+            .assertIsDisplayed()
     }
 
     /** ADR 055 y 056: lo que ve quien entra si su empresa pide las dos cosas. */

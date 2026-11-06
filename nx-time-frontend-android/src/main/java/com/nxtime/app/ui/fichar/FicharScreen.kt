@@ -824,9 +824,11 @@ private fun textoDeEstado(estado: FicharUiState): String = when (estado.estado) 
     EstadoJornada.TRABAJANDO -> stringResource(
         R.string.fichar_desde, DateFormats.hora(estado.registro?.horaEntrada)
     )
-    EstadoJornada.EN_PAUSA -> stringResource(
-        R.string.fichar_en_pausa, DateFormats.hora(estado.registro?.horaEntrada)
-    )
+    // Desde que empezó la pausa, no desde la entrada: antes la app no tenía esa
+    // hora y decía la de la entrada. Sin ella (una respuesta vieja), sin hora.
+    EstadoJornada.EN_PAUSA -> estado.registro?.inicioPausaActual
+        ?.let { stringResource(R.string.fichar_en_pausa, DateFormats.hora(it)) }
+        ?: stringResource(R.string.fichar_en_pausa_sin_hora)
 }
 
 /**
