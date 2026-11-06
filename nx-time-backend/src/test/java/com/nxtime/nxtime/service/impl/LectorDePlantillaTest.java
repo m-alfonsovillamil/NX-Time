@@ -108,6 +108,33 @@ class LectorDePlantillaTest {
     }
 
     @Test
+    @DisplayName("Una celda con fórmula se lee por su resultado, no por el texto de la fórmula (POI 6)")
+    void excelConFormulas() throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        try (XSSFWorkbook libro = new XSSFWorkbook()) {
+            Sheet hoja = libro.createSheet("Plantilla");
+            Row titulos = hoja.createRow(0);
+            String[] cabecera = {"Nombre", "Apellidos", "Email", "Horas semanales"};
+            for (int i = 0; i < cabecera.length; i++) {
+                titulos.createCell(i).setCellValue(cabecera[i]);
+            }
+            Row fila = hoja.createRow(1);
+            fila.createCell(0).setCellValue("Luis");
+            fila.createCell(1).setCellValue("Martín");
+            fila.createCell(2).setCellFormula("LOWER(A2)&\"@empresa.test\"");
+            fila.createCell(3).setCellFormula("8*5");
+            // Como Excel al guardar: deja el resultado de cada fórmula junto a ella.
+            libro.getCreationHelper().createFormulaEvaluator().evaluateAll();
+            libro.write(salida);
+        }
+
+        LectorDePlantilla.Fila fila = LectorDePlantilla.leer("plantilla.xlsx", salida.toByteArray()).filas().get(0);
+
+        assertThat(fila.valor(LectorDePlantilla.EMAIL)).isEqualTo("luis@empresa.test");
+        assertThat(fila.valor(LectorDePlantilla.HORAS)).isEqualTo("40");
+    }
+
+    @Test
     @DisplayName("Un fichero que dice ser Excel y no lo es se rechaza con un mensaje, no con un error 500")
     void excelRoto() {
         assertThatThrownBy(() -> LectorDePlantilla.leer("plantilla.xlsx", "no soy un excel".getBytes(StandardCharsets.UTF_8)))

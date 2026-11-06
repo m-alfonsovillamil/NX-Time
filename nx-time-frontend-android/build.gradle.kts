@@ -363,7 +363,7 @@ dependencies {
 
     // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
     // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
-    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
     implementation("com.google.firebase:firebase-messaging")
 
     // La tarjeta del kiosco (ADR 033): el QR se dibuja aquí a partir de su

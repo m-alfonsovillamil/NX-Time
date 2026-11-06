@@ -52,7 +52,7 @@ dependencies {
     // vez de iText 7 (AGPL, que obligaría a liberar el proyecto entero
     // o comprar licencia) y en vez de JasperReports, mucho más pesado y
     // con plantillas .jrxml que no aportan nada para un informe tabular.
-    implementation("org.apache.poi:poi-ooxml:5.5.1")
+    implementation("org.apache.poi:poi-ooxml:6.0.0")
     implementation("com.github.librepdf:openpdf:3.0.5")
 
     // Las tarjetas QR del kiosco (fase K1, ADR 033). Solo el núcleo de ZXing,
