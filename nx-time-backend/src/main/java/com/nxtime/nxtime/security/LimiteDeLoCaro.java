@@ -125,7 +125,10 @@ public class LimiteDeLoCaro extends OncePerRequestFilter {
         // segundos. Un aviso que llena el log durante un ataque es parte del
         // ataque. Y sin el correo: la ruta basta para ver qué se pide de más.
         if (avisados.asMap().putIfAbsent(quien.getName(), Boolean.TRUE) == null) {
-            log.warn("Límite de peticiones caras alcanzado en {}.", request.getServletPath());
+            // La ruta, sin saltos de línea: viene de la petición y no puede
+            // fabricar líneas falsas en el log.
+            log.warn("Límite de peticiones caras alcanzado en {}.",
+                    request.getServletPath().replaceAll("[\\r\\n\\t]", "_"));
         }
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
                 "Has pedido esto demasiadas veces seguidas. Espera un minuto y vuelve a intentarlo.");

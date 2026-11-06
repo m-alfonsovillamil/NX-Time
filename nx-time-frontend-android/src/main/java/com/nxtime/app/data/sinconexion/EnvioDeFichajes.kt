@@ -50,6 +50,11 @@ class EnvioDeFichajes(
             }
 
             while (true) {
+                // Despertar a Render puede tardar un minuto, y en ese rato cabe
+                // cerrar sesión y entrar con otra cuenta. El token va en cada
+                // petición: sin esta comprobación, lo de quien fichó saldría con
+                // la sesión de otra persona y se le apuntaría a ella.
+                if (dueno() != quien) return ResultadoDelEnvio.TERMINADO
                 val lote = cola.pendientes(quien).take(ColaDeFichajes.MAXIMO)
                 if (lote.isEmpty()) return ResultadoDelEnvio.TERMINADO
                 if (!enviarLote(quien, lote)) return ResultadoDelEnvio.REINTENTAR

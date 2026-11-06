@@ -21,12 +21,16 @@ import org.springframework.stereotype.Component;
  * se cruzaran, media hora de fichajes olvidados se quedaría sin mirar
  * hasta la noche siguiente.
  *
- * <b>Y mira catorce días atrás, no solo ayer.</b> Desde la Fase E las
+ * <b>Y mira 38 días atrás, no solo ayer.</b> Desde la Fase E las
  * correcciones son rutina: alguien pide el jueves que le arreglen el
  * fichaje del lunes pasado, y cuando se aprueba, ese lunes cambia. Un
- * barrido que solo mirara el día anterior nunca se enteraría. La ventana
- * cubre además dos semanas ISO completas, que es lo que necesita el
- * umbral semanal.
+ * barrido que solo mirara el día anterior nunca se enteraría.
+ *
+ * Fueron catorce hasta que llegó el fichaje sin conexión (ADR 054): el
+ * servidor acepta fichajes de hasta 31 días atrás, y uno de hace tres
+ * semanas no cambiaba ningún aviso. 31 días más una semana ISO completa
+ * para el umbral semanal son 38. El coste es el mismo número de consultas
+ * (agregadas por persona y día), solo con más filas.
  *
  * Volver a pasar por los mismos días es seguro por construcción: el
  * índice único {@code uq_horas_extra_usuario_fecha_tipo} (V12) y la
@@ -39,7 +43,7 @@ public class OvertimeScheduler {
     private static final Logger log = LoggerFactory.getLogger(OvertimeScheduler.class);
 
     /** Ver el Javadoc de la clase. */
-    private static final int DIAS_HACIA_ATRAS = 14;
+    private static final int DIAS_HACIA_ATRAS = 38;
 
     private static final ZoneId MADRID = ZoneId.of(ScheduledTask.ZONA);
 

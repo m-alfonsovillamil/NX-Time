@@ -286,6 +286,22 @@ class OvertimeServiceIT {
     }
 
     @Test
+    @DisplayName("la semana suma SEGUNDOS: cinco días de 9 h y 50 s son 304 min de exceso, no 300")
+    void laSemanaNoTruncaCadaDia() {
+        // El patrón de bug de siempre: pasar cada día a minutos antes de
+        // sumar perdía los 50 s de cada uno (4 min a la semana).
+        for (int i = 0; i < 5; i++) {
+            fichar(empleado, LUNES.plusDays(i), 9 + 50 / 3600.0);
+        }
+        detectarLaSemana();
+
+        assertThat(avisosDe(empleado))
+                .filteredOn(aviso -> "SEMANAL".equals(aviso.tipo()))
+                .singleElement()
+                .satisfies(aviso -> assertThat(aviso.minutosExtra()).isEqualTo(5 * 60 + 4));
+    }
+
+    @Test
     @DisplayName("con un festivo entre medias, el objetivo baja a 32 h y no salta nada")
     void semanaConFestivo() {
         // La razón de ser del prorrateo. Cuatro jornadas de ocho horas

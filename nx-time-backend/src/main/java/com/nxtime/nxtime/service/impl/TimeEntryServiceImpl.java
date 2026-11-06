@@ -254,8 +254,11 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 if (activeEntry != null) {
                     throw new BusinessException("Ya hay una jornada activa.");
                 }
-                Project proyecto = proyectoAlIniciar(user, request.proyectoId(), dia);
-                motivoAuditoria = proyecto != null ? "Proyecto: " + proyecto.getCodigo() : null;
+                EleccionDeProyecto eleccion = proyectoAlIniciar(user, request.proyectoId(), dia,
+                        momento.sinConexion());
+                Project proyecto = eleccion.proyecto();
+                motivoAuditoria = juntar(proyecto != null ? "Proyecto: " + proyecto.getCodigo() : null,
+                        eleccion.nota());
                 TimeEntry newEntry = TimeEntry.builder()
                         .usuario(user)
                         .empresa(user.getEmpresa())
@@ -429,6 +432,16 @@ public class TimeEntryServiceImpl implements TimeEntryService {
                 throw new BusinessException("Este fichaje (" + hora(cuando, user.zona())
                         + ") es anterior al último de esa jornada (" + hora(ultimo, user.zona()) + ").");
             }
+            // Las pausas ya cerradas no guardan su hora, solo lo que duraron.
+            // Pero nada de la jornada puede caer antes de la entrada más esas
+            // pausas: una salida a las 9:30 de una jornada de las 8:00 con dos
+            // horas de pausa dejaría el neto en negativo.
+            Instant minimo = abierta.getHoraEntrada().plusSeconds(abierta.getSegundosPausaAcumulados());
+            if (!abierta.isEnPausa() && cuando.isBefore(minimo)) {
+                throw new BusinessException("Este fichaje (" + hora(cuando, user.zona())
+                        + ") no cabe en esa jornada: entre la entrada (" + hora(abierta.getHoraEntrada(), user.zona())
+                        + ") y él no caben las pausas que ya constan. Pide que te la corrijan.");
+            }
             return;
         }
         if (tipo != TimeEntryAction.INICIO) {
@@ -489,16 +502,29 @@ public class TimeEntryServiceImpl implements TimeEntryService {
      *       que se cambie o se repartan.</li>
      * </ul>
      */
-    private Project proyectoAlIniciar(User user, Long proyectoId, LocalDate dia) {
+    private EleccionDeProyecto proyectoAlIniciar(User user, Long proyectoId, LocalDate dia, boolean sinConexion) {
         List<Project> disponibles = projectAllocationService.proyectosParaFichar(user, dia);
-        if (proyectoId != null) {
-            return disponibles.stream()
-                    .filter(p -> p.getId() == proyectoId)
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException(
-                            "No tienes asignado ese proyecto hoy.", HttpStatus.FORBIDDEN));
+        Project porDefecto = disponibles.size() == 1 ? disponibles.get(0) : null;
+        if (proyectoId == null) {
+            return new EleccionDeProyecto(porDefecto, null);
         }
-        return disponibles.size() == 1 ? disponibles.get(0) : null;
+        Optional<Project> elegido = disponibles.stream().filter(p -> p.getId() == proyectoId).findFirst();
+        if (elegido.isPresent()) {
+            return new EleccionDeProyecto(elegido.get(), null);
+        }
+        if (!sinConexion) {
+            throw new BusinessException("No tienes asignado ese proyecto hoy.", HttpStatus.FORBIDDEN);
+        }
+        // Sin conexión, la app eligió de una lista que pudo quedarse vieja. Si
+        // se rechazara la entrada, detrás caerían la pausa y la salida («no hay
+        // jornada activa») y se perdería el día entero por un proyecto: se
+        // ficha como si no hubiera elegido, y queda dicho en la auditoría.
+        return new EleccionDeProyecto(porDefecto,
+                "El proyecto elegido sin conexión (id " + proyectoId + ") ya no estaba asignado ese día");
+    }
+
+    /** El proyecto con el que empieza la jornada y, si no es el que se pidió, por qué. */
+    private record EleccionDeProyecto(Project proyecto, String nota) {
     }
 
     @Override

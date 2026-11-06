@@ -73,6 +73,9 @@ class NxTimeApplication : Application() {
             // Al cerrar sesión, los recordatorios de fichaje tienen que irse
             // con ella: viven en WorkManager y no en la app.
             RecordatorioDeFichaje.cancelar(this)
+            // Igual el envío de lo fichado sin conexión: la cola se queda para
+            // cuando vuelva su dueño (ver EntornoAndroid.cancelarEnvio).
+            com.nxtime.app.data.sinconexion.EntornoAndroid.cancelarEnvio(this)
             // Y el token de push, por lo mismo: si no, este móvil seguiría
             // recibiendo los avisos de quien se fue.
             registroDePush.alCerrarSesion()

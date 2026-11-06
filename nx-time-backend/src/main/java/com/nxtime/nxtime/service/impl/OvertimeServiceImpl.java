@@ -313,7 +313,7 @@ public class OvertimeServiceImpl implements OvertimeService {
 
         // Todas las personas de una vez, no una consulta por vuelta (Fase A6).
         // Este bucle recorre a TODA la plantilla que haya fichado en la
-        // ventana de 14 días: un findById por iteración son tantas consultas
+        // ventana del barrido: un findById por iteración son tantas consultas
         // como empleados, cada noche.
         Map<Long, User> personas = userRepository.findAllById(porUsuario.keySet()).stream()
                 .collect(Collectors.toMap(User::getId, persona -> persona));
@@ -384,11 +384,15 @@ public class OvertimeServiceImpl implements OvertimeService {
             LocalDate hasta,
             Barrido barrido) {
 
-        Map<LocalDate, Long> minutosPorSemana = new HashMap<>();
+        // Se suman SEGUNDOS y se pasa a minutos al final: truncar cada día
+        // antes de sumar perdía hasta 59 s por día, unos 6 min a la semana
+        // justo en el umbral.
+        Map<LocalDate, Long> segundosPorSemana = new HashMap<>();
         for (TimeEntryRepository.DailyWorkProjection dia : dias) {
-            LocalDate lunes = lunesDe(dia.getDia());
-            minutosPorSemana.merge(lunes, dia.getSegundos() / 60, Long::sum);
+            segundosPorSemana.merge(lunesDe(dia.getDia()), dia.getSegundos(), Long::sum);
         }
+        Map<LocalDate, Long> minutosPorSemana = new HashMap<>();
+        segundosPorSemana.forEach((lunes, segundos) -> minutosPorSemana.put(lunes, segundos / 60));
 
         LocalDate hoy = LocalDate.now(usuario.zona());
         int tocados = 0;
@@ -475,7 +479,7 @@ public class OvertimeServiceImpl implements OvertimeService {
      *
      * @return true si algo cambió de verdad. Un aviso idéntico al que ya
      *     estaba no cuenta: el barrido corre cada noche sobre los mismos
-     *     catorce días, y contarlos todos haría que el log dijera lo
+     *     días (ver OvertimeScheduler), y contarlos todos haría que el log dijera lo
      *     mismo siempre y no significara nada.
      */
     private ResultadoDelGuardado guardar(
