@@ -31,12 +31,23 @@ La conversión ya está hecha:
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | `jdbc:postgresql://<TU-ENDPOINT>-pooler.<region>.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
+| `DATABASE_URL` | `jdbc:postgresql://<TU-ENDPOINT>-pooler.<region>.aws.neon.tech/neondb?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory&channelBinding=require` |
 | `DATABASE_USERNAME` | `nxtime_app` |
 | `DATABASE_PASSWORD` | `<CONTRASEÑA DE nxtime_app>` |
 
 **Por qué la URL con `-pooler`:** la documentación de Neon la recomienda para
 aplicaciones web con peticiones concurrentes.
+
+**Por qué `verify-full` y no `require`** (probado el 6/11/2026): con `require` la
+conexión va cifrada pero **no comprueba de quién es el certificado**: con un
+almacén de confianza vacío entra igual, así que no protege de que alguien se
+haga pasar por Neon. `verify-full` comprueba la cadena y el nombre del host.
+En JDBC necesita `sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory`: sin él,
+el driver busca un `root.crt` que no existe y no conecta. Con él usa las raíces
+de Java, y la imagen `eclipse-temurin:21-jre-alpine` del `Dockerfile` las trae
+(probado contra el pooler y la conexión directa). El parámetro de JDBC es
+`channelBinding`; el `channel_binding` de libpq que daba Neon el driver lo
+ignoraba.
 
 **Por qué `nxtime_app` y no el dueño:** es el rol de mínimo privilegio de la
 Fase 8. El dueño (`neondb_owner`) solo lo usa Flyway.
@@ -49,7 +60,7 @@ las herramientas de migración necesitan.
 
 | Variable | Valor |
 |---|---|
-| `SPRING_FLYWAY_URL` | `jdbc:postgresql://<TU-ENDPOINT>.<region>.aws.neon.tech/neondb?channel_binding=require&sslmode=require` |
+| `SPRING_FLYWAY_URL` | `jdbc:postgresql://<TU-ENDPOINT>.<region>.aws.neon.tech/neondb?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory&channelBinding=require` |
 | `SPRING_FLYWAY_USER` | `neondb_owner` |
 | `SPRING_FLYWAY_PASSWORD` | `<CONTRASEÑA DE neondb_owner>` |
 
@@ -730,12 +741,16 @@ de la base, solo tamaños y nombres de fichero, y la copia nunca se guarda como
 
    | Secreto | Valor |
    |---|---|
-   | `COPIA_DATABASE_URL` | la conexión **directa** de Neon (la de `DATABASE_URL_UNPOOLED` en `.env.local`, sin `-pooler` en el host) |
+   | `COPIA_DATABASE_URL` | la conexión **directa** de Neon (la de `DATABASE_URL_UNPOOLED` en `.env.local`, sin `-pooler` en el host), terminada en `?sslmode=verify-full&sslrootcert=system&channel_binding=require` |
    | `COPIA_FRASE` | la frase de las copias, **la misma** que `clave-de-las-copias.txt` (desde el gestor de contraseñas) |
    | `R2_ENDPOINT` | el endpoint S3 del paso 2, completo, **sin** el nombre del cubo al final |
    | `R2_ACCESS_KEY_ID` | el del token del paso 2 |
    | `R2_SECRET_ACCESS_KEY` | el del token del paso 2 |
    | `R2_BUCKET` | `nxtime-copias` |
+   `sslrootcert=system` (libpq 16 o más; el workflow instala el 18) usa las
+   raíces de confianza de Linux. Probado el 6/11/2026 con `psql` 18 en Linux:
+   conecta, y con el almacén de raíces vacío falla, como tiene que hacer. En
+   Windows no vale: el `psql` de EDB no encuentra las raíces del sistema.
 4. *Actions* → *Copia diaria* → *Run workflow*, y comprobar que acaba en verde y
    que la copia aparece en el cubo.
 5. Bajarla y restaurarla una vez con `scripts/probar-restauracion.sh` (descifra

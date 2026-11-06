@@ -64,9 +64,11 @@ DUMP="${1:-}"
 COMPARAR=false
 if [ -z "$DUMP" ]; then
     # .env.local lleva BOM y la primera línea da "command not found": es
-    # inofensivo, pero no debe ensuciar la salida.
-    set -a; . "$RAIZ/.env.local" 2>/dev/null; set +a
-    [ -n "${DATABASE_URL_UNPOOLED:-}" ] || { echo "Falta DATABASE_URL_UNPOOLED en .env.local"; exit 2; }
+    # inofensivo, pero no debe ensuciar la salida. Fuera de OneDrive (J2), lo
+    # dice NXTIME_ENV.
+    ENV_FILE="${NXTIME_ENV:-$RAIZ/.env.local}"
+    set -a; . "$ENV_FILE" 2>/dev/null; set +a
+    [ -n "${DATABASE_URL_UNPOOLED:-}" ] || { echo "Falta DATABASE_URL_UNPOOLED en $ENV_FILE"; exit 2; }
     DUMP="$TMP/produccion.dump"
     echo "Copiando producción..."
     "$PG_BIN/pg_dump" "$DATABASE_URL_UNPOOLED" --format=custom --file="$DUMP" || { echo "pg_dump ha fallado"; exit 2; }

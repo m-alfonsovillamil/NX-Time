@@ -18,7 +18,8 @@
 
     Las credenciales se leen de .env.local (ignorado por git) y se pasan a
     pg_dump por variables de entorno, no en la línea de comandos, donde las
-    vería cualquier proceso del equipo.
+    vería cualquier proceso del equipo. Si .env.local se ha sacado de
+    OneDrive (J2), la variable de usuario NXTIME_ENV dice dónde está.
 
     Deja un registro en copias.log y, si falla, un ULTIMA-COPIA-FALLIDA.txt
     en la carpeta de destino, que es lo que se ve al abrir OneDrive.
@@ -44,7 +45,7 @@
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\copia-neon.ps1
 #>
 param(
-    [string]$EnvFile = (Join-Path $PSScriptRoot '..\.env.local'),
+    [string]$EnvFile = $(if ($env:NXTIME_ENV) { $env:NXTIME_ENV } else { Join-Path $PSScriptRoot '..\.env.local' }),
     [string]$Destino = (Join-Path $env:USERPROFILE 'OneDrive\Copias NX Time'),
     [int]$DiasDeRetencion = 30,
     [int]$MinimoDeCopias = 7,
