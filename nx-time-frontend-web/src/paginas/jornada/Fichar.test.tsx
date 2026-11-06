@@ -14,7 +14,7 @@ import { pintar, problema, sesionDe, simularApi, sinContenido, type Manejador, t
 import { segundosDeJornada } from './consultas';
 import { Fichar } from './Fichar';
 import { DialogoPausa } from './DialogoPausa';
-import { tomarUbicacion } from './ubicacion';
+import { recordarUbicacionInformada, tomarUbicacion } from './ubicacion';
 
 const F = fichar;
 const HACE_UNA_HORA = () => new Date(Date.now() - 3_600_000).toISOString();
@@ -307,14 +307,35 @@ describe('la ubicación al fichar', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: T.app.cancelar }));
     expect(llamadas.a('POST', '/api/v1/fichaje')).toHaveLength(0);
 
-    localStorage.setItem('nx-ubicacion-informada', '1');
+    recordarUbicacionInformada('access');
     await userEvent.click(screen.getByRole('button', { name: F.entrar }));
 
     await waitFor(() => expect(llamadas.a('POST', '/api/v1/fichaje')).toHaveLength(1));
   });
 
+  /* Antes se recordaba por navegador: en un ordenador compartido solo lo veía la primera. */
+  it('en un ordenador compartido, cada persona ve el aviso su primera vez', async () => {
+    const tokenDe = (correo: string) =>
+      `cabecera.${btoa(JSON.stringify({ sub: correo })).replace(/=+$/, '')}.firma`;
+    recordarUbicacionInformada(tokenDe('ana@empresa.test'));
+    getCurrentPosition.mockImplementation((bien: (p: unknown) => void) => bien(POSICION));
+    api({
+      'GET /api/v1/fichaje/hoy': () => ({ laborable: true, pedirUbicacion: true }),
+      'POST /api/v1/fichaje': () => abierta(),
+    });
+    pintar(<Fichar />, { sesion: { ...sesionDe('EMPLEADO', 'Luis'), accessToken: tokenDe('luis@empresa.test') } });
+
+    await userEvent.click(await screen.findByRole('button', { name: F.entrar }));
+    await aceptarElAviso();
+
+    // Lo que queda guardado no es su correo.
+    const guardado = localStorage.getItem('nx-ubicacion-informada') ?? '';
+    expect(JSON.parse(guardado)).toHaveLength(2);
+    expect(guardado).not.toContain('empresa.test');
+  });
+
   it('sin permiso se ficha igual, y se dice que se denegó', async () => {
-    localStorage.setItem('nx-ubicacion-informada', '1');
+    recordarUbicacionInformada('access');
     getCurrentPosition.mockImplementation((_bien: unknown, mal: (e: unknown) => void) =>
       mal({ code: 1, PERMISSION_DENIED: 1 }),
     );
@@ -354,7 +375,7 @@ describe('la ubicación al fichar', () => {
   });
 
   it('también al salir, y en las pausas no', async () => {
-    localStorage.setItem('nx-ubicacion-informada', '1');
+    recordarUbicacionInformada('access');
     getCurrentPosition.mockImplementation((bien: (p: unknown) => void) => bien(POSICION));
     const llamadas = api({
       'GET /api/v1/fichaje/activo': () => abierta(),

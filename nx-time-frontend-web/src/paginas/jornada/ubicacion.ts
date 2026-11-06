@@ -47,18 +47,63 @@ export function tomarUbicacion(): Promise<UbicacionDelFichaje> {
 
 const CLAVE_INFORMADA = 'nx-ubicacion-informada';
 
-/** Si en este navegador ya se ha enseñado para qué se toma. Sin almacenamiento, se vuelve a enseñar. */
-export function ubicacionInformada(): boolean {
+/** Las últimas personas a las que se ha enseñado en este navegador; con más, se olvida a la primera. */
+const PERSONAS_RECORDADAS = 50;
+
+/**
+ * Se recuerda **por persona**, no por navegador: en un ordenador compartido,
+ * antes solo lo veía la primera que fichaba. Quién es sale del `sub` del token
+ * (su correo), y no se guarda el correo sino un resumen: en `localStorage` lo
+ * podría leer cualquiera que use ese ordenador. Un resumen de 32 bits no es
+ * secreto (con una lista de correos se podría cotejar), pero no deja el correo
+ * a la vista, y para esto no hace falta más.
+ */
+function personaDe(token: string | undefined): string {
+  return resumen(subDelToken(token) ?? '');
+}
+
+function subDelToken(token: string | undefined): string | null {
   try {
-    return localStorage.getItem(CLAVE_INFORMADA) !== null;
+    const carga = token?.split('.')[1];
+    if (carga === undefined) return null;
+    const base64 = carga.replace(/-/g, '+').replace(/_/g, '/');
+    const datos: unknown = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')));
+    const sub = (datos as { sub?: unknown } | null)?.sub;
+    return typeof sub === 'string' ? sub : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function recordarUbicacionInformada() {
+/** FNV-1a de 32 bits: basta para distinguir a quien usa un mismo navegador. */
+function resumen(texto: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function leerInformadas(): string[] {
   try {
-    localStorage.setItem(CLAVE_INFORMADA, '1');
+    const valor: unknown = JSON.parse(localStorage.getItem(CLAVE_INFORMADA) ?? '[]');
+    return Array.isArray(valor) ? valor.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Si a esta persona ya se le ha enseñado para qué se toma. Sin almacenamiento, se vuelve a enseñar. */
+export function ubicacionInformada(token: string | undefined): boolean {
+  return leerInformadas().includes(personaDe(token));
+}
+
+export function recordarUbicacionInformada(token: string | undefined) {
+  const persona = personaDe(token);
+  const informadas = leerInformadas().filter((p) => p !== persona);
+  try {
+    localStorage.setItem(CLAVE_INFORMADA, JSON.stringify([...informadas, persona].slice(-PERSONAS_RECORDADAS)));
   } catch {
     // Ventana privada: la próxima vez se vuelve a enseñar, nada más.
   }
