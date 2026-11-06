@@ -174,7 +174,17 @@ class EntornoAndroid(private val contexto: Context) : EntornoDelMovil {
         WorkManager.getInstance(contexto).enqueueUniqueWork(TRABAJO, ExistingWorkPolicy.KEEP, trabajo)
     }
 
-    private companion object {
-        const val TRABAJO = "envio-de-fichajes"
+    companion object {
+        private const val TRABAJO = "envio-de-fichajes"
+
+        /**
+         * Al cerrar sesión. El envío manda con el token que haya en cada
+         * petición, no con el de quien fichó: si siguiera vivo cuando entra
+         * otra persona, los fichajes del primero se le apuntarían al segundo.
+         * La cola no se toca; se manda cuando su dueño vuelva a entrar.
+         */
+        fun cancelarEnvio(contexto: Context) {
+            WorkManager.getInstance(contexto).cancelUniqueWork(TRABAJO)
+        }
     }
 }

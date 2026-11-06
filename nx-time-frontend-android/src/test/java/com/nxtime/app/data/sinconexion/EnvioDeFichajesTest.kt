@@ -190,6 +190,23 @@ class EnvioDeFichajesTest {
     }
 
     @Test
+    fun `si cambia la sesion mientras despierta el servidor, no se manda con la de otra persona`() = runTest {
+        var sesion: String? = "ana@x"
+        val conCambio = EnvioDeFichajes(repositorio, cola, entorno) { sesion }
+        cola.anadir(fichaje("de-ana"))
+        // Render tarda en despertar; mientras, Ana cierra sesión y entra Luis.
+        whenever(repositorio.getRegistroActivo()).thenAnswer {
+            sesion = "luis@x"
+            Response.success<Registro?>(null)
+        }
+
+        assertEquals(ResultadoDelEnvio.TERMINADO, conCambio.enviar())
+
+        verify(repositorio, never()).enviarFichajesSinConexion(any())
+        assertEquals(1, cola.fichajes.size)
+    }
+
+    @Test
     fun `sin sesion no se hace nada, y lo guardado sigue ahi`() = runTest {
         cola.anadir(fichaje("a"))
 

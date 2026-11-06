@@ -3,10 +3,14 @@ package com.nxtime.nxtime.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.nxtime.nxtime.audit.VerificadorDeAuditoria;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.FichajeRecibido;
+import com.nxtime.nxtime.domain.MonthlySignatureStatus;
+import com.nxtime.nxtime.domain.Project;
+import com.nxtime.nxtime.domain.ProjectAssignment;
 import com.nxtime.nxtime.domain.OrigenDelFichaje;
 import com.nxtime.nxtime.domain.Role;
 import com.nxtime.nxtime.domain.TimeEntry;
@@ -16,16 +20,26 @@ import com.nxtime.nxtime.dto.SinConexionDtos.Fichaje;
 import com.nxtime.nxtime.dto.SinConexionDtos.Resultado;
 import com.nxtime.nxtime.dto.TimeEntryRequest;
 import com.nxtime.nxtime.exception.BusinessException;
+import com.nxtime.nxtime.dto.MonthlySignatureResponse;
 import com.nxtime.nxtime.repository.CompanyRepository;
+import com.nxtime.nxtime.repository.MonthlySignatureRepository;
+import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
+import com.nxtime.nxtime.repository.ProjectRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.scheduled.IncompleteTimeEntryScheduler;
+import com.nxtime.nxtime.service.MonthlySignatureService;
 import com.nxtime.nxtime.service.TimeEntryService;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -81,6 +95,16 @@ class FichajeSinConexionIT {
     private VerificadorDeAuditoria verificador;
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired
+    private ProjectRepository projectRepository;
+    @Autowired
+    private ProjectAssignmentRepository projectAssignmentRepository;
+    @Autowired
+    private MonthlySignatureService signatureService;
+    @Autowired
+    private MonthlySignatureRepository signatureRepository;
+
+    private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
     private User persona(Company empresa, String nombre, Role rol) {
         return userRepository.save(User.builder()
@@ -241,5 +265,97 @@ class FichajeSinConexionIT {
         TimeEntry jornada = ultimaDe(tecnico);
         assertThat(jornada.getHoraEntrada()).isEqualTo(aLas);
         assertThat(motivosDe(jornada.getId())).anyMatch(m -> m.contains("se reinició"));
+    }
+
+    @Test
+    @DisplayName("Una salida sin conexión que no deja sitio a las pausas ya hechas se rechaza: el neto no puede quedar negativo")
+    void laSalidaNoPuedeComerseLasPausas() {
+        Company empresa = empresa();
+        User tecnico = persona(empresa, "Pausado", Role.EMPLEADO);
+        // Entró con red hace 6 h e hizo dos horas de pausa, también con red.
+        timeEntryRepository.save(TimeEntry.builder()
+                .usuario(tecnico).empresa(empresa).origen(OrigenDelFichaje.APP)
+                .horaEntrada(Instant.now().minus(6, ChronoUnit.HOURS))
+                .segundosPausaAcumulados(2 * 3600)
+                .build());
+
+        // El móvil se reinició con la hora mal: la salida dice que fue una
+        // hora después de entrar. Con dos horas de pausa, imposible.
+        Resultado salida = recepcion.recibir(tecnico.getEmail(), List.of(
+                hecho(TimeEntryAction.FIN, Duration.ofHours(5)))).get(0);
+
+        assertThat(salida.resultado()).isEqualTo(FichajeRecibido.Resultado.RECHAZADO);
+        assertThat(salida.motivo()).contains("no cabe");
+        assertThat(ultimaDe(tecnico).getHoraSalida()).isNull();
+
+        // Una salida posible sí entra.
+        Resultado buena = recepcion.recibir(tecnico.getEmail(), List.of(
+                hecho(TimeEntryAction.FIN, Duration.ofHours(1)))).get(0);
+        assertThat(buena.resultado()).isEqualTo(FichajeRecibido.Resultado.APLICADO);
+    }
+
+    @Test
+    @DisplayName("Si el proyecto elegido sin conexión ya no está asignado, se ficha igual y la jornada no se pierde")
+    void unProyectoViejoNoTiraLaJornada() {
+        Company empresa = empresa();
+        User tecnica = persona(empresa, "Proyectos", Role.EMPLEADO);
+        Project vigente = proyecto(empresa, "VIG");
+        Project retirado = proyecto(empresa, "RET");
+        projectAssignmentRepository.save(ProjectAssignment.builder().empresa(empresa).usuario(tecnica)
+                .proyecto(vigente).fechaInicio(LocalDate.now().minusDays(30)).build());
+
+        // La app tenía la lista de ayer, cuando aún estaba en RET.
+        List<Resultado> resultados = recepcion.recibir(tecnica.getEmail(), List.of(
+                new Fichaje(UUID.randomUUID(), TimeEntryAction.INICIO, retirado.getId(),
+                        Instant.now().minus(Duration.ofHours(4)), Duration.ofHours(4).toMillis()),
+                hecho(TimeEntryAction.PAUSA_INICIO, Duration.ofHours(3)),
+                hecho(TimeEntryAction.PAUSA_FIN, Duration.ofHours(2)),
+                hecho(TimeEntryAction.FIN, Duration.ofHours(1))));
+
+        assertThat(resultados).extracting(Resultado::resultado).containsOnly(FichajeRecibido.Resultado.APLICADO);
+        TimeEntry jornada = ultimaDe(tecnica);
+        assertThat(jornada.getHoraSalida()).isNotNull();
+        // Con un solo proyecto asignado, va a ese, y queda dicho por qué.
+        assertThat(motivosDe(jornada.getId())).anyMatch(m -> m.contains("Proyecto: " + vigente.getCodigo())
+                && m.contains("ya no estaba asignado"));
+
+        // Con red, en cambio, se sigue rechazando: la lista que ve es la de hoy.
+        User otra = persona(empresa, "ConRed", Role.EMPLEADO);
+        assertThatThrownBy(() -> timeEntryService.registerTimeEntry(otra.getEmail(),
+                new TimeEntryRequest(TimeEntryAction.INICIO, retirado.getId()), OrigenDelFichaje.APP))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("No tienes asignado");
+    }
+
+    @Test
+    @DisplayName("Un fichaje sin conexión que cae en un mes ya firmado invalida la firma")
+    void unFichajeTardioInvalidaLaFirma() {
+        Company empresa = empresa();
+        User tecnico = persona(empresa, "Firmante", Role.EMPLEADO);
+        YearMonth mesPasado = YearMonth.now(MADRID).minusMonths(1);
+        Instant entrada = ZonedDateTime.of(mesPasado.atDay(1), LocalTime.of(9, 0), MADRID).toInstant();
+        timeEntryRepository.save(TimeEntry.builder()
+                .usuario(tecnico).empresa(empresa).origen(OrigenDelFichaje.APP)
+                .horaEntrada(entrada).horaSalida(entrada.plus(8, ChronoUnit.HOURS))
+                .build());
+        MonthlySignatureResponse firma = signatureService.firmar(tecnico, mesPasado, null);
+
+        // Una jornada del último día del mes pasado que el móvil no pudo mandar.
+        Instant cuando = ZonedDateTime.of(mesPasado.atEndOfMonth(), LocalTime.of(20, 0), MADRID).toInstant();
+        Duration hace = Duration.between(cuando, Instant.now());
+        assumeTrue(hace.compareTo(Duration.ofDays(30)) < 0, "a fin de mes el último día del anterior ya pasa de 30 días");
+
+        Resultado resultado = recepcion.recibir(tecnico.getEmail(), List.of(
+                new Fichaje(UUID.randomUUID(), TimeEntryAction.INICIO, null, cuando, hace.toMillis()))).get(0);
+
+        assertThat(resultado.resultado()).isNotEqualTo(FichajeRecibido.Resultado.RECHAZADO);
+        assertThat(signatureRepository.findById(firma.id()).orElseThrow().getEstado())
+                .isEqualTo(MonthlySignatureStatus.INVALIDADA);
+    }
+
+    private Project proyecto(Company empresa, String codigo) {
+        return projectRepository.save(Project.builder()
+                .empresa(empresa).codigo(codigo + System.nanoTime() % 100000).nombre(codigo)
+                .fechaInicio(LocalDate.of(2026, 1, 1)).activo(true).build());
     }
 }

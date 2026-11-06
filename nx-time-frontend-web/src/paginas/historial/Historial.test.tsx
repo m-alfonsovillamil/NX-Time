@@ -186,6 +186,15 @@ describe('un periodo', () => {
     const lunes = { horaEntrada: LUNES.horaEntrada, horaSalida: LUNES.horaSalida, segundosPausaAcumulados: 1800 };
     expect(minutosCerrados([lunes, { horaEntrada: ABIERTA.horaEntrada }])).toBe(480);
   });
+
+  it('suma segundos antes de pasar a minutos: dos jornadas con 30 s de más son un minuto más', () => {
+    const conMedioMinuto = (dia: string) => ({
+      horaEntrada: `2026-09-${dia}T07:00:00Z`,
+      horaSalida: `2026-09-${dia}T15:00:30Z`,
+      segundosPausaAcumulados: 0,
+    });
+    expect(minutosCerrados([conMedioMinuto('21'), conMedioMinuto('22')])).toBe(2 * 480 + 1);
+  });
 });
 
 describe('pedir corrección', () => {

@@ -73,9 +73,14 @@ export function rangoDe(periodo: Exclude<Periodo, 'recientes' | 'elegir'>, hoy: 
   }
 }
 
-/** Minutos netos de las jornadas cerradas. La abierta no suma: ver arriba. */
+/**
+ * Minutos netos de las jornadas cerradas. La abierta no suma: ver arriba.
+ * Se suman segundos y se pasa a minutos al final: truncar cada jornada antes
+ * de sumar perdía hasta un minuto por jornada en el total del periodo.
+ */
 export function minutosCerrados(jornadas: readonly Jornada[]): number {
-  return jornadas.reduce((s, j) => (j.horaSalida === undefined ? s : s + Math.floor(segundosDeJornada(j) / 60)), 0);
+  const segundos = jornadas.reduce((s, j) => (j.horaSalida === undefined ? s : s + segundosDeJornada(j)), 0);
+  return Math.floor(segundos / 60);
 }
 
 interface Acciones {
