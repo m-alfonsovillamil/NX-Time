@@ -17,7 +17,7 @@ código. Paso a paso y en orden.
 | 3. Segundo factor en todas las cuentas | 30 min | **Antes** de rotar: que los secretos nuevos caigan en cuentas protegidas |
 | 4. Rotar los secretos, de uno en uno | 45 min | Con calma, comprobando después de cada uno |
 | 5. Conexión a Neon con `verify-full` | 5 min | Con la 4 (también toca la `DATABASE_URL`) |
-| 6. Proteger `main` en GitHub | 5 min | Cuando sea |
+| 6. Proteger `main` en GitHub | Hecho (6/11) | — |
 | 7. Neon, Firebase, Sentry y Cloudflare | 30 min | Cuando sea |
 
 Después de **cada** cambio en Render, comprobar que sigue vivo:
@@ -159,6 +159,11 @@ postgresql://neondb_owner:<contraseña>@<host directo>/neondb?sslmode=verify-ful
 Y lanzar «Copia diaria» a mano para ver que sigue en verde.
 
 ## 6. Proteger `main` en GitHub
+
+> **Hecho el 6/11/2026** con la API (`gh api .../rulesets`): la regla `main`,
+> activa, con lo de abajo. Se ve y se cambia en *Settings* → *Rules* →
+> *Rulesets*. Si alguna vez hace falta un arreglo urgente sin esperar al CI, se
+> desactiva ahí un momento, y se vuelve a activar después.
 
 *Settings* → *Rules* → *Rulesets* → *New branch ruleset*:
 

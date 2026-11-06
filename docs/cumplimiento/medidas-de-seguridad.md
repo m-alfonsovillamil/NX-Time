@@ -29,6 +29,7 @@ dos y se sube `application.legal.version`.
 | Registros sin correos; Sentry con los correos tapados y sin IP | `LimpiezaDeSentry`, J1 |
 | App: sesión cifrada con el almacén de claves, sin copias de seguridad, sin tráfico en claro en producción | ADR 045, `network_security_config` |
 | Dependencias vigiladas (Dependabot), CodeQL, acciones y contenedores fijados | `.github/` (J1) |
+| `main` protegida: solo por PR, con el CI en verde, sin borrarla ni reescribirla | Regla `main` de GitHub (6/11/2026) |
 | Copias diarias cifradas (AES-256), 30 días, con la frase fuera de OneDrive | `scripts/copia-neon.ps1` (J2) |
 | Conservación automática de cada dato, cada noche | `ConservacionDeDatos` (ADR 047) |
 | Registro de solo inserción de los accesos a datos personales de otra persona | V44, `accesos_a_datos` (ADR 047) |
