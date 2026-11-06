@@ -11,6 +11,7 @@
 import type { ComponentType } from 'react';
 
 import { AvisoLegal } from './textos/AvisoLegal';
+import { BorrarCuenta } from './textos/BorrarCuenta';
 import { Condiciones } from './textos/Condiciones';
 import { Cookies } from './textos/Cookies';
 import { Encargo } from './textos/Encargo';
@@ -51,6 +52,12 @@ export const DOCUMENTOS: readonly DocumentoLegal[] = [
     titulo: 'Política de privacidad',
     resumen: 'Los datos que tratamos por nuestra cuenta: quien registra y administra una empresa, la web y la app.',
     Texto: Privacidad,
+  },
+  {
+    ruta: 'borrar-cuenta',
+    titulo: 'Borrar tu cuenta',
+    resumen: 'Cómo pedir que se borre tu cuenta y tus datos, y qué se conserva por ley.',
+    Texto: BorrarCuenta,
   },
   {
     ruta: 'cookies',
