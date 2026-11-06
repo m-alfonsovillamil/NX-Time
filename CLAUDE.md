@@ -27,8 +27,24 @@ cd nx-time-frontend-web && npm run e2e                         # Playwright, con
 
 - Para los tests y el jar hace falta el JDK 21 (el `java` del sistema puede ser otro).
 - **Nunca `--rerun-tasks`**: deja `build/` bloqueado. Si sale «Unable to delete directory», ejecutar `./gradlew --stop`, borrar esa carpeta y repetir.
-- Probar contra una **base desechable** (`CREATE DATABASE nxtime_x` en el Postgres de Docker, y arrancar con `--spring.datasource.url` y `--spring.flyway.url`). La base `nxtime` arrastra migraciones de otras ramas.
-- Antes de probar, matar lo que haya en el puerto: una instancia vieja sigue sirviendo y engaña.
+- Probar siempre contra una **base desechable**: la base `nxtime` arrastra migraciones de otras ramas. Lo hace `scripts/dev/backend-desechable.sh` (ver abajo).
+
+## Scripts de ayuda (`scripts/dev/`)
+
+Están para usarlos, no para reescribirlos en cada sesión:
+
+- `backend-desechable.sh <base> [puerto] [--sin-compilar]`: crea la base si no existe, compila (resolviendo los bloqueos de `build/`), arranca con `dev,demo` y sin `show-sql`, y espera a los datos de demo. Comprueba antes que el puerto esté libre. También acepta `--parar <puerto>` y `--borrar <base>`. El log va a `nx-time-backend/build/backend-<base>.log`.
+- `sustituir.py cambios.py [--probar]`: aplica una lista `CAMBIOS = [(fichero, viejo, nuevo)]`; cada texto viejo debe aparecer exactamente una vez, y si alguno falla no se escribe nada. Para cambios con barras invertidas, comillas o varias líneas, que en un heredoc se rompen: el `cambios.py` se escribe con Write en el scratchpad.
+- `ui.ps1` (PowerShell: `. .\scripts\dev\ui.ps1`): manejar el emulador por el árbol de accesibilidad (`Textos`, `Tocar`, `Escribir`, `Tecla`, `Captura`).
+- Además: `scripts/e2e.py` (recorrido por HTTP), `scripts/probar-restauracion.sh` y `npm run capturas` en la web.
+
+## Gastar poco contexto
+
+- **Salida de compilaciones y tests, filtrada:** `./gradlew -q …` o `… 2>&1 | grep -E "FAILED|BUILD|error:|Exception" | head -40`; Playwright con `--reporter=line`; `npm ci --silent`. Si algo falla, leer el informe de ese test (`build/test-results`, `build/reports`), no la salida entera.
+- **Ficheros grandes, por secciones:** README, `docs/DESPLIEGUE.md`, `render.yaml`, los ADR largos. Primero `grep -n "^#"` para ubicar la sección, y luego leer solo ese rango.
+- **`docs/openapi.json` no se lee entero:** buscar la ruta o el esquema con Grep, o filtrarlo con un script.
+- Logs del backend: buscar con Grep (`ERROR`, la clase o la ruta), no leerlos enteros.
+- Para buscar en el repo, mejor la herramienta Grep o Glob que un subagente; dejar los subagentes para búsquedas muy amplias o trabajo en paralelo.
 
 ## Convenciones
 
