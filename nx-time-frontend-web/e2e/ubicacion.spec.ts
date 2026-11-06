@@ -9,7 +9,7 @@
  * con esta misma empresa y no esperan esos diálogos.
  */
 
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 import { entrar, irASeccion } from './ayudas';
 
@@ -52,15 +52,27 @@ function salida(page: Page) {
   return page.getByRole('button', { name: 'Fichar salida' });
 }
 
+/**
+ * El aviso sale la primera vez que esta persona ficha en este navegador, y cada
+ * test tiene el suyo: se acepta si sale, antes de lo que venga después. No se
+ * escribe en `localStorage` para saltarlo: lo que se guarda es interno.
+ */
+async function entendidoSiAvisa(page: Page, despues: Locator) {
+  const aviso = page.getByRole('dialog', { name: AVISO });
+  await expect(aviso.or(despues)).toBeVisible();
+  if (await aviso.isVisible()) await aviso.getByRole('button', { name: 'Entendido' }).click();
+}
+
 async function terminar(page: Page) {
   await salida(page).click();
-  await page.getByRole('dialog', { name: '¿Terminas la jornada?' }).getByRole('button', { name: 'Terminar' }).click();
+  const confirmar = page.getByRole('dialog', { name: '¿Terminas la jornada?' });
+  await entendidoSiAvisa(page, confirmar);
+  await confirmar.getByRole('button', { name: 'Terminar' }).click();
   await expect(entrada(page)).toBeVisible();
 }
 
-/** Entra como Javier, sin jornada abierta y sin el aviso: ese lo mira el test que lo necesita. */
+/** Entra como Javier, sin jornada abierta. */
 async function entrarComoJavier(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('nx-ubicacion-informada', '1'));
   await entrar(page, 'javier.lopez@techcorp.demo');
   await expect(entrada(page).or(salida(page))).toBeVisible();
   if (await salida(page).isVisible()) {
@@ -74,6 +86,7 @@ async function entrarComoJavier(page: Page) {
 async function elegirYEmpezar(page: Page, modalidad: string) {
   const laborable = page.getByRole('dialog', { name: 'Hoy no es un día laborable' });
   const pregunta = page.getByRole('dialog', { name: '¿Dónde trabajas hoy?' });
+  await entendidoSiAvisa(page, laborable.or(pregunta));
   await expect(laborable.or(pregunta)).toBeVisible();
   if (await laborable.isVisible()) await laborable.getByRole('button', { name: 'Iniciar igualmente' }).click();
   await pregunta.getByRole('button', { name: modalidad }).click();

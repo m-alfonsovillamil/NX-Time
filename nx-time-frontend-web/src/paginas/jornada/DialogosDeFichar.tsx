@@ -22,7 +22,6 @@ import { T } from '../../i18n/es';
 import { fichar } from '../../i18n/es/fichar';
 import { duracion, hora } from '../../util/fechas';
 import type { Jornada, ProyectosParaFichar } from './consultas';
-import { recordarUbicacionInformada } from './ubicacion';
 
 const F = fichar;
 
@@ -159,12 +158,7 @@ export function AvisoDeUbicacion({
           <Boton variante="texto" onClick={alCancelar}>
             {T.app.cancelar}
           </Boton>
-          <Boton
-            onClick={() => {
-              recordarUbicacionInformada();
-              alEntendido();
-            }}
-          >
+          <Boton onClick={alEntendido}>
             {F.ubicacion.entendido}
           </Boton>
         </>

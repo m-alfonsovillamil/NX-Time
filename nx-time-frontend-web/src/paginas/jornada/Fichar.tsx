@@ -50,7 +50,7 @@ import {
   type Modalidad,
 } from './DialogosDeFichar';
 import { Resumen } from './Resumen';
-import { tomarUbicacion, ubicacionInformada } from './ubicacion';
+import { recordarUbicacionInformada, tomarUbicacion, ubicacionInformada } from './ubicacion';
 
 const F = fichar;
 
@@ -169,7 +169,7 @@ export function Fichar() {
 
   /** La primera vez que se va a tomar la ubicación, se dice antes para qué. */
   function informandoAntes(pedirla: boolean, seguir: () => void) {
-    if (pedirla && !ubicacionInformada()) setTrasInformar(() => seguir);
+    if (pedirla && !ubicacionInformada(sesion?.accessToken)) setTrasInformar(() => seguir);
     else seguir();
   }
 
@@ -340,6 +340,7 @@ export function Fichar() {
       <AvisoDeUbicacion
         abierto={trasInformar !== null}
         alEntendido={() => {
+          recordarUbicacionInformada(sesion?.accessToken);
           trasInformar?.();
           setTrasInformar(null);
         }}
