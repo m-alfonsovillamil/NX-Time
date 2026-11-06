@@ -1,6 +1,7 @@
 package com.nxtime.app.data.sinconexion
 
 import com.nxtime.app.data.dto.AvisoDeEnvio
+import com.nxtime.app.data.dto.ErrorDelEnvio
 import com.nxtime.app.data.dto.FichajePendiente
 import com.nxtime.app.data.dto.Registro
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,15 @@ class ColaEnMemoria : ColaDeFichajes {
 
     override fun quitarAviso(idCliente: String) {
         todosLosAvisos.removeAll { it.idCliente == idCliente }
+        _cambios.value += 1
+    }
+
+    val errores = mutableMapOf<String, ErrorDelEnvio>()
+
+    override fun errorDelEnvio(dueno: String) = errores[dueno]
+
+    override fun guardarErrorDelEnvio(dueno: String, error: ErrorDelEnvio?) {
+        if (error == null) errores.remove(dueno) else errores[dueno] = error
         _cambios.value += 1
     }
 }

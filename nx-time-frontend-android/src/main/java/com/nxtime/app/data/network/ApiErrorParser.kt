@@ -34,10 +34,15 @@ object ApiErrorParser {
     fun mensajeDe(response: Response<*>): MensajeUi =
         mensajeDe(response.errorBody(), response.code())
 
-    fun mensajeDe(errorBody: ResponseBody?, codigo: Int): MensajeUi {
-        val detalle = detalleDelProblemDetail(errorBody)
-        return if (detalle != null) MensajeUi.Texto(detalle) else mensajeGenerico(codigo)
-    }
+    fun mensajeDe(errorBody: ResponseBody?, codigo: Int): MensajeUi =
+        mensajeConDetalle(detalleDelProblemDetail(errorBody), codigo)
+
+    /** Para un error guardado y enseñado más tarde: el cuerpo ya no se puede volver a leer. */
+    fun mensajeConDetalle(detalle: String?, codigo: Int): MensajeUi =
+        if (detalle != null) MensajeUi.Texto(detalle) else mensajeGenerico(codigo)
+
+    /** El `detail` del ProblemDetail de una respuesta sin éxito, o null. Lee el cuerpo: una sola vez. */
+    fun detalleDe(response: Response<*>): String? = detalleDelProblemDetail(response.errorBody())
 
     /**
      * Devuelve el campo "detail" del cuerpo, o null si el cuerpo no es

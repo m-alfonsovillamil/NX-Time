@@ -6,9 +6,12 @@ import androidx.work.WorkerParameters
 import com.nxtime.app.NxTimeApplication
 import com.nxtime.app.data.dto.AvisoDeEnvio
 import com.nxtime.app.data.dto.EnvioSinConexionRequest
+import com.nxtime.app.data.dto.ErrorDelEnvio
 import com.nxtime.app.data.dto.FichajePendiente
+import com.nxtime.app.data.network.ApiErrorParser
 import com.nxtime.app.data.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
+import retrofit2.Response
 
 /** Qué hacer después de un intento de envío. */
 enum class ResultadoDelEnvio {
@@ -40,7 +43,11 @@ class EnvioDeFichajes(
             // Despierta el servidor (Render puede estar dormido) antes de calcular
             // las horas: lo que tarde en contestar no debe contar como tiempo pasado.
             if (cola.pendientes(quien).isEmpty()) return ResultadoDelEnvio.TERMINADO
-            if (!repositorio.getRegistroActivo().isSuccessful) return ResultadoDelEnvio.REINTENTAR
+            val despierto = repositorio.getRegistroActivo()
+            if (!despierto.isSuccessful) {
+                anotarRechazo(quien, despierto)
+                return ResultadoDelEnvio.REINTENTAR
+            }
 
             while (true) {
                 val lote = cola.pendientes(quien).take(ColaDeFichajes.MAXIMO)
@@ -60,11 +67,15 @@ class EnvioDeFichajes(
         val respuesta = repositorio.enviarFichajesSinConexion(
             EnvioSinConexionRequest(lote.map { ReglaDelEnvio.paraEnviar(it, arranque, elapsed) })
         )
-        val cuerpo = respuesta.body()
-        if (!respuesta.isSuccessful || cuerpo == null) return false
+        if (!respuesta.isSuccessful) {
+            anotarRechazo(quien, respuesta)
+            return false
+        }
+        val cuerpo = respuesta.body() ?: return false
 
         val nombrados = cuerpo.resultados.map { it.idCliente }.toSet()
         if (nombrados.isEmpty()) return false
+        cola.guardarErrorDelEnvio(quien, null)
 
         // Primero los avisos: si la app muere entre las dos escrituras, se reenvía
         // y como mucho se avisa dos veces, pero no se pierde un rechazo.
@@ -86,6 +97,18 @@ class EnvioDeFichajes(
         cola.guardarUltimaJornada(quien, cuerpo.jornada)
         cola.quitar(nombrados)
         return true
+    }
+
+    /**
+     * Un 4xx no se arregla esperando (sesión caducada, cuenta dada de baja, una
+     * petición que el servidor no admite): se sigue reintentando, porque un fichaje
+     * no se tira, pero la pantalla lo dice. Antes reintentaba sin avisar a nadie.
+     * Un 5xx, un 408 o un 429 sí pasan solos: de esos no se avisa.
+     */
+    private fun anotarRechazo(quien: String, respuesta: Response<*>) {
+        val codigo = respuesta.code()
+        if (codigo !in 400..499 || codigo == 408 || codigo == 429) return
+        cola.guardarErrorDelEnvio(quien, ErrorDelEnvio(codigo, ApiErrorParser.detalleDe(respuesta)))
     }
 
     private companion object {

@@ -61,3 +61,10 @@ data class AvisoDeEnvio(
     val aRevisar: Boolean,
     val motivo: String?
 )
+
+/**
+ * El servidor ha rechazado el envío entero (un 4xx que no se arregla esperando):
+ * se sigue intentando, pero la persona tiene que saberlo. `detalle` es el
+ * `detail` del ProblemDetail, si lo había.
+ */
+data class ErrorDelEnvio(val codigo: Int, val detalle: String?)

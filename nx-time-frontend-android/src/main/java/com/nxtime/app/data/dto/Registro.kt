@@ -26,6 +26,13 @@ data class Registro(
     val segundosPausaAcumulados: Long = 0,
 
     /**
+     * Cuándo empezó la pausa en curso, o null si no hay ninguna. Sin él, al
+     * abrir la app con la jornada en pausa el cronómetro salía a 00:00:00: lo
+     * trabajado hasta la pausa solo se puede calcular sabiendo cuándo empezó.
+     */
+    val inicioPausaActual: String? = null,
+
+    /**
      * El nombre del kiosco en que se abrió la jornada, o null si se abrió desde
      * la propia sesión (ADR 033). Para el distintivo del historial.
      */

@@ -76,6 +76,29 @@ class ReglaDelEnvioTest {
     }
 
     @Test
+    fun `una pausa sin red dice cuando empezo, y al reanudar se olvida`() {
+        val enPausa = ReglaDelEnvio.jornadaConCola(abierta, listOf(fichaje(TipoFichaje.PAUSA_INICIO, "2026-10-26T07:00:00Z")))
+        assertEquals("2026-10-26T07:00:00Z", enPausa?.inicioPausaActual)
+
+        val reanudada = ReglaDelEnvio.jornadaConCola(
+            abierta,
+            listOf(fichaje(TipoFichaje.PAUSA_INICIO, "2026-10-26T07:00:00Z"), fichaje(TipoFichaje.PAUSA_FIN, "2026-10-26T07:30:00Z"))
+        )
+        assertNull(reanudada?.inicioPausaActual)
+    }
+
+    /** Antes no se descontaba: aquí no se sabía cuándo había empezado. */
+    @Test
+    fun `reanudar sin red una pausa que empezo con red la descuenta`() {
+        val enPausaEnElServidor = abierta.copy(enPausa = true, segundosPausaAcumulados = 60, inicioPausaActual = "2026-10-26T07:00:00Z")
+
+        val reanudada = ReglaDelEnvio.jornadaConCola(enPausaEnElServidor, listOf(fichaje(TipoFichaje.PAUSA_FIN, "2026-10-26T07:20:00Z")))
+
+        assertFalse(reanudada?.enPausa == true)
+        assertEquals(60L + 1_200L, reanudada?.segundosPausaAcumulados)
+    }
+
+    @Test
     fun `una jornada entera sin red acaba sin jornada abierta`() {
         assertNull(
             ReglaDelEnvio.jornadaConCola(

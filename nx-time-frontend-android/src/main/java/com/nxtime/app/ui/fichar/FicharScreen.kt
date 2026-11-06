@@ -199,6 +199,7 @@ fun FicharScreen(
             AvisosSinConexion(
                 pendientes = estado.fichajesPendientes,
                 avisos = estado.avisosDeEnvio,
+                errorDelEnvio = estado.errorDelEnvio?.resolver(),
                 onDescartar = viewModel::descartarAvisoDeEnvio
             )
 
@@ -459,12 +460,27 @@ fun FicharScreen(
  * su salida sin que nadie lo supiera.
  */
 @Composable
-private fun AvisosSinConexion(pendientes: Int, avisos: List<AvisoDeEnvio>, onDescartar: (String) -> Unit) {
+private fun AvisosSinConexion(
+    pendientes: Int,
+    avisos: List<AvisoDeEnvio>,
+    errorDelEnvio: String?,
+    onDescartar: (String) -> Unit
+) {
     if (pendientes > 0) {
         Text(
             text = pluralStringResource(R.plurals.sin_conexion_pendientes, pendientes, pendientes),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
+    }
+    // Con la red ya de vuelta y el servidor diciendo que no: esperar no lo arregla.
+    if (pendientes > 0 && errorDelEnvio != null) {
+        Text(
+            text = stringResource(R.string.sin_conexion_envio_rechazado, errorDelEnvio),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
         )

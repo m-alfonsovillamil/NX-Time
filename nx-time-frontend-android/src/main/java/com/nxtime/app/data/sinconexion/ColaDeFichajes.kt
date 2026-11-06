@@ -15,6 +15,7 @@ import androidx.work.WorkManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nxtime.app.data.dto.AvisoDeEnvio
+import com.nxtime.app.data.dto.ErrorDelEnvio
 import com.nxtime.app.data.dto.FichajePendiente
 import com.nxtime.app.data.dto.Registro
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,10 @@ interface ColaDeFichajes {
     fun avisos(dueno: String): List<AvisoDeEnvio>
     fun anadirAvisos(avisos: List<AvisoDeEnvio>)
     fun quitarAviso(idCliente: String)
+
+    /** El último rechazo del envío entero, o null si no lo hay desde el último envío que llegó. */
+    fun errorDelEnvio(dueno: String): ErrorDelEnvio?
+    fun guardarErrorDelEnvio(dueno: String, error: ErrorDelEnvio?)
 
     companion object {
         const val MAXIMO = 50
@@ -113,11 +118,21 @@ class ColaEnPreferencias(context: Context) : ColaDeFichajes {
         _cambios.value += 1
     }
 
+    override fun errorDelEnvio(dueno: String): ErrorDelEnvio? =
+        prefs.getString(KEY_ERROR + dueno, null)?.let { gson.fromJson(it, ErrorDelEnvio::class.java) }
+
+    override fun guardarErrorDelEnvio(dueno: String, error: ErrorDelEnvio?) {
+        if (error == errorDelEnvio(dueno)) return
+        prefs.edit().putString(KEY_ERROR + dueno, error?.let(gson::toJson)).apply()
+        _cambios.value += 1
+    }
+
     private companion object {
         const val NOMBRE_PREFS = "NXTIME_COLA"
         const val KEY_COLA = "cola"
         const val KEY_AVISOS = "avisos"
         const val KEY_JORNADA = "jornada_"
+        const val KEY_ERROR = "error_"
     }
 }
 

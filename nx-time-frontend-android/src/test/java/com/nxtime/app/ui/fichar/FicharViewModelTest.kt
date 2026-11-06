@@ -251,6 +251,28 @@ class FicharViewModelTest {
         assertTrue(viewModel.uiState.value.avisosDeEnvio.isEmpty())
     }
 
+    @Test
+    fun `si el servidor rechaza el envio se dice por que, solo mientras quede algo por mandar`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        cola.anadir(
+            com.nxtime.app.data.dto.FichajePendiente(
+                idCliente = "a", dueno = "ana@x", tipo = TipoFichaje.INICIO,
+                horaDelDispositivo = "2026-10-26T07:00:00Z", elapsedAlFichar = 1, arranqueAlFichar = 5
+            )
+        )
+        val viewModel = viewModelCon(activo = null)
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.errorDelEnvio)
+
+        cola.guardarErrorDelEnvio("ana@x", com.nxtime.app.data.dto.ErrorDelEnvio(403, "Tu cuenta está desactivada."))
+        advanceUntilIdle()
+        assertEquals(MensajeUi.Texto("Tu cuenta está desactivada."), viewModel.uiState.value.errorDelEnvio)
+
+        cola.quitar(setOf("a"))
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.errorDelEnvio)
+    }
+
     /** ADR 056: al entrar y al salir, explicada antes la primera vez, y sin ella se ficha igual. */
     private suspend fun empresaQuePide(modalidad: Boolean = false, ubicacion: Boolean = false) {
         whenever(repositorio.getEstadoDeHoy()).thenReturn(
@@ -435,6 +457,20 @@ class FicharViewModelTest {
         advanceUntilIdle()
 
         assertEquals(EstadoJornada.EN_PAUSA, viewModel.uiState.value.estado)
+    }
+
+    /** Antes salía 00:00:00: la app no leía cuándo había empezado la pausa. */
+    @Test
+    fun `al abrir con la jornada en pausa el cronometro marca lo trabajado hasta la pausa`() = runTest {
+        val enPausa = registro(enPausa = true).copy(
+            segundosPausaAcumulados = 600,
+            inicioPausaActual = "2026-08-29T09:00:00Z"
+        )
+        val viewModel = viewModelCon(activo = enPausa)
+        advanceUntilIdle()
+
+        // De 07:00 a 09:00, menos los diez minutos de una pausa anterior.
+        assertEquals(2 * 3600L - 600, viewModel.uiState.value.segundosEnCurso)
     }
 
     /**

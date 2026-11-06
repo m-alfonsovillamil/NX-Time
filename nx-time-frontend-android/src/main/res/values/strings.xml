@@ -285,6 +285,7 @@
     </plurals>
     <string name="sin_conexion_salir_titulo">¿Cerrar sesión con fichajes sin enviar?</string>
     <string name="sin_conexion_cola_llena">No se ha podido guardar el fichaje en el móvil: hay demasiados sin enviar. Conéctate para mandarlos.</string>
+    <string name="sin_conexion_envio_rechazado">No se pueden enviar: %1$s Se seguirá intentando.</string>
     <string name="sin_conexion_rechazado">No se ha aceptado tu fichaje del %1$s</string>
     <string name="sin_conexion_a_revisar">Tu fichaje del %1$s llegó tarde: lo tiene que revisar tu responsable</string>
     <string name="sin_conexion_distintivo">Sin conexión</string>
