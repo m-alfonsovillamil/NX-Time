@@ -10,8 +10,8 @@ se puede cambiar una vez publicada.
 1. **El nombre y el `applicationId` definitivos** (ver el plan del cambio de nombre).
 2. **Una página para pedir el borrado de la cuenta.** Play la exige a toda app
    que deja crear cuentas, y esta deja («Registrar una empresa»). Tiene que ser
-   pública, sin entrar, y decir cómo se pide y qué se borra. **No existe todavía**:
-   es un PR pequeño (una página en `/legal`).
+   pública, sin entrar, y decir cómo se pide y qué se borra. Es
+   `https://[web]/legal/borrar-cuenta` (PR #220).
 3. **Una cuenta para la revisión de Google**: Play pide usuario y contraseña de
    una cuenta que entre sin segundo factor. Vale la de demostración, en una
    empresa de demostración, nunca una real.
@@ -55,7 +55,7 @@ Respuestas generales:
 |---|---|
 | ¿Recoge o comparte datos de los tipos obligatorios? | Sí |
 | ¿Se cifran en tránsito? | Sí (HTTPS en todo; el tráfico en claro está prohibido en producción) |
-| ¿Se puede pedir que se borren? | Sí: la página del punto 2 de arriba |
+| ¿Se puede pedir que se borren? | Sí: `https://[web]/legal/borrar-cuenta` |
 | ¿Se comparten con terceros? | **No.** Sentry y Firebase son proveedores que tratan por encargo, y Play no cuenta eso como compartir |
 
 Tipos de datos (todos **recogidos**, ninguno **compartido**, ninguno para
