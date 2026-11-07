@@ -75,7 +75,7 @@ public class EmailSender {
             String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
         try {
             Context contexto = new Context();
-            contexto.setVariables(conBoton(plantilla, variables));
+            contexto.setVariables(completar(plantilla, variables));
             String cuerpo = templateEngine.process("email/" + plantilla, contexto);
 
             MimeMessage mensaje = mailSender.createMimeMessage();
@@ -93,22 +93,39 @@ public class EmailSender {
         }
     }
 
+    /** Dónde está el icono de la marca en la web (public/iconos de la web). */
+    static final String RUTA_DEL_ICONO = "/iconos/icono-192.png";
+
     /**
-     * Las variables, más el botón que lleva a la operativa del correo si esa
-     * plantilla tiene uno ({@link BotonDelCorreo}). Lo pinta el marco común
-     * (layout.html), así que ninguna plantilla ni ninguna llamada tiene que
-     * acordarse de ponerlo. Sin web configurada, sin botón.
+     * Las variables de quien llama, más lo que pinta el marco común
+     * (layout.html) en todos los correos, para que ninguna plantilla ni ninguna
+     * llamada tenga que acordarse:
+     *
+     * <ul>
+     *   <li>{@code producto}, {@code titular} y {@code web}: de la configuración
+     *       del titular, el único sitio del nombre (ver CondicionesDelServicio).
+     *       Si quien llama ya los manda, valen los suyos.</li>
+     *   <li>{@code urlIcono}: el icono de la N, servido por la web.</li>
+     *   <li>{@code botonUrl} y {@code botonTexto}: el botón a la operativa, si
+     *       esa plantilla tiene uno ({@link BotonDelCorreo}).</li>
+     * </ul>
+     *
+     * Sin web configurada no hay icono ni botón: no se inventa una dirección.
      */
-    Map<String, Object> conBoton(String plantilla, Map<String, Object> variables) {
+    Map<String, Object> completar(String plantilla, Map<String, Object> variables) {
+        Map<String, Object> todas = new HashMap<>(variables);
+        todas.putIfAbsent("producto", servicio.producto());
+        todas.putIfAbsent("titular", servicio.titular());
         String web = servicio.web();
         if (web == null || web.isBlank()) {
-            return variables;
+            return todas;
         }
-        return BotonDelCorreo.de(plantilla).<Map<String, Object>>map(boton -> {
-            Map<String, Object> todas = new HashMap<>(variables);
+        todas.putIfAbsent("web", web);
+        todas.putIfAbsent("urlIcono", web + RUTA_DEL_ICONO);
+        BotonDelCorreo.de(plantilla).ifPresent(boton -> {
             todas.put("botonUrl", web + "/" + boton.ruta());
             todas.put("botonTexto", boton.texto());
-            return todas;
-        }).orElse(variables);
+        });
+        return todas;
     }
 }

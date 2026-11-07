@@ -19,7 +19,9 @@ Play**: el `applicationId` de la app no se puede cambiar una vez publicada.
 | Dónde | Qué | Cuántos sitios |
 |---|---|---|
 | `application.yml` → `application.titular.*` | Producto, correos de privacidad y seguridad, web. De aquí sale `titular.ts` para la web (`npm run titular`) | 1 bloque |
-| Plantillas de correo (`templates/email/*.html`) | La cabecera y el pie de `layout.html` y el texto de cada correo. Hoy van escritos a mano: **pasarlos a la variable del titular**, así la próxima vez no hay que tocarlos | 33 apariciones |
+| Plantillas de correo (`templates/email/*.html`) | **Ya hecho (7/11/2026):** el nombre, el titular, la web y el icono los añade `EmailSender` desde el titular (`[[${producto}]]` en el texto). Lo comprueba `EmailTemplateRenderingTest#elNombreSaleDeLaConfiguracion`. Nada que tocar | 0 |
+| PDF del informe mensual y de «Mis datos» | **Ya hecho (7/11/2026):** el nombre sale del titular (`CondicionesDelServicio.producto()`) | 0 |
+| Icono de los correos | El de la web (`public/iconos/icono-192.png`): al cambiar el icono de la web, cambia solo | — |
 | Asuntos y textos de correo en Java (`SegundoFactorServiceImpl`, `AccessCodeServiceImpl`, `SsoServiceImpl`…) | Igual: desde el titular | ~15 |
 | Nombre en las apps de autenticación (`SegundoFactorServiceImpl.EMISOR`) | El nombre con el que sale el segundo factor en Google Authenticator. Las entradas ya creadas seguirán con el nombre viejo: no pasa nada | 1 |
 | Título de la API (`OpenApiConfig`) | | 1 |

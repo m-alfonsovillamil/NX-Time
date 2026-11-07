@@ -10,7 +10,7 @@
     <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
 
     <p>
-        Se ha creado tu cuenta en NX Time para
+        Se ha creado tu cuenta en [[${producto}]] para
         <strong th:text="${nombreEmpresa}">Empresa</strong>.
         Tu usuario es <strong th:text="${email}">correo@empresa.com</strong>.
     </p>
@@ -24,12 +24,19 @@
     <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}">
         <strong>1. Instala la aplicación</strong> (Android) desde tu móvil:
     </p>
-    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" style="margin: 16px 0;">
-        <a th:href="${urlDescargaApp}" href="#"
-           style="background: #1f6feb; color: #ffffff; padding: 12px 20px; border-radius: 6px;
-                  text-decoration: none; font-weight: bold; display: inline-block;">Descargar NX Time</a>
-    </p>
-    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" style="color: #6a737d; font-size: 13px;">
+    <!--/* Tabla y no <a> con padding, como el botón del marco: Outlook ignora el padding de un enlace. */-->
+    <table th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" role="presentation"
+           cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0;">
+        <tr>
+            <td style="background: #0E7C86; border-radius: 20px;">
+                <a th:href="${urlDescargaApp}" href="#"
+                   style="display: inline-block; padding: 12px 24px; color: #FFFFFF; font-weight: bold;
+                          font-size: 15px; text-decoration: none; border-radius: 20px;
+                          font-family: Arial, Helvetica, sans-serif;">Descargar [[${producto}]]</a>
+            </td>
+        </tr>
+    </table>
+    <p th:if="${urlDescargaApp != null and !#strings.isEmpty(urlDescargaApp)}" style="color: #4A5C5E; font-size: 13px;">
         La primera vez, Android te pedirá permiso para instalar aplicaciones
         que no vienen de Google Play. Es normal: acéptalo solo para este archivo.
     </p>
@@ -43,7 +50,7 @@
         escribe tu correo, pulsa <strong>«Ya tengo un código»</strong> y usa este:
     </p>
 
-    <p style="font-size: 30px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;"
+    <p style="display: inline-block; margin: 20px 0; padding: 12px 24px; background: #CDEBEE; color: #00363B; border-radius: 16px; font-family: 'Sora', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: bold; letter-spacing: 8px;"
        th:text="${codigo}">123456</p>
 
     <p>
@@ -51,7 +58,7 @@
         desde esa misma pantalla puedes pedir otro.
     </p>
 
-    <p style="color: #6a737d;">
+    <p style="color: #4A5C5E;">
         Nadie más conoce tu contraseña, tampoco quien ha creado tu cuenta.
     </p>
 </div>

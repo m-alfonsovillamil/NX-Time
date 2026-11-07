@@ -1,5 +1,7 @@
 package com.nxtime.nxtime.report;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
+import com.nxtime.nxtime.config.Marca;
 import org.openpdf.text.Document;
 import org.openpdf.text.Element;
 import org.openpdf.text.Font;
@@ -34,6 +36,9 @@ import org.springframework.stereotype.Component;
  *
  * Escribe directamente en el OutputStream de la respuesta, igual que
  * {@link ExcelReportGenerator}.
+ *
+ * Con los colores de la marca ({@link Marca}) desde noviembre de 2026: antes
+ * llevaba el azul genérico de los correos, distinto del teal de la app.
  */
 @Component
 public class PdfReportGenerator {
@@ -49,19 +54,35 @@ public class PdfReportGenerator {
      */
     private static final String[] CABECERAS = {"Fecha", "Entrada", "Salida", "Pausa", "Tiempo efectivo"};
 
-    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-    private static final Font SUBTITULO = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
-    private static final Font CABECERA_TABLA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
-    private static final Font CELDA = FontFactory.getFont(FontFactory.HELVETICA, 9);
-    private static final Font CELDA_AVISO = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Color.RED);
-    private static final Font TOTAL = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10);
-    private static final Font PIE = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
+    private static final Color PRIMARIO = Marca.awt(Marca.PRIMARIO);
+    private static final Color BORDE = Marca.awt(Marca.BORDE);
+    private static final Color FONDO = Marca.awt(Marca.FONDO);
+
+    private static final Font MARCA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, PRIMARIO);
+    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Marca.awt(Marca.TEXTO));
+    private static final Font SUBTITULO =
+            FontFactory.getFont(FontFactory.HELVETICA, 10, Marca.awt(Marca.TEXTO_SECUNDARIO));
+    private static final Font CABECERA_TABLA =
+            FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Marca.awt(Marca.SOBRE_PRIMARIO));
+    private static final Font CELDA = FontFactory.getFont(FontFactory.HELVETICA, 9, Marca.awt(Marca.TEXTO));
+    private static final Font CELDA_AVISO =
+            FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Marca.awt(Marca.ERROR));
+    private static final Font TOTAL =
+            FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Marca.awt(Marca.SOBRE_CONTENEDOR_PRIMARIO));
+    private static final Font PIE = FontFactory.getFont(FontFactory.HELVETICA, 8, Marca.awt(Marca.TEXTO_SECUNDARIO));
+
+    private final CondicionesDelServicio servicio;
+
+    public PdfReportGenerator(CondicionesDelServicio servicio) {
+        this.servicio = servicio;
+    }
 
     public void generar(MonthlyReport informe, OutputStream salida) {
         Document documento = new Document(PageSize.A4, 40, 40, 40, 40);
         PdfWriter.getInstance(documento, salida);
         documento.open();
 
+        documento.add(new Paragraph(servicio.producto(), MARCA));
         documento.add(new Paragraph("Registro horario mensual", TITULO));
         documento.add(new Paragraph(informe.nombreEmpresa(), SUBTITULO));
         documento.add(new Paragraph(
@@ -103,41 +124,58 @@ public class PdfReportGenerator {
 
         for (String cabecera : cabeceras) {
             PdfPCell celda = new PdfPCell(new Phrase(cabecera, CABECERA_TABLA));
-            celda.setBackgroundColor(new Color(31, 111, 235));
-            celda.setPadding(5);
+            celda.setBackgroundColor(PRIMARIO);
+            celda.setBorderColor(PRIMARIO);
+            celda.setPadding(6);
             celda.setHorizontalAlignment(Element.ALIGN_CENTER);
             tabla.addCell(celda);
         }
 
+        int numero = 0;
         for (ReportRow fila : informe.filas()) {
             // Las jornadas que cerró el sistema por falta de fichaje de
             // salida (Fase 9) se marcan en rojo y en cursiva: el dato es
             // menos fiable y quien firme el documento debe verlo.
             Font fuente = fila.incidencia() ? CELDA_AVISO : CELDA;
-            tabla.addCell(celdaTexto(fila.fecha().format(FECHA), fuente));
-            tabla.addCell(celdaTexto(fila.horaEntrada().toString(), fuente));
-            tabla.addCell(celdaTexto(fila.horaSalida().toString(), fuente));
-            tabla.addCell(celdaTexto(fila.minutosPausa() + " min", fuente));
-            tabla.addCell(celdaTexto(fila.duracionLegible(), fuente));
+            // Filas alternas con el fondo de la marca: un mes son treinta
+            // filas, y sin ellas la vista se salta de una a otra.
+            Color fondo = numero++ % 2 == 1 ? FONDO : null;
+            tabla.addCell(celdaTexto(fila.fecha().format(FECHA), fuente, fondo));
+            tabla.addCell(celdaTexto(fila.horaEntrada().toString(), fuente, fondo));
+            tabla.addCell(celdaTexto(fila.horaSalida().toString(), fuente, fondo));
+            tabla.addCell(celdaTexto(fila.minutosPausa() + " min", fuente, fondo));
+            tabla.addCell(celdaTexto(fila.duracionLegible(), fuente, fondo));
             if (conModalidad) {
-                tabla.addCell(celdaTexto(com.nxtime.nxtime.domain.Modalidad.texto(fila.modalidad()), fuente));
+                tabla.addCell(celdaTexto(com.nxtime.nxtime.domain.Modalidad.texto(fila.modalidad()), fuente, fondo));
             }
         }
 
         return tabla;
     }
 
-    private PdfPCell celdaTexto(String texto, Font fuente) {
+    private PdfPCell celdaTexto(String texto, Font fuente, Color fondo) {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
         celda.setPadding(4);
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        celda.setBorderColor(BORDE);
+        if (fondo != null) {
+            celda.setBackgroundColor(fondo);
+        }
         return celda;
     }
 
-    private Paragraph resumen(MonthlyReport informe) {
-        return new Paragraph(
+    /** El total, en el contenedor de la marca: es la cifra que se busca primero. */
+    private PdfPTable resumen(MonthlyReport informe) {
+        PdfPTable caja = new PdfPTable(1);
+        caja.setWidthPercentage(100);
+        PdfPCell celda = new PdfPCell(new Phrase(
                 "Días trabajados: " + informe.diasTrabajados()
-                        + "        Total del periodo: " + informe.totalLegible(), TOTAL);
+                        + "        Total del periodo: " + informe.totalLegible(), TOTAL));
+        celda.setBackgroundColor(Marca.awt(Marca.CONTENEDOR_PRIMARIO));
+        celda.setBorder(org.openpdf.text.Rectangle.NO_BORDER);
+        celda.setPadding(8);
+        caja.addCell(celda);
+        return caja;
     }
 
     private Paragraph avisoDeIncidencias(MonthlyReport informe) {
@@ -180,6 +218,7 @@ public class PdfReportGenerator {
     private PdfPCell celdaDeFirma(String etiqueta) {
         PdfPCell celda = new PdfPCell(new Phrase("\n\n\n" + etiqueta, CELDA));
         celda.setBorder(org.openpdf.text.Rectangle.TOP);
+        celda.setBorderColor(BORDE);
         celda.setPaddingTop(6);
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
         return celda;
@@ -198,7 +237,7 @@ public class PdfReportGenerator {
 
     private Paragraph pieLegal(ZoneId zona) {
         Paragraph pie = new Paragraph(
-                "Documento generado por NX Time el " + hoyEn(zona).format(FECHA)
+                "Documento generado por " + servicio.producto() + " el " + hoyEn(zona).format(FECHA)
                         + ". Registro de jornada conforme al RD-ley 8/2019; conservar durante cuatro años.",
                 PIE);
         pie.setSpacingBefore(20);

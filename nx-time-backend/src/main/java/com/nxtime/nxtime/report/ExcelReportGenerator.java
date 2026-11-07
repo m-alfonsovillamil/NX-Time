@@ -8,11 +8,13 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import com.nxtime.nxtime.config.Marca;
 import org.springframework.stereotype.Component;
 
 /**
@@ -156,26 +158,53 @@ public class ExcelReportGenerator {
         total.setCellStyle(estilo);
     }
 
+    /**
+     * La cabecera con el primario de la marca y letra blanca, como las tablas
+     * de la app y del PDF. Hasta noviembre de 2026 era gris. Un color propio y
+     * no uno de la paleta indexada de Excel: ahí no hay ningún teal.
+     */
     private CellStyle estiloCabecera(Workbook libro) {
         Font negrita = libro.createFont();
         negrita.setBold(true);
+        colorear(negrita, Marca.SOBRE_PRIMARIO);
 
         CellStyle estilo = libro.createCellStyle();
         estilo.setFont(negrita);
-        estilo.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        estilo.setFillForegroundColor(color(Marca.PRIMARIO));
         estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         estilo.setBorderBottom(BorderStyle.THIN);
         estilo.setAlignment(HorizontalAlignment.CENTER);
         return estilo;
     }
 
+    /** El total, en el contenedor claro de la marca, como en el PDF. */
     private CellStyle estiloTotal(Workbook libro) {
         Font negrita = libro.createFont();
         negrita.setBold(true);
+        colorear(negrita, Marca.SOBRE_CONTENEDOR_PRIMARIO);
 
         CellStyle estilo = libro.createCellStyle();
         estilo.setFont(negrita);
+        estilo.setFillForegroundColor(color(Marca.CONTENEDOR_PRIMARIO));
+        estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         estilo.setBorderTop(BorderStyle.THIN);
         return estilo;
+    }
+
+    /**
+     * Con el alfa delante (FF, opaco): el estándar pide ARGB de ocho cifras, y
+     * con solo las seis del RGB algunas versiones de Excel pintan el relleno
+     * transparente.
+     */
+    private static XSSFColor color(String hex) {
+        byte[] rgb = Marca.rgb(hex);
+        return new XSSFColor(new byte[] {(byte) 0xFF, rgb[0], rgb[1], rgb[2]}, null);
+    }
+
+    /** SXSSF crea fuentes de XSSF por debajo: son las que admiten un color RGB. */
+    private static void colorear(Font fuente, String hex) {
+        if (fuente instanceof XSSFFont xssf) {
+            xssf.setColor(color(hex));
+        }
     }
 }

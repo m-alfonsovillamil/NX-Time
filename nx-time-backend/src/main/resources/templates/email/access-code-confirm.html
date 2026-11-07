@@ -5,10 +5,10 @@
 <div id="contenido">
     <p>Hola <span th:text="${nombre}">Nombre</span>,</p>
 
-    <p>Has registrado <strong th:text="${nombreEmpresa}">tu empresa</strong> en NX Time. Para entrar,
+    <p>Has registrado <strong th:text="${nombreEmpresa}">tu empresa</strong> en [[${producto}]]. Para entrar,
         confirma que este correo es tuyo escribiendo este código:</p>
 
-    <p style="font-size: 30px; font-weight: bold; letter-spacing: 8px; margin: 20px 0;"
+    <p style="display: inline-block; margin: 20px 0; padding: 12px 24px; background: #CDEBEE; color: #00363B; border-radius: 16px; font-family: 'Sora', Arial, Helvetica, sans-serif; font-size: 30px; font-weight: bold; letter-spacing: 8px;"
        th:text="${codigo}">123456</p>
 
     <p>Caduca en <span th:text="${validez}">1 hora</span> y solo sirve una vez.</p>
@@ -17,8 +17,8 @@
       Quien no lo ha pedido no tiene que hacer nada: sin el código, la cuenta
       que alguien dejó a medias con su correo no se puede usar.
     */-->
-    <p style="color: #6a737d;">
-        Si no has sido tú, no hagas nada: sin este código nadie puede usar tu correo en NX Time.
+    <p style="color: #4A5C5E;">
+        Si no has sido tú, no hagas nada: sin este código nadie puede usar tu correo en [[${producto}]].
     </p>
 </div>
 </body>

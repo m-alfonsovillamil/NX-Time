@@ -29,7 +29,9 @@ import org.junit.jupiter.api.Test;
 class ReportGeneratorTest {
 
     private final ExcelReportGenerator excelGenerator = new ExcelReportGenerator();
-    private final PdfReportGenerator pdfGenerator = new PdfReportGenerator();
+    private final PdfReportGenerator pdfGenerator = new PdfReportGenerator(
+            new com.nxtime.nxtime.config.CondicionesDelServicio("NX Time", "Titular", "privacidad@ejemplo.test",
+                    "https://nxtime-web.com", "2026-11-01", true));
 
     // Los tiempos van en SEGUNDOS desde el arreglo del total del
     // informe (ver MonthlyReportTotalTest): se escriben como
@@ -82,6 +84,20 @@ class ReportGeneratorTest {
 
             // Fila 6: la jornada con incidencia va marcada.
             assertThat(hoja.getRow(6).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");
+        }
+    }
+
+    @Test
+    @DisplayName("La cabecera del Excel lleva el teal de la marca, opaco, con la letra blanca")
+    void excel_cabeceraConLaMarca() throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(informeDeEjemplo(), salida);
+
+        try (XSSFWorkbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            var estilo = (org.apache.poi.xssf.usermodel.XSSFCellStyle) libro.getSheetAt(0).getRow(3).getCell(0)
+                    .getCellStyle();
+            assertThat(estilo.getFillForegroundXSSFColor().getARGBHex()).isEqualTo("FF0E7C86");
+            assertThat(estilo.getFont().getXSSFColor().getARGBHex()).isEqualTo("FFFFFFFF");
         }
     }
 

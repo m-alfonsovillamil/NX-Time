@@ -33,11 +33,11 @@
       Se lee dentro de la aplicación.
     */-->
     <p style="margin-top: 20px;" th:if="${comentario}">
-        Te han dejado un comentario: lo tienes en NX Time.
+        Te han dejado un comentario: lo tienes en [[${producto}]].
     </p>
 
     <p style="margin-top: 20px;" th:if="${descartada}">
-        Puedes seguir optando a otras vacantes internas desde NX Time.
+        Puedes seguir optando a otras vacantes internas desde [[${producto}]].
     </p>
 </div>
 </body>

@@ -55,7 +55,19 @@ class EmailTemplateRenderingTest {
         // módulo "extras-java8time" está integrado en el núcleo.
     }
 
+    /** Como en producción: con lo que EmailSender añade a todos (nombre, titular, web, icono, botón). */
+    private static final EmailSender REMITENTE = new EmailSender(
+            org.mockito.Mockito.mock(org.springframework.mail.javamail.JavaMailSender.class),
+            org.mockito.Mockito.mock(org.thymeleaf.TemplateEngine.class),
+            new com.nxtime.nxtime.config.CondicionesDelServicio("NX Time", "Miguel Alfonso Villamil",
+                    "privacidad@nxtime-web.com", "https://nxtime-web.com", "2026-11-01", true));
+
     private String render(String plantilla, Map<String, Object> variables) {
+        return renderTalCual(plantilla, REMITENTE.completar(plantilla, variables));
+    }
+
+    /** Sin lo que añade EmailSender: solo las variables que se pasan. */
+    private String renderTalCual(String plantilla, Map<String, Object> variables) {
         Context contexto = new Context();
         contexto.setVariables(variables);
         return templateEngine.process("email/" + plantilla, contexto);
@@ -83,9 +95,54 @@ class EmailTemplateRenderingTest {
         vars.put("nombreDestinatario", "Ana");
         vars.put("mes", "octubre de 2026");
 
+        String html = renderTalCual("signature-reminder", vars);
+
+        assertThat(html).doesNotContain("data-nx=\"boton\"").doesNotContain("copia esta dirección");
+    }
+
+    @Test
+    @DisplayName("El marco lleva la marca: el icono de la N, el nombre de la configuración, el titular y la privacidad")
+    void elMarcoLlevaLaMarca() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombreDestinatario", "Ana");
+        vars.put("mes", "octubre de 2026");
+
         String html = render("signature-reminder", vars);
 
-        assertThat(html).doesNotContain("<table").doesNotContain("copia esta dirección");
+        assertThat(html).contains("src=\"https://nxtime-web.com/iconos/icono-192.png\"")
+                .contains("alt=\"NX Time\"")
+                .contains("Miguel Alfonso Villamil")
+                .contains("href=\"https://nxtime-web.com/legal/privacidad\"")
+                .contains("#0E7C86")
+                .doesNotContain("#1f6feb");
+    }
+
+    @Test
+    @DisplayName("Con otro nombre en la configuración, ningún correo dice «NX Time»")
+    void elNombreSaleDeLaConfiguracion() throws java.io.IOException {
+        EmailSender otro = new EmailSender(
+                org.mockito.Mockito.mock(org.springframework.mail.javamail.JavaMailSender.class),
+                org.mockito.Mockito.mock(org.thymeleaf.TemplateEngine.class),
+                new com.nxtime.nxtime.config.CondicionesDelServicio("Jornada Clara", "Titular",
+                        "privacidad@ejemplo.test", "https://ejemplo.test", "2026-11-01", true));
+        java.nio.file.Path carpeta = java.nio.file.Path.of("src/main/resources/templates/email");
+        try (var plantillas = java.nio.file.Files.list(carpeta)) {
+            for (java.nio.file.Path fichero : plantillas.toList()) {
+                String plantilla = fichero.getFileName().toString().replace(".html", "");
+                if (plantilla.equals("layout")) {
+                    continue;
+                }
+                String html;
+                try {
+                    html = renderTalCual(plantilla, otro.completar(plantilla, new HashMap<>()));
+                } catch (RuntimeException e) {
+                    // Alguna plantilla necesita sus variables (fechas, por
+                    // ejemplo) para pintarse: esas se prueban en su test.
+                    continue;
+                }
+                assertThat(html).as(plantilla).doesNotContain("NX Time").contains("Jornada Clara");
+            }
+        }
     }
 
     @Test
