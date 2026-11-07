@@ -62,6 +62,33 @@ class EmailTemplateRenderingTest {
     }
 
     @Test
+    @DisplayName("Con botón, el marco común lo pinta con su texto y su dirección, también en texto")
+    void elMarcoPintaElBoton() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombreDestinatario", "Ana");
+        vars.put("mes", "octubre de 2026");
+        vars.put("botonUrl", "https://nxtime-web.com/firmas");
+        vars.put("botonTexto", "Firmar mi registro");
+
+        String html = render("signature-reminder", vars);
+
+        assertThat(html).contains("href=\"https://nxtime-web.com/firmas\"").contains(">Firmar mi registro</a>");
+        assertThat(html).contains(">https://nxtime-web.com/firmas</a>");
+    }
+
+    @Test
+    @DisplayName("Sin botón, el marco no pinta ni el botón ni la dirección")
+    void sinBotonNoHayEnlace() {
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("nombreDestinatario", "Ana");
+        vars.put("mes", "octubre de 2026");
+
+        String html = render("signature-reminder", vars);
+
+        assertThat(html).doesNotContain("<table").doesNotContain("copia esta dirección");
+    }
+
+    @Test
     @DisplayName("La plantilla de petición nueva renderiza con los datos del empleado")
     void absenceRequested_renderiza() {
         Map<String, Object> vars = new HashMap<>();

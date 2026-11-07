@@ -1,7 +1,9 @@
 package com.nxtime.nxtime.notification;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,13 +44,15 @@ public class EmailSender {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+    private final CondicionesDelServicio servicio;
 
     @Value("${application.mail.from}")
     private String remitente;
 
-    public EmailSender(JavaMailSender mailSender, TemplateEngine templateEngine) {
+    public EmailSender(JavaMailSender mailSender, TemplateEngine templateEngine, CondicionesDelServicio servicio) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
+        this.servicio = servicio;
     }
 
     public void enviar(String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
@@ -71,7 +75,7 @@ public class EmailSender {
             String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
         try {
             Context contexto = new Context();
-            contexto.setVariables(variables);
+            contexto.setVariables(conBoton(plantilla, variables));
             String cuerpo = templateEngine.process("email/" + plantilla, contexto);
 
             MimeMessage mensaje = mailSender.createMimeMessage();
@@ -87,5 +91,24 @@ public class EmailSender {
         } catch (MailException | jakarta.mail.MessagingException e) {
             throw new EmailNotSentException("No se pudo enviar el correo '" + plantilla + "'", e);
         }
+    }
+
+    /**
+     * Las variables, más el botón que lleva a la operativa del correo si esa
+     * plantilla tiene uno ({@link BotonDelCorreo}). Lo pinta el marco común
+     * (layout.html), así que ninguna plantilla ni ninguna llamada tiene que
+     * acordarse de ponerlo. Sin web configurada, sin botón.
+     */
+    Map<String, Object> conBoton(String plantilla, Map<String, Object> variables) {
+        String web = servicio.web();
+        if (web == null || web.isBlank()) {
+            return variables;
+        }
+        return BotonDelCorreo.de(plantilla).<Map<String, Object>>map(boton -> {
+            Map<String, Object> todas = new HashMap<>(variables);
+            todas.put("botonUrl", web + "/" + boton.ruta());
+            todas.put("botonTexto", boton.texto());
+            return todas;
+        }).orElse(variables);
     }
 }
