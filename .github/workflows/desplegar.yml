@@ -82,7 +82,9 @@ jobs:
           fi
 
           sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
-          desplegado=$(gh api "repos/$REPO/git/ref/tags/desplegado" --jq .object.sha 2>/dev/null || true)
+          # Sin la etiqueta, `gh api` sale con error pero escribe en stdout el JSON
+          # del 404, y ese texto acababa pasando por un sha (7/11/2026).
+          desplegado=$(gh api "repos/$REPO/git/ref/tags/desplegado" --jq .object.sha 2>/dev/null) || desplegado=""
           echo "main: $sha · desplegado: ${desplegado:-ninguno}"
           if [ "$sha" = "$desplegado" ] && [ "$FORZAR" != "true" ]; then
             echo "Producción ya está en main. Nada que hacer."
