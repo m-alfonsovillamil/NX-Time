@@ -593,6 +593,11 @@ Render lo terminara; Render avisa por correo si un build falla).
 4. Lanzarlo a mano una vez (*Run workflow*, con **ahora**): la primera vez no hay
    etiqueta y despliega los dos.
 
+**Puesto en marcha el 7/11/2026.** La primera vez falló sin desplegar nada: sin
+la etiqueta, `gh api` dejaba en la variable el JSON del 404 y se tomaba por un
+commit (arreglado en el #228). Desde entonces, la primera vez sin etiqueta
+funciona como se describe arriba.
+
 Sin los dos secretos el workflow no hace nada y lo dice, sin fallar. Y ojo:
 **mientras no estén, con Auto-Deploy apagado no se despliega nada**; los pasos 1
 y 3 van juntos.
@@ -755,6 +760,10 @@ de la base, solo tamaños y nombres de fichero, y la copia nunca se guarda como
    que la copia aparece en el cubo.
 5. Bajarla y restaurarla una vez con `scripts/probar-restauracion.sh` (descifra
    con la frase del PC: si es la misma, funciona).
+
+**Puesta en marcha el 7/11/2026**: la primera copia (333 KB, 131 KB cifrada)
+se bajó del cubo y se restauró con `probar-restauracion.sh`:
+`RESTAURACIÓN VERIFICADA`, con las 52 migraciones.
 
 Sin los seis secretos el workflow no hace nada y lo dice, sin fallar. Y si un
 día falla, GitHub manda un correo a quien lo tenga activado en *Settings* →
