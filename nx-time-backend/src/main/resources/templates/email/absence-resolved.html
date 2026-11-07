@@ -10,8 +10,8 @@
         del <strong th:text="${#temporals.format(fechaInicio, 'dd/MM/yyyy')}">01/01/2026</strong>
         al <strong th:text="${#temporals.format(fechaFin, 'dd/MM/yyyy')}">05/01/2026</strong>
         ha sido
-        <strong th:if="${aprobada}" style="color: #1a7f37;">APROBADA</strong>
-        <strong th:unless="${aprobada}" style="color: #cf222e;">RECHAZADA</strong>
+        <strong th:if="${aprobada}" style="color: #2E6B34;">APROBADA</strong>
+        <strong th:unless="${aprobada}" style="color: #BA1A1A;">RECHAZADA</strong>
         por <span th:text="${resolutor}">Gestor</span>.
     </p>
 

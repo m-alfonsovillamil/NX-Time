@@ -42,13 +42,23 @@ public class PersonalDataPdfGenerator {
     private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
-    private static final Color AZUL = new Color(31, 111, 235);
-    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
-    private static final Font SECCION = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, AZUL);
-    private static final Font NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 9);
-    private static final Font SUAVE = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
+    // Los colores de la marca (config/Marca.java); hasta noviembre de 2026, el azul de los correos.
+    private static final Color PRIMARIO = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.PRIMARIO);
+    private static final Color TEXTO = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.TEXTO);
+    private static final Color BORDE = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.BORDE);
+    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, TEXTO);
+    private static final Font SECCION = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, PRIMARIO);
+    private static final Font NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 9, TEXTO);
+    private static final Font SUAVE = FontFactory.getFont(FontFactory.HELVETICA, 9,
+            com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.TEXTO_SECUNDARIO));
     private static final Font CABECERA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.WHITE);
-    private static final Font CELDA = FontFactory.getFont(FontFactory.HELVETICA, 8);
+    private static final Font CELDA = FontFactory.getFont(FontFactory.HELVETICA, 8, TEXTO);
+
+    private final com.nxtime.nxtime.config.CondicionesDelServicio servicio;
+
+    public PersonalDataPdfGenerator(com.nxtime.nxtime.config.CondicionesDelServicio servicio) {
+        this.servicio = servicio;
+    }
 
     public void generar(PersonalDataExport datos, OutputStream salida) {
         Document documento = new Document(PageSize.A4, 36, 36, 36, 36);
@@ -58,7 +68,7 @@ public class PersonalDataPdfGenerator {
         PersonalDataExport.Persona p = datos.persona();
         Horas en = new Horas(ZoneId.of(p.zonaHoraria()));
 
-        documento.add(new Paragraph("Tus datos en NX Time", TITULO));
+        documento.add(new Paragraph("Tus datos en " + servicio.producto(), TITULO));
         documento.add(new Paragraph("Generado el " + en.fechaHora(datos.generadoEn())
                 + ". Contiene lo mismo que el fichero JSON de la misma exportación.", SUAVE));
 
@@ -205,13 +215,15 @@ public class PersonalDataPdfGenerator {
         tabla.setHeaderRows(1);
         for (String cabecera : cabeceras) {
             PdfPCell celda = new PdfPCell(new Phrase(cabecera, CABECERA));
-            celda.setBackgroundColor(AZUL);
+            celda.setBackgroundColor(PRIMARIO);
+            celda.setBorderColor(PRIMARIO);
             celda.setPadding(4);
             tabla.addCell(celda);
         }
         for (T fila : filas) {
             for (String valor : celdas.apply(fila)) {
                 PdfPCell celda = new PdfPCell(new Phrase(texto(valor), CELDA));
+                celda.setBorderColor(BORDE);
                 celda.setPadding(3);
                 celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
                 tabla.addCell(celda);
@@ -229,10 +241,12 @@ public class PersonalDataPdfGenerator {
 
     private void fila(PdfPTable tabla, String etiqueta, String valor) {
         PdfPCell izquierda = new PdfPCell(new Phrase(etiqueta, CABECERA));
-        izquierda.setBackgroundColor(AZUL);
+        izquierda.setBackgroundColor(PRIMARIO);
+        izquierda.setBorderColor(PRIMARIO);
         izquierda.setPadding(4);
         tabla.addCell(izquierda);
         PdfPCell derecha = new PdfPCell(new Phrase(texto(valor), CELDA));
+        derecha.setBorderColor(BORDE);
         derecha.setPadding(4);
         tabla.addCell(derecha);
     }

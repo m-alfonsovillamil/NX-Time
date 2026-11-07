@@ -27,7 +27,7 @@ class BotonDelCorreoTest {
         Map<String, Object> variables = new HashMap<>();
         variables.put("nombreDestinatario", "Ana");
 
-        Map<String, Object> con = conWeb("https://nxtime-web.com/").conBoton("signature-reminder", variables);
+        Map<String, Object> con = conWeb("https://nxtime-web.com/").completar("signature-reminder", variables);
 
         assertThat(con).containsEntry("botonUrl", "https://nxtime-web.com/firmas")
                 .containsEntry("botonTexto", "Firmar mi registro")
@@ -62,13 +62,13 @@ class BotonDelCorreoTest {
         EmailSender sender = conWeb("https://nxtime-web.com");
         for (String plantilla : List.of("access-code-welcome", "access-code-recovery", "access-code-confirm",
                 "second-factor", "account-already-exists", "sso-linked", "deletion-executed")) {
-            assertThat(sender.conBoton(plantilla, Map.of())).as(plantilla).doesNotContainKey("botonUrl");
+            assertThat(sender.completar(plantilla, Map.of())).as(plantilla).doesNotContainKey("botonUrl");
         }
     }
 
     @Test
     @DisplayName("Sin web configurada no hay botón (no se inventa una dirección)")
     void sinWebNoHayBoton() {
-        assertThat(conWeb("").conBoton("signature-reminder", Map.of())).doesNotContainKey("botonUrl");
+        assertThat(conWeb("").completar("signature-reminder", Map.of())).doesNotContainKey("botonUrl");
     }
 }
