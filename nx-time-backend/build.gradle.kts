@@ -84,6 +84,16 @@ dependencies {
     // despliegue con credencial se cayó con ClassNotFoundException (26/09/2026).
     // Misma versión que el google-http-client que trae firebase-admin.
     implementation("com.google.http-client:google-http-client-jackson2:2.2.0")
+    // Guava llega de rebote por firebase-admin (api-common) en la 33.6.0, que
+    // tiene un fallo alto (alerta 24 de Dependabot: deserializar CompactHashMap
+    // y compañía reserva memoria sin límite). El backend no deserializa con
+    // ObjectInputStream, pero se sube igual hasta que firebase-admin la traiga
+    // por sí mismo; entonces esta restricción sobra y se puede quitar.
+    constraints {
+        implementation("com.google.guava:guava:33.7.2-jre") {
+            because("fallo de deserialización en Guava < 33.7.2 (alerta 24 de Dependabot)")
+        }
+    }
 
     // Caché (Fase 10): Caffeine como implementación. Se usa para el
     // calendario laboral (ver HolidayCalendar) -- los festivos cambian
