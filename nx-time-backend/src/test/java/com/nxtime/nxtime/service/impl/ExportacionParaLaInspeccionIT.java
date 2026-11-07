@@ -94,7 +94,8 @@ class ExportacionParaLaInspeccionIT {
         Company empresa = companyRepository.save(Company.builder().nombre("Inspección " + System.nanoTime()).build());
         User rrhh = persona(empresa, "Rrhh", Role.RRHH);
         User ana = persona(empresa, "Ana", Role.EMPLEADO);
-        // Dos personas que se llaman igual: el ZIP no puede tener dos entradas iguales.
+        // Dos personas que se llaman igual, con apellidos y todo: el ZIP no
+        // puede tener dos entradas iguales. El fichero va con nombre y apellidos.
         User otraAna = persona(empresa, "Ana", Role.EMPLEADO);
         YearMonth enero = YearMonth.of(2026, 1);
         YearMonth febrero = YearMonth.of(2026, 2);
@@ -118,9 +119,10 @@ class ExportacionParaLaInspeccionIT {
 
         assertThat(zip.keySet()).contains(
                 "LEEME.txt", "horas-2026-01.xlsx", "horas-2026-02.xlsx",
-                "registros/2026-01/ana.pdf", "registros/2026-01/ana-2.pdf", "registros/2026-02/ana.pdf",
+                "registros/2026-01/ana-pruebas.pdf", "registros/2026-01/ana-pruebas-2.pdf",
+                "registros/2026-02/ana-pruebas.pdf",
                 "correcciones.csv", "firmas.csv");
-        assertThat(new String(zip.get("registros/2026-01/ana.pdf"), 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertThat(new String(zip.get("registros/2026-01/ana-pruebas.pdf"), 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         // Un .xlsx es un ZIP: empieza por PK.
         assertThat(new String(zip.get("horas-2026-01.xlsx"), 0, 2, StandardCharsets.US_ASCII)).isEqualTo("PK");
         String correcciones = new String(zip.get("correcciones.csv"), StandardCharsets.UTF_8);

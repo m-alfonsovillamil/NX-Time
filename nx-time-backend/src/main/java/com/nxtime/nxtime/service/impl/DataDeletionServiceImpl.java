@@ -161,7 +161,7 @@ public class DataDeletionServiceImpl implements DataDeletionService {
     @Override
     public List<DeletionCandidate> candidatos(User actor) {
         return repository.findCandidatos(actor.getEmpresa().getId(), actor.getId()).stream()
-                .map(u -> new DeletionCandidate(u.getId(), nombreCompleto(u), u.getEmail(), u.isActivo()))
+                .map(u -> new DeletionCandidate(u.getId(), u.nombreCompleto(), u.getEmail(), u.isActivo()))
                 .toList();
     }
 
@@ -353,7 +353,7 @@ public class DataDeletionServiceImpl implements DataDeletionService {
         return new DeletionResponse(
                 solicitud.getId(),
                 persona.getId(),
-                nombreCompleto(persona),
+                persona.nombreCompleto(),
                 persona.getEmail(),
                 solicitud.getEstado().name(),
                 solicitud.getMotivo(),
@@ -381,12 +381,6 @@ public class DataDeletionServiceImpl implements DataDeletionService {
         ZoneId zona = Company.zonaDe(solicitud.getEmpresa());
         LocalDate limite = solicitud.getCreadaEn().atZone(zona).toLocalDate().plusMonths(1);
         return ChronoUnit.DAYS.between(LocalDate.now(clock.withZone(zona)), limite);
-    }
-
-    private static String nombreCompleto(User persona) {
-        return persona.getApellidos() == null || persona.getApellidos().isBlank()
-                ? persona.getNombre()
-                : persona.getNombre() + " " + persona.getApellidos();
     }
 
     private static String vacioComoNulo(String texto) {

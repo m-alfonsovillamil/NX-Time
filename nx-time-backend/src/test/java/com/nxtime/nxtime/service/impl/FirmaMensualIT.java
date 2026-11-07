@@ -350,7 +350,10 @@ class FirmaMensualIT {
 
         assertThat(enElInforme).isNotNull();
         assertThat(enElInforme.hash()).isEqualTo(firma.hash());
-        assertThat(enElInforme.firmadaPor()).isEqualTo("Ana");
+        // Con apellidos: es el registro de jornada, y dos «Ana» no se pueden confundir.
+        assertThat(enElInforme.firmadaPor()).isEqualTo("Ana Prueba");
+        assertThat(reportService.informeDeEmpleado(rrhh.getEmail(), ana.getId(), MARZO).nombreEmpleado())
+                .isEqualTo("Ana Prueba");
     }
 
     // ------------------------------------------------------------------

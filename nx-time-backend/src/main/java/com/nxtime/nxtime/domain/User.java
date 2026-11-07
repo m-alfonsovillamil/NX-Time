@@ -188,6 +188,16 @@ public class User {
         return Company.zonaDe(empresa);
     }
 
+    /**
+     * Nombre y apellidos, o solo el nombre si no tiene apellidos. Es lo que va
+     * en los documentos (el registro de jornada, el Excel de la empresa): con
+     * solo el nombre, dos «Ana» de la misma plantilla no se distinguían.
+     * Antes había cuatro copias de esto repartidas por los servicios.
+     */
+    public String nombreCompleto() {
+        return apellidos == null || apellidos.isBlank() ? nombre : nombre + " " + apellidos.strip();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

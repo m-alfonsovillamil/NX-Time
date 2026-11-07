@@ -219,11 +219,11 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
             porPersona.merge(firma.getUsuario().getId(), firma, MonthlySignatureServiceImpl::laQueCuenta);
         }
         return userRepository.findByEmpresaAndActivoTrue(actor.getEmpresa()).stream()
-                .sorted(Comparator.comparing(MonthlySignatureServiceImpl::nombreCompleto))
+                .sorted(Comparator.comparing(User::nombreCompleto))
                 .map(persona -> {
                     MonthlySignature firma = porPersona.get(persona.getId());
                     String estado = firma == null ? "SIN_FIRMAR" : firma.getEstado().name();
-                    return new TeamSignatureResponse(persona.getId(), nombreCompleto(persona), estado,
+                    return new TeamSignatureResponse(persona.getId(), persona.nombreCompleto(), estado,
                             firma == null ? null : toResponse(firma));
                 })
                 .toList();
@@ -372,17 +372,11 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
         return mes.atDay(1).atStartOfDay(zona).toInstant();
     }
 
-    private static String nombreCompleto(User persona) {
-        return persona.getApellidos() == null || persona.getApellidos().isBlank()
-                ? persona.getNombre()
-                : persona.getNombre() + " " + persona.getApellidos();
-    }
-
     static MonthlySignatureResponse toResponse(MonthlySignature firma) {
         return new MonthlySignatureResponse(
                 firma.getId(),
                 firma.getUsuario().getId(),
-                nombreCompleto(firma.getUsuario()),
+                firma.getUsuario().nombreCompleto(),
                 firma.getAnio(),
                 firma.getMes(),
                 firma.getEstado(),
@@ -392,7 +386,7 @@ public class MonthlySignatureServiceImpl implements MonthlySignatureService {
                 firma.getFirmadaEn(),
                 firma.getInvalidadaEn(),
                 firma.getMotivoInvalidacion(),
-                firma.getVisadaPor() == null ? null : nombreCompleto(firma.getVisadaPor()),
+                firma.getVisadaPor() == null ? null : firma.getVisadaPor().nombreCompleto(),
                 firma.getVisadaEn());
     }
 }

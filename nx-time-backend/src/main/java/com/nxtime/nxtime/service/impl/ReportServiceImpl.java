@@ -116,16 +116,16 @@ public class ReportServiceImpl implements ReportService {
                 .findByUsuario_IdAndAnioAndMesAndEstado(
                         empleado.getId(), mes.getYear(), mes.getMonthValue(), MonthlySignatureStatus.VIGENTE)
                 .map(vigente -> new MonthlyReport.FirmaDelInforme(
-                        empleado.getNombre(),
+                        empleado.nombreCompleto(),
                         vigente.getFirmadaEn(),
                         vigente.getHash(),
-                        vigente.getVisadaPor() == null ? null : vigente.getVisadaPor().getNombre(),
+                        vigente.getVisadaPor() == null ? null : vigente.getVisadaPor().nombreCompleto(),
                         vigente.getVisadaEn()))
                 .orElse(null);
 
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
-                empleado.getNombre(),
+                empleado.nombreCompleto(),
                 mes,
                 fichajes.stream().map(fichaje -> aFila(fichaje, zona)).toList(),
                 firma,
@@ -150,7 +150,7 @@ public class ReportServiceImpl implements ReportService {
         long segundosNetos = segundosBrutos - fichaje.getSegundosPausaAcumulados();
 
         return new ReportRow(
-                fichaje.getUsuario().getNombre(),
+                fichaje.getUsuario().nombreCompleto(),
                 entrada.toLocalDate(),
                 entrada.toLocalTime().withSecond(0).withNano(0),
                 salida.toLocalTime().withSecond(0).withNano(0),
