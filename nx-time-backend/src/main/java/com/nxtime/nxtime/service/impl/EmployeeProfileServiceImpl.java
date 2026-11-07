@@ -268,7 +268,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.getEmail(),
                 usuario.getNombre(),
                 usuario.getApellidos(),
-                nombreCompleto(usuario),
+                usuario.nombreCompleto(),
                 iniciales(usuario),
                 puedeVerLaFechaDeNacimiento(usuario, actor) ? usuario.getFechaNacimiento() : null,
                 usuario.getPuesto(),
@@ -279,13 +279,6 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.getHorasSemanales(),
                 dias,
                 operadores.authoritiesDe(usuario));
-    }
-
-    private static String nombreCompleto(User usuario) {
-        String apellidos = usuario.getApellidos();
-        return apellidos == null || apellidos.isBlank()
-                ? usuario.getNombre()
-                : usuario.getNombre() + " " + apellidos;
     }
 
     /**

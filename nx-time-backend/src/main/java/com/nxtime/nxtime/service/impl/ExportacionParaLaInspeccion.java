@@ -191,7 +191,7 @@ public class ExportacionParaLaInspeccion {
         return String.join("\r\n",
                 "Registro de jornada de " + actor.getEmpresa().getNombre() + ", de " + desde + " a " + hasta + ".",
                 "Exportado el " + FECHA_HORA.format(Instant.now().atZone(actor.zona())) + " por "
-                        + actor.getNombre() + ", para la Inspección de Trabajo o la representación legal",
+                        + actor.nombreCompleto() + ", para la Inspección de Trabajo o la representación legal",
                 "de las personas trabajadoras (art. 34.9 del Estatuto de los Trabajadores).",
                 "",
                 "horas-AAAA-MM.xlsx   Todas las jornadas cerradas del mes, de toda la plantilla, con sus totales.",

@@ -369,7 +369,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .sorted(Comparator.comparing(User::getNombre, String.CASE_INSENSITIVE_ORDER))
                 .map(persona -> new TeamScheduleEntryResponse(
                         persona.getId(),
-                        nombreCompleto(persona),
+                        persona.nombreCompleto(),
                         toResponse(jornadaTeoricaService.dia(persona, fecha))))
                 .toList();
     }
@@ -393,7 +393,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
         eventPublisher.publishEvent(new NotificationEvents.ScheduleDiffersFromContract(
                 actor.getEmpresa().getId(),
-                nombreCompleto(persona),
+                persona.nombreCompleto(),
                 plantilla.getNombre(),
                 minutosPlantilla,
                 minutosContrato,
@@ -516,13 +516,6 @@ public class ScheduleServiceImpl implements ScheduleService {
         return texto.isEmpty() ? texto : Character.toUpperCase(texto.charAt(0)) + texto.substring(1);
     }
 
-    private static String nombreCompleto(User persona) {
-        String apellidos = persona.getApellidos();
-        return apellidos == null || apellidos.isBlank()
-                ? persona.getNombre()
-                : persona.getNombre() + " " + apellidos;
-    }
-
     // ------------------------------------------------------------------
     // A DTO
     // ------------------------------------------------------------------
@@ -543,7 +536,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         return new ScheduleAssignmentResponse(
                 asignacion.getId(),
                 asignacion.getUsuario().getId(),
-                nombreCompleto(asignacion.getUsuario()),
+                asignacion.getUsuario().nombreCompleto(),
                 asignacion.getPlantilla().getId(),
                 asignacion.getPlantilla().getNombre(),
                 asignacion.getFechaInicio(),
