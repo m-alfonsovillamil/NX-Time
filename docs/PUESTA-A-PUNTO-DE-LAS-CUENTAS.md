@@ -12,7 +12,7 @@ código. Paso a paso y en orden.
 
 | Parte | Tiempo | Cuándo |
 |---|---|---|
-| 1. Vigilancia externa (UptimeRobot) | 10 min | Cuando sea |
+| 1. Vigilancia externa (UptimeRobot) | Hecho (7/11) | — |
 | 2. Sacar los `.env` de OneDrive | 10 min | Antes que el 3 |
 | 3. Segundo factor en todas las cuentas | 30 min | **Antes** de rotar: que los secretos nuevos caigan en cuentas protegidas |
 | 4. Rotar los secretos, de uno en uno | 45 min | Con calma, comprobando después de cada uno |
@@ -54,6 +54,10 @@ avisa de que el servicio entero esté caído. Esto sí.
 4. *Alert contacts*: el correo, y la app del móvil si se quiere.
 5. Opcional: una *Status page* pública con los dos monitores, para dar a las
    empresas.
+
+**Hecho el 7/11/2026** con los dos monitores, cada 5 minutos y con aviso por
+correo. En el de la salud, la palabra es `"status":"UP"` entera y con
+mayúsculas exactas, para no fiarse de que `UP` salga en otro sitio.
 
 Un aviso de caída de un minuto que se arregla solo suele ser un arranque en frío
 de Render (`DESPLIEGUE.md`, apartado 4). Si se repite, es el momento del plan de
