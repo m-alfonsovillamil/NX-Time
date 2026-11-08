@@ -174,7 +174,7 @@ está dentro no lo nota.
 > ese correo no sale **el alta falla con un 503** en vez de dejar una cuenta en la
 > que nadie puede entrar. Sin SMTP no se pueden dar altas ni recuperar contraseñas.
 
-#### Dos trampas que ya han costado días, en este orden
+#### Tres trampas que ya han costado días, en este orden
 
 **1. Render bloquea la salida por el puerto 587** en el plan gratuito, y Gmail no
 ofrece otro. No es la contraseña ni el código: desde tu PC funciona y desde Render
@@ -206,6 +206,23 @@ SMTP y **después lo descarta**. Esto tiró todos los correos durante cuatro dí
 > proveedor**: en Brevo, *Transaccional → Logs*, una fila con **dos eventos
 > ("Enviado" y "Error") no se ha entregado**, y el contador "Entregado" de
 > *Tiempo real* lo canta de un vistazo.
+
+**3. Brevo bloquea las IP que no estén autorizadas** (*Seguridad* → *IP
+autorizadas*, activado para las claves SMTP). Con la lista vacía rechaza todo con
+un `535 Authentication failed`, **con la clave buena**, y en el log de Render sale
+`No se pudo enviar el correo …: Authentication failed`; en Brevo, la IP de
+Render aparece en «Direcciones IP no autorizadas». Pasó el 8/11/2026 al rotar la
+clave. Hay que autorizar los rangos de salida de Render (panel del servicio →
+*Connect* → *Outbound*), que hoy son:
+
+```
+74.220.51.0/24
+74.220.59.0/24
+```
+
+Brevo acepta rangos CIDR. Si Render los cambia o el servicio se mueve de región,
+hay que autorizar los nuevos. No hace falta la IP de casa: el correo solo sale
+del backend.
 
 Para un piloto basta el plan gratuito de **Brevo**. Un remitente `@gmail.com`
 verificado funciona, pero Brevo reescribe el remitente a un subdominio suyo
@@ -371,8 +388,10 @@ https://api.nxtime-web.com/auth/sso/microsoft/vuelta
 > cambian a menudo: si no aparece alguno, lo que hay que encontrar es lo que
 > dice cada paso, no el rótulo.
 
-**Google** (<https://console.cloud.google.com>, vale el mismo proyecto de
-Firebase):
+**Google** (<https://console.cloud.google.com>; valdría el mismo proyecto de
+Firebase, pero el cliente de producción, «nxtime-web.com», está en el proyecto
+**`nx-time`**). Para rotar su secreto sin cortar el SSO: *Add secret*, poner el
+nuevo en Render, desplegar, probar y después inhabilitar y borrar el viejo.
 
 1. *APIs y servicios* → *Pantalla de consentimiento de OAuth*. Tipo **Externo**.
    Nombre «NX Time», un correo de asistencia y `nxtime-web.com` como dominio

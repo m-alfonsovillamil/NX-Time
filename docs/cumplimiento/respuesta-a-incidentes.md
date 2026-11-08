@@ -31,12 +31,12 @@ personales». A ENISA: la plataforma única de notificación del CRA.
 
 | Secreto | Dónde vive | Cómo se rota | Efecto |
 |---|---|---|---|
-| `JWT_SECRET` | Render | Generar otro (`openssl rand -base64 64`) y desplegar | Todas las sesiones caen a los 15 min como mucho |
+| `JWT_SECRET` | Render | Generar otro (`openssl rand -base64 64`) y desplegar | Los tokens de acceso dejan de valer; las sesiones siguen (el refresco no depende de él). Invalida las tarjetas QR del kiosco |
 | Contraseña de `nxtime_app` | Neon + `DATABASE_URL` en Render | Neon → Roles → Reset; actualizar Render | Reinicio del servicio |
 | Contraseña de `neondb_owner` | Neon + `.env.local` (fuera de OneDrive) | Neon → Roles → Reset | Afecta a las migraciones y a las copias |
 | Clave SMTP de Brevo | Render (`MAIL_PASSWORD`) | Brevo → SMTP & API → nueva clave; borrar la vieja | Correos parados hasta actualizarla |
 | Cuenta de servicio de Firebase | Render (`FIREBASE_CREDENTIALS_JSON`) | Google Cloud → IAM → cuentas de servicio → nueva clave; borrar la vieja | Push parado hasta actualizarla |
-| Secreto del cliente OAuth de Google / Microsoft | Render | Consola del proveedor → nuevo secreto | SSO parado hasta actualizarlo |
+| Secreto del cliente OAuth de Google / Microsoft | Render | Consola del proveedor (Google: proyecto `nx-time`) → añadir secreto, desplegar, probar y borrar el viejo | Ninguno si se hace en ese orden: los dos valen a la vez |
 | DSN de Sentry | Render y la app | Sentry → Client Keys → revocar y crear | Los informes de la app vieja se pierden |
 | Frase de las copias | `%LOCALAPPDATA%\NX Time` + gestor de contraseñas | Crear otra; las copias viejas siguen necesitando la vieja | — |
 | Clave de firma de la app | Fuera del repositorio (ver `DESPLIEGUE.md`) | No se rota: si se pierde, otra app | Grave: guardarla bien |
@@ -44,7 +44,7 @@ personales». A ENISA: la plataforma única de notificación del CRA.
 | Token de R2 | GitHub (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) | Cloudflare → R2 → *Manage API tokens* → nuevo; borrar el viejo | La copia diaria falla hasta actualizarlo |
 | `COPIA_DATABASE_URL` | GitHub | Lleva la contraseña de `neondb_owner`: rotarla con ella | — |
 | Contraseña de la cuenta de demostración | `.env.local` | Cambiarla desde la propia cuenta | Solo la demo |
-| `NEON_API_KEY` (GitHub) y token de Neon AI Gateway (`.env.local`) | GitHub y `.env.local` | **No los usa nada**: revocarlos en Neon y borrar el secreto | — |
+| Token de Neon AI Gateway | `.env.local` | **No lo usa nada**: revocarlo en Neon (`NEON_API_KEY` y la integración con GitHub se quitaron el 8/11/2026) | — |
 
 ## 3. Valorar
 

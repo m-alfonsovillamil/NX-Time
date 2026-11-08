@@ -9,13 +9,20 @@ código. Paso a paso y en orden.
 > Cambiar una variable en Render vuelve a desplegar, y lo que se despliega es
 > `main`: si `main` va por delante de producción, cambiar una contraseña sacaría
 > también todo lo que estaba pendiente.
+>
+> **Guardar no siempre despliega.** Según el botón que se pulse al guardar
+> («Save only» o «Save and deploy»), el valor nuevo puede quedarse guardado sin
+> aplicarse, y el servicio sigue con el viejo. Después de cada cambio, mirar
+> *Events*: si no aparece «Deploy started», lanzar *Manual Deploy* → *Deploy
+> latest commit*. El distintivo «Live» de la cabecera no sirve para saberlo: es
+> el del despliegue anterior.
 
 | Parte | Tiempo | Cuándo |
 |---|---|---|
 | 1. Vigilancia externa (UptimeRobot) | Hecho (7/11) | — |
-| 2. Sacar los `.env` de OneDrive | 10 min | Antes que el 3 |
-| 3. Segundo factor en todas las cuentas | 30 min | **Antes** de rotar: que los secretos nuevos caigan en cuentas protegidas |
-| 4. Rotar los secretos, de uno en uno | 45 min | Con calma, comprobando después de cada uno |
+| 2. Sacar los `.env` de OneDrive | Hecho (8/11) | — |
+| 3. Segundo factor en todas las cuentas | Hecho (8/11) | — |
+| 4. Rotar los secretos, de uno en uno | Hecho (8/11), salvo el token de Neon AI Gateway | — |
 | 5. Conexión a Neon con `verify-full` | 5 min | Con la 4 (también toca la `DATABASE_URL`) |
 | 6. Proteger `main` en GitHub | Hecho (6/11) | — |
 | 7. Neon, Firebase, Sentry y Cloudflare | 30 min | Cuando sea |
@@ -117,9 +124,16 @@ $b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create
 
 1. **Lo que no se usa, fuera**: el secreto `NEON_API_KEY` de GitHub (*Settings*
    → *Secrets* → *Actions*) y el token de Neon AI Gateway de `.env.local`
-   (revocarlo en Neon). Ningún workflow ni el código los usa.
-2. **`JWT_SECRET`** en Render → *Save and deploy*. Todas las sesiones se cierran
-   en 15 minutos como mucho: hacerlo a una hora tranquila.
+   (revocarlo en Neon). Ningún workflow ni el código los usa. `NEON_API_KEY` lo
+   creó la integración de Neon con GitHub: quitarla en Neon (*Integrations* →
+   GitHub → *Remove*) borra también su clave.
+2. **`JWT_SECRET`** en Render → *Save and deploy*. **No cierra las sesiones**:
+   los tokens de acceso (15 min) dejan de valer, pero la web y la app piden otro
+   con el de refresco, que es un valor aleatorio guardado en la base y no depende
+   de este secreto. Basta para que un `JWT_SECRET` filtrado deje de servir para
+   falsificar tokens. Lo que sí deja sin valor son las **tarjetas QR del
+   kiosco**, firmadas con una clave que se deriva de él (ADR 033): si hay
+   impresas, RRHH tiene que regenerarlas.
 3. **Contraseña de `nxtime_app`**: Neon → *Roles* → *Reset password*. Después:
    - Render → `DATABASE_PASSWORD`;
    - `.env.local` → `PGPASSWORD`.
@@ -129,13 +143,24 @@ $b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create
    - `.env.local` → `DATABASE_URL` y `DATABASE_URL_UNPOOLED`.
 
    Luego, *Actions* → «Copia diaria» → *Run workflow*: tiene que acabar en verde.
-5. **Clave SMTP de Brevo**: Brevo → *SMTP & API* → nueva clave → Render
+5. **Clave SMTP de Brevo**: Brevo → *SMTP & API* → nueva clave (variante
+   estándar; caduca a la fecha elegida **y a los 90 días sin uso**) → Render
    `MAIL_PASSWORD` → borrar la vieja en Brevo. Probar con un «He olvidado mi
-   contraseña» a una cuenta propia, y mirar el registro de Brevo si no llega.
-6. **Clave de la cuenta de servicio de Firebase**: Google Cloud → *IAM* →
-   *Cuentas de servicio* → nueva clave JSON → Render `FIREBASE_CREDENTIALS_JSON`
-   → borrar la vieja. Probar con una notificación al móvil.
-7. **Secreto OAuth de Google**, solo si llegó a crearse.
+   contraseña» a una cuenta propia, y mirar el registro de Brevo si no llega. Si
+   el backend registra `Authentication failed` con la clave buena, Brevo está
+   bloqueando la IP de Render: ver «Correo» en `DESPLIEGUE.md`.
+6. **Clave de la cuenta de servicio de Firebase**: consola de Firebase →
+   *Configuración del proyecto* → *Cuentas de servicio* → *Generar nueva clave
+   privada* → en base64 a Render `FIREBASE_CREDENTIALS_JSON` → borrar el JSON
+   descargado. En el arranque tiene que salir «Push activado». Después, Google
+   Cloud → *IAM* → *Cuentas de servicio* → `firebase-adminsdk-…` → *Claves*:
+   borrar todas menos la nueva.
+7. **Secreto OAuth de Google** (el SSO está activo en producción). El cliente
+   «nxtime-web.com» está en el proyecto de Google Cloud **`nx-time`**, no en el
+   de Firebase. Google admite dos secretos a la vez, así que se rota sin cortar:
+   *Add secret* → Render `SSO_GOOGLE_CLIENT_SECRET` → desplegar → entrar con
+   Google en una ventana de incógnito → inhabilitar el viejo, volver a probar y
+   borrarlo.
 8. **Contraseña de la cuenta de demostración**: desde la propia cuenta.
 
 ## 5. Conexión a Neon con `verify-full`
