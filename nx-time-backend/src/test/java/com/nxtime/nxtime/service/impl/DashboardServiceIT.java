@@ -205,6 +205,27 @@ class DashboardServiceIT {
     }
 
     @Test
+    @DisplayName("Quien se dio de baja con horas este mes sale en la gráfica, marcado, y no en los empleados activos")
+    void panelEmpresa_marcaAQuienEstaDeBaja() {
+        Company empresa = crearEmpresa("Bajas SL");
+        User gestor = crearUsuario(empresa, "gestor.bajas@nxtime.test", Role.GESTOR);
+        User sigue = crearUsuario(empresa, "sigue@nxtime.test", Role.EMPLEADO);
+        User seFue = crearUsuario(empresa, "sefue@nxtime.test", Role.EMPLEADO);
+        jornadaDeHoy(sigue, 13, 0);
+        jornadaDeHoy(seFue, 18, 0);
+        seFue.setActivo(false);
+        userRepository.save(seFue);
+
+        CompanyDashboardResponse resumen = dashboardService.getCompanyDashboard(gestor.getEmail());
+
+        assertThat(resumen.empleadosActivos()).isEqualTo(1);
+        assertThat(resumen.horasPorEmpleado()).extracting(EmployeeHoursDTO::usuarioId, EmployeeHoursDTO::activo)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(seFue.getId(), false),
+                        org.assertj.core.groups.Tuple.tuple(sigue.getId(), true));
+    }
+
+    @Test
     @DisplayName("El panel de una empresa no incluye horas de otra (aislamiento multi-tenant)")
     void panelEmpresa_noMezclaEmpresas() {
         Company mia = crearEmpresa("Mia SL");

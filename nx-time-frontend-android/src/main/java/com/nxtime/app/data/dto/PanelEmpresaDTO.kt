@@ -21,7 +21,14 @@ data class PanelEmpresaDTO(
 data class HorasEmpleadoDTO(
     val usuarioId: Long,
     val nombre: String,
-    val minutos: Long
+    val minutos: Long,
+    /**
+     * `false` si ya está de baja: sale porque trabajó este mes. Anulable a
+     * propósito: un backend anterior no lo manda, y Gson no aplica los valores
+     * por defecto de Kotlin (crea el objeto sin constructor), así que un
+     * `Boolean` a secas llegaría a `false` y todos saldrían de baja.
+     */
+    val activo: Boolean? = null
 )
 
 /** Cuerpo de `PATCH /api/v1/gestor/empleados/{id}/estado`. */

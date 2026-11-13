@@ -48,8 +48,8 @@ const PANEL = {
   horasExtraAbiertas: 7,
   denunciasAbiertas: 1,
   horasPorEmpleado: [
-    { usuarioId: 2, nombre: 'Javier', minutos: 9000 },
-    { usuarioId: 3, nombre: 'Ana', minutos: 6000 },
+    { usuarioId: 2, nombre: 'Javier', minutos: 9000, activo: true },
+    { usuarioId: 3, nombre: 'Ana', minutos: 6000, activo: false },
   ],
 };
 
@@ -73,6 +73,9 @@ describe('panel de empresa', () => {
     // Las denuncias son de quien instruye (ADMIN): un GESTOR no las ve contadas.
     expect(screen.queryByText(E.denuncias)).toBeNull();
     expect(screen.getByText(E.mediaEquipo('125h 00m'))).toBeTruthy();
+    // Ana se dio de baja este mes: sale, marcada, y Javier no.
+    expect(screen.getByText(E.deBaja('Ana'))).toBeTruthy();
+    expect(screen.getByText('Javier')).toBeTruthy();
     expect(await screen.findByText('2,5 %')).toBeTruthy();
     expect(screen.getByText(/Ingeniería$/)).toBeTruthy();
   });

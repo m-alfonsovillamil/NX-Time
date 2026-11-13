@@ -119,7 +119,11 @@ export function PanelEmpresa() {
                     <Barras
                       filas={[...horas]
                         .sort((a, b) => (b.minutos ?? 0) - (a.minutos ?? 0))
-                        .map((h) => ({ clave: h.usuarioId ?? 0, texto: h.nombre ?? '', valor: h.minutos ?? 0 }))}
+                        .map((h) => ({
+                          clave: h.usuarioId ?? 0,
+                          texto: h.activo === false ? E.deBaja(h.nombre ?? '') : (h.nombre ?? ''),
+                          valor: h.minutos ?? 0,
+                        }))}
                       media={media}
                     />
                     <p className="nx-sutil">{E.mediaEquipo(minutos(media))}</p>

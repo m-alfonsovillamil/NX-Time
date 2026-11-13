@@ -411,7 +411,7 @@ private fun Indicadores(estado: PanelEmpresaUiState) {
 
         panel.horasPorEmpleado.forEach { fila ->
             BarraDeHoras(
-                etiqueta = fila.nombre,
+                etiqueta = if (fila.activo == false) stringResource(R.string.empresa_de_baja, fila.nombre) else fila.nombre,
                 minutos = fila.minutos,
                 proporcion = fila.minutos.toFloat() / tope,
                 proporcionMedia = media.toFloat() / tope,
