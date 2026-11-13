@@ -157,6 +157,11 @@ private fun BotonesResolucion(
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = androidx.compose.material3.MaterialTheme.colorScheme.error
             ),
+            // El borde también en rojo: el gris por defecto lo dejaba a medias.
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                androidx.compose.material3.MaterialTheme.colorScheme.error.copy(alpha = if (habilitados) 1f else 0.38f)
+            ),
             modifier = Modifier.weight(1f)
         ) {
             Text(stringResource(R.string.pendientes_rechazar))

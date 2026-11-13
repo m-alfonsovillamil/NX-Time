@@ -30,7 +30,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -264,8 +263,10 @@ fun FicharScreen(
 
             if (estado.estado != EstadoJornada.SIN_JORNADA) {
                 // En pausa no hace falta: el botón grande es el que reanuda.
+                // Tonal, como «Solicitar ausencia»: el perfilado va en gris en
+                // Material 3 y sobre el degradado parecía desactivado.
                 if (estado.estado == EstadoJornada.TRABAJANDO) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = viewModel::pulsarBotonPausa,
                         enabled = !estado.cargando,
                         modifier = Modifier
@@ -581,7 +582,7 @@ private fun DialogoDeModalidad(ultima: Modalidad?, onElegir: (Modalidad) -> Unit
                 Button(onClick = { onElegir(primera) }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(textoDeModalidad(primera)))
                 }
-                OutlinedButton(onClick = { onElegir(segunda) }, modifier = Modifier.fillMaxWidth()) {
+                FilledTonalButton(onClick = { onElegir(segunda) }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(textoDeModalidad(segunda)))
                 }
             }

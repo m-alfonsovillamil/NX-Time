@@ -31,7 +31,19 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.Devices
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.size
+import com.nxtime.app.ui.components.FilaDeTarjeta
+import com.nxtime.app.ui.components.TarjetaDeFilas
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -381,28 +393,22 @@ private fun Cuenta(
     onCerrarSesion: () -> Unit,
     onCerrarTodas: () -> Unit
 ) {
-    Tarjeta(stringResource(R.string.ajustes_cuenta)) {
-        OutlinedButton(onClick = onIrContrasena, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.nav_contrasena))
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.nav_cerrar_sesion))
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = onCerrarTodas,
-            enabled = !cerrando,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.ajustes_cerrar_todas))
-        }
-        // Lo que de verdad pasa, dicho antes de pulsar: el access token ya
-        // emitido vale hasta que caduque, así que no es un corte inmediato.
-        Text(
-            text = stringResource(R.string.ajustes_cerrar_todas_detalle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+    /*
+     * Filas con icono y no tres botones perfilados iguales: en gris parecían
+     * desactivados, y «Cerrar sesión» no se distinguía de «Cambiar contraseña»
+     * (revisión de pantallas, 11/2026). Cerrar en todos va en rojo y con lo que
+     * de verdad pasa debajo, dicho antes de pulsar.
+     */
+    TarjetaDeFilas(titulo = stringResource(R.string.ajustes_cuenta)) {
+        FilaDeTarjeta(Icons.Outlined.Key, stringResource(R.string.nav_contrasena), onIrContrasena)
+        FilaDeTarjeta(
+            Icons.AutoMirrored.Outlined.Logout, stringResource(R.string.nav_cerrar_sesion), onCerrarSesion,
+            conFlecha = false, separadorArriba = true
+        )
+        FilaDeTarjeta(
+            Icons.Outlined.Devices, stringResource(R.string.ajustes_cerrar_todas), onCerrarTodas,
+            detalle = stringResource(R.string.ajustes_cerrar_todas_detalle),
+            peligrosa = true, habilitada = !cerrando, separadorArriba = true
         )
     }
 }
@@ -587,18 +593,22 @@ private fun Privacidad(
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = { onDescargar(FormatoDeExportacion.PDF) },
                 enabled = !descargando,
                 modifier = Modifier.weight(1f)
             ) {
+                Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.ajustes_mis_datos_pdf))
             }
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = { onDescargar(FormatoDeExportacion.JSON) },
                 enabled = !descargando,
                 modifier = Modifier.weight(1f)
             ) {
+                Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.ajustes_mis_datos_json))
             }
         }
@@ -628,7 +638,7 @@ private fun Privacidad(
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = onRetirarBorrado,
                 enabled = !enviandoBorrado,
                 modifier = Modifier.fillMaxWidth()
@@ -647,15 +657,15 @@ private fun Privacidad(
                 )
                 Spacer(Modifier.height(8.dp))
             }
+            // En rojo, borde incluido: el borde gris por defecto lo dejaba a medias.
             OutlinedButton(
                 onClick = onPedirBorrado,
                 enabled = !enviandoBorrado,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    stringResource(R.string.ajustes_borrar_datos_pedir),
-                    color = MaterialTheme.colorScheme.error
-                )
+                Text(stringResource(R.string.ajustes_borrar_datos_pedir))
             }
         }
     }

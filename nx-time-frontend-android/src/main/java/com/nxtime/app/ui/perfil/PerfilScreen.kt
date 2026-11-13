@@ -41,7 +41,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.MoreTime
+import androidx.compose.material.icons.outlined.ReportProblem
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material.icons.outlined.WorkOutline
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import com.nxtime.app.ui.components.FilaDeTarjeta
+import com.nxtime.app.ui.components.TarjetaDeFilas
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -190,56 +202,35 @@ fun PerfilScreen(
                     // Sin esta entrada, la única forma de llegar a ellas
                     // sería pulsando el aviso de la campana -- que
                     // caduca en cuanto lo lee.
+                    /*
+                     * Una lista con icono y flecha, como los ajustes de Android,
+                     * y no siete botones perfilados seguidos: en Material 3 van
+                     * en gris, parecían desactivados y no se distinguían unos de
+                     * otros (revisión de pantallas, 11/2026). Ninguno se gatea
+                     * por rol: horas extra, incidencias (sin cuadrante la
+                     * pantalla lo dice), firma, kiosco, el canal de la Ley 2/2023
+                     * y las ofertas son de todo el mundo.
+                     */
                     Spacer(Modifier.height(16.dp))
-                    OutlinedButton(onClick = onIrHorasExtra, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.horas_extra_ver))
+                    TarjetaDeFilas(titulo = stringResource(R.string.perfil_mas_cosas)) {
+                        FilaDeTarjeta(Icons.Outlined.MoreTime, stringResource(R.string.horas_extra_ver), onIrHorasExtra)
+                        FilaDeTarjeta(
+                            Icons.Outlined.ReportProblem, stringResource(R.string.cuadrante_ver_incidencias), onIrIncidencias,
+                            separadorArriba = true
+                        )
+                        FilaDeTarjeta(Icons.Outlined.Draw, stringResource(R.string.firma_ver), onIrFirmas, separadorArriba = true)
+                        FilaDeTarjeta(Icons.Outlined.Badge, stringResource(R.string.kiosco_ver), onIrKiosco, separadorArriba = true)
+                        FilaDeTarjeta(Icons.Outlined.WorkOutline, stringResource(R.string.ofertas_ver), onIrOfertas, separadorArriba = true)
+                        FilaDeTarjeta(
+                            Icons.Outlined.Campaign, stringResource(R.string.denuncias_ver), onIrDenuncias,
+                            separadorArriba = true
+                        )
                     }
 
-                    // Fase B2. Sin gatear: quien no tiene cuadrante no tiene
-                    // incidencias, y la pantalla lo dice; esconder el botón
-                    // haría inalcanzables las de un cuadrante ya cerrado.
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onIrIncidencias, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.cuadrante_ver_incidencias))
-                    }
-
-                    // Fase B3. Firmar tu registro es tuyo: sin gatear.
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onIrFirmas, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.firma_ver))
-                    }
-
-                    // ADR 033. Sin gatear, como la firma: fichar es de todos los roles.
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onIrKiosco, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.kiosco_ver))
-                    }
-
-                    // Fase G. Sin gatear por rol, y a propósito: el canal
-                    // interno de la Ley 2/2023 lo puede usar todo el
-                    // mundo, y uno al que no llega todo el mundo no es un
-                    // canal. Lo que sí pide permiso es INSTRUIRLO, y eso
-                    // vive en el panel de gestión.
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onIrDenuncias, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.denuncias_ver))
-                    }
-
-                    // Fase H. Tampoco se gatea por rol: optar a una
-                    // vacante interna lo puede todo el mundo, y quien
-                    // ademas las publica llega a eso por el panel de
-                    // gestion, no por aqui.
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(onClick = onIrOfertas, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.ofertas_ver))
-                    }
-
-                    // La tarjeta "Cuenta" se mudó a Ajustes: cambiar la
-                    // contraseña y cerrar sesión son ajustes de la cuenta,
-                    // no datos de la ficha.
-                    Spacer(Modifier.height(24.dp))
-                    OutlinedButton(onClick = onIrAjustes, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.ajustes_abrir))
+                    // Cambiar la contraseña y cerrar sesión viven en Ajustes.
+                    Spacer(Modifier.height(16.dp))
+                    TarjetaDeFilas {
+                        FilaDeTarjeta(Icons.Outlined.Settings, stringResource(R.string.ajustes_abrir), onIrAjustes)
                     }
                     Spacer(Modifier.height(24.dp))
                 }
@@ -345,10 +336,11 @@ private fun DatosLaborales(perfil: PerfilDTO, proyecto: AsignacionProyectoDTO?) 
                 proyecto?.let { "${it.proyectoCodigo} · ${it.proyectoNombre}" }
                     ?: stringResource(R.string.proyectos_sin_proyecto)
             )
-            Dato(stringResource(R.string.perfil_rol), perfil.rol)
+            // «Gestor» y «40 horas», no «GESTOR» y «40.0 horas»: como en la web.
+            Dato(stringResource(R.string.perfil_rol), nombreDeRol(perfil.rol))
             Dato(
                 stringResource(R.string.perfil_jornada),
-                stringResource(R.string.perfil_jornada_valor, perfil.horasSemanales)
+                stringResource(R.string.perfil_jornada_valor, horasLegibles(perfil.horasSemanales))
             )
             Dato(
                 stringResource(R.string.perfil_vacaciones),
@@ -365,6 +357,19 @@ private fun DatosLaborales(perfil: PerfilDTO, proyecto: AsignacionProyectoDTO?) 
         }
     }
 }
+
+@Composable
+private fun nombreDeRol(rol: String?): String? = when (rol) {
+    "EMPLEADO" -> stringResource(R.string.rol_empleado)
+    "GESTOR" -> stringResource(R.string.rol_gestor)
+    "RRHH" -> stringResource(R.string.rol_rrhh)
+    "ADMIN" -> stringResource(R.string.rol_admin)
+    else -> rol
+}
+
+/** «40.0» → «40»; «37.5» → «37,5». Llega como texto con punto decimal. */
+internal fun horasLegibles(horas: String): String =
+    horas.toBigDecimalOrNull()?.stripTrailingZeros()?.toPlainString()?.replace('.', ',') ?: horas
 
 @Composable
 private fun Formulario(estado: PerfilUiState, viewModel: PerfilViewModel) {
@@ -511,11 +516,13 @@ private fun MiCurriculum(
             }
 
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = onElegir,
                 enabled = !subiendo,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                Icon(Icons.Outlined.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
                 Text(
                     stringResource(
                         if (cv == null) R.string.perfil_cv_subir else R.string.perfil_cv_reemplazar
