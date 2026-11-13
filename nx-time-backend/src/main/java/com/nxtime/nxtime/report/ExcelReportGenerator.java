@@ -39,7 +39,10 @@ public class ExcelReportGenerator {
             // Excel por posición de columna no nota el cambio.
             "Código de empleado",
             // Igual, al final (ADR 055). Vacía si la empresa no la pregunta.
-            "Modalidad"
+            "Modalidad",
+            // Al final, por lo mismo (ADR 054): «Sí» si algún fichaje de la
+            // jornada se hizo sin conexión y la hora la midió el móvil.
+            "Sin conexión"
     };
 
     /**
@@ -51,7 +54,7 @@ public class ExcelReportGenerator {
      * contenido real de cada columna -- un nombre completo, una fecha ISO, una
      * hora "HH:mm" -- y son de sobra.
      */
-    private static final int[] ANCHOS = {28, 12, 10, 10, 12, 16, 20, 20, 14};
+    private static final int[] ANCHOS = {28, 12, 10, 10, 12, 16, 36, 20, 14, 14};
 
     /**
      * Filas que se quedan en memoria antes de ir volcándose al disco.
@@ -142,12 +145,14 @@ public class ExcelReportGenerator {
             pausa.setCellValue(linea.segundosPausa() / 60.0);
             pausa.setCellStyle(estiloMinutos);
             fila.createCell(5).setCellValue(linea.duracionLegible());
-            // Se marcan las jornadas que cerró el sistema (Fase 9): son
-            // menos fiables que el resto y hay que poder distinguirlas.
-            fila.createCell(6).setCellValue(linea.incidencia() ? "Cierre automático" : "");
+            // Se marcan las jornadas que cerró el sistema (Fase 9) y las que
+            // llegaron sin conexión pasadas 72 h y nadie ha revisado (ADR
+            // 054): son menos fiables que el resto y hay que poder distinguirlas.
+            fila.createCell(6).setCellValue(linea.textoDeIncidencia());
             // Como texto: «000123» como número perdería los ceros.
             fila.createCell(7).setCellValue(linea.codigoEmpleado() == null ? "" : linea.codigoEmpleado());
             fila.createCell(8).setCellValue(com.nxtime.nxtime.domain.Modalidad.texto(linea.modalidad()));
+            fila.createCell(9).setCellValue(linea.sinConexion() ? "Sí" : "");
         }
         return numeroFila;
     }

@@ -8,6 +8,8 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.ReportRow;
+import com.nxtime.nxtime.domain.OrigenDelFichaje;
+import com.nxtime.nxtime.repository.FichajeRecibidoRepository;
 import com.nxtime.nxtime.repository.MonthlySignatureRepository;
 import com.nxtime.nxtime.repository.TimeEntryRepository;
 import com.nxtime.nxtime.repository.UserRepository;
@@ -17,9 +19,11 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,16 +43,22 @@ public class ReportServiceImpl implements ReportService {
     private final UserRepository userRepository;
     private final MonthlySignatureRepository signatureRepository;
     private final RegistroDeAccesos accesos;
+    private final FichajeRecibidoRepository recibidos;
+
+    /** Cuántos ids van en cada consulta: un informe anual de una empresa grande pasaría del tope de parámetros de PostgreSQL. */
+    static final int IDS_POR_CONSULTA = 1000;
 
     public ReportServiceImpl(
             TimeEntryRepository timeEntryRepository,
             UserRepository userRepository,
             MonthlySignatureRepository signatureRepository,
-            RegistroDeAccesos accesos) {
+            RegistroDeAccesos accesos,
+            FichajeRecibidoRepository recibidos) {
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.signatureRepository = signatureRepository;
         this.accesos = accesos;
+        this.recibidos = recibidos;
     }
 
     @Override
@@ -60,11 +70,12 @@ public class ReportServiceImpl implements ReportService {
                 solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));
         accesos.anotar(solicitante, DatoConsultado.INFORME_EMPRESA, null, "Excel de horas de " + mes);
 
+        Set<Long> sinConexion = conFichajeSinConexion(fichajes);
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 "Todos los empleados",
                 mes,
-                fichajes.stream().map(fichaje -> aFila(fichaje, zona)).toList(),
+                fichajes.stream().map(fichaje -> aFila(fichaje, zona, sinConexion)).toList(),
                 null,
                 zona);
     }
@@ -123,11 +134,12 @@ public class ReportServiceImpl implements ReportService {
                         vigente.getVisadaEn()))
                 .orElse(null);
 
+        Set<Long> sinConexion = conFichajeSinConexion(fichajes);
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 empleado.nombreCompleto(),
                 mes,
-                fichajes.stream().map(fichaje -> aFila(fichaje, zona)).toList(),
+                fichajes.stream().map(fichaje -> aFila(fichaje, zona, sinConexion)).toList(),
                 firma,
                 zona);
     }
@@ -142,7 +154,29 @@ public class ReportServiceImpl implements ReportService {
      * a la hora de la empresa: el informe lo lee una persona allí, no un
      * sistema en UTC.
      */
-    private ReportRow aFila(TimeEntry fichaje, ZoneId zona) {
+    /**
+     * Las jornadas con algún fichaje sin conexión (ADR 054): las que se
+     * abrieron así, y las que recibieron alguno después. Una corrección copia
+     * el origen, así que la jornada nueva sigue marcada si se abrió sin conexión.
+     */
+    private Set<Long> conFichajeSinConexion(List<TimeEntry> fichajes) {
+        Set<Long> marcadas = new HashSet<>();
+        List<Long> ids = new java.util.ArrayList<>(fichajes.size());
+        for (TimeEntry fichaje : fichajes) {
+            if (fichaje.getOrigen() == OrigenDelFichaje.APP_SIN_CONEXION) {
+                marcadas.add(fichaje.getId());
+            } else {
+                ids.add(fichaje.getId());
+            }
+        }
+        for (int desde = 0; desde < ids.size(); desde += IDS_POR_CONSULTA) {
+            marcadas.addAll(recibidos.conFichajeSinConexion(
+                    ids.subList(desde, Math.min(ids.size(), desde + IDS_POR_CONSULTA))));
+        }
+        return marcadas;
+    }
+
+    private ReportRow aFila(TimeEntry fichaje, ZoneId zona, Set<Long> sinConexion) {
         ZonedDateTime entrada = fichaje.getHoraEntrada().atZone(zona);
         ZonedDateTime salida = fichaje.getHoraSalida().atZone(zona);
 
@@ -160,7 +194,9 @@ public class ReportServiceImpl implements ReportService {
                 segundosNetos,
                 fichaje.isJornadaIncompleta(),
                 fichaje.getUsuario().getCodigoEmpleado(),
-                fichaje.getModalidad());
+                fichaje.getModalidad(),
+                sinConexion.contains(fichaje.getId()),
+                fichaje.isRevisarPorLlegarTarde());
     }
 
     private static Instant inicioDelMes(YearMonth mes, ZoneId zona) {

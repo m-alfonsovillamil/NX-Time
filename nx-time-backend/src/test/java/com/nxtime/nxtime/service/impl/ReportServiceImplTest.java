@@ -61,6 +61,8 @@ class ReportServiceImplTest {
     private MonthlySignatureRepository signatureRepository;
     @Mock
     private RegistroDeAccesos accesos;
+    @Mock
+    private com.nxtime.nxtime.repository.FichajeRecibidoRepository recibidos;
 
     private ReportServiceImpl service;
 
@@ -69,7 +71,7 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository, accesos);
+        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository, accesos, recibidos);
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         solicitante = User.builder().id(10L).email("rrhh@nxtime.test").nombre("RRHH")
                 .rol(Role.RRHH).empresa(empresa).activo(true).build();
@@ -119,6 +121,50 @@ class ReportServiceImplTest {
         assertThat(fila.segundosPausa()).isEqualTo(30 * 60);
         assertThat(fila.segundosNetos()).isEqualTo((8L * 3600) + (30 * 60) - (30 * 60)); // 8 h netas
         assertThat(fila.duracionLegible()).isEqualTo("8h 00m");
+    }
+
+    @Test
+    @DisplayName("Se marca lo fichado sin conexión: abierto así o con un fichaje que llegó después; y lo pendiente de revisar")
+    void aFila_marcaLoSinConexionYLoPendienteDeRevisar() {
+        TimeEntry abiertaSinConexion = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 0);
+        abiertaSinConexion.setId(1L);
+        abiertaSinConexion.setOrigen(com.nxtime.nxtime.domain.OrigenDelFichaje.APP_SIN_CONEXION);
+        abiertaSinConexion.setRevisarPorLlegarTarde(true);
+        TimeEntry salidaSinConexion = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 0);
+        salidaSinConexion.setId(2L);
+        salidaSinConexion.setOrigen(com.nxtime.nxtime.domain.OrigenDelFichaje.APP);
+        TimeEntry conRed = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 0);
+        conRed.setId(3L);
+        when(userRepository.findByEmail(solicitante.getEmail())).thenReturn(Optional.of(solicitante));
+        when(timeEntryRepository.findParaInforme(any(), any(), any()))
+                .thenReturn(List.of(abiertaSinConexion, salidaSinConexion, conRed));
+        // Solo se pregunta por las que no se abrieron sin conexión.
+        when(recibidos.conFichajeSinConexion(List.of(2L, 3L))).thenReturn(List.of(2L));
+
+        MonthlyReport informe = service.informeDeEmpresa(solicitante.getEmail(), YearMonth.of(2026, 6));
+
+        assertThat(informe.filas()).extracting(ReportRow::sinConexion).containsExactly(true, true, false);
+        assertThat(informe.filas()).extracting(ReportRow::aRevisar).containsExactly(true, false, false);
+        assertThat(informe.filas().get(0).textoDeIncidencia()).isEqualTo("Pendiente de revisar");
+        assertThat(informe.sinConexion()).isEqualTo(2);
+        assertThat(informe.aRevisar()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Los ids se preguntan por tandas: un informe anual pasaría del tope de parámetros de PostgreSQL")
+    void aFila_preguntaPorTandas() {
+        List<TimeEntry> muchas = new java.util.ArrayList<>();
+        for (int i = 0; i < ReportServiceImpl.IDS_POR_CONSULTA + 5; i++) {
+            TimeEntry j = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 0);
+            j.setId(i + 1);
+            muchas.add(j);
+        }
+        when(userRepository.findByEmail(solicitante.getEmail())).thenReturn(Optional.of(solicitante));
+        when(timeEntryRepository.findParaInforme(any(), any(), any())).thenReturn(muchas);
+
+        service.informeDeEmpresa(solicitante.getEmail(), YearMonth.of(2026, 6));
+
+        verify(recibidos, org.mockito.Mockito.times(2)).conFichajeSinConexion(any());
     }
 
     @Test
