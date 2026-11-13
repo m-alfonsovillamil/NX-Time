@@ -606,11 +606,17 @@ public class DemoDataSeeder implements CommandLineRunner {
                             : "Rechazada: esas fechas coinciden con el cierre trimestral.")
                     .build());
 
+            // Entre semana: dos días a partir de «hoy + 15» caían a veces en
+            // sábado y domingo, una petición de cero días hábiles.
+            LocalDate inicioPendiente = entreSemana(hoy.plusDays(15 + i));
+            LocalDate finPendiente = inicioPendiente.plusDays(1).getDayOfWeek().getValue() >= 6
+                    ? inicioPendiente
+                    : inicioPendiente.plusDays(1);
             absenceRequestRepository.save(AbsenceRequest.builder()
                     .usuario(empleado)
                     .empresa(empleado.getEmpresa())
-                    .fechaInicio(hoy.plusDays(15 + i))
-                    .fechaFin(hoy.plusDays(16 + i))
+                    .fechaInicio(inicioPendiente)
+                    .fechaFin(finPendiente)
                     .tipo(AbsenceType.ASUNTOS_PROPIOS)
                     .motivo("Petición de ejemplo pendiente de revisar")
                     .estado(AbsenceStatus.PENDIENTE)
@@ -1147,6 +1153,15 @@ public class DemoDataSeeder implements CommandLineRunner {
                     "Asuntos propios, pendiente de resolver.",
                     ahora.minus(2L + i, ChronoUnit.HOURS), false);
         }
+    }
+
+    /** El mismo día si es entre semana; si no, el lunes siguiente. */
+    private static LocalDate entreSemana(LocalDate dia) {
+        LocalDate d = dia;
+        while (d.getDayOfWeek().getValue() >= 6) {
+            d = d.plusDays(1);
+        }
+        return d;
     }
 
     private void crearAviso(User destinatario, NoticeType tipo, String titulo,
