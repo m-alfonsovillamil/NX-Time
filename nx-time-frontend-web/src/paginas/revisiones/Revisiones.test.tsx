@@ -11,7 +11,7 @@ import { cerrarSesion } from '../../api/sesion';
 import { revisiones } from '../../i18n/es/revisiones';
 import { pintar, problema, sesionDe, simularApi } from '../../pruebas/api';
 import { fechaCorta } from '../../util/fechas';
-import { Correcciones, cambiosDe } from './Correcciones';
+import { Correcciones, HorasQueCambian, cambiosDe } from './Correcciones';
 import { HorasExtra, periodoDe } from './HorasExtra';
 
 const H = revisiones.horasExtra;
@@ -150,6 +150,18 @@ describe('correcciones', () => {
       }),
     ).toEqual([C.soloPausa('12:00 h', '12:30 h')]);
     expect(cambiosDe({ ...horas, repartoPropuesto: [{ codigo: 'WEB', minutos: 90 }] })).toContain(C.reparto('WEB 1h 30m'));
+  });
+
+  it('pone en negrita solo la hora que cambia, y dice lo mismo que el texto', () => {
+    const horas = {
+      horaEntradaActual: CORRECCION.horaEntradaActual,
+      horaSalidaActual: CORRECCION.horaSalidaActual,
+      horaEntradaPropuesta: CORRECCION.horaEntradaPropuesta,
+      horaSalidaPropuesta: CORRECCION.horaSalidaPropuesta,
+    };
+    const { container } = pintar(<HorasQueCambian c={horas} />);
+    expect(container.textContent).toBe(C.deA('09:00–17:00 h', '08:30–17:00 h'));
+    expect([...container.querySelectorAll('strong')].map((s) => s.textContent)).toEqual(['08:30']);
   });
 
   it('dice quién pide qué', async () => {
