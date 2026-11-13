@@ -659,6 +659,32 @@ release compila igual, pero sin firmar (es lo que pasa en el CI).
 > cualquiera de los dos, la app instalada **no se puede volver a actualizar
 > nunca**: Android exige que cada versión venga firmada con la misma clave.
 
+### Los botones de los correos abren la app (App Links, 1.19)
+
+Los botones de los correos llevan a `https://nxtime-web.com/<destino>`. Desde la
+1.19, con la app instalada, Android abre la app en esa pantalla en vez del
+navegador; sin sesión, la abre después de entrar. Hace falta que la web publique
+`/.well-known/assetlinks.json` (`nx-time-frontend-web/public/.well-known/`), con
+el paquete `com.nxtime.app` y la huella SHA-256 de la clave de firma. La huella se
+lee del APK, sin contraseña:
+
+```bash
+apksigner verify --print-certs NX-Time.apk   # «certificate SHA-256 digest»
+```
+
+- **Orden:** primero la web con el fichero, después la app. Android lo comprueba
+  al instalar (o actualizar) la app; si entonces no lo encuentra, los enlaces
+  siguen yendo al navegador hasta la siguiente comprobación.
+- **Comprobarlo** con un móvil conectado: `adb shell pm get-app-links com.nxtime.app`
+  tiene que decir `nxtime-web.com: verified`. Para forzar otra comprobación:
+  `adb shell pm verify-app-links --re-verify com.nxtime.app`.
+- Solo abren la app los destinos que sabe abrir (`DESTINOS_CON_ENLACE` y el
+  `intent-filter` de `MainActivity`, que `EnlaceDeLaWebTest` mantiene iguales). Lo
+  demás (`/legal`, `/ajustes-empresa`…) sigue yendo al navegador.
+- Si cambia el nombre del dominio ([CAMBIO-DE-NOMBRE](CAMBIO-DE-NOMBRE.md)), hay que
+  cambiarlo en el `intent-filter`, en `HOSTS_DE_LA_WEB` y publicar el fichero en el
+  dominio nuevo.
+
 ### Publicar una versión nueva
 
 El correo de alta lleva un botón para descargar la app que apunta a

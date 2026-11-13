@@ -329,6 +329,13 @@ fun NxTimeNavHost(
      * devolvería a una pantalla que ya no puede cargar nada porque el
      * token está borrado.
      */
+    /*
+     * Adónde iba un enlace de un correo que se abrió sin sesión (App Links,
+     * 1.19): se guarda hasta entrar, y entonces se va ahí. Con un correo, lo
+     * normal es no tener la sesión abierta; con un push, no.
+     */
+    var rutaTrasEntrar by remember { mutableStateOf<String?>(null) }
+
     fun entrarA(destino: Pantalla) {
         authorities = sessionManager.fetchAuthorities()
         /*
@@ -347,6 +354,12 @@ fun NxTimeNavHost(
         }
         navController.navigate(destino.ruta) {
             popUpTo(navController.graph.id) { inclusive = true }
+        }
+        if (destino == Pantalla.LOGIN) return
+        rutaTrasEntrar?.let { ruta ->
+            rutaTrasEntrar = null
+            // Encima de «Mi jornada», como un aviso: «atrás» vuelve ahí.
+            navController.navigate(ruta) { launchSingleTop = true }
         }
     }
 
@@ -440,16 +453,19 @@ fun NxTimeNavHost(
     }
 
     /*
-     * Un push tocado (Fase B5): se va adonde apunta, igual que al tocar el
-     * aviso en la lista, y el contador de la campana se pone al día. Solo con
-     * sesión: sin ella el push ni se enseña, pero la ruta podría haber llegado
-     * justo antes de caducar. Una ruta que esta versión no conoce se descarta.
+     * Un push tocado (Fase B5) o un enlace de un correo (1.19): se va adonde
+     * apunta, igual que al tocar el aviso en la lista, y el contador de la
+     * campana se pone al día. Sin sesión se guarda para después de entrar:
+     * un correo se abre muchas veces sin ella. Una ruta que esta versión no
+     * conoce se descarta.
      */
     LaunchedEffect(rutaDeAvisoPendiente) {
         val ruta = rutaDeAvisoPendiente ?: return@LaunchedEffect
         if (sessionManager.fetchAuthToken() != null) {
             rutaDeAviso(ruta)?.let { irAAviso(it) }
             avisosViewModel.refrescarContador()
+        } else {
+            rutaTrasEntrar = rutaDeAviso(ruta)
         }
         onRutaDeAvisoAtendida()
     }

@@ -18,8 +18,11 @@ se puede cambiar una vez publicada.
 4. **El AAB firmado** (`bundleProdRelease`). En *Play App Signing*, **subir la
    clave con la que se firma hoy el APK** como clave de firma de la app, y no
    dejar que Google genere una nueva. Si no, la app de Play y el APK de GitHub
-   llevarían firmas distintas (ver el final). Guardar la clave de subida junto a
-   la de firma.
+   llevarían firmas distintas (ver el final), y los botones de los correos
+   dejarían de abrir la app: `nx-time-frontend-web/public/.well-known/assetlinks.json`
+   solo lleva la huella SHA-256 de esa clave (App Links, 1.19). Si aun así la
+   firma acaba siendo otra, añadir su huella (*Play App Signing* la enseña) a
+   ese fichero. Guardar la clave de subida junto a la de firma.
 5. Cuenta de desarrollador (25 €, una vez). Como empresa, Google pide el número
    D-U-N-S; como persona física, verificar la identidad.
 
