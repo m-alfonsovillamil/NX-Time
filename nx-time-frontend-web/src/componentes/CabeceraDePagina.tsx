@@ -6,8 +6,8 @@
  * de mudo: nada decía en qué parte de la aplicación estabas, y en una pantalla
  * ancha el título quedaba perdido en una esquina.
  *
- * Ahora lleva el icono de la sección en su recuadro de color (teal en «Lo
- * mío», índigo en «Gestión», la regla de la app), la miga de pan con el grupo
+ * Ahora lleva el icono de la sección en su recuadro de color (azul noche en «Lo
+ * mío», petróleo en «Gestión», la regla de la app), la miga de pan con el grupo
  * y el apartado del menú, y los botones a la derecha. El icono y la miga
  * salen del catálogo (`secciones.ts`) por la URL, así que no hay que pasarlos.
  */

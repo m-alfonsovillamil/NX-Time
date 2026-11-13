@@ -5,11 +5,15 @@ import androidx.compose.ui.graphics.Color
 /**
  * Paleta de la app, en los dos temas.
  *
- * Dirección visual "Fichaje": el verde azulado de siempre, pero más
- * luminoso (`#0E7C86` en vez de `#006970`), superficies que flotan sobre
- * un fondo con degradado, y una segunda familia de color -- índigo --
- * reservada a las pantallas de gestión, para que se distingan de un
- * vistazo de las del empleado.
+ * Dirección visual "Fichaje", con la paleta **arena** (ADR 057): el fondo
+ * es arena -- el reloj de arena, el tiempo --, las acciones van en azul
+ * noche y las tarjetas en marfil, flotando sobre un fondo con degradado.
+ * El verde petróleo, que hasta noviembre de 2026 era el primario, queda
+ * para las pantallas de gestión, que así se distinguen de un vistazo de
+ * las del empleado.
+ *
+ * El arena es un color de **fondo**, nunca de botón: es claro y poco
+ * saturado, y un botón arena con texto blanco no se lee.
  *
  * **Todos los pares texto/fondo llegan a 4.5:1 (WCAG AA)**, comprobados
  * uno a uno antes de escribirlos. No es un detalle: una versión anterior
@@ -17,55 +21,57 @@ import androidx.compose.ui.graphics.Color
  * nocturna mientras el tema oscuro ponía el texto casi blanco, y el
  * contraste real era de **1.02:1**: la aplicación resultaba ilegible.
  *
- * El par más justo de esta paleta es `primary` sobre el inicio del
- * degradado claro, a 4.67:1. Si alguien aclara el fondo o oscurece el
- * primario, ese es el que cae primero.
+ * El par más justo de esta paleta es `tertiary` sobre el final del
+ * degradado claro, a 4.84:1. Si alguien oscurece el fondo o aclara el
+ * petróleo, ese es el que cae primero.
  */
 
 // ---- Tema claro ----
-val LightPrimary = Color(0xFF0E7C86)
+val LightPrimary = Color(0xFF1F3A5F)
 val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = Color(0xFFCDEBEE)
-val LightOnPrimaryContainer = Color(0xFF00363B)
+val LightPrimaryContainer = Color(0xFFD6E0EF)
+val LightOnPrimaryContainer = Color(0xFF0B1E38)
 
-val LightSecondary = Color(0xFF44646A)
+val LightSecondary = Color(0xFF655A43)
 val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xFFC9E7EB)
-val LightOnSecondaryContainer = Color(0xFF042023)
+val LightSecondaryContainer = Color(0xFFE8DCC3)
+val LightOnSecondaryContainer = Color(0xFF2A2415)
 
 /**
- * El índigo de gestión.
+ * El petróleo de gestión (antes, índigo).
  *
  * Va en el hueco de `tertiary` a propósito: Material ya reserva ese papel
  * para "un acento que no compite con el primario", que es exactamente
  * para lo que se usa aquí -- el panel de empresa y las acciones de RRHH.
+ * Con el fondo arena, un índigo además del azul eran demasiados tonos.
  */
-val LightTertiary = Color(0xFF5B5BD6)
+val LightTertiary = Color(0xFF0A6570)
 val LightOnTertiary = Color(0xFFFFFFFF)
-val LightTertiaryContainer = Color(0xFFE2E1FF)
-val LightOnTertiaryContainer = Color(0xFF161268)
+val LightTertiaryContainer = Color(0xFFCDE7E8)
+val LightOnTertiaryContainer = Color(0xFF00363B)
 
 val LightError = Color(0xFFBA1A1A)
 val LightOnError = Color(0xFFFFFFFF)
 val LightErrorContainer = Color(0xFFFFDAD6)
 val LightOnErrorContainer = Color(0xFF410002)
 
-val LightBackground = Color(0xFFF2FAFB)
-val LightOnBackground = Color(0xFF0F1B1D)
+val LightBackground = Color(0xFFF2EAD9)
+val LightOnBackground = Color(0xFF1C2327)
 
 /**
- * Las tarjetas son BLANCAS y flotan sobre el degradado. Por eso
- * `surface` no coincide con `background`, que es lo que hacía la paleta
- * anterior: aquí esa diferencia es justo el efecto que se busca.
+ * Las tarjetas son MARFIL y flotan sobre el degradado. Por eso
+ * `surface` no coincide con `background`: esa diferencia es justo el
+ * efecto que se busca. Marfil y no blanco: el blanco puro sobre arena
+ * queda duro, como recuadros vacíos.
  */
-val LightSurface = Color(0xFFFFFFFF)
-val LightOnSurface = Color(0xFF0F1B1D)
-val LightSurfaceVariant = Color(0xFFD9E7E9)
-val LightOnSurfaceVariant = Color(0xFF4A5C5E)
-val LightOutline = Color(0xFF6C7E80)
-val LightOutlineVariant = Color(0xFFBFD2D4)
-val LightSurfaceContainer = Color(0xFFFFFFFF)
-val LightSurfaceContainerHigh = Color(0xFFF4FAFB)
+val LightSurface = Color(0xFFFFFAF1)
+val LightOnSurface = Color(0xFF1C2327)
+val LightSurfaceVariant = Color(0xFFE4D8C2)
+val LightOnSurfaceVariant = Color(0xFF565040)
+val LightOutline = Color(0xFF7B7361)
+val LightOutlineVariant = Color(0xFFD6CBB5)
+val LightSurfaceContainer = Color(0xFFFFFAF1)
+val LightSurfaceContainerHigh = Color(0xFFFAF3E6)
 
 /**
  * Los tres escalones que faltaban de la escala de superficies.
@@ -84,9 +90,9 @@ val LightSurfaceContainerHigh = Color(0xFFF4FAFB)
  * Siguen la dirección que ya marcaban los dos existentes: en tema claro,
  * cuanto más "alto" el contenedor, un punto más oscuro.
  */
-val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
-val LightSurfaceContainerLow = Color(0xFFFFFFFF)
-val LightSurfaceContainerHighest = Color(0xFFE9F3F5)
+val LightSurfaceContainerLowest = Color(0xFFFFFAF1)
+val LightSurfaceContainerLow = Color(0xFFFFFAF1)
+val LightSurfaceContainerHighest = Color(0xFFF3EAD9)
 
 /**
  * Los dos extremos del degradado del fondo.
@@ -105,60 +111,63 @@ val LightSurfaceContainerHighest = Color(0xFFE9F3F5)
  * saludo va en tinta y "Solicitar ausencia" pasó a botón tonal. Así el
  * salto de luminancia es de 0,143 -- casi el doble que antes -- y lo que
  * queda encima llega a 5,8:1 en el peor caso.
+ *
+ * Con la paleta arena el degradado va de arena clara a arena tostada, y
+ * el primario (azul noche) sí aguanta encima: 8,2:1 en el peor punto.
  */
-val LightFondoArriba = Color(0xFFF4FCFD)
-val LightFondoAbajo = Color(0xFFD9EDF0)
+val LightFondoArriba = Color(0xFFF6EFE1)
+val LightFondoAbajo = Color(0xFFE6D9C1)
 
 // ---- Tema oscuro ----
-val DarkPrimary = Color(0xFF5FD4DE)
-val DarkOnPrimary = Color(0xFF00363B)
-val DarkPrimaryContainer = Color(0xFF00525A)
-val DarkOnPrimaryContainer = Color(0xFF8FF2FA)
+val DarkPrimary = Color(0xFFA9C7F2)
+val DarkOnPrimary = Color(0xFF0B2A4D)
+val DarkPrimaryContainer = Color(0xFF284566)
+val DarkOnPrimaryContainer = Color(0xFFD6E4FA)
 
-val DarkSecondary = Color(0xFFACCBD0)
-val DarkOnSecondary = Color(0xFF163438)
-val DarkSecondaryContainer = Color(0xFF2D4B4F)
-val DarkOnSecondaryContainer = Color(0xFFC9E7EB)
+val DarkSecondary = Color(0xFFD2C5A8)
+val DarkOnSecondary = Color(0xFF372F1B)
+val DarkSecondaryContainer = Color(0xFF4A412C)
+val DarkOnSecondaryContainer = Color(0xFFEEE2C6)
 
-val DarkTertiary = Color(0xFFAFAFF7)
-val DarkOnTertiary = Color(0xFF1C1C63)
-val DarkTertiaryContainer = Color(0xFF3A3A9E)
-val DarkOnTertiaryContainer = Color(0xFFE2E1FF)
+val DarkTertiary = Color(0xFF5FD4DE)
+val DarkOnTertiary = Color(0xFF00363B)
+val DarkTertiaryContainer = Color(0xFF00525A)
+val DarkOnTertiaryContainer = Color(0xFF8FF2FA)
 
 val DarkError = Color(0xFFFFB4AB)
 val DarkOnError = Color(0xFF690005)
 val DarkErrorContainer = Color(0xFF93000A)
 val DarkOnErrorContainer = Color(0xFFFFDAD6)
 
-val DarkBackground = Color(0xFF0C1416)
-val DarkOnBackground = Color(0xFFE2EBEC)
+val DarkBackground = Color(0xFF14120E)
+val DarkOnBackground = Color(0xFFECE6DA)
 
 /**
  * En oscuro las tarjetas **no** son blancas: son una superficie elevada.
  * Copiar el blanco del tema claro es el error clásico que deja la app
  * ilegible de noche.
  */
-val DarkSurface = Color(0xFF182325)
-val DarkOnSurface = Color(0xFFE2EBEC)
-val DarkSurfaceVariant = Color(0xFF3E4E50)
-val DarkOnSurfaceVariant = Color(0xFFA8BABB)
-val DarkOutline = Color(0xFF869899)
-val DarkOutlineVariant = Color(0xFF3E4E50)
-val DarkSurfaceContainer = Color(0xFF182325)
-val DarkSurfaceContainerHigh = Color(0xFF1F2C2E)
+val DarkSurface = Color(0xFF201D18)
+val DarkOnSurface = Color(0xFFECE6DA)
+val DarkSurfaceVariant = Color(0xFF4B4538)
+val DarkOnSurfaceVariant = Color(0xFFBDB4A2)
+val DarkOutline = Color(0xFF978E7C)
+val DarkOutlineVariant = Color(0xFF4B4538)
+val DarkSurfaceContainer = Color(0xFF201D18)
+val DarkSurfaceContainerHigh = Color(0xFF28241E)
 
 /** Los mismos tres escalones que en claro, pero aclarando hacia arriba. */
-val DarkSurfaceContainerLowest = Color(0xFF0A1113)
-val DarkSurfaceContainerLow = Color(0xFF131E20)
-val DarkSurfaceContainerHighest = Color(0xFF283A3C)
+val DarkSurfaceContainerLowest = Color(0xFF0F0D0A)
+val DarkSurfaceContainerLow = Color(0xFF1A1713)
+val DarkSurfaceContainerHighest = Color(0xFF332E26)
 
 /**
  * El degradado oscuro va al revés que el claro -- de más oscuro arriba a
  * algo más claro abajo -- para que la barra de navegación no se hunda en
  * negro y siga leyéndose como una superficie.
  */
-val DarkFondoArriba = Color(0xFF0A1113)
-val DarkFondoAbajo = Color(0xFF16292C)
+val DarkFondoArriba = Color(0xFF100E0B)
+val DarkFondoAbajo = Color(0xFF2A2419)
 
 /**
  * Colores del estado de la jornada.

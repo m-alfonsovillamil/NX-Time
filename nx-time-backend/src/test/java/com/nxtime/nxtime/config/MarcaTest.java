@@ -39,6 +39,7 @@ class MarcaTest {
                 "LightOnSurfaceVariant", Marca.TEXTO_SECUNDARIO,
                 "LightOutlineVariant", Marca.BORDE,
                 "LightFondoArriba", Marca.FONDO,
+                "LightSurface", Marca.TARJETA,
                 "LightError", Marca.ERROR);
 
         esperados.forEach((nombre, hex) -> {
@@ -57,7 +58,7 @@ class MarcaTest {
     void losCorreosSoloUsanLaMarca() throws IOException {
         java.util.Set<String> permitidos = java.util.Set.of(Marca.PRIMARIO, Marca.SOBRE_PRIMARIO,
                 Marca.CONTENEDOR_PRIMARIO, Marca.SOBRE_CONTENEDOR_PRIMARIO, Marca.TEXTO, Marca.TEXTO_SECUNDARIO,
-                Marca.BORDE, Marca.FONDO, Marca.ERROR, Marca.EXITO);
+                Marca.BORDE, Marca.FONDO, Marca.TARJETA, Marca.ERROR, Marca.EXITO);
         Pattern hex = Pattern.compile("#[0-9A-Fa-f]{6}\\b|#[0-9A-Fa-f]{3}\\b");
         try (var plantillas = Files.list(Path.of("src/main/resources/templates/email"))) {
             for (Path plantilla : plantillas.toList()) {
@@ -73,7 +74,7 @@ class MarcaTest {
     @Test
     @DisplayName("Los conversores dan el mismo color")
     void conversores() {
-        assertThat(Marca.awt(Marca.PRIMARIO).getRGB() & 0xFFFFFF).isEqualTo(0x0E7C86);
-        assertThat(Marca.rgb(Marca.PRIMARIO)).containsExactly((byte) 0x0E, (byte) 0x7C, (byte) 0x86);
+        assertThat(Marca.awt(Marca.PRIMARIO).getRGB() & 0xFFFFFF).isEqualTo(0x1F3A5F);
+        assertThat(Marca.rgb(Marca.PRIMARIO)).containsExactly((byte) 0x1F, (byte) 0x3A, (byte) 0x5F);
     }
 }

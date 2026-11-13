@@ -1,7 +1,7 @@
 <!--
     Fondo del icono de lanzador.
 
-    Un color plano, el primario de la app (#0E7C86). Los 108 dp completos
+    Un color plano, el primario de la app (#1F3A5F). Los 108 dp completos
     van rellenos a proposito: el sistema recorta la capa de fondo con la
     mascara del lanzador (circulo, squircle, gota...) y cualquier hueco
     aparecerian como un borde transparente en algunos moviles y en otros no.
@@ -12,6 +12,6 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#0E7C86"
+        android:fillColor="#1F3A5F"
         android:pathData="M0,0h108v108h-108z" />
 </vector>

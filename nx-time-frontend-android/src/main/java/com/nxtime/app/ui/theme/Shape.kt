@@ -54,7 +54,7 @@ val RadioBotonActivo = 44.dp
  * La sombra de las tarjetas de contenido.
  *
  * En la dirección "Fichaje" las tarjetas **flotan** sobre el degradado, y
- * en el tema claro son blancas sobre un fondo casi blanco: sin sombra no
+ * en el tema claro son marfil sobre un fondo arena claro: sin sombra no
  * se despegan del fondo y el efecto no existe. `Card` viene de fábrica a
  * elevación 0, así que hay que pedirlo.
  *

@@ -143,7 +143,7 @@ class ReportGeneratorTest {
         try (XSSFWorkbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
             var estilo = (org.apache.poi.xssf.usermodel.XSSFCellStyle) libro.getSheetAt(0).getRow(3).getCell(0)
                     .getCellStyle();
-            assertThat(estilo.getFillForegroundXSSFColor().getARGBHex()).isEqualTo("FF0E7C86");
+            assertThat(estilo.getFillForegroundXSSFColor().getARGBHex()).isEqualTo("FF1F3A5F");
             assertThat(estilo.getFont().getXSSFColor().getARGBHex()).isEqualTo("FFFFFFFF");
         }
     }

@@ -20,9 +20,9 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="marco(titulo, contenido)"
-     style="margin: 0; padding: 24px 12px; background: #F4FCFD;">
+     style="margin: 0; padding: 24px 12px; background: #F6EFE1;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="max-width: 560px; margin: 0 auto; font-family: Arial, Helvetica, sans-serif; color: #0F1B1D;">
+       style="max-width: 560px; margin: 0 auto; font-family: Arial, Helvetica, sans-serif; color: #1C2327;">
 
     <!--/* La marca: el icono y el nombre, fuera de la tarjeta, como en la web. */-->
     <tr>
@@ -34,7 +34,7 @@
                              style="display: block; border: 0; border-radius: 8px;">
                     </td>
                     <td style="vertical-align: middle; font-family: 'Sora', Arial, Helvetica, sans-serif;
-                               font-size: 20px; font-weight: bold; color: #0E7C86;"
+                               font-size: 20px; font-weight: bold; color: #1F3A5F;"
                         th:text="${producto}">NX Time</td>
                 </tr>
             </table>
@@ -43,10 +43,10 @@
 
     <!--/* La tarjeta, con las esquinas de 16 de la línea visual. */-->
     <tr>
-        <td style="background: #FFFFFF; border: 1px solid #BFD2D4; border-radius: 16px;
+        <td style="background: #FFFAF1; border: 1px solid #D6CBB5; border-radius: 16px;
                    padding: 28px 24px; font-size: 15px; line-height: 1.55;">
             <h2 style="margin: 0 0 16px; font-family: 'Sora', Arial, Helvetica, sans-serif;
-                       font-size: 20px; line-height: 1.3; color: #0F1B1D;" th:text="${titulo}">Título</h2>
+                       font-size: 20px; line-height: 1.3; color: #1C2327;" th:text="${titulo}">Título</h2>
             <div th:replace="${contenido}">Contenido</div>
 
             <!--/*
@@ -58,7 +58,7 @@
             <table th:if="${botonUrl != null}" role="presentation" cellpadding="0" cellspacing="0" border="0"
                    style="margin: 28px 0 10px;" data-nx="boton">
                 <tr>
-                    <td style="background: #0E7C86; border-radius: 20px;">
+                    <td style="background: #1F3A5F; border-radius: 20px;">
                         <a th:href="${botonUrl}" href="#" th:text="${botonTexto}"
                            style="display: inline-block; padding: 12px 24px; color: #FFFFFF; font-weight: bold;
                                   font-size: 15px; text-decoration: none; border-radius: 20px;
@@ -66,21 +66,21 @@
                     </td>
                 </tr>
             </table>
-            <p th:if="${botonUrl != null}" style="margin: 0; font-size: 12px; color: #4A5C5E;">
+            <p th:if="${botonUrl != null}" style="margin: 0; font-size: 12px; color: #565040;">
                 O copia esta dirección en el navegador:
-                <a th:href="${botonUrl}" href="#" th:text="${botonUrl}" style="color: #0E7C86;">enlace</a>
+                <a th:href="${botonUrl}" href="#" th:text="${botonUrl}" style="color: #1F3A5F;">enlace</a>
             </p>
         </td>
     </tr>
 
     <!--/* El pie: qué es esto y quién lo manda. */-->
     <tr>
-        <td style="padding: 16px 8px 0; font-size: 12px; line-height: 1.5; color: #4A5C5E; text-align: center;">
+        <td style="padding: 16px 8px 0; font-size: 12px; line-height: 1.5; color: #565040; text-align: center;">
             Mensaje automático de <span th:text="${producto}">NX Time</span>; no hace falta responder.
             <span th:if="${titular != null}"><br><span th:text="${producto}">NX Time</span> es un servicio
                 de <span th:text="${titular}">su titular</span>.</span>
             <span th:if="${web != null}">
-                <a th:href="${web} + '/legal/privacidad'" href="#" style="color: #0E7C86;">Privacidad</a>
+                <a th:href="${web} + '/legal/privacidad'" href="#" style="color: #1F3A5F;">Privacidad</a>
             </span>
         </td>
     </tr>

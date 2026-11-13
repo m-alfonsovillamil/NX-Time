@@ -107,7 +107,7 @@ fun BarraDeHoras(
              * Va en dos capas -- un filo del color de la tarjeta y un
              * nucleo gris dentro -- porque tiene que verse sobre dos
              * fondos distintos: el carril vacio, que es gris claro, y el
-             * relleno indigo de quien esta por encima de la media, que es
+             * relleno petroleo de quien esta por encima de la media, que es
              * justo la fila donde la marca mas importa. Con una sola capa
              * gris, la marca de Javier Lopez desaparecia dentro de su
              * propia barra.

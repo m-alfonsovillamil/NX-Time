@@ -691,6 +691,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 54. [Fichar sin conexión: la hora del móvil, 72 h y la jornada que cerró el sistema](docs/adr/054-fichar-sin-conexion.md)
 55. [Presencial o a distancia: opcional por empresa y nunca obligatoria para fichar](docs/adr/055-presencial-o-a-distancia.md)
 56. [La ubicación al fichar: opcional, solo al entrar y al salir, y borrada a los 12 meses](docs/adr/056-la-ubicacion-al-fichar.md)
+57. [Paleta arena: fondo arena, azul noche para las acciones, petróleo en gestión y tarjetas marfil](docs/adr/057-paleta-arena.md)
 
 ---
 
