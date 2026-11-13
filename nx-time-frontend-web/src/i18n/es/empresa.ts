@@ -95,7 +95,8 @@ export const empresa = {
       pedir: 'Pedir la ubicación al entrar y al salir',
       guardar: 'Aplicar',
       pedida: 'Desde ahora se pide la ubicación al fichar.',
-      noPedida: 'Ya no se pide la ubicación al fichar. La que ya se tomó se borra a sus 12 meses.',
+      noPedida:
+        'Ya no se pide la ubicación al fichar, y el equipo deja de ver la que ya se tomó. Cada persona la sigue viendo en lo suyo hasta que se borra, a sus 12 meses.',
       confirmarTitulo: '¿Pedir la ubicación al fichar?',
       confirmarLey:
         'Vuestra empresa es la responsable de este dato. Antes de encenderlo tenéis que informar, de forma expresa, clara e inequívoca, a la plantilla y a sus representantes (art. 90 de la LOPDGDD).',

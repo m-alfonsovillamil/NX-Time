@@ -106,6 +106,38 @@ class UbicacionIT {
     }
 
     @Test
+    @DisplayName("Si la empresa la apaga, el equipo deja de verla, también la que ya había; si la enciende, vuelve")
+    void alApagarlaElEquipoDejaDeVerla() {
+        User tecnico = persona(true);
+        long empresaId = tecnico.getEmpresa().getId();
+        Company empresa = tecnico.getEmpresa();
+        User gestora = userRepository.save(User.builder()
+                .email("gestora" + System.nanoTime() + "@nxtime.test")
+                .nombre("Gestora").contrasena("hash").rol(Role.GESTOR).empresa(empresa).activo(true).build());
+        timeEntryService.registerTimeEntry(tecnico.getEmail(),
+                new TimeEntryRequest(TimeEntryAction.INICIO, null, null, EN_LA_OBRA), OrigenDelFichaje.APP);
+        var pagina = org.springframework.data.domain.PageRequest.of(0, 10);
+
+        assertThat(timeEntryService.getTeamHistory(gestora.getEmail(), tecnico.getId(), pagina).getContent().get(0)
+                .ubicacionEntrada().latitud()).isEqualTo(43.3623);
+
+        empresa = companyRepository.findById(empresaId).orElseThrow();
+        empresa.setUbicacionAlFichar(false);
+        companyRepository.save(empresa);
+        assertThat(timeEntryService.getTeamHistory(gestora.getEmail(), tecnico.getId(), pagina).getContent().get(0)
+                .ubicacionEntrada()).isNull();
+        // El dato sigue ahí, para la persona y hasta los 12 meses.
+        assertThat(timeEntryRepository.findFirstByUsuarioAndAnuladoFalseOrderByHoraEntradaDesc(tecnico).orElseThrow()
+                .getUbicacionEntrada().getLatitud()).isEqualTo(43.3623);
+
+        empresa = companyRepository.findById(empresaId).orElseThrow();
+        empresa.setUbicacionAlFichar(true);
+        companyRepository.save(empresa);
+        assertThat(timeEntryService.getTeamHistory(gestora.getEmail(), tecnico.getId(), pagina).getContent().get(0)
+                .ubicacionEntrada()).isNotNull();
+    }
+
+    @Test
     @DisplayName("Sin el ajuste no se guarda aunque la mande el cliente")
     void sinAjusteNoSeGuarda() {
         User tecnico = persona(false);

@@ -93,6 +93,19 @@ public class PersonalDataPdfGenerator {
                         en.fecha(f.horaEntrada()), en.hora(f.horaEntrada()), en.hora(f.horaSalida()),
                         minutos(f.segundosPausa()), neto(f), observaciones(f)});
 
+        // Dónde se fichó (ADR 056), solo las jornadas que lo tienen: con la
+        // ubicación apagada, la tabla no aparece. Es un dato suyo y estaba en
+        // el JSON; hasta noviembre de 2026 faltaba aquí.
+        List<PersonalDataExport.Fichaje> conUbicacion = datos.fichajes().stream()
+                .filter(f -> f.ubicacionEntrada() != null || f.ubicacionSalida() != null)
+                .toList();
+        if (!conUbicacion.isEmpty()) {
+            tabla(documento, "Ubicación al fichar", conUbicacion,
+                    new String[] {"Fecha", "Al entrar", "Al salir"},
+                    f -> new String[] {
+                            en.fecha(f.horaEntrada()), ubicacion(f.ubicacionEntrada()), ubicacion(f.ubicacionSalida())});
+        }
+
         tabla(documento, "Pausas añadidas a posteriori", datos.pausasAnadidas(),
                 new String[] {"Fecha", "Desde", "Hasta", "Motivo", "Cómo entró"},
                 pa -> new String[] {
@@ -259,14 +272,39 @@ public class PersonalDataPdfGenerator {
         return minutos(Math.max(0, segundos));
     }
 
-    private static String observaciones(PersonalDataExport.Fichaje f) {
+    static String observaciones(PersonalDataExport.Fichaje f) {
+        List<String> partes = new java.util.ArrayList<>();
         if (f.anulado()) {
-            return "Sustituido por una corrección";
+            partes.add("Sustituido por una corrección");
+        } else if (f.corrigeAlFichaje() != null) {
+            partes.add("Corrección aprobada");
+        } else if (f.jornadaIncompleta()) {
+            partes.add("Cerrada por el sistema");
         }
-        if (f.corrigeAlFichaje() != null) {
-            return "Corrección aprobada";
+        // La modalidad (ADR 055) y si se abrió sin conexión (ADR 054): estaban
+        // en el JSON y no aquí.
+        if (f.modalidad() != null) {
+            partes.add(com.nxtime.nxtime.domain.Modalidad.texto(f.modalidad()));
         }
-        return f.jornadaIncompleta() ? "Cerrada por el sistema" : "";
+        if (f.origen() == com.nxtime.nxtime.domain.OrigenDelFichaje.APP_SIN_CONEXION) {
+            partes.add("Sin conexión");
+        }
+        return String.join(" · ", partes);
+    }
+
+    /** «40.4168, -3.7038 (± 25 m)», o por qué no hay. */
+    static String ubicacion(com.nxtime.nxtime.domain.PuntoDeFichaje punto) {
+        if (punto == null || punto.getEstado() == null) {
+            return "—";
+        }
+        return switch (punto.getEstado()) {
+            case CAPTURADA -> punto.getLatitud() == null
+                    ? "Tomada (ya borrada a los 12 meses)"
+                    : String.format(java.util.Locale.ROOT, "%.4f, %.4f", punto.getLatitud(), punto.getLongitud())
+                            + (punto.getPrecisionM() != null ? " (± " + punto.getPrecisionM() + " m)" : "");
+            case DENEGADA -> "Sin permiso";
+            case NO_DISPONIBLE -> "No disponible";
+        };
     }
 
     private static String minutos(long segundos) {

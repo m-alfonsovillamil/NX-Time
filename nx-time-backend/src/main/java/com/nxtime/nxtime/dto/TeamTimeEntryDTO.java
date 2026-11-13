@@ -61,4 +61,15 @@ public record TeamTimeEntryDTO(
         UbicacionDelFichaje ubicacionEntrada,
         UbicacionDelFichaje ubicacionSalida
 ) {
+
+    /**
+     * La misma jornada sin la ubicación: lo que ve el equipo cuando la empresa
+     * ha dejado de pedirla (ADR 056). El dato sigue guardado hasta que se borra
+     * a los 12 meses, y la persona lo sigue viendo en lo suyo.
+     */
+    public TeamTimeEntryDTO sinUbicacion() {
+        return new TeamTimeEntryDTO(id, horaEntrada, horaSalida, fecha, usuario, usuarioId, minutosPausaAcumulados,
+                segundosPausaAcumulados, kiosco, cerradaPorElSistema, origen, revisarPorLlegarTarde, modalidad,
+                null, null);
+    }
 }

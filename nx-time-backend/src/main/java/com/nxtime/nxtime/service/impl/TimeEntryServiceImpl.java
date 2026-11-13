@@ -674,7 +674,13 @@ public class TimeEntryServiceImpl implements TimeEntryService {
         Page<TimeEntry> fichajes = usuarioId == null
                 ? timeEntryRepository.findTeamHistory(manager.getEmpresa(), pagina)
                 : timeEntryRepository.findTeamHistoryDeUsuario(manager.getEmpresa(), usuarioId, pagina);
-        return fichajes.map(timeEntryMapper::toTeamDTO);
+        // Si la empresa ha dejado de pedir la ubicación, el equipo deja de
+        // verla también en lo que ya había (ADR 056): ya no hay para qué.
+        boolean conUbicacion = manager.getEmpresa() != null && manager.getEmpresa().isUbicacionAlFichar();
+        return fichajes.map(fichaje -> {
+            TeamTimeEntryDTO dto = timeEntryMapper.toTeamDTO(fichaje);
+            return conUbicacion ? dto : dto.sinUbicacion();
+        });
     }
 
     /**

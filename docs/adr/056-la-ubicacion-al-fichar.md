@@ -28,8 +28,13 @@ justificar para llevar un registro de jornada.
   poder borrarla sin romper la cadena ni anular firmas. Una corrección la copia a
   la jornada nueva.
 - **La ven la persona, su gestor y RRHH/ADMIN**: en los historiales, «± 25 m · Ver
-  en el mapa», y la persona también en «Mis datos». No sale en el Excel de horas,
-  ni en el PDF, ni en el ZIP de la Inspección.
+  en el mapa», y la persona también en «Mis datos» (en el JSON y, desde el
+  13/11/2026, también en el PDF). No sale en el Excel de horas, ni en el PDF de
+  horas, ni en el ZIP de la Inspección.
+- **Si la empresa la apaga, el equipo deja de verla** (13/11/2026), también la que
+  ya había: el historial del equipo la devuelve vacía. Sigue guardada hasta los 12
+  meses, la persona la sigue viendo en lo suyo, y si se vuelve a encender, vuelve a
+  verse.
 - **El mapa es un enlace a OpenStreetMap**, no un mapa dentro de la página: las
   coordenadas solo salen de NX Time si alguien pulsa, sin teselas de terceros y
   sin tocar la CSP.
