@@ -85,6 +85,27 @@ class ReportGeneratorTest {
             // Fila 6: la jornada con incidencia va marcada.
             assertThat(hoja.getRow(6).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");
             assertThat(hoja.getRow(4).getCell(4).getNumericCellValue()).isEqualTo(30.0);
+            assertThat(hoja.getRow(3).getCell(9).getStringCellValue()).isEqualTo("Sin conexión");
+            assertThat(hoja.getRow(4).getCell(9).getStringCellValue()).isEmpty();
+        }
+    }
+
+    @Test
+    @DisplayName("El Excel marca lo fichado sin conexión y lo pendiente de revisar")
+    void excel_marcaLoSinConexion() throws Exception {
+        List<ReportRow> filas = List.of(
+                new ReportRow("Ana", LocalDate.of(2026, 6, 1), LocalTime.of(9, 0), LocalTime.of(17, 0), 0, 8 * 3600,
+                        false, null, null, true, true),
+                new ReportRow("Ana", LocalDate.of(2026, 6, 2), LocalTime.of(9, 0), LocalTime.of(17, 0), 0, 8 * 3600,
+                        true, null, null, true, false));
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(new MonthlyReport("Empresa", "Ana", YearMonth.of(2026, 6), filas), salida);
+
+        try (Workbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            Sheet hoja = libro.getSheetAt(0);
+            assertThat(hoja.getRow(4).getCell(6).getStringCellValue()).isEqualTo("Pendiente de revisar");
+            assertThat(hoja.getRow(4).getCell(9).getStringCellValue()).isEqualTo("Sí");
+            assertThat(hoja.getRow(5).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");
         }
     }
 

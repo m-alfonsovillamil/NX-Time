@@ -42,20 +42,39 @@ public record ReportRow(
         /** Su número en el ERP o en nóminas (ADR 053), o null. */
         String codigoEmpleado,
         /** Presencial o a distancia (ADR 055), o null si no consta. */
-        com.nxtime.nxtime.domain.Modalidad modalidad
+        com.nxtime.nxtime.domain.Modalidad modalidad,
+        /**
+         * Algún fichaje de la jornada se hizo sin conexión (ADR 054): la hora
+         * la midió el móvil y llegó después.
+         */
+        boolean sinConexion,
+        /**
+         * Llegó sin conexión pasadas 72 h y nadie la ha dado por buena todavía
+         * (ADR 054): como el cierre automático, es una incidencia abierta.
+         */
+        boolean aRevisar
 ) {
+
+    /** Sin las marcas del fichaje sin conexión (lo de antes del ADR 054). */
+    public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
+            long segundosPausa, long segundosNetos, boolean incidencia, String codigoEmpleado,
+            com.nxtime.nxtime.domain.Modalidad modalidad) {
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, codigoEmpleado,
+                modalidad, false, false);
+    }
 
     /** Sin código de empleado. */
     public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
             long segundosPausa, long segundosNetos, boolean incidencia) {
-        this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, null, null);
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, null, null,
+                false, false);
     }
 
     /** Sin modalidad (lo de antes del ADR 055). */
     public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
             long segundosPausa, long segundosNetos, boolean incidencia, String codigoEmpleado) {
         this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, codigoEmpleado,
-                null);
+                null, false, false);
     }
 
     /**
@@ -63,6 +82,17 @@ public record ReportRow(
      * una fila; NO para sumar varias -- para eso está
      * {@link MonthlyReport#totalSegundos()}.
      */
+    /** Lo que va en la columna «Incidencia»: vacío si la jornada no tiene ninguna. */
+    public String textoDeIncidencia() {
+        if (incidencia && aRevisar) {
+            return "Cierre automático · Pendiente de revisar";
+        }
+        if (incidencia) {
+            return "Cierre automático";
+        }
+        return aRevisar ? "Pendiente de revisar" : "";
+    }
+
     public long minutosNetos() {
         return segundosNetos / 60;
     }

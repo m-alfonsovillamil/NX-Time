@@ -96,6 +96,15 @@ public class PdfReportGenerator {
         if (informe.incidencias() > 0) {
             documento.add(avisoDeIncidencias(informe));
         }
+        if (informe.aRevisar() > 0) {
+            documento.add(nota(informe.aRevisar() + " jornada(s) marcadas en rojo tienen un fichaje hecho sin conexión "
+                    + "que llegó pasadas 72 horas; las horas son las del móvil y están pendientes de que las revise "
+                    + "un responsable.", CELDA_AVISO));
+        }
+        if (informe.sinConexion() > 0) {
+            documento.add(nota("* Jornada con algún fichaje hecho sin conexión: la hora la midió el móvil y se "
+                    + "recibió después.", PIE));
+        }
 
         documento.add(espacio());
         documento.add(bloqueDeFirma(informe.firma(), informe.zona()));
@@ -136,11 +145,15 @@ public class PdfReportGenerator {
             // Las jornadas que cerró el sistema por falta de fichaje de
             // salida (Fase 9) se marcan en rojo y en cursiva: el dato es
             // menos fiable y quien firme el documento debe verlo.
-            Font fuente = fila.incidencia() ? CELDA_AVISO : CELDA;
+            // Lo mismo con lo que llegó sin conexión pasadas 72 h y nadie ha
+            // revisado (ADR 054).
+            Font fuente = fila.incidencia() || fila.aRevisar() ? CELDA_AVISO : CELDA;
             // Filas alternas con el fondo de la marca: un mes son treinta
             // filas, y sin ellas la vista se salta de una a otra.
             Color fondo = numero++ % 2 == 1 ? FONDO : null;
-            tabla.addCell(celdaTexto(fila.fecha().format(FECHA), fuente, fondo));
+            // Un asterisco si algún fichaje se hizo sin conexión: la nota de
+            // debajo de la tabla dice qué significa.
+            tabla.addCell(celdaTexto(fila.fecha().format(FECHA) + (fila.sinConexion() ? " *" : ""), fuente, fondo));
             tabla.addCell(celdaTexto(fila.horaEntrada().toString(), fuente, fondo));
             tabla.addCell(celdaTexto(fila.horaSalida().toString(), fuente, fondo));
             tabla.addCell(celdaTexto(fila.minutosPausa() + " min", fuente, fondo));
@@ -176,6 +189,12 @@ public class PdfReportGenerator {
         celda.setPadding(8);
         caja.addCell(celda);
         return caja;
+    }
+
+    private Paragraph nota(String texto, Font fuente) {
+        Paragraph nota = new Paragraph(texto, fuente);
+        nota.setSpacingBefore(6);
+        return nota;
     }
 
     private Paragraph avisoDeIncidencias(MonthlyReport informe) {

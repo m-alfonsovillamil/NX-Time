@@ -114,3 +114,9 @@ sobre un mes firmado la revisa sola, como cualquier cambio.
 - La API de integración con Dynamics que se planteó el 24/10 queda descartada
   (26/10): en IIDD las horas de las OT van por Field Service y la nómina no
   está enlazada; no hay a dónde mandarlas.
+- **Los informes de horas lo marcan** (13/11/2026). El Excel lleva una columna
+  «Sin conexión» al final y escribe «Pendiente de revisar» en «Incidencia»; el
+  PDF pone un asterisco en la fecha, en rojo lo pendiente de revisar, y una nota
+  debajo. Una jornada cuenta como «sin conexión» si se abrió así (`origen`) o si
+  recibió algún fichaje sin conexión (`fichajes_recibidos.registro_id`): el
+  origen solo dice cómo se abrió.

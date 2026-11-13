@@ -86,4 +86,14 @@ public record MonthlyReport(
     public long incidencias() {
         return filas.stream().filter(ReportRow::incidencia).count();
     }
+
+    /** Jornadas que llegaron sin conexión pasadas 72 h y siguen sin revisar (ADR 054). */
+    public long aRevisar() {
+        return filas.stream().filter(ReportRow::aRevisar).count();
+    }
+
+    /** Jornadas con algún fichaje hecho sin conexión (ADR 054). */
+    public long sinConexion() {
+        return filas.stream().filter(ReportRow::sinConexion).count();
+    }
 }

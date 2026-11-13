@@ -103,6 +103,8 @@ class FichajeSinConexionIT {
     private MonthlySignatureService signatureService;
     @Autowired
     private MonthlySignatureRepository signatureRepository;
+    @Autowired
+    private com.nxtime.nxtime.repository.FichajeRecibidoRepository recibidos;
 
     private static final ZoneId MADRID = ZoneId.of("Europe/Madrid");
 
@@ -265,6 +267,24 @@ class FichajeSinConexionIT {
         TimeEntry jornada = ultimaDe(tecnico);
         assertThat(jornada.getHoraEntrada()).isEqualTo(aLas);
         assertThat(motivosDe(jornada.getId())).anyMatch(m -> m.contains("se reinició"));
+    }
+
+    @Test
+    @DisplayName("Los informes ven la jornada abierta con red y cerrada sin conexión, y no la que va toda con red")
+    void elInformeVeLaSalidaSinConexion() {
+        Company empresa = empresa();
+        User tecnica = persona(empresa, "Informada", Role.EMPLEADO);
+        TimeEntry mixta = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(tecnica).empresa(empresa).origen(OrigenDelFichaje.APP)
+                .horaEntrada(Instant.now().minus(6, ChronoUnit.HOURS)).build());
+        recepcion.recibir(tecnica.getEmail(), List.of(hecho(TimeEntryAction.FIN, Duration.ofHours(1))));
+        TimeEntry conRed = timeEntryRepository.save(TimeEntry.builder()
+                .usuario(persona(empresa, "ConRed", Role.EMPLEADO)).empresa(empresa).origen(OrigenDelFichaje.APP)
+                .horaEntrada(Instant.now().minus(6, ChronoUnit.HOURS))
+                .horaSalida(Instant.now().minus(1, ChronoUnit.HOURS)).build());
+
+        assertThat(recibidos.conFichajeSinConexion(List.of(mixta.getId(), conRed.getId())))
+                .containsExactly(mixta.getId());
     }
 
     @Test
