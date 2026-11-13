@@ -38,10 +38,13 @@ dos y se sube `application.legal.version`.
 
 | Medida | Estado | Quién |
 |---|---|---|
-| Segundo factor en GitHub, Render, Neon, Cloudflare, Brevo, Google/Firebase y Sentry | Pendiente (J2) | Miguel |
-| Secretos fuera de OneDrive y rotados | Pendiente (J2) | Miguel |
+| Segundo factor en GitHub, Render, Neon, Cloudflare, Brevo, Google/Firebase y Sentry | **Hecho el 8/11/2026** | Miguel |
+| Secretos fuera de OneDrive y rotados | **Hecho el 8/11/2026** | Miguel |
 | La frase de las copias creada y guardada en un gestor de contraseñas; copias viejas sin cifrar borradas | Pendiente (J2) | Miguel |
 | Neon: `nxtime_app` fuera de `neon_superuser` | **No se puede**: Neon mete ahí a todos los roles y no deja quitarlo (V5), así que hereda `pg_write_all_data` y los `REVOKE` no valen. Lo compensan los triggers de solo inserción (V5, V43, V44, V46): los diez, activos en producción el 6/11/2026 | — |
 | Neon: restauración de prueba hecha, lista blanca de IPs | Pendiente (J2) | Miguel |
 | Conexión a Neon con `sslmode=verify-full` (con `require` no se comprueba el certificado) | Probada el 6/11/2026; falta cambiar la variable en Render (J2) | Miguel |
-| Sentry en la región de la UE | Por confirmar (`DESPLIEGUE.md` apunta a `ingest.de`) | Miguel |
+| Sentry en la región de la UE | **Comprobado el 13/11/2026**: la organización `nx-time` guarda los datos en la Unión Europea. Ese día se activaron además, para todos los proyectos, la limpieza de datos y el no guardar direcciones IP | — |
+| Render y Neon en Frankfurt | **Comprobado el 13/11/2026** en los dos paneles (`nxtime-backend` en *Frankfurt (EU Central)*; Neon en *AWS Europe Central 1*) | — |
+| Claves de API de Firebase restringidas por aplicación | Pendiente (J2): hoy solo están limitadas a las API de Firebase | Miguel |
+| Cloudflare: DNSSEC y registros CAA | Pendiente (J2): el 13/11/2026 el dominio no tenía ni DS ni CAA | Miguel |
