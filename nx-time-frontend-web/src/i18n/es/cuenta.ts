@@ -188,6 +188,7 @@ export const cuenta = {
       },
     },
 
+    cerrarSesion: 'Cerrar sesión',
     cerrarTodas: {
       boton: 'Cerrar sesión en todos los dispositivos',
       detalle:
@@ -271,6 +272,6 @@ export const cuenta = {
 
     enLaApp: 'Solo en la app',
     enLaAppDetalle:
-      'El recordatorio de fichar y entrar con huella están en la app Android: el recordatorio necesita avisarte a una hora aunque no hayas abierto nada, y la huella en la web serían las passkeys, que son otra fase.',
+      'Hay dos cosas que solo hace la app de Android: avisarte a tu hora si no has fichado y entrar con la huella.',
   },
 } as const;

@@ -2435,6 +2435,22 @@ h2 {
   align-items: center;
 }
 
+/* Bajo un párrafo: con aire arriba y entre botones, que no salgan pegados. */
+.nx-acciones-fila--con-aire {
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* La explicación al principio de una tarjeta, separada de lo que sigue. */
+.nx-tarjeta__explicacion {
+  margin-bottom: 12px;
+}
+
+/* Un botón de texto para algo que no se deshace con un clic. */
+.nx-boton--texto-peligro {
+  color: var(--nx-error);
+}
+
 /* «Más»: las acciones que no son la principal, en una lista que flota bajo el
    botón y no estira la fila. */
 .nx-mas-acciones {

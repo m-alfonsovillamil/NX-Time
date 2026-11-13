@@ -636,6 +636,11 @@
     <string name="perfil_puesto">Puesto</string>
     <string name="perfil_departamento">Departamento</string>
     <string name="perfil_rol">Rol</string>
+    <string name="perfil_mas_cosas">Lo mío</string>
+    <string name="rol_empleado">Empleado</string>
+    <string name="rol_gestor">Gestor</string>
+    <string name="rol_rrhh">RRHH</string>
+    <string name="rol_admin">Administración</string>
     <string name="perfil_jornada">Jornada semanal</string>
     <string name="perfil_jornada_valor">%1$s horas</string>
     <string name="perfil_vacaciones">Vacaciones de este año</string>

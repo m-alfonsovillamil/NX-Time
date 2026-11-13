@@ -210,15 +210,21 @@ function Cuenta() {
   return (
     <Tarjeta id="ajustes-cuenta" icono="persona" titulo={J.cuenta}>
       <div className="nx-columna">
-        <div>
-          <Boton variante="secundario" onClick={() => setCambiando(true)}>
+        {/* Cerrar sesión, también aquí y no solo en el menú del nombre: es donde la busca quien viene de la app. */}
+        <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+          <Boton variante="secundario" icono="candado" onClick={() => setCambiando(true)}>
             {J.contrasena.boton}
+          </Boton>
+          <Boton variante="secundario" icono="salir" onClick={salir}>
+            {J.cerrarSesion}
           </Boton>
         </div>
         <div>
-          <Boton variante="secundario" onClick={() => setCerrando(true)}>
-            {J.cerrarTodas.boton}
-          </Boton>
+          <div className="nx-acciones-fila">
+            <Boton variante="texto" className="nx-boton--texto-peligro" onClick={() => setCerrando(true)}>
+              {J.cerrarTodas.boton}
+            </Boton>
+          </div>
           <p className="nx-sutil">{J.cerrarTodas.detalle}</p>
         </div>
       </div>
@@ -273,11 +279,11 @@ function MisDatos() {
     <div>
       <h3 className="nx-subtitulo">{J.misDatos.titulo}</h3>
       <p className="nx-sutil">{J.misDatos.detalle}</p>
-      <div className="nx-acciones-fila">
-        <Boton variante="secundario" ocupado={bajando === 'pdf'} onClick={() => void bajar('pdf')}>
+      <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+        <Boton variante="secundario" icono="descargar" ocupado={bajando === 'pdf'} onClick={() => void bajar('pdf')}>
           {J.misDatos.pdf}
         </Boton>
-        <Boton variante="secundario" ocupado={bajando === 'json'} onClick={() => void bajar('json')}>
+        <Boton variante="secundario" icono="descargar" ocupado={bajando === 'json'} onClick={() => void bajar('json')}>
           {J.misDatos.json}
         </Boton>
       </div>
@@ -345,18 +351,22 @@ function Borrado() {
           <p>
             <Insignia tono="aviso">{B.pendiente(fechaCorta(diaEnEmpresa(solicitud.data?.creadaEn ?? '')))}</Insignia>
           </p>
-          <Boton variante="secundario" ocupado={retirar.isPending} onClick={() => retirar.mutate(undefined)}>
-            {B.retirar}
-          </Boton>
+          <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+            <Boton variante="secundario" ocupado={retirar.isPending} onClick={() => retirar.mutate(undefined)}>
+              {B.retirar}
+            </Boton>
+          </div>
         </>
       ) : (
         <>
           {estado === 'RECHAZADA' && solicitud.data?.comentarioResolucion && (
             <Aviso>{B.rechazado(solicitud.data.comentarioResolucion)}</Aviso>
           )}
-          <Boton variante="peligro" onClick={() => setPidiendo(true)}>
-            {B.pedir}
-          </Boton>
+          <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+            <Boton variante="peligro" onClick={() => setPidiendo(true)}>
+              {B.pedir}
+            </Boton>
+          </div>
         </>
       )}
       {retirar.error !== null && <Aviso>{retirar.error.message}</Aviso>}
@@ -378,7 +388,7 @@ const INDICE: readonly { id: string; icono: NombreIcono; texto: string; soloConS
   { id: 'ajustes-cuenta', icono: 'persona', texto: J.cuenta },
   { id: 'ajustes-segundo-factor', icono: 'candado', texto: J.segundoFactor.titulo },
   { id: 'ajustes-vinculadas', icono: 'enlace', texto: J.vinculadas.titulo, soloConSso: true },
-  { id: 'ajustes-privacidad', icono: 'candado', texto: J.privacidad },
+  { id: 'ajustes-privacidad', icono: 'escudo', texto: J.privacidad },
   { id: 'ajustes-app', icono: 'movil', texto: J.enLaApp },
   { id: 'ajustes-legal', icono: 'info', texto: J.legal.titulo },
 ];
@@ -417,7 +427,7 @@ export function Ajustes() {
           <Cuenta />
           <TarjetaSegundoFactor />
           {vinculadas.hay && <CuentasVinculadas {...vinculadas} />}
-          <Tarjeta id="ajustes-privacidad" icono="candado" titulo={J.privacidad}>
+          <Tarjeta id="ajustes-privacidad" icono="escudo" titulo={J.privacidad}>
             <div className="nx-columna">
               <MisDatos />
               <Borrado />

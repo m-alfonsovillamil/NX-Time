@@ -53,7 +53,7 @@ function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode 
       )}
       {a.comentarioResolucion && <span>{G.respuesta(a.comentarioResolucion)}</span>}
       {acciones && (
-        <div className="nx-acciones-fila" role="group" aria-label={G.accionesDe(quien)}>
+        <div className="nx-acciones-fila nx-acciones-fila--con-aire" role="group" aria-label={G.accionesDe(quien)}>
           {acciones}
         </div>
       )}
@@ -99,14 +99,14 @@ function Pendientes() {
                   a={a}
                   acciones={
                     <>
+                      {/* Botones y no enlaces: es lo que viene a hacer quien entra aquí (revisión de pantallas, 11/2026). */}
                       <Boton
-                        variante="texto"
                         ocupado={resolver.isPending && resolver.variables?.id === a.id && resolver.variables.aprobar}
                         onClick={() => a.id !== undefined && resolver.mutate({ id: a.id, aprobar: true })}
                       >
                         {G.aprobar}
                       </Boton>
-                      <Boton variante="texto" onClick={() => setRechazando(a)}>
+                      <Boton variante="secundario" onClick={() => setRechazando(a)}>
                         {G.rechazar}
                       </Boton>
                     </>

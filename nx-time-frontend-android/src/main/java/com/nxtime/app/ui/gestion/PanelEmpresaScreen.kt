@@ -34,7 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -164,13 +164,13 @@ fun PanelEmpresaScreen(
                     Spacer(Modifier.height(20.dp))
                     SelectorDeMes(estado.mes, viewModel::cambiarMes)
                     Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = { viewModel.descargarExcel { c, n -> abrir(c, n, MIME_EXCEL) } },
                         enabled = !estado.descargando,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.empresa_descargar_excel))
                     }
                 }

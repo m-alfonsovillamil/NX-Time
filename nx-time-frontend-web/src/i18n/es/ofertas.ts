@@ -59,6 +59,8 @@ export const ofertas = {
     candidaturas: 'Candidaturas',
     acciones: 'Acciones',
     accionesDe: (titulo: string) => `Acciones de «${titulo}»`,
+    mas: 'Más',
+    masDe: (titulo: string) => `Más acciones de «${titulo}»`,
     editar: 'Editar',
     publicar: 'Publicar',
     publicarAyuda: 'Se avisa a toda la plantilla la primera vez que se publica.',
