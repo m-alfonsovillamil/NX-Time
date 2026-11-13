@@ -105,7 +105,7 @@ function TarjetaDeCorreccion({ c, acciones }: { c: Correccion; acciones?: ReactN
       {c.motivo && <span className="nx-sutil">{C.motivo(c.motivo)}</span>}
       {c.motivoDisputa && <span>{C.noAcepta(c.motivoDisputa)}</span>}
       {c.comentarioResolucion && <span className="nx-sutil">{C.comentario(c.comentarioResolucion)}</span>}
-      {acciones && <div className="nx-acciones-fila">{acciones}</div>}
+      {acciones && <div className="nx-acciones-fila nx-acciones-fila--con-aire">{acciones}</div>}
     </li>
   );
 }
@@ -163,20 +163,20 @@ function EsperanPorTi() {
                       <>
                         {c.puedoResolver === true && (
                           <>
+                            {/* Botones y no enlaces: es la decisión que viene a tomar (revisión de pantallas, 11/2026). */}
                             <Boton
-                              variante="texto"
                               ocupado={resolver.isPending && resolver.variables?.id === c.id && resolver.variables.aprobada}
                               onClick={() => c.id !== undefined && resolver.mutate({ id: c.id, aprobada: true })}
                             >
                               {C.aprobar}
                             </Boton>
-                            <Boton variante="texto" onClick={() => setPidiendoTexto({ c, que: 'rechazar' })}>
+                            <Boton variante="secundario" onClick={() => setPidiendoTexto({ c, que: 'rechazar' })}>
                               {C.rechazar}
                             </Boton>
                           </>
                         )}
                         {c.puedoDisputar === true && (
-                          <Boton variante="texto" onClick={() => setPidiendoTexto({ c, que: 'disputar' })}>
+                          <Boton variante="secundario" onClick={() => setPidiendoTexto({ c, que: 'disputar' })}>
                             {C.disputar}
                           </Boton>
                         )}

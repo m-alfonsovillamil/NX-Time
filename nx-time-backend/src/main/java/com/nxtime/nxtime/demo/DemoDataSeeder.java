@@ -1135,7 +1135,7 @@ public class DemoDataSeeder implements CommandLineRunner {
 
             crearAviso(empleado, NoticeType.AUSENCIA_RESUELTA,
                     "Tu ausencia ha sido " + (aprobada ? "aprobada" : "rechazada"),
-                    "VACACIONES. " + (aprobada
+                    "Vacaciones. " + (aprobada
                             ? "Aprobada, que las disfrutes."
                             : "Rechazada: esas fechas coinciden con el cierre trimestral."),
                     ahora.minus(30L + i, ChronoUnit.DAYS), false);
@@ -1144,7 +1144,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             // lo que hace que su campana lleve un número de verdad.
             crearAviso(gestor, NoticeType.AUSENCIA_SOLICITADA,
                     "Nueva petición de " + empleado.getNombre(),
-                    "ASUNTOS_PROPIOS, pendiente de resolver.",
+                    "Asuntos propios, pendiente de resolver.",
                     ahora.minus(2L + i, ChronoUnit.HOURS), false);
         }
     }
