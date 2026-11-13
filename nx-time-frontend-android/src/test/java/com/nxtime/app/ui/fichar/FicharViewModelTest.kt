@@ -703,18 +703,58 @@ class FicharViewModelTest {
      * es inmediato y no consume una petición.
      */
     @Test
-    fun `no se puede terminar la jornada estando en pausa`() = runTest {
+    fun `en pausa el boton principal reanuda, no termina la jornada`() = runTest {
         val viewModel = viewModelCon(activo = registro(enPausa = true))
+        whenever(repositorio.registrarFichaje(any())).thenReturn(Response.success(registro()))
         advanceUntilIdle()
 
         viewModel.pulsarBotonPrincipal()
         advanceUntilIdle()
 
-        assertEquals(
-            MensajeUi.Recurso(R.string.fichar_reanuda_antes),
-            viewModel.uiState.value.error
-        )
-        verify(repositorio, never()).registrarFichaje(any())
+        verify(repositorio).registrarFichaje(PeticionFichaje(TipoFichaje.PAUSA_FIN))
+        assertFalse(viewModel.uiState.value.confirmandoFin)
+        assertEquals(EstadoJornada.TRABAJANDO, viewModel.uiState.value.estado)
+    }
+
+    /** La salida fichada se recuerda para decirla, y se olvida con la entrada siguiente. */
+    @Test
+    fun `la salida se recuerda hasta la entrada siguiente`() = runTest {
+        val viewModel = viewModelCon(activo = registro())
+        val cerrada = registro(horaSalida = "2026-08-29T15:00:00Z")
+        whenever(repositorio.registrarFichaje(PeticionFichaje(TipoFichaje.FIN))).thenReturn(Response.success(cerrada))
+        advanceUntilIdle()
+
+        viewModel.pulsarBotonPrincipal()
+        viewModel.confirmarFinDeJornada()
+        advanceUntilIdle()
+        assertEquals(cerrada, viewModel.uiState.value.ultimaSalida)
+
+        whenever(repositorio.registrarFichaje(PeticionFichaje(TipoFichaje.INICIO))).thenReturn(Response.success(registro()))
+        whenever(repositorio.getEstadoDeHoy()).thenThrow(RuntimeException("sin red"))
+        viewModel.pulsarBotonPrincipal()
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.ultimaSalida)
+    }
+
+    /** Sin red también: la salida guardada en el móvil se dice con su hora y su ubicación. */
+    @Test
+    fun `sin red la salida guardada en el movil tambien se recuerda`() = runTest {
+        whenever(sesion.correoDeLaSesion()).thenReturn("ana@x")
+        whenever(ajustes.empresaPideUbicacion).thenReturn(true)
+        whenever(ajustes.ubicacionExplicada).thenReturn(true)
+        whenever(fuente.tomar()).thenReturn(posicion)
+        val viewModel = viewModelCon(activo = registro())
+        advanceUntilIdle()
+        entorno.red = false
+
+        viewModel.pulsarBotonPrincipal()
+        viewModel.confirmarFinDeJornada()
+        advanceUntilIdle()
+
+        val salida = viewModel.uiState.value.ultimaSalida
+        assertEquals("2026-10-26T07:00:00Z", salida?.horaSalida)
+        assertEquals(posicion, salida?.ubicacionSalida)
+        assertEquals(EstadoJornada.SIN_JORNADA, viewModel.uiState.value.estado)
     }
 
     @Test

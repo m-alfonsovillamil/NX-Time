@@ -52,7 +52,6 @@ import com.nxtime.app.ui.util.DateFormats
 fun ComposicionDeLaJornada(
     segundosTrabajados: Long,
     segundosPausa: Long,
-    horaEntradaIso: String?,
     modifier: Modifier = Modifier
 ) {
     /*
@@ -65,12 +64,14 @@ fun ComposicionDeLaJornada(
      * espera al primer minuto, que además es cuando el dato empieza a
      * significar algo.
      */
-    val total = segundosTrabajados + segundosPausa
-    if (total < 60) return
-
-    // La pausa entra en el dibujo con el mismo criterio: una pausa de
-    // nueve segundos no merece un bloque de color.
+    /*
+     * Y nada sin pausa: una barra entera verde con «Trabajado 2h 14m» repetía
+     * el cronómetro, que está justo encima. La hora de entrada que iba sobre
+     * la barra también se ha quitado: ya la dice «Trabajando desde las…». La
+     * pantalla repetía la misma hora cinco veces (revisión de pantallas, 11/2026).
+     */
     val pausaVisible = segundosPausa >= 60
+    if (!pausaVisible) return
     val colores = LocalColoresJornada.current
     val descripcion = stringResource(
         R.string.jornada_composicion_descripcion,
@@ -79,18 +80,6 @@ fun ComposicionDeLaJornada(
     )
 
     Column(modifier = modifier.semantics { contentDescription = descripcion }) {
-        /*
-         * La hora de entrada, en su propia linea y encima de la barra.
-         * Iba al final de la fila de leyendas y ahi se partia en dos
-         * ("Desde las 15:15" / "h") en cuanto las leyendas crecian.
-         */
-        Text(
-            text = stringResource(R.string.jornada_desde, DateFormats.hora(horaEntradaIso)),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
-        Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -103,14 +92,12 @@ fun ComposicionDeLaJornada(
                     .fillMaxHeight()
                     .background(colores.trabajando)
             )
-            if (pausaVisible) {
-                Box(
-                    modifier = Modifier
-                        .weight(segundosPausa.toFloat())
-                        .fillMaxHeight()
-                        .background(colores.enPausa)
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .weight(segundosPausa.toFloat())
+                    .fillMaxHeight()
+                    .background(colores.enPausa)
+            )
         }
 
         Spacer(Modifier.height(8.dp))
@@ -126,15 +113,13 @@ fun ComposicionDeLaJornada(
                     DateFormats.minutos(segundosTrabajados / 60)
                 )
             )
-            if (pausaVisible) {
-                Leyenda(
-                    color = colores.enPausa,
-                    texto = stringResource(
-                        R.string.jornada_pausado,
-                        DateFormats.minutos(segundosPausa / 60)
-                    )
+            Leyenda(
+                color = colores.enPausa,
+                texto = stringResource(
+                    R.string.jornada_pausado,
+                    DateFormats.minutos(segundosPausa / 60)
                 )
-            }
+            )
         }
     }
 }
@@ -171,7 +156,8 @@ private fun Leyenda(color: Color, texto: String) {
  *
  * La barra **no se corta al 100 %**. Pasarse de la jornada es
  * información relevante, no un error de dibujo, así que el exceso se
- * pinta en el color de "parado" y el texto lo dice.
+ * pinta en el ámbar de "en pausa" y el texto lo dice. Iba en el rojo de
+ * "parado", el del botón de fichar la salida, y parecía un error.
  */
 @Composable
 fun ProgresoSemanal(
@@ -204,7 +190,7 @@ fun ProgresoSemanal(
                 ),
                 style = MaterialTheme.typography.labelMedium,
                 color = if (excedido) {
-                    colores.parado
+                    colores.enPausa
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 }
@@ -225,7 +211,7 @@ fun ProgresoSemanal(
                     .fillMaxWidth(proporcion)
                     .fillMaxHeight()
                     .background(
-                        if (excedido) colores.parado else MaterialTheme.colorScheme.primary
+                        if (excedido) colores.enPausa else MaterialTheme.colorScheme.primary
                     )
             )
         }

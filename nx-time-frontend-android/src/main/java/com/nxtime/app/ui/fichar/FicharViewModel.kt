@@ -79,6 +79,12 @@ data class FicharUiState(
     val avisosDeEnvio: List<AvisoDeEnvio> = emptyList(),
     /** El servidor rechaza el envío de los pendientes y no es cosa de esperar: el motivo. */
     val errorDelEnvio: MensajeUi? = null,
+    /**
+     * La salida que se acaba de fichar, para decir a qué hora y con qué ubicación:
+     * sin esto, al fichar la salida la pantalla volvía a «Toca para fichar» y no
+     * quedaba constancia de nada. Se olvida al fichar la entrada siguiente.
+     */
+    val ultimaSalida: Registro? = null,
 
     /**
      * Totales del backend. Es `null` mientras no ha llegado, y puede
@@ -343,8 +349,8 @@ class FicharViewModel(
     }
 
     /**
-     * Botón central. Inicia la jornada si no hay ninguna y **pide
-     * confirmación** para terminarla si la hay.
+     * Botón central. Inicia la jornada si no hay ninguna, la **reanuda** si
+     * está en pausa y **pide confirmación** para terminarla si está en marcha.
      *
      * Iniciar va directo y finalizar no, y la asimetría es deliberada: es
      * la misma doctrina que el panel de empresa, donde dar de baja pide
@@ -352,17 +358,17 @@ class FicharViewModel(
      * Cerrar la jornada por error obliga a pedir una corrección y a que
      * alguien la apruebe; empezarla por error se arregla terminándola.
      *
-     * La comprobación de "no puedes terminar estando en pausa" se hace
-     * aquí y no se manda al servidor: es una regla que el propio estado
-     * de la pantalla ya conoce, y así el usuario recibe la respuesta al
-     * instante en vez de tras una ida y vuelta. Va **antes** del diálogo:
-     * no tiene sentido confirmar algo que se va a rechazar.
+     * En pausa reanuda, y no avisa «reanuda antes de finalizar»: el botón
+     * grande decía «Finalizar jornada» durante la pausa, y al pulsarlo solo
+     * salía ese aviso con un «Reintentar» que no hacía nada (revisión de
+     * pantallas, 11/2026). Terminar estando en pausa sigue siendo reanudar
+     * y fichar la salida, como en la web.
      */
     fun pulsarBotonPrincipal() {
         if (fichando) return
         val estado = _uiState.value.estado
         if (estado == EstadoJornada.EN_PAUSA) {
-            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.fichar_reanuda_antes)) }
+            registrarFichaje(TipoFichaje.PAUSA_FIN)
             return
         }
         if (estado == EstadoJornada.SIN_JORNADA) {
@@ -590,6 +596,16 @@ class FicharViewModel(
                 )
                 fichando = false
                 if (guardado) {
+                    if (tipo == TipoFichaje.FIN) {
+                        _uiState.update {
+                            it.copy(
+                                ultimaSalida = Registro(
+                                    id = 0, horaEntrada = null, horaSalida = horaAlPulsar, enPausa = false,
+                                    ubicacionSalida = ubicacion
+                                )
+                            )
+                        }
+                    }
                     actualizarCola()
                     entorno.lanzarEnvio()
                     aplicarSinRespuesta(dueno!!)
@@ -651,6 +667,12 @@ class FicharViewModel(
                 estado = estado,
                 registro = activo,
                 error = null,
+                // Una jornada abierta deja vieja la salida anterior; una cerrada es la nueva.
+                ultimaSalida = when {
+                    estado != EstadoJornada.SIN_JORNADA -> null
+                    registro?.horaSalida != null -> registro
+                    else -> it.ultimaSalida
+                },
                 /*
                  * Se recalcula ya, sin esperar al siguiente latido: al
                  * iniciar la jornada el cronómetro tiene que arrancar en

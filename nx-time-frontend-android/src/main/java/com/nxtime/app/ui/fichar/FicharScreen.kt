@@ -16,8 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,7 +65,9 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.nxtime.app.data.dto.AvisoDeEnvio
+import com.nxtime.app.data.dto.EstadoUbicacion
 import com.nxtime.app.data.dto.Modalidad
+import com.nxtime.app.data.dto.UbicacionDelFichaje
 import com.nxtime.app.data.dto.ProyectosParaFicharDTO
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.RadioButton
@@ -231,6 +233,8 @@ fun FicharScreen(
                 modifier = Modifier.padding(top = 4.dp, start = 24.dp, end = 24.dp)
             )
 
+            LoGuardadoConElFichaje(estado)
+
             /*
              * El cuadrante de hoy (Fase B1), y el camino a verlo entero. Solo
              * aparece a quien tiene cuadrante: para el resto la pantalla queda
@@ -259,25 +263,19 @@ fun FicharScreen(
             Spacer(Modifier.height(24.dp))
 
             if (estado.estado != EstadoJornada.SIN_JORNADA) {
-                OutlinedButton(
-                    onClick = viewModel::pulsarBotonPausa,
-                    enabled = !estado.cargando,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
-                ) {
-                    Icon(
-                        if (estado.estado == EstadoJornada.EN_PAUSA) Icons.Default.PlayArrow
-                        else Icons.Default.Pause,
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.size(8.dp))
-                    Text(
-                        stringResource(
-                            if (estado.estado == EstadoJornada.EN_PAUSA) R.string.fichar_reanudar
-                            else R.string.fichar_pausar
-                        )
-                    )
+                // En pausa no hace falta: el botón grande es el que reanuda.
+                if (estado.estado == EstadoJornada.TRABAJANDO) {
+                    OutlinedButton(
+                        onClick = viewModel::pulsarBotonPausa,
+                        enabled = !estado.cargando,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp)
+                    ) {
+                        Icon(Icons.Default.Pause, contentDescription = null)
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.fichar_pausar))
+                    }
                 }
 
                 /*
@@ -308,7 +306,6 @@ fun FicharScreen(
                 ComposicionDeLaJornada(
                     segundosTrabajados = estado.segundosEnCurso,
                     segundosPausa = estado.registro?.segundosPausaAcumulados ?: 0,
-                    horaEntradaIso = estado.registro?.horaEntrada,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
                 Spacer(Modifier.height(20.dp))
@@ -455,9 +452,52 @@ fun FicharScreen(
 }
 
 /**
+ * Lo que se guardó con el fichaje (ADR 055 y 056): presencial o a distancia, y si
+ * se tomó la ubicación. El servidor ya lo guardaba, pero quien fichaba no lo veía,
+ * y sin verlo no sabe si el permiso del móvil funciona (revisión de pantallas,
+ * 11/2026). Con la jornada abierta, lo de la entrada; tras la salida, lo de la salida.
+ */
+@Composable
+private fun LoGuardadoConElFichaje(estado: FicharUiState) {
+    val modalidad = estado.registro?.modalidad.takeIf { estado.estado != EstadoJornada.SIN_JORNADA }
+    val ubicacion = if (estado.estado == EstadoJornada.SIN_JORNADA) {
+        estado.ultimaSalida?.ubicacionSalida
+    } else {
+        estado.registro?.ubicacionEntrada
+    }
+    val partes = listOfNotNull(
+        modalidad?.let { stringResource(textoDeModalidad(it)) },
+        ubicacion?.let { textoDeUbicacion(it) }
+    )
+    if (partes.isEmpty()) return
+    Text(
+        text = partes.joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(top = 2.dp, start = 24.dp, end = 24.dp)
+    )
+}
+
+/** Null si el estado no se reconoce: Gson deja a null un valor que no conoce. */
+@Composable
+private fun textoDeUbicacion(ubicacion: UbicacionDelFichaje): String? =
+    when (ubicacion.estado as EstadoUbicacion?) {
+        EstadoUbicacion.CAPTURADA -> ubicacion.precisionM
+            ?.let { stringResource(R.string.fichar_con_ubicacion_precision, it) }
+            ?: stringResource(R.string.fichar_con_ubicacion)
+        EstadoUbicacion.DENEGADA -> stringResource(R.string.fichar_sin_ubicacion_denegada)
+        EstadoUbicacion.NO_DISPONIBLE -> stringResource(R.string.fichar_sin_ubicacion_no_disponible)
+        null -> null
+    }
+
+/**
  * Lo que espera en el móvil, y lo que llegó y no entró tal cual (ADR 054). Un
  * rechazo se queda a la vista hasta que se lee: si no, una jornada se quedaría sin
  * su salida sin que nadie lo supiera.
+ *
+ * Lo pendiente va en una tarjeta con icono y no en una línea gris: era fácil no
+ * verla, y es justo lo que quien ficha sin cobertura necesita saber.
  */
 @Composable
 private fun AvisosSinConexion(
@@ -467,23 +507,38 @@ private fun AvisosSinConexion(
     onDescartar: (String) -> Unit
 ) {
     if (pendientes > 0) {
-        Text(
-            text = pluralStringResource(R.plurals.sin_conexion_pendientes, pendientes, pendientes),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        )
-    }
-    // Con la red ya de vuelta y el servidor diciendo que no: esperar no lo arregla.
-    if (pendientes > 0 && errorDelEnvio != null) {
-        Text(
-            text = stringResource(R.string.sin_conexion_envio_rechazado, errorDelEnvio),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        )
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.CloudOff, contentDescription = null)
+                Column {
+                    Text(stringResource(R.string.sin_conexion_titulo), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = pluralStringResource(R.plurals.sin_conexion_pendientes, pendientes, pendientes),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    // Con la red ya de vuelta y el servidor diciendo que no: esperar no lo arregla.
+                    if (errorDelEnvio != null) {
+                        Text(
+                            text = stringResource(R.string.sin_conexion_envio_rechazado, errorDelEnvio),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
     }
     avisos.forEach { aviso ->
         Card(
@@ -770,8 +825,8 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
         /*
          * El relleno por defecto de un Button son 24 dp por lado, pensados
          * para un boton ancho y bajo. Aqui dejaban 128 dp utiles de los
-         * 176 y "Finalizar jornada" se partia en dos lineas dentro de un
-         * boton que tiene sitio de sobra. Con 12 dp quedan 152 y entra.
+         * 176 y el texto largo de entonces ("Finalizar jornada") se partia
+         * en dos lineas. Con 12 dp quedan 152 y entra.
          */
         contentPadding = PaddingValues(12.dp),
         modifier = Modifier.size(176.dp)
@@ -800,11 +855,13 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
                     text = stringResource(
                         when (estado.estado) {
                             EstadoJornada.SIN_JORNADA -> R.string.fichar_iniciar
-                            else -> R.string.fichar_finalizar
+                            EstadoJornada.TRABAJANDO -> R.string.fichar_finalizar
+                            // En pausa, lo que se busca es volver: el boton grande reanuda.
+                            EstadoJornada.EN_PAUSA -> R.string.fichar_reanudar
                         }
                     ),
                     // `titleMedium` y no `titleLarge`: al bajar el boton a
-                    // 176 dp, "Finalizar jornada" se partia en dos lineas
+                    // 176 dp, un texto largo se partia en dos lineas
                     // y empujaba al cronometro contra el borde.
                     style = MaterialTheme.typography.titleMedium,
                     // Sin `maxLines`: con el relleno reducido entra en una
@@ -820,7 +877,9 @@ private fun BotonFichar(estado: FicharUiState, onClick: () -> Unit) {
 
 @Composable
 private fun textoDeEstado(estado: FicharUiState): String = when (estado.estado) {
-    EstadoJornada.SIN_JORNADA -> stringResource(R.string.fichar_sin_jornada)
+    EstadoJornada.SIN_JORNADA -> estado.ultimaSalida?.horaSalida
+        ?.let { stringResource(R.string.fichar_salida_fichada, DateFormats.hora(it)) }
+        ?: stringResource(R.string.fichar_sin_jornada)
     EstadoJornada.TRABAJANDO -> stringResource(
         R.string.fichar_desde, DateFormats.hora(estado.registro?.horaEntrada)
     )

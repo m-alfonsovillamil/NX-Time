@@ -22,11 +22,18 @@ desde el menú de compartir.
 En **Mi jornada**:
 
 - **Fichar entrada** al empezar.
-- **Iniciar pausa** y **Reanudar jornada** para las pausas (comida, descansos).
-- **Finalizar jornada** al terminar. Te pide confirmar, porque deshacerlo
+- **Pausar** para las pausas (comida, descansos). En pausa, el botón grande
+  pasa a **Reanudar**.
+- **Fichar salida** al terminar. Te pide confirmar, porque deshacerlo
   necesita una corrección.
 
-El cronómetro dice lo que llevas trabajado, sin las pausas.
+El cronómetro dice lo que llevas trabajado, sin las pausas. Para fichar la
+salida estando en pausa, reanuda primero.
+
+Debajo de la hora verás lo que se ha guardado con tu fichaje: si estás en el
+centro o a distancia y si se tomó tu ubicación (por ejemplo, «Presencial · Con
+ubicación (± 5 m)»). Si dice «Sin ubicación: el móvil no tiene permiso», puedes
+darlo en los ajustes del móvil.
 
 Si tu empresa lo pide, al entrar te pregunta **dónde trabajas hoy** (en el centro
 o a distancia), y puede que tome **tu ubicación** al entrar y al salir. Mira el
@@ -35,9 +42,9 @@ apartado de la ubicación, más abajo.
 ## Sin cobertura
 
 **Con la app de Android puedes fichar sin cobertura.** El fichaje se guarda en el
-móvil con la hora en que pulsaste, y arriba verás «Sin conexión: 1 fichaje se
-enviará al volver la red». Cuando vuelve la red se manda solo, aunque la app esté
-cerrada.
+móvil con la hora en que pulsaste, y arriba verás un aviso «Sin conexión: 1
+fichaje guardado en el móvil». Cuando vuelve la red se manda solo, aunque la app
+esté cerrada.
 
 - Si llega **más de 72 horas tarde**, se registra igual, pero queda «a revisar»
   hasta que tu responsable lo dé por bueno. Te lo dice la app.
