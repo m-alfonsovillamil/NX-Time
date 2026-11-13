@@ -425,6 +425,36 @@ class CuadranteIT {
                 .as("el martes no hereda la madrugada del lunes").isZero();
     }
 
+    /**
+     * La noche del cambio de hora, el turno de 22:00 a 06:00 no dura 8 h: el
+     * 29/03/2025 a las 02:00 pasan a ser las 03:00 (7 h), y el 26/10/2025 a las
+     * 03:00 vuelven a ser las 02:00 (9 h). Un turno de día no cambia.
+     */
+    @Test
+    @DisplayName("El turno de noche del cambio de hora dura lo que dura de verdad: 7 h en marzo y 9 h en octubre")
+    void turnoDeNocheConCambioDeHora() {
+        LocalDate sabadoDeMarzo = LocalDate.of(2025, 3, 29);
+        LocalDate sabadoDeOctubre = LocalDate.of(2025, 10, 25);
+        asignar(empleado, plantilla("Noche de sábado y domingo de día", List.of(
+                new ScheduleTemplateRequest.Tramo(6, minutos("22:00"), minutos("06:00") + 1440),
+                new ScheduleTemplateRequest.Tramo(7, minutos("09:00"), minutos("17:00")))), LUNES);
+
+        assertThat(jornadaTeoricaService.dia(empleado, sabadoDeMarzo).minutos()).isEqualTo(7 * 60);
+        assertThat(jornadaTeoricaService.dia(empleado, sabadoDeOctubre).minutos()).isEqualTo(9 * 60);
+        assertThat(jornadaTeoricaService.dia(empleado, sabadoDeMarzo.plusDays(1)).minutos())
+                .as("el domingo del cambio, de 09:00 a 17:00, sigue siendo de 8 h").isEqualTo(8 * 60);
+        assertThat(jornadaTeoricaService.dia(empleado, sabadoDeMarzo.minusDays(7)).minutos())
+                .as("un sábado cualquiera").isEqualTo(8 * 60);
+        // La semana también: es contra lo que se miden sus horas extra.
+        assertThat(jornadaTeoricaService.minutosTeoricosSemana(empleado, sabadoDeMarzo.minusDays(5)))
+                .isEqualTo(7 * 60 + 8 * 60);
+        assertThat(jornadaTeoricaService.minutosTeoricosSemana(empleado, sabadoDeOctubre.minusDays(5)))
+                .isEqualTo(9 * 60 + 8 * 60);
+        // Y lo mismo por lotes, que es lo que usa la analítica.
+        assertThat(jornadaTeoricaService.planificadoDeVarios(List.of(empleado), sabadoDeOctubre, sabadoDeOctubre)
+                .get(empleado.getId()).get(0).minutos()).isEqualTo(9 * 60);
+    }
+
     /** La versión por rango y la de un día tienen que decir lo mismo, palabra por palabra. */
     @Test
     @DisplayName("Los motivos de no laborable por rango coinciden con los de día a día")

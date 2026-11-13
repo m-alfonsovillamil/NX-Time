@@ -11,8 +11,11 @@ import com.nxtime.nxtime.repository.ScheduleSlotRepository;
 import com.nxtime.nxtime.service.JornadaTeoricaService;
 import com.nxtime.nxtime.service.NonWorkingDayService;
 import com.nxtime.nxtime.service.OvertimeCalculator;
+import com.nxtime.nxtime.service.ReglasDeCuadrante;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -75,7 +78,7 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
 
         List<DiaTeorico> dias = new ArrayList<>();
         for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
-            dias.add(diaTeorico(fecha, asignaciones, noLaborables, excepciones, tramosPorPlantilla));
+            dias.add(diaTeorico(fecha, persona.zona(), asignaciones, noLaborables, excepciones, tramosPorPlantilla));
         }
         return dias;
     }
@@ -101,12 +104,14 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
         Map<Long, Map<DayOfWeek, List<Tramo>>> tramosPorPlantilla = tramosDe(
                 asignaciones.values().stream().flatMap(List::stream).toList());
 
+        Map<Long, ZoneId> zonas = personas.stream().collect(Collectors.toMap(User::getId, User::zona, (a, b) -> a));
         Map<Long, DiaTeorico> porPersona = new HashMap<>();
         for (long id : ids) {
             NonWorkingDayService.Motivo motivo = noLaborables.get(id);
             List<ScheduleException> suyas = excepciones.getOrDefault(id, List.of());
             porPersona.put(id, diaTeorico(
                     fecha,
+                    zonas.get(id),
                     asignaciones.getOrDefault(id, List.of()),
                     motivo != null ? Map.of(fecha, motivo) : Map.of(),
                     suyas.isEmpty() ? Map.of() : Map.of(fecha, suyas),
@@ -141,13 +146,14 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
         Map<Long, Map<DayOfWeek, List<Tramo>>> tramosPorPlantilla = tramosDe(
                 asignaciones.values().stream().flatMap(List::stream).toList());
 
+        ZoneId zona = personas.iterator().next().zona();
         Map<Long, List<DiaTeorico>> porPersona = new HashMap<>();
         for (long id : ids) {
             List<ScheduleAssignment> suyas = asignaciones.getOrDefault(id, List.of());
             Map<LocalDate, List<ScheduleException>> susExcepciones = excepciones.getOrDefault(id, Map.of());
             List<DiaTeorico> dias = new ArrayList<>();
             for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
-                dias.add(diaTeorico(fecha, suyas, festivos, susExcepciones, tramosPorPlantilla));
+                dias.add(diaTeorico(fecha, zona, suyas, festivos, susExcepciones, tramosPorPlantilla));
             }
             porPersona.put(id, dias);
         }
@@ -188,6 +194,7 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
      */
     private DiaTeorico diaTeorico(
             LocalDate fecha,
+            ZoneId zona,
             List<ScheduleAssignment> asignaciones,
             Map<LocalDate, NonWorkingDayService.Motivo> noLaborables,
             Map<LocalDate, List<ScheduleException>> excepciones,
@@ -220,14 +227,14 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
                     .map(e -> new Tramo(e.getInicio(), e.getFin()))
                     .sorted(Comparator.comparingInt(Tramo::inicio))
                     .toList();
-            return new DiaTeorico(fecha, Origen.EXCEPCION, suma(tramos), tramos, explicacion, plantilla);
+            return new DiaTeorico(fecha, Origen.EXCEPCION, suma(fecha, zona, tramos), tramos, explicacion, plantilla);
         }
 
         if (vigente != null) {
             List<Tramo> tramos = tramosPorPlantilla
                     .getOrDefault(vigente.getPlantilla().getId(), Map.of())
                     .getOrDefault(fecha.getDayOfWeek(), List.of());
-            return new DiaTeorico(fecha, Origen.CUADRANTE, suma(tramos), tramos, null, plantilla);
+            return new DiaTeorico(fecha, Origen.CUADRANTE, suma(fecha, zona, tramos), tramos, null, plantilla);
         }
 
         return new DiaTeorico(fecha, Origen.SIN_CUADRANTE, 0, List.of(), null, null);
@@ -250,8 +257,20 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
         return porPlantilla;
     }
 
-    private static int suma(List<Tramo> tramos) {
-        return tramos.stream().mapToInt(Tramo::minutos).sum();
+    /**
+     * Los minutos REALES de los tramos de ese día, no los del reloj de pared.
+     * Casi siempre coinciden; la noche del cambio de hora, no: un turno de
+     * 22:00 a 06:00 dura 7 h en marzo y 9 h en octubre. Hasta noviembre de
+     * 2026 salían 8 h las dos noches, y las horas extra de quien tiene
+     * cuadrante se medían contra ese número: una hora extra que no existía
+     * en octubre y una de menos en marzo.
+     */
+    private static int suma(LocalDate fecha, ZoneId zona, List<Tramo> tramos) {
+        return (int) tramos.stream()
+                .mapToLong(tramo -> Duration.between(
+                        ReglasDeCuadrante.instante(fecha, zona, tramo.inicio()),
+                        ReglasDeCuadrante.instante(fecha, zona, tramo.fin())).toMinutes())
+                .sum();
     }
 
     private static boolean esEntreSemana(LocalDate fecha) {
