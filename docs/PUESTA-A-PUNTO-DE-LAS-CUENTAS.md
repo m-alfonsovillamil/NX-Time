@@ -216,14 +216,25 @@ afecta.
   hace con todos los roles. Lo compensan los triggers de solo inserción, y los
   diez estaban activos en producción el 6/11/2026. No hay que hacer nada.
 - Mirar en *Settings* cuántas horas atrás deja volver el plan (*restore window*).
-  El gratuito, 6 horas: por eso hay copias diarias.
+  El gratuito, 6 horas: por eso hay copias diarias. Comprobado el 13/11/2026:
+  *History retention*, 6 horas.
 - Lista blanca de IPs: **no**, de momento. La copia diaria sale de GitHub
   Actions, que no tiene IP fija, y Render gratuito tampoco.
 
 **Firebase** (Google Cloud → *APIs y servicios* → *Credenciales*):
-- la clave de Android: *Aplicaciones de Android*, paquete `com.nxtime.app` y la
-  huella SHA-1 de la clave de firma (`keytool -list -v -keystore <el .jks>`);
-- la clave de la web: *Sitios web*, `https://nxtime-web.com/*`;
+- la clave de Android: *Aplicaciones de Android*, con **dos** entradas, porque
+  `google-services.json` lleva los dos paquetes y la misma clave sirve a ambos:
+  - `com.nxtime.app` con la huella de la clave de firma,
+    `F9:8B:9F:6E:D8:2A:62:D4:17:AB:F8:83:C1:67:3B:12:59:58:DB:B4`;
+  - `com.nxtime.app.dev` con la huella de depuración de este PC,
+    `94:F4:CB:81:68:66:91:E6:F9:F6:B1:EC:8D:A1:05:6F:63:41:EE:6E`. Sin ella,
+    las notificaciones dejan de llegar al emulador. Cambia si se regenera
+    `~/.android/debug.keystore` o se compila en otro equipo.
+
+  Las huellas se leen del APK, sin contraseña:
+  `apksigner verify --print-certs <el .apk>`;
+- la clave de la web: *Sitios web*, `https://nxtime-web.com/*` (y
+  `http://localhost:5173/*` si se quieren probar las notificaciones en local);
 - en las dos, *Restringir clave* a las API de Firebase que salen marcadas
   (Installations y Cloud Messaging).
 
@@ -231,12 +242,22 @@ Si las notificaciones dejan de llegar justo después, la restricción está mal:
 quitarla, y volver a probar.
 
 **Sentry**
+
+> **Hecho el 13/11/2026**: la organización está en la UE (*Data Storage
+> Region: European Union*), y en *Security & Privacy* quedaron activados
+> «Requerir limpieza de datos», «Requerir uso de limpieza de datos» y «Evitar
+> almacenamiento de direcciones IP», que obligan a todos los proyectos.
+
 - La región: el DSN tiene que llevar `.de.` (`…ingest.de.sentry.io`). Si no,
   la organización está en EE. UU., y hay que crearla de nuevo en la UE.
 - *Settings* → *Security & Privacy*: **Data Scrubber** activado y **Prevent
   Storing of IP Addresses** activado.
 
 **Render**
+
+> **Comprobado el 13/11/2026**: *Settings* → *Region* dice «Frankfurt (EU
+> Central)».
+
 - En la ficha de `nxtime-backend`, comprobar que la región es **Frankfurt**,
   como dice `render.yaml`. La región no se puede cambiar una vez creado el
   servicio, y el DNS de Render apunta a un nombre `us-west1`. El tiempo de
@@ -247,8 +268,10 @@ quitarla, y volver a probar.
 **Cloudflare** (el dominio `nxtime-web.com`):
 - **DNSSEC**: *DNS* → *Settings* → *Enable DNSSEC*. Si el dominio no está
   registrado en Cloudflare, copiar el registro DS que enseña en el registrador.
-- **CAA**: hoy los certificados los firma Google Trust Services, y Render
-  también usa Let's Encrypt. Dos registros CAA en `nxtime-web.com`:
+- **CAA**: hoy los certificados los firma Google Trust Services (los tres,
+  comprobado el 13/11/2026; caducan el 26/12/2026, así que Render los renovará
+  hacia finales de noviembre), y Render también usa Let's Encrypt. Dos
+  registros CAA en `nxtime-web.com`:
   - `0 issue "pki.goog"`
   - `0 issue "letsencrypt.org"`
 
