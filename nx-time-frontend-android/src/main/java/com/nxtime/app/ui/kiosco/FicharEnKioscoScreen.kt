@@ -24,7 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -147,7 +147,7 @@ fun FicharEnKioscoScreen(
                     enabled = !estado.cargandoTarjeta,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(stringResource(R.string.kiosco_ensenar_tarjeta)) }
-                OutlinedButton(
+                FilledTonalButton(
                     onClick = { regenerando = true },
                     enabled = !estado.cargandoTarjeta,
                     modifier = Modifier.fillMaxWidth()

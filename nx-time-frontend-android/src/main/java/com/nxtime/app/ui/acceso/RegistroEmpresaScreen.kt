@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -162,7 +162,7 @@ fun RegistroEmpresaScreen(
             } else if (estado.proveedoresSso.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
                 estado.proveedoresSso.forEach { proveedor ->
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = { viewModel.registrarCon(proveedor) },
                         enabled = !estado.cargando,
                         modifier = Modifier
