@@ -17,7 +17,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -72,12 +72,12 @@ fun AusenciasScreen(
             )
         },
         accionFlotante = {
-            FloatingActionButton(onClick = onIrSolicitud) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = stringResource(R.string.nav_solicitar)
-                )
-            }
+            // Con el texto, como en la web y en Borrados: un «+» suelto no dice qué crea.
+            ExtendedFloatingActionButton(
+                onClick = onIrSolicitud,
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text(stringResource(R.string.nav_solicitar)) }
+            )
         }
     ) { modifier ->
         ListaConRecarga(

@@ -331,6 +331,9 @@ private fun Celda(
     val tinta = when {
         seleccionado -> MaterialTheme.colorScheme.onPrimaryContainer
         ausencias.isNotEmpty() -> MaterialTheme.colorScheme.onSecondaryContainer
+        // El número del festivo, en el color de marca: el punto solo no se
+        // veía (revisión de pantallas, 11/2026). Sin fondo, que le quitaría contraste.
+        festivo != null -> MaterialTheme.colorScheme.primary
         // El fin de semana se apaga en vez de colorearse: es el día "sin
         // nada", y bajarle el contraste dice eso sin gastar un color.
         esFinDeSemana -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -364,7 +367,7 @@ private fun Celda(
             Text(
                 text = fecha.dayOfMonth.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (esHoy) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (esHoy || festivo != null) FontWeight.Bold else FontWeight.Normal,
                 color = tinta
             )
             // El punto de festivo va DEBAJO del número y no detrás: un

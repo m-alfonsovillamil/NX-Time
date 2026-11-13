@@ -107,11 +107,11 @@ function TarjetaDeAviso({
       {a.justificacion && <span className="nx-sutil">{H.justificacion(a.justificacion)}</span>}
       {a.revisadoPor && <span className="nx-sutil">{H.revisadoPor(a.revisadoPor)}</span>}
       {delEquipo && esperaDecision && alAceptar && alJustificar && (
-        <div className="nx-acciones-fila">
-          <Boton variante="texto" ocupado={ocupado === true} onClick={alAceptar}>
+        <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+          <Boton ocupado={ocupado === true} onClick={alAceptar}>
             {H.aceptar}
           </Boton>
-          <Boton variante="texto" onClick={alJustificar}>
+          <Boton variante="secundario" onClick={alJustificar}>
             {H.justificar}
           </Boton>
         </div>

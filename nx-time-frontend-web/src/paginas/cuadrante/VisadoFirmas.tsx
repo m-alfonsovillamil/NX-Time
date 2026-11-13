@@ -97,7 +97,7 @@ export function VisadoFirmas() {
         return (
           <div className="nx-acciones-fila" role="group" aria-label={V.accionesDe(f.usuario ?? '')}>
             {f.estado === 'VIGENTE' && !firma.visadaPor && (
-              <Boton variante="texto" ocupado={visar.isPending && visar.variables === id} onClick={() => visar.mutate(id)}>
+              <Boton variante="secundario" ocupado={visar.isPending && visar.variables === id} onClick={() => visar.mutate(id)}>
                 {V.visar}
               </Boton>
             )}

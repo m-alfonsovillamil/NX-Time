@@ -606,11 +606,17 @@ public class DemoDataSeeder implements CommandLineRunner {
                             : "Rechazada: esas fechas coinciden con el cierre trimestral.")
                     .build());
 
+            // Entre semana: dos días a partir de «hoy + 15» caían a veces en
+            // sábado y domingo, una petición de cero días hábiles.
+            LocalDate inicioPendiente = entreSemana(hoy.plusDays(15 + i));
+            LocalDate finPendiente = inicioPendiente.plusDays(1).getDayOfWeek().getValue() >= 6
+                    ? inicioPendiente
+                    : inicioPendiente.plusDays(1);
             absenceRequestRepository.save(AbsenceRequest.builder()
                     .usuario(empleado)
                     .empresa(empleado.getEmpresa())
-                    .fechaInicio(hoy.plusDays(15 + i))
-                    .fechaFin(hoy.plusDays(16 + i))
+                    .fechaInicio(inicioPendiente)
+                    .fechaFin(finPendiente)
                     .tipo(AbsenceType.ASUNTOS_PROPIOS)
                     .motivo("Petición de ejemplo pendiente de revisar")
                     .estado(AbsenceStatus.PENDIENTE)
@@ -1135,7 +1141,7 @@ public class DemoDataSeeder implements CommandLineRunner {
 
             crearAviso(empleado, NoticeType.AUSENCIA_RESUELTA,
                     "Tu ausencia ha sido " + (aprobada ? "aprobada" : "rechazada"),
-                    "VACACIONES. " + (aprobada
+                    "Vacaciones. " + (aprobada
                             ? "Aprobada, que las disfrutes."
                             : "Rechazada: esas fechas coinciden con el cierre trimestral."),
                     ahora.minus(30L + i, ChronoUnit.DAYS), false);
@@ -1144,9 +1150,18 @@ public class DemoDataSeeder implements CommandLineRunner {
             // lo que hace que su campana lleve un número de verdad.
             crearAviso(gestor, NoticeType.AUSENCIA_SOLICITADA,
                     "Nueva petición de " + empleado.getNombre(),
-                    "ASUNTOS_PROPIOS, pendiente de resolver.",
+                    "Asuntos propios, pendiente de resolver.",
                     ahora.minus(2L + i, ChronoUnit.HOURS), false);
         }
+    }
+
+    /** El mismo día si es entre semana; si no, el lunes siguiente. */
+    private static LocalDate entreSemana(LocalDate dia) {
+        LocalDate d = dia;
+        while (d.getDayOfWeek().getValue() >= 6) {
+            d = d.plusDays(1);
+        }
+        return d;
     }
 
     private void crearAviso(User destinatario, NoticeType tipo, String titulo,

@@ -71,7 +71,7 @@ function TarjetaDeIncidencia({ i, delEquipo, acciones }: { i: Incidencia; delEqu
           {i.comentarioResolucion ? I.resueltaConComentario(i.resueltaPor, i.comentarioResolucion) : I.resueltaPor(i.resueltaPor)}
         </span>
       )}
-      {acciones !== null && <div className="nx-acciones-fila">{acciones}</div>}
+      {acciones !== null && <div className="nx-acciones-fila nx-acciones-fila--con-aire">{acciones}</div>}
     </li>
   );
 }
@@ -189,13 +189,12 @@ function DelEquipo() {
               acciones={
                 <>
                   <Boton
-                    variante="texto"
                     ocupado={decidir.isPending && decidir.variables?.id === i.id && decidir.variables.aceptar}
                     onClick={() => i.id !== undefined && decidir.mutate({ id: i.id, aceptar: true })}
                   >
                     {I.aceptar}
                   </Boton>
-                  <Boton variante="texto" onClick={() => setRechazando(i)}>
+                  <Boton variante="secundario" onClick={() => setRechazando(i)}>
                     {I.rechazar}
                   </Boton>
                 </>

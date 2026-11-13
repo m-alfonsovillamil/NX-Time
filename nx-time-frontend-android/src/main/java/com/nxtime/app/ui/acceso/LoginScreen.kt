@@ -15,7 +15,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -204,7 +204,7 @@ fun LoginScreen(
             if (estado.proveedoresSso.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 20.dp))
                 estado.proveedoresSso.forEach { proveedor ->
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = { viewModel.entrarCon(proveedor) },
                         enabled = !estado.cargando,
                         modifier = Modifier

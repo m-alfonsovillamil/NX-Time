@@ -202,13 +202,13 @@ export function Borrados() {
       clave: 'acciones',
       cabecera: B.columnas.acciones,
       celda: (s) => (
-        <div className="nx-acciones-fila">
+        <div className="nx-acciones-fila nx-acciones-fila--con-aire">
           {(s.bloqueos ?? []).length === 0 && (
-            <Boton variante="texto" onClick={() => setEjecutando(s)}>
+            <Boton variante="peligro" onClick={() => setEjecutando(s)}>
               {B.ejecutar}
             </Boton>
           )}
-          <Boton variante="texto" onClick={() => setRechazando(s)}>
+          <Boton variante="secundario" onClick={() => setRechazando(s)}>
             {B.rechazar}
           </Boton>
         </div>
