@@ -116,6 +116,7 @@ class ReportServiceImplTest {
         ReportRow fila = service.informeDeEmpresa(solicitante.getEmail(), YearMonth.of(2026, 6)).filas().get(0);
 
         assertThat(fila.minutosPausa()).isEqualTo(30);
+        assertThat(fila.segundosPausa()).isEqualTo(30 * 60);
         assertThat(fila.segundosNetos()).isEqualTo((8L * 3600) + (30 * 60) - (30 * 60)); // 8 h netas
         assertThat(fila.duracionLegible()).isEqualTo("8h 00m");
     }
