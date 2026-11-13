@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.nxtime.app",
+      "sha256_cert_fingerprints": [
+        "6F:3A:49:D8:BA:EA:AA:27:0B:A9:DD:71:C5:16:DD:01:57:D0:F8:DC:1F:50:B1:51:BC:C0:68:C9:81:3E:36:54"
+      ]
+    }
+  }
+]

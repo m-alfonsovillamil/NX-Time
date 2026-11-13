@@ -37,6 +37,7 @@ Play**: el `applicationId` de la app no se puede cambiar una vez publicada.
 | `render.yaml` | Los valores de producción: CORS, dominio de la cookie de sesión (`COOKIE_DOMAIN`), URL de la API para la web, URL pública, `MAIL_FROM` y la CSP. `application-prod.yml` solo lo menciona en comentarios |
 | `SsoConfig` y `SesionWeb` | La redirección del SSO y el dominio por defecto de la sesión web |
 | `nx-time-frontend-android/build.gradle.kts` | `applicationId` y `WEB_URL` del sabor `prod`. La API la llama por `nxtime-backend.onrender.com`, que no cambia |
+| App Links (1.19) | El host del `intent-filter` de `MainActivity`, `HOSTS_DE_LA_WEB` (`EnlaceDeLaWeb.kt`) y, con el `applicationId` nuevo, `package_name` en `nx-time-frontend-web/public/.well-known/assetlinks.json`. Ver `DESPLIEGUE.md` |
 
 Los workflows (keep-alive, tareas nocturnas) llaman a `nxtime-backend.onrender.com`: no cambian.
 | `APP_DOWNLOAD_URL` (`application.yml`) | El enlace al APK que va en el correo de alta. Hoy apunta al repositorio de GitHub (`NX-Time.apk`): con Play, al de Play |

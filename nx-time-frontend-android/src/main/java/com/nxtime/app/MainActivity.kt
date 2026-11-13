@@ -32,6 +32,7 @@ import com.nxtime.app.ui.ajustes.estadoDeLaHuella
 import com.nxtime.app.ui.ajustes.pedirHuella
 import com.nxtime.app.ui.components.AvisoServidorDespertando
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
+import com.nxtime.app.ui.navegacion.destinoDeEnlaceWeb
 import com.nxtime.app.data.session.Tema
 import com.nxtime.app.ui.theme.NxTimeTheme
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -75,6 +76,14 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun recogerRutaDeAviso(intent: Intent?) {
+        // Un botón de un correo (App Links, 1.19): el enlace de la web trae el
+        // mismo destino que el aviso que va con ese correo.
+        if (intent?.action == Intent.ACTION_VIEW) {
+            destinoDeEnlaceWeb(intent.data?.host, intent.data?.path)?.let { rutaDeAviso.value = it }
+            // De un solo uso, como el push: al girar el móvil no vuelve a saltar.
+            intent.data = null
+            return
+        }
         val ruta = intent?.getStringExtra(NotificacionesPush.EXTRA_RUTA) ?: return
         // Se quita del intent: es de un solo uso.
         intent.removeExtra(NotificacionesPush.EXTRA_RUTA)

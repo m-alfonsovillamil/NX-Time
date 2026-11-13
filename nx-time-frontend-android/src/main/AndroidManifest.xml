@@ -72,6 +72,40 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+                App Links (1.19): los botones de los correos llevan a
+                https://nxtime-web.com/<destino>, y con el dominio verificado
+                (/.well-known/assetlinks.json en la web) abren la app en esa
+                pantalla. Solo los destinos que la app sabe abrir: lo demas
+                sigue yendo al navegador. La lista es DESTINOS_CON_ENLACE, y
+                EnlaceDeLaWebTest comprueba que coinciden.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="nxtime-web.com" />
+                <data android:path="/fichar" />
+                <data android:path="/ausencias" />
+                <data android:path="/ausencias-equipo/pendientes" />
+                <data android:path="/ausencias-equipo/resueltas" />
+                <data android:path="/correcciones/pendientes" />
+                <data android:path="/historial" />
+                <data android:path="/horas-extra" />
+                <data android:path="/canal-denuncias" />
+                <data android:path="/denuncias" />
+                <data android:path="/ofertas" />
+                <data android:path="/mis-candidaturas" />
+                <data android:path="/gestion-ofertas" />
+                <data android:path="/borrados" />
+                <data android:path="/equipo" />
+                <data android:path="/ajustes" />
+                <data android:path="/incidencias" />
+                <data android:path="/firmas" />
+                <data android:path="/perfil" />
+            </intent-filter>
         </activity>
 
         <!--
