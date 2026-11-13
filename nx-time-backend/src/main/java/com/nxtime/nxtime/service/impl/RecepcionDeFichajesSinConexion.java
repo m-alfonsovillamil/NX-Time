@@ -20,8 +20,10 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -32,6 +34,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  * pausa rechazada no tiene por qué impedir la salida). Cada resultado, también
  * el rechazo, se guarda en {@code fichajes_recibidos}, para contestar lo mismo
  * si la app lo vuelve a mandar.
+ *
+ * <p>Si algo falla sin ser una regla del fichaje, hay dos casos. Si es la base
+ * de datos (caída, sin conexiones libres, un tiempo agotado), se para el lote y
+ * se contesta solo lo procesado: la app quita eso de la cola y reenvía el resto
+ * más tarde, en el mismo orden. Cualquier otro fallo se repetiría igual en cada
+ * reenvío y dejaría la cola atascada para siempre, con todo lo de detrás: ese
+ * fichaje se rechaza, la persona lo ve en la app y pide una corrección, y el
+ * error queda en el registro (y en Sentry) para arreglarlo.
  *
  * <p>La hora: si el móvil manda cuánto ha pasado desde el fichaje, medido con
  * {@code elapsedRealtime}, la hora es la de llegada menos eso. Ese reloj no se
@@ -86,10 +96,23 @@ public class RecepcionDeFichajesSinConexion {
                 .getId();
         List<Resultado> resultados = new ArrayList<>(fichajes.size());
         for (Fichaje fichaje : fichajes) {
-            resultados.add(uno(usuarioId, fichaje));
+            try {
+                resultados.add(uno(usuarioId, fichaje));
+            } catch (DataAccessException | TransactionException e) {
+                // Lo de detrás puede depender de este (la salida, de la
+                // entrada): se para aquí, y la app lo reenvía todo en orden.
+                log.warn("Fichajes sin conexión del usuario {}: la base ha fallado en {} de {}; "
+                        + "se contestan los {} procesados y la app reenviará el resto",
+                        usuarioId, resultados.size() + 1, fichajes.size(), resultados.size(), e);
+                break;
+            }
         }
         return resultados;
     }
+
+    /** Lo que se le dice a la persona cuando su fichaje no se ha podido aplicar por un fallo nuestro. */
+    static final String FALLO_DEL_SERVIDOR = "No se ha podido aplicar por un error del servidor. "
+            + "Pide una corrección con la hora en que fichaste.";
 
     private Resultado uno(long usuarioId, Fichaje fichaje) {
         Optional<FichajeRecibido> previo = recibidos.findByUsuarioIdAndIdCliente(usuarioId, fichaje.idCliente());
@@ -152,6 +175,12 @@ public class RecepcionDeFichajesSinConexion {
                     .map(otro -> resultado(otro, true, null))
                     .orElseGet(() -> rechazar(usuarioId, fichaje, recibido,
                             "Choca con otro fichaje que ha llegado a la vez. Revisa tu jornada."));
+        } catch (DataAccessException | TransactionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            log.error("Fichaje sin conexión {} del usuario {}: fallo inesperado; se rechaza para no atascar la cola",
+                    fichaje.idCliente(), usuarioId, e);
+            return rechazar(usuarioId, fichaje, recibido, FALLO_DEL_SERVIDOR);
         }
     }
 

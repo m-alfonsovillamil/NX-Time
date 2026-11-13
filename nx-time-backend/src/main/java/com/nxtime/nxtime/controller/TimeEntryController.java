@@ -124,9 +124,10 @@ public class TimeEntryController {
             description = "La app los manda al volver la red, en el orden en que se hicieron (ADR 054). Cada uno se "
                     + "aplica con la hora en que ocurrió y en su propia transacción: un rechazo no deshace los "
                     + "anteriores. Repetir un fichaje con el mismo 'idCliente' devuelve lo mismo que la primera vez, "
-                    + "con 'yaRecibido'. Lo que llega pasadas 72 h se aplica para revisar (A_REVISAR).")
+                    + "con 'yaRecibido'. Lo que llega pasadas 72 h se aplica para revisar (A_REVISAR). Si la base de datos "
+                    + "falla a mitad, la respuesta trae solo los procesados, y el resto se reenvía después.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Un resultado por fichaje, en el mismo orden",
+            @ApiResponse(responseCode = "200", description = "Un resultado por fichaje procesado, en el mismo orden",
                     content = @Content(schema = @Schema(implementation = SinConexionDtos.EnvioResponse.class))),
             @ApiResponse(responseCode = "400", description = "Lista vacía, de más de 50, o un fichaje sin sus datos",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
