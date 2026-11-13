@@ -266,7 +266,7 @@ public final class ReglasDeCuadrante {
      * minutos a la medianoche del día del cambio de hora daría las 08:00 o las
      * 10:00, no las 09:00. Un minuto más allá de 1440 cae al día siguiente.
      */
-    static Instant instante(LocalDate fecha, ZoneId zona, int minutos) {
+    public static Instant instante(LocalDate fecha, ZoneId zona, int minutos) {
         return fecha.atStartOfDay().plusMinutes(minutos).atZone(zona).toInstant();
     }
 
