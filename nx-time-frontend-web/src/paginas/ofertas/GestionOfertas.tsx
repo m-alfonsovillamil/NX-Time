@@ -23,7 +23,7 @@ import { cliente } from '../../api/cliente';
 import { ErrorDeApi, pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { AreaDeTexto, Aviso, Boton, Campo, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { AreaDeTexto, Aviso, Boton, Campo, Insignia, MasAcciones, Selector, type Tono } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
@@ -252,31 +252,38 @@ export function GestionOfertas() {
       clave: 'acciones',
       cabecera: G.acciones,
       celda: (o) => (
+        /*
+         * Una acción a la vista (publicar un borrador, ver las candidaturas del
+         * resto) y lo demás tras «Más». Eran hasta cuatro enlaces que en el
+         * móvil se partían en dos líneas (revisión de pantallas, 11/2026).
+         */
         <div className="nx-acciones-fila" role="group" aria-label={G.accionesDe(o.titulo ?? '')}>
-          {o.estado !== 'CERRADA' && (
-            <Boton variante="texto" onClick={() => setEditando(o)}>
-              {G.editar}
-            </Boton>
-          )}
-          {o.estado === 'BORRADOR' && (
+          {o.estado === 'BORRADOR' ? (
             <Boton variante="texto" title={G.publicarAyuda} onClick={() => o.id !== undefined && estado.mutate({ id: o.id, nuevo: 'ABIERTA' })}>
               {G.publicar}
             </Boton>
-          )}
-          {o.estado === 'ABIERTA' && (
-            <>
-              <Boton variante="texto" onClick={() => o.id !== undefined && estado.mutate({ id: o.id, nuevo: 'BORRADOR' })}>
-                {G.retirar}
-              </Boton>
-              <Boton variante="texto" onClick={() => setCerrando(o)}>
-                {G.cerrar}
-              </Boton>
-            </>
-          )}
-          {o.estado !== 'BORRADOR' && (
+          ) : (
             <Boton variante="texto" onClick={() => setBusqueda({ oferta: String(o.id) })}>
               {G.verCandidaturas}
             </Boton>
+          )}
+          {/* Una cerrada no se reabre ni se edita: no le queda nada más. */}
+          {o.estado !== 'CERRADA' && (
+            <MasAcciones texto={G.mas} etiqueta={G.masDe(o.titulo ?? '')}>
+              <Boton variante="texto" onClick={() => setEditando(o)}>
+                {G.editar}
+              </Boton>
+              {o.estado === 'ABIERTA' && (
+                <>
+                  <Boton variante="texto" onClick={() => o.id !== undefined && estado.mutate({ id: o.id, nuevo: 'BORRADOR' })}>
+                    {G.retirar}
+                  </Boton>
+                  <Boton variante="texto" onClick={() => setCerrando(o)}>
+                    {G.cerrar}
+                  </Boton>
+                </>
+              )}
+            </MasAcciones>
           )}
         </div>
       ),

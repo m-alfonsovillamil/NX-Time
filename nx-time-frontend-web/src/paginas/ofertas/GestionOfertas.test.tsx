@@ -62,9 +62,11 @@ describe('gestión de ofertas', () => {
     const abierta = screen.getByRole('group', { name: G.accionesDe('Producto') });
     const cerrada = screen.getByRole('group', { name: G.accionesDe('Soporte') });
     expect(within(borrador).queryByRole('button', { name: G.verCandidaturas })).toBeNull();
+    await userEvent.click(within(abierta).getByText(G.mas));
     expect(within(abierta).getByRole('button', { name: G.retirar })).toBeTruthy();
-    // Una cerrada no se reabre ni se edita.
-    expect(within(cerrada).queryByRole('button', { name: G.editar })).toBeNull();
+    // Una cerrada no se reabre ni se edita: ni siquiera tiene «Más».
+    expect(within(cerrada).queryByText(G.mas)).toBeNull();
+    expect(within(cerrada).getByRole('button', { name: G.verCandidaturas })).toBeTruthy();
 
     await userEvent.click(within(borrador).getByRole('button', { name: G.publicar }));
     await userEvent.click(within(abierta).getByRole('button', { name: G.cerrar }));
@@ -88,6 +90,7 @@ describe('gestión de ofertas', () => {
     });
     pintar(<GestionOfertas />, { sesion: sesionDe('GESTOR') });
 
+    await userEvent.click(await screen.findByText(G.mas));
     await userEvent.click(await screen.findByRole('button', { name: G.editar }));
     const dialogo = await screen.findByRole('dialog', { name: G.editarTitulo('Producto') });
     await waitFor(() => expect((within(dialogo).getByLabelText(G.departamento) as HTMLSelectElement).value).toBe('2'));
