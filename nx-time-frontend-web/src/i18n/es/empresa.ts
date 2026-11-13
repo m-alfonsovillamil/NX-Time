@@ -12,6 +12,8 @@ export const empresa = {
     denuncias: 'Denuncias abiertas',
     horasPorEmpleado: 'Horas por empleado',
     mediaEquipo: (media: string) => `La raya es la media del equipo: ${media}`,
+    // Trabajó este mes y ya no está de alta: sus horas cuentan, pero no es de los «empleados activos».
+    deBaja: (nombre: string) => `${nombre} (de baja)`,
     horasPorProyecto: 'Horas por proyecto',
     sinHoras: 'Nadie ha fichado todavía este mes.',
   },

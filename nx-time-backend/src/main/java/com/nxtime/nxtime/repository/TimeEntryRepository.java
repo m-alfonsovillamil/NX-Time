@@ -162,6 +162,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     @Query(value = """
             SELECT u.id                AS usuarioId,
                    u.nombre            AS nombre,
+                   u.activo            AS activo,
                    COALESCE(SUM(
                        EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
                        - r.segundos_pausa_acumulados), 0) AS segundos
@@ -172,7 +173,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
               AND r.hora_salida IS NOT NULL
               AND r.hora_entrada >= :desde
               AND r.hora_entrada < :hasta
-            GROUP BY u.id, u.nombre
+            GROUP BY u.id, u.nombre, u.activo
             ORDER BY segundos DESC
             """, nativeQuery = true)
     List<EmployeeHoursProjection> sumarSegundosPorEmpleado(
@@ -326,6 +327,9 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
         long getUsuarioId();
 
         String getNombre();
+
+        /** Si sigue de alta: quien se dio de baja este mes también trabajó, y sale. */
+        Boolean getActivo();
 
         long getSegundos();
     }

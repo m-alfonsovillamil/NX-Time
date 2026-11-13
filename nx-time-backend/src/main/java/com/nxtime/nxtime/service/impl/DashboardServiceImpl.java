@@ -129,7 +129,8 @@ public class DashboardServiceImpl implements DashboardService {
         List<EmployeeHoursDTO> horasPorEmpleado =
                 timeEntryRepository.sumarSegundosPorEmpleado(empresa.getId(), inicioDeMes, finExclusivo).stream()
                         .map(fila -> new EmployeeHoursDTO(
-                                fila.getUsuarioId(), fila.getNombre(), aMinutos(fila.getSegundos())))
+                                fila.getUsuarioId(), fila.getNombre(), aMinutos(fila.getSegundos()),
+                                !Boolean.FALSE.equals(fila.getActivo())))
                         .toList();
 
         // Un COUNT y no toda la plantilla en memoria para contarla (Fase A6).

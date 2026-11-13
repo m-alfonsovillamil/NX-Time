@@ -16203,6 +16203,10 @@
           "minutos" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "activo" : {
+            "type" : "boolean",
+            "description" : "false si ya está de baja: sale porque trabajó este mes"
           }
         }
       },

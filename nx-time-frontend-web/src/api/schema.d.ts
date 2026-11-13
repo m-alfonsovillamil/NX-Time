@@ -5684,6 +5684,8 @@ export interface components {
             nombre?: string;
             /** Format: int64 */
             minutos?: number;
+            /** @description false si ya está de baja: sale porque trabajó este mes */
+            activo?: boolean;
         };
         TheoreticalDayResponse: {
             /** Format: date */
