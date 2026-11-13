@@ -1756,6 +1756,49 @@ h2 {
   }
 }
 
+/* La tabla compacta en el móvil (historiales): la cabecera arriba, los datos en
+   rejilla con la etiqueta pequeña encima, y las acciones en su fila. Antes, una
+   jornada ocupaba 600 px y un mes, 18 pantallas. */
+@media (max-width: 639px) {
+  .nx-tabla--compacta tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    column-gap: 12px;
+    row-gap: 6px;
+    padding: 12px 0;
+  }
+
+  .nx-tabla--compacta td {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 0;
+  }
+
+  .nx-tabla--compacta td::before {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .nx-tabla--compacta .nx-tabla__numerica {
+    text-align: left;
+  }
+
+  .nx-tabla--compacta .nx-tabla__cabecera-movil,
+  .nx-tabla--compacta .nx-tabla__ancha-movil {
+    grid-column: 1 / -1;
+  }
+
+  .nx-tabla--compacta .nx-tabla__cabecera-movil {
+    font-weight: 700;
+  }
+
+  .nx-tabla--compacta .nx-tabla__cabecera-movil::before,
+  .nx-tabla--compacta .nx-tabla__ancha-movil::before {
+    content: none;
+  }
+}
+
 /* ---- Diálogo ---- */
 
 .nx-dialogo {
@@ -1767,6 +1810,16 @@ h2 {
   background: var(--nx-surface);
   color: var(--nx-on-surface);
   box-shadow: 0 8px 32px rgb(0 0 0 / 24%);
+}
+
+/* Para una tabla de varias columnas: con 560 px, la de importar la plantilla
+   cortaba la columna de problemas, que es justo la que hay que leer. */
+.nx-dialogo--amplio {
+  width: min(1040px, calc(100vw - 32px));
+}
+
+.nx-importar .nx-tabla td:last-child {
+  min-width: 260px;
 }
 
 .nx-dialogo::backdrop {
@@ -2353,6 +2406,54 @@ h2 {
 
 .nx-acciones-fila .nx-boton {
   min-height: 36px;
+}
+
+.nx-acciones-fila {
+  align-items: center;
+}
+
+/* «Más»: las acciones que no son la principal, en una lista que flota bajo el
+   botón y no estira la fila. */
+.nx-mas-acciones {
+  position: relative;
+}
+
+/* Con «Más», la principal y «Más» caben en una línea: que no se apilen. */
+.nx-acciones-fila:has(> .nx-mas-acciones) {
+  flex-wrap: nowrap;
+}
+
+.nx-mas-acciones > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.nx-mas-acciones > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nx-mas-acciones[open] > summary .nx-icono {
+  transform: rotate(180deg);
+}
+
+.nx-mas-acciones__lista {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: calc(100% + 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: var(--nx-radio-m);
+  background: var(--nx-surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+}
+
+.nx-mas-acciones__lista .nx-boton {
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .nx-filtro-fechas {

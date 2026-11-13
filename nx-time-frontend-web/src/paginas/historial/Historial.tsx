@@ -91,7 +91,12 @@ interface Acciones {
 
 function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<Jornada>[] {
   return [
-    { clave: 'dia', cabecera: H.dia, celda: (j) => (j.horaEntrada !== undefined ? fechaLarga(new Date(j.horaEntrada)) : '') },
+    {
+      clave: 'dia',
+      cabecera: H.dia,
+      celda: (j) => (j.horaEntrada !== undefined ? fechaLarga(new Date(j.horaEntrada)) : ''),
+      enMovil: 'cabecera',
+    },
     {
       clave: 'entrada',
       cabecera: H.entrada,
@@ -131,6 +136,7 @@ function columnas({ alCorregir, alAnadirPausa, alRepartir }: Acciones): Columna<
     {
       clave: 'acciones',
       cabecera: H.acciones,
+      enMovil: 'ancha',
       celda: (j) => {
         // Una jornada abierta se cierra fichando, no corrigiendo: el servidor la rechaza.
         if (j.id === undefined || j.horaEntrada === undefined || j.horaSalida === undefined) return null;
@@ -166,7 +172,7 @@ function Recientes({ acciones }: { acciones: Acciones }) {
 
   return (
     <>
-      <Tabla titulo={H.tablaTitulo} columnas={columnas(acciones)} filas={lista.elementos} claveDeFila={(j) => j.id ?? 0} />
+      <Tabla titulo={H.tablaTitulo} columnas={columnas(acciones)} filas={lista.elementos} claveDeFila={(j) => j.id ?? 0} compacta />
       <FinDeLista
         hayMas={lista.hasNextPage}
         cargando={lista.isFetchingNextPage}
@@ -198,7 +204,7 @@ function DelPeriodo({ desde, hasta, acciones }: { desde: string; hasta: string; 
           {jornadas.length === 0 ? (
             <Vacio titulo={H.periodoVacioTitulo} detalle={H.periodoVacioTexto} />
           ) : (
-            <Tabla titulo={H.tablaTitulo} columnas={columnas(acciones)} filas={jornadas} claveDeFila={(j) => j.id ?? 0} />
+            <Tabla titulo={H.tablaTitulo} columnas={columnas(acciones)} filas={jornadas} claveDeFila={(j) => j.id ?? 0} compacta />
           )}
         </>
       )}

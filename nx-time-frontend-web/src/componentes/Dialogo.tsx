@@ -31,6 +31,7 @@ export function Dialogo({
   children,
   acciones,
   obligatorio = false,
+  ancho = 'normal',
 }: {
   abierto: boolean;
   titulo: string;
@@ -42,6 +43,8 @@ export function Dialogo({
    */
   acciones?: ReactNode | null;
   obligatorio?: boolean;
+  /** «amplio» para lo que lleva una tabla de varias columnas, como los resultados de importar la plantilla. */
+  ancho?: 'normal' | 'amplio';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const idTitulo = useId();
@@ -61,7 +64,7 @@ export function Dialogo({
   return (
     <dialog
       ref={ref}
-      className="nx-dialogo"
+      className={ancho === 'amplio' ? 'nx-dialogo nx-dialogo--amplio' : 'nx-dialogo'}
       aria-labelledby={idTitulo}
       // Escape dispara `cancel` y luego `close`. Se escucha `close` para que
       // el estado de React siga al del navegador, cierre quien cierre.

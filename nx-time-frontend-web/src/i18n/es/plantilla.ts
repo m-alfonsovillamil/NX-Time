@@ -16,6 +16,8 @@ export const plantilla = {
   estado: 'Estado',
   acciones: 'Acciones',
   accionesDe: (quien: string) => `Acciones de ${quien}`,
+  mas: 'Más',
+  masDe: (quien: string) => `Más acciones de ${quien}`,
   horasSemana: (horas: string) => `${horas} h/semana`,
   dias: (n: number) => `${n} días`,
   sinDepartamento: 'Sin departamento',

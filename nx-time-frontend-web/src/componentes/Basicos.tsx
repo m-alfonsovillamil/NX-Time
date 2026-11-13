@@ -49,6 +49,38 @@ export function Boton({ variante = 'primario', ocupado = false, icono, children,
   );
 }
 
+/**
+ * Las acciones de una fila que no son la principal, plegadas tras «Más».
+ *
+ * Con `<details>` nativo: se abre y se cierra con el teclado y lo anuncia el
+ * lector de pantalla sin código propio. Se cierra solo al elegir una acción,
+ * que suele abrir un diálogo. Nace de la tabla de la plantilla (11/2026): con
+ * tres o cuatro acciones apiladas, cada persona ocupaba 130 px de alto, y «Dar
+ * de baja» quedaba tan a mano como «Ficha».
+ */
+export function MasAcciones({ etiqueta, texto, children }: { etiqueta: string; texto: string; children: ReactNode }) {
+  return (
+    <details className="nx-mas-acciones">
+      <summary className="nx-boton nx-boton--texto nx-boton--con-icono" aria-label={etiqueta}>
+        {texto}
+        <Icono nombre="desplegar" tamano={20} />
+      </summary>
+      <div
+        className="nx-mas-acciones__lista"
+        role="group"
+        aria-label={etiqueta}
+        onClick={(evento) => {
+          if ((evento.target as HTMLElement).closest('button') !== null) {
+            evento.currentTarget.closest('details')?.removeAttribute('open');
+          }
+        }}
+      >
+        {children}
+      </div>
+    </details>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Campos                                                              */
 /* ------------------------------------------------------------------ */

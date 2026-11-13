@@ -118,9 +118,14 @@ export function ImportarPlantilla({ alTerminar }: { alTerminar: () => void }) {
 
   const sinErrores = comprobado !== null && (comprobado.conErrores ?? 0) === 0;
   const error = comprobar.error ?? crear.error;
+  // Primero las filas con problemas, que son las que hay que ir a corregir; cada
+  // una conserva su número de fila del fichero.
+  const filas = [...(comprobado?.detalle ?? [])].sort(
+    (a, b) => Number((b.errores ?? []).length > 0) - Number((a.errores ?? []).length > 0),
+  );
 
   return (
-    <div className="nx-formulario-dialogo">
+    <div className="nx-formulario-dialogo nx-importar">
       <p>{I.explicacion}</p>
       <div>
         <Boton variante="texto" icono="descargar" onClick={descargarEjemplo}>
@@ -142,7 +147,7 @@ export function ImportarPlantilla({ alTerminar }: { alTerminar: () => void }) {
           {(comprobado.columnasIgnoradas ?? []).length > 0 && (
             <p className="nx-sutil">{I.ignoradas((comprobado.columnasIgnoradas ?? []).join(', '))}</p>
           )}
-          <Tabla titulo={I.tabla} columnas={columnas} filas={comprobado.detalle ?? []} claveDeFila={(f) => f.fila ?? 0} />
+          <Tabla titulo={I.tabla} columnas={columnas} filas={filas} claveDeFila={(f) => f.fila ?? 0} />
         </>
       )}
       <div className="nx-dialogo__acciones">

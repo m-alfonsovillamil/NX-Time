@@ -24,7 +24,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { Aviso, Boton, Campo, Insignia, Selector } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Insignia, MasAcciones, Selector } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { Dialogo } from '../../componentes/Dialogo';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
@@ -327,29 +327,34 @@ export function Plantilla() {
                     {P.editarFicha}
                   </Boton>
                 )}
-                {puedeGestionar &&
-                  (p.activo === false ? (
-                    <Boton
-                      variante="texto"
-                      ocupado={cambiarEstado.isPending && cambiarEstado.variables?.persona.id === p.id}
-                      onClick={() => cambiarEstado.mutate({ persona: p, activo: true })}
-                    >
-                      {P.reactivar}
-                    </Boton>
-                  ) : (
-                    <Boton variante="texto" onClick={() => setBaja(p)}>
-                      {P.darDeBaja}
-                    </Boton>
-                  ))}
-                {puede('gestor:crear') && (
-                  <Boton variante="texto" onClick={() => setConRolNuevo(p)}>
-                    {P.cambioDeRol.boton}
-                  </Boton>
-                )}
-                {puedeGestionar && p.segundoFactor === true && (
-                  <Boton variante="texto" onClick={() => setSinSegundoFactor(p)}>
-                    {P.quitarSegundoFactor}
-                  </Boton>
+                {(puedeGestionar || puede('gestor:crear')) && (
+                  <MasAcciones texto={P.mas} etiqueta={P.masDe(p.nombre ?? '')}>
+                    {puede('gestor:crear') && (
+                      <Boton variante="texto" onClick={() => setConRolNuevo(p)}>
+                        {P.cambioDeRol.boton}
+                      </Boton>
+                    )}
+                    {puedeGestionar && p.segundoFactor === true && (
+                      <Boton variante="texto" onClick={() => setSinSegundoFactor(p)}>
+                        {P.quitarSegundoFactor}
+                      </Boton>
+                    )}
+                    {/* La baja, la última y lejos del dedo: no se deshace con un clic. */}
+                    {puedeGestionar &&
+                      (p.activo === false ? (
+                        <Boton
+                          variante="texto"
+                          ocupado={cambiarEstado.isPending && cambiarEstado.variables?.persona.id === p.id}
+                          onClick={() => cambiarEstado.mutate({ persona: p, activo: true })}
+                        >
+                          {P.reactivar}
+                        </Boton>
+                      ) : (
+                        <Boton variante="texto" onClick={() => setBaja(p)}>
+                          {P.darDeBaja}
+                        </Boton>
+                      ))}
+                  </MasAcciones>
                 )}
               </div>
             ),
@@ -414,7 +419,7 @@ export function Plantilla() {
         </EstadoDeConsulta>
       </section>
 
-      <Dialogo abierto={importando} titulo={P.importar.titulo} alCerrar={() => setImportando(false)} acciones={null}>
+      <Dialogo abierto={importando} titulo={P.importar.titulo} alCerrar={() => setImportando(false)} acciones={null} ancho="amplio">
         {importando && <ImportarPlantilla alTerminar={() => setImportando(false)} />}
       </Dialogo>
 
