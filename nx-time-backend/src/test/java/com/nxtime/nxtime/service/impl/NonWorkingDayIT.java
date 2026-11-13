@@ -66,6 +66,8 @@ class NonWorkingDayIT {
     private AbsenceRequestRepository absenceRepository;
     @Autowired
     private HolidayCalendar holidayCalendar;
+    @Autowired
+    private com.nxtime.nxtime.scheduled.SiembraDeFestivos siembra;
 
     private Company empresa;
     private Company otraEmpresa;
@@ -100,6 +102,24 @@ class NonWorkingDayIT {
                 .usuario(de).empresa(de.getEmpresa()).fechaInicio(inicio).fechaFin(fin).tipo(tipo).estado(estado)
                 .aprobadoPor(pendiente ? null : de).fechaResolucion(pendiente ? null : Instant.now())
                 .build());
+    }
+
+    @Test
+    @DisplayName("En diciembre ya están los festivos del año siguiente, sin que nadie haya abierto su calendario")
+    void losNacionalesDelAnioSiguienteYaEstan() {
+        // 2033: nadie lo ha mirado en esta base. Antes, el 1 y el 6 de enero
+        // contaban como laborables hasta que alguien abría el calendario.
+        LocalDate anioNuevo = LocalDate.of(2033, 1, 1);
+        LocalDate reyes = LocalDate.of(2033, 1, 6);
+        assertThat(holidayRepository.existenNacionalesDelAnio(2033)).isFalse();
+
+        siembra.sembrarDesde(LocalDate.of(2032, 12, 15));
+
+        assertThat(service.motivo(ana, anioNuevo)).get()
+                .satisfies(m -> assertThat(m.texto()).isEqualTo("Festivo: Año Nuevo"));
+        assertThat(service.motivosEnRango(ana, LocalDate.of(2033, 1, 1), LocalDate.of(2033, 1, 9)))
+                .containsKeys(anioNuevo, reyes);
+        assertThat(holidayRepository.existenNacionalesDelAnio(2033)).isTrue();
     }
 
     @Test
