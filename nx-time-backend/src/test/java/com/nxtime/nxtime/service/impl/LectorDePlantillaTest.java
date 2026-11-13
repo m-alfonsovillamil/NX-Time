@@ -58,6 +58,42 @@ class LectorDePlantillaTest {
     }
 
     @Test
+    @DisplayName("Con filas en blanco en medio, cada fila lleva su número del fichero")
+    void elNumeroDeFilaEsElDelFichero() {
+        LectorDePlantilla.Leido leido = csv("\nnombre;apellidos;email\nAna;Buena;ana@empresa.test\n;;\n"
+                + "Malo;Correo;no-es-correo\n\nOtra;Vez;otra@empresa.test\n", StandardCharsets.UTF_8);
+
+        // Fila 1 en blanco, 2 títulos, 3 Ana, 4 en blanco, 5 «Malo», 6 vacía, 7 «Otra».
+        assertThat(leido.filas()).extracting(LectorDePlantilla.Fila::numero).containsExactly(3, 5, 7);
+    }
+
+    @Test
+    @DisplayName("El primer y el segundo apellido en dos columnas se juntan; con solo el primero, también vale")
+    void apellidosPorSeparado() {
+        LectorDePlantilla.Leido leido = csv("Nombre;Primer apellido;Segundo apellido;Email\n"
+                + "Lucas;García;Pérez;lucas@empresa.test\nLeo;Smith;;leo@empresa.test\n", StandardCharsets.UTF_8);
+
+        assertThat(leido.filas()).extracting(fila -> fila.valor(LectorDePlantilla.APELLIDOS))
+                .containsExactly("García Pérez", "Smith");
+        assertThat(leido.columnasIgnoradas()).isEmpty();
+        assertThat(csv("nombre;apellido1;email\nLeo;Smith;leo@empresa.test\n", StandardCharsets.UTF_8)
+                .filas().get(0).valor(LectorDePlantilla.APELLIDOS)).isEqualTo("Smith");
+        // Si ya hay una columna «apellidos», manda esa.
+        assertThat(csv("nombre;apellidos;segundo apellido;email\nAna;López Gil;Gil;ana@empresa.test\n",
+                StandardCharsets.UTF_8).filas().get(0).valor(LectorDePlantilla.APELLIDOS)).isEqualTo("López Gil");
+    }
+
+    @Test
+    @DisplayName("El nombre completo en una columna no se parte solo: se dice cómo separarlo")
+    void nombreCompletoEnUnaColumna() {
+        assertThatThrownBy(() -> csv("Nombre y apellidos;Email\nLucas García Pérez;lucas@empresa.test\n",
+                StandardCharsets.UTF_8))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("Sepáralos en dos");
+        assertThatThrownBy(() -> csv("Empleado;Correo\nLucas García;lucas@empresa.test\n", StandardCharsets.UTF_8))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("Sepáralos en dos");
+    }
+
+    @Test
     @DisplayName("Sin las columnas obligatorias, o sin nadie, no se puede")
     void columnasObligatorias() {
         assertThatThrownBy(() -> csv("nombre;email\nAna;ana@empresa.test\n", StandardCharsets.UTF_8))

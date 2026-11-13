@@ -57,7 +57,7 @@ export const plantilla = {
     boton: 'Importar desde Excel o CSV',
     titulo: 'Importar la plantilla',
     explicacion:
-      'Sube un Excel (.xlsx) o un CSV con una persona por fila. La primera fila lleva los títulos: nombre, apellidos y email, y si quieres rol, departamento, horas, vacaciones y código (su número en vuestro ERP o nóminas). Primero lo comprobamos, sin crear nada.',
+      'Sube un Excel (.xlsx) o un CSV con una persona por fila. La primera fila lleva los títulos: nombre, apellidos (o primer y segundo apellido) y email, y si quieres rol, departamento, horas, vacaciones y código (su número en vuestro ERP o nóminas). Primero lo comprobamos, sin crear nada.',
     ejemplo: 'Descargar un ejemplo',
     ficheroEjemplo:
       'nombre;apellidos;email;rol;departamento;horas;vacaciones;codigo\nAna;López García;ana.lopez@tuempresa.es;empleado;;40;22;000123\nLuis;Martín Ruiz;luis.martin@tuempresa.es;gestor;;37,5;23;000124\n',
