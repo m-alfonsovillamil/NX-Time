@@ -26,7 +26,8 @@ async function irAAjustes(page: Page): Promise<void> {
 
 async function cerrarSesion(page: Page): Promise<void> {
   await page.getByLabel(/^Menú de /).click();
-  await page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  // El del menú del nombre: en Ajustes hay otro igual.
+  await page.getByRole('group').getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
 }
 
