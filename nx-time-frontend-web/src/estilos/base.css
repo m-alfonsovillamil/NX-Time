@@ -1865,6 +1865,21 @@ h2 {
   margin-bottom: 16px;
 }
 
+/* Si hay más pestañas de las que caben, el borde por donde siguen se
+   difumina: antes «Mes anterior» salía cortada sin más y no se adivinaba que
+   la fila se deslizaba. */
+.nx-pestanas__lista--sigue-derecha {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.nx-pestanas__lista--sigue-izquierda {
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.nx-pestanas__lista--sigue-izquierda.nx-pestanas__lista--sigue-derecha {
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+}
+
 .nx-pestanas__pestana {
   flex: none;
   min-height: 44px;
@@ -2311,6 +2326,14 @@ h2 {
   fill: var(--nx-on-surface-variant);
   font-size: 13px;
   font-family: var(--nx-font-cuerpo);
+}
+
+/* El dibujo mide 600 de ancho por dentro y en el móvil se encoge a la mitad,
+   letras incluidas: a 13, los días salían a unos 7 px. A 22 quedan en unos 12. */
+@media (max-width: 639px) {
+  .nx-grafico__eje {
+    font-size: 22px;
+  }
 }
 
 .nx-grafico__pie {

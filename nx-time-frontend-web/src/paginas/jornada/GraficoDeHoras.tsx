@@ -29,7 +29,8 @@ const H = fichar.horas;
  */
 const ANCHO = 600;
 const ALTO = 200;
-const MARGEN_ABAJO = 22;
+// Con sitio para las letras del eje a 22 unidades, que es como se ven en el móvil.
+const MARGEN_ABAJO = 28;
 const BARRA_MAXIMA = 36;
 
 function motivoDelDia(d: HorasDelDia): string | null {

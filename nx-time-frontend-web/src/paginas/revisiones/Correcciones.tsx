@@ -40,10 +40,33 @@ function tramo(entrada: string | undefined, salida: string | undefined): string 
   return `${horaEnEmpresa(entrada)}–${horaDeSalida(entrada, salida)}`;
 }
 
+function cambianLasHoras(c: Correccion): boolean {
+  return c.horaEntradaActual !== c.horaEntradaPropuesta || c.horaSalidaActual !== c.horaSalidaPropuesta;
+}
+
+/**
+ * «De 08:54–17:00 h a **08:39**–17:00 h»: lo que cambia, en negrita. Sin ella
+ * había que comparar las dos horas a ojo, y una corrección de quince minutos
+ * se aprobaba sin ver cuál de las dos cambiaba (revisión de pantallas, 11/2026).
+ * Dice lo mismo que `C.deA`.
+ */
+export function HorasQueCambian({ c }: { c: Correccion }) {
+  const entrada = horaEnEmpresa(c.horaEntradaPropuesta);
+  const salida = horaDeSalida(c.horaEntradaPropuesta, c.horaSalidaPropuesta);
+  const resaltar = (texto: string, cambia: boolean) => (cambia ? <strong>{texto}</strong> : texto);
+  return (
+    <>
+      {C.de} {tramo(c.horaEntradaActual, c.horaSalidaActual)} {C.a}{' '}
+      {resaltar(entrada, entrada !== horaEnEmpresa(c.horaEntradaActual))}–
+      {resaltar(salida, salida !== horaDeSalida(c.horaEntradaActual, c.horaSalidaActual))}
+    </>
+  );
+}
+
 /** Lo que cambia, línea a línea: las horas (si cambian), la pausa y el reparto. */
 export function cambiosDe(c: Correccion): string[] {
   const lineas: string[] = [];
-  if (c.horaEntradaActual !== c.horaEntradaPropuesta || c.horaSalidaActual !== c.horaSalidaPropuesta) {
+  if (cambianLasHoras(c)) {
     lineas.push(C.deA(tramo(c.horaEntradaActual, c.horaSalidaActual), tramo(c.horaEntradaPropuesta, c.horaSalidaPropuesta)));
   }
   if (c.pausaInicioPropuesta && c.pausaFinPropuesta) {
@@ -75,8 +98,9 @@ function TarjetaDeCorreccion({ c, acciones }: { c: Correccion; acciones?: ReactN
         {c.estado && <Insignia tono={TONO[c.estado] ?? 'neutro'}>{C.estados[c.estado] ?? c.estado}</Insignia>}
       </div>
       <span className="nx-sutil">{quien(c)}</span>
-      {cambiosDe(c).map((linea) => (
-        <span key={linea}>{linea}</span>
+      {cambiosDe(c).map((linea, i) => (
+        // Las horas, si cambian, son siempre la primera línea.
+        <span key={linea}>{i === 0 && cambianLasHoras(c) ? <HorasQueCambian c={c} /> : linea}</span>
       ))}
       {c.motivo && <span className="nx-sutil">{C.motivo(c.motivo)}</span>}
       {c.motivoDisputa && <span>{C.noAcepta(c.motivoDisputa)}</span>}

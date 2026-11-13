@@ -41,6 +41,9 @@ export const revisiones = {
     quienPide: (quien: string, de: string) => `${quien} propone corregir un fichaje de ${de}`,
     pideElSuyo: (quien: string) => `${quien} pide corregir un fichaje suyo`,
     deA: (antes: string, despues: string) => `De ${antes} a ${despues}`,
+    // Las dos palabras de `deA`, para pintarlo con lo que cambia en negrita.
+    de: 'De',
+    a: 'a',
     soloPausa: (inicio: string, fin: string) => `Añadir una pausa de ${inicio} a ${fin}`,
     reparto: (texto: string) => `Reparto por proyecto: ${texto}`,
     modalidad: (antes: string, despues: string) => `${antes} → ${despues}`,
