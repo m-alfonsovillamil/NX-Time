@@ -285,7 +285,10 @@ export function TarjetaSegundoFactor() {
   const datos = estado.data;
 
   return (
-    <Tarjeta id="ajustes-segundo-factor" icono="candado" titulo={S.titulo} descripcion={S.descripcion}>
+    // La explicación va en el cuerpo: en la cabecera, junto al icono, era la
+    // única tarjeta de Ajustes con el título desplazado y tres líneas al lado.
+    <Tarjeta id="ajustes-segundo-factor" icono="candado" titulo={S.titulo}>
+      <p className="nx-sutil nx-tarjeta__explicacion">{S.descripcion}</p>
       {estado.isPending ? (
         <Esqueleto lineas={2} />
       ) : estado.error !== null ? (
