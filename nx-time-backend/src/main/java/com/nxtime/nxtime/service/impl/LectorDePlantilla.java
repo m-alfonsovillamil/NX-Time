@@ -36,6 +36,10 @@ import org.springframework.http.HttpStatus;
  *       punto y coma, otros con coma, y algunos con tabulador.</li>
  *   <li>Las cabeceras se reconocen sin mayúsculas ni tildes, y con los nombres
  *       que se le ocurrirían a cualquiera («correo», «email», «jornada»...).</li>
+ *   <li>El primer y el segundo apellido pueden venir en dos columnas, como
+ *       los exportan muchos programas de nóminas: se juntan.</li>
+ *   <li>Cada fila lleva el número que tiene en el fichero, aunque haya filas
+ *       en blanco antes: es lo que se busca en Excel para corregirla.</li>
  * </ul>
  *
  * No valida nada de lo que dice cada fila: eso es cosa de quien importa, que
@@ -55,12 +59,38 @@ final class LectorDePlantilla {
     static final String VACACIONES = "vacaciones";
     static final String CODIGO = "codigo";
 
+    /** El primer y el segundo apellido en columnas separadas: se juntan en {@link #APELLIDOS}. */
+    private static final String APELLIDO_1 = "apellido 1";
+    private static final String APELLIDO_2 = "apellido 2";
+
+    /**
+     * El nombre completo en una sola columna. No se parte solo: en «José Ángel
+     * Muñoz Peña» no hay forma de saber dónde acaba el nombre. Se dice qué hacer.
+     */
+    private static final java.util.Set<String> NOMBRE_COMPLETO = java.util.Set.of(
+            "nombre y apellidos", "nombre completo", "apellidos y nombre", "apellidos, nombre",
+            "nombre apellidos", "empleado", "trabajador", "trabajadora", "persona");
+
     /** Cómo puede llamarse cada columna, ya sin tildes ni mayúsculas. */
     private static final Map<String, String> SINONIMOS = Map.ofEntries(
             Map.entry("nombre", NOMBRE),
             Map.entry("apellidos", APELLIDOS),
             Map.entry("apellido", APELLIDOS),
+            Map.entry("primer apellido", APELLIDO_1),
+            Map.entry("apellido 1", APELLIDO_1),
+            Map.entry("apellido1", APELLIDO_1),
+            Map.entry("1er apellido", APELLIDO_1),
+            Map.entry("1.er apellido", APELLIDO_1),
+            Map.entry("segundo apellido", APELLIDO_2),
+            Map.entry("apellido 2", APELLIDO_2),
+            Map.entry("apellido2", APELLIDO_2),
+            Map.entry("2o apellido", APELLIDO_2),
+            Map.entry("2º apellido", APELLIDO_2),
             Map.entry("email", EMAIL),
+            Map.entry("mail", EMAIL),
+            Map.entry("email corporativo", EMAIL),
+            Map.entry("correo corporativo", EMAIL),
+            Map.entry("correo electronico corporativo", EMAIL),
             Map.entry("e-mail", EMAIL),
             Map.entry("correo", EMAIL),
             Map.entry("correo electronico", EMAIL),
@@ -116,8 +146,19 @@ final class LectorDePlantilla {
             throw invalido("El fichero está vacío.");
         }
         String nombre = nombreDelFichero == null ? "" : nombreDelFichero.toLowerCase(Locale.ROOT);
-        List<List<String>> tabla = nombre.endsWith(".xlsx") ? deExcel(contenido) : deCsv(contenido);
-        tabla.removeIf(LectorDePlantilla::vacia);
+        List<List<String>> leida = nombre.endsWith(".xlsx") ? deExcel(contenido) : deCsv(contenido);
+        // El número de cada fila en el fichero, ANTES de saltar las vacías: un
+        // error en «la fila 4» tiene que ser la fila 4 de Excel. Hasta noviembre
+        // de 2026 se numeraba después, y con una fila en blanco en medio todos
+        // los errores de debajo señalaban la fila de antes.
+        List<Integer> numeros = new ArrayList<>();
+        List<List<String>> tabla = new ArrayList<>();
+        for (int i = 0; i < leida.size(); i++) {
+            if (!vacia(leida.get(i))) {
+                numeros.add(i + 1);
+                tabla.add(leida.get(i));
+            }
+        }
         if (tabla.isEmpty()) {
             throw invalido("El fichero está vacío.");
         }
@@ -132,7 +173,20 @@ final class LectorDePlantilla {
                 ignoradas.add(titulo.strip());
             }
         }
+        boolean apellidosPorSeparado = !columnas.contains(APELLIDOS) && columnas.contains(APELLIDO_1);
+        if (apellidosPorSeparado) {
+            ignoradas.removeIf(titulo -> APELLIDO_2.equals(SINONIMOS.get(normalizar(titulo))));
+        }
+        boolean nombreCompleto = cabecera.stream().map(LectorDePlantilla::normalizar).anyMatch(NOMBRE_COMPLETO::contains);
+        if (nombreCompleto && (!columnas.contains(NOMBRE) || !columnas.contains(APELLIDOS) && !apellidosPorSeparado)) {
+            throw invalido("El nombre y los apellidos vienen juntos en una columna. Sepáralos en dos, «nombre» y "
+                    + "«apellidos» (o «primer apellido» y «segundo apellido»): no se puede saber solo dónde acaba "
+                    + "el nombre.");
+        }
         for (String obligatoria : List.of(NOMBRE, APELLIDOS, EMAIL)) {
+            if (obligatoria.equals(APELLIDOS) && apellidosPorSeparado) {
+                continue;
+            }
             if (!columnas.contains(obligatoria)) {
                 throw invalido("Falta la columna «" + obligatoria + "». La primera fila tiene que llevar los títulos: "
                         + "nombre, apellidos y email, y si quieres rol, departamento, horas y vacaciones.");
@@ -152,7 +206,14 @@ final class LectorDePlantilla {
                     valores.put(columnas.get(c), celdas.get(c));
                 }
             }
-            filas.add(new Fila(i + 1, valores));
+            if (apellidosPorSeparado) {
+                String primero = valores.getOrDefault(APELLIDO_1, "").strip();
+                String segundo = valores.getOrDefault(APELLIDO_2, "").strip();
+                valores.put(APELLIDOS, (primero + " " + segundo).strip());
+            }
+            valores.remove(APELLIDO_1);
+            valores.remove(APELLIDO_2);
+            filas.add(new Fila(numeros.get(i), valores));
         }
         if (filas.isEmpty()) {
             throw invalido("El fichero solo tiene la fila de títulos: no hay nadie que dar de alta.");
@@ -212,8 +273,10 @@ final class LectorDePlantilla {
         if (texto.startsWith("﻿")) {
             texto = texto.substring(1);
         }
-        int finDeCabecera = texto.indexOf('\n');
-        String cabecera = finDeCabecera < 0 ? texto : texto.substring(0, finDeCabecera);
+        // El separador sale de la primera línea con algo: si el fichero empieza
+        // con líneas en blanco, mirar la primera daba coma, y un CSV con punto y
+        // coma se leía como una sola columna.
+        String cabecera = texto.lines().filter(linea -> !linea.isBlank()).findFirst().orElse("");
         char separador = separadorDe(cabecera);
         return trocear(texto, separador);
     }

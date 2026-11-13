@@ -71,7 +71,7 @@ una persona por fila. La primera fila lleva los títulos:
 | Columna | Obligatoria | Qué va |
 |---|---|---|
 | `nombre` | Sí | |
-| `apellidos` | Sí | |
+| `apellidos` | Sí | O dos columnas, `primer apellido` y `segundo apellido`: se juntan |
 | `email` | Sí | Su correo: ahí le llega la invitación. Uno por persona |
 | `rol` | No | `empleado` (si no se pone), `gestor`, `rrhh` o `admin` |
 | `departamento` | No | Tiene que existir ya (punto 3) |
@@ -81,6 +81,11 @@ una persona por fila. La primera fila lleva los títulos:
 
 - Vale el Excel tal cual: los títulos pueden ir con mayúsculas o tildes, y se
   entienden variantes como «correo», «jornada» o «nº empleado».
+- El nombre y los apellidos tienen que ir en columnas separadas. Si vienen
+  juntos («Nombre y apellidos»), sepáralos antes: no se puede saber solo dónde
+  acaba el nombre.
+- Los errores dicen el número de fila tal como sale en Excel, aunque haya filas
+  en blanco por medio.
 - Como mucho 500 personas por fichero.
 - **Primero se comprueba sin crear nada**, y te enseña cada fila con sus
   errores. Si alguna fila está mal, no se crea nadie: corrige el fichero y
