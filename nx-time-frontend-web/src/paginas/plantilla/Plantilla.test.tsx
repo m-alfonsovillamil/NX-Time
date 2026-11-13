@@ -216,6 +216,7 @@ describe('plantilla', () => {
     pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
 
     const javier = (await screen.findByRole('group', { name: P.accionesDe('Javier') })) as HTMLElement;
+    await userEvent.click(within(javier).getByText(P.mas));
     await userEvent.click(within(javier).getByRole('button', { name: P.darDeBaja }));
     const dialogo = await screen.findByRole('dialog', { name: P.bajaTitulo('Javier') });
     expect(within(dialogo).getByText(P.bajaTexto)).toBeTruthy();
@@ -224,6 +225,7 @@ describe('plantilla', () => {
 
     await userEvent.click(screen.getByLabelText(P.verDeBaja));
     const pedro = screen.getByRole('group', { name: P.accionesDe('Pedro') });
+    await userEvent.click(within(pedro).getByText(P.mas));
     await userEvent.click(within(pedro).getByRole('button', { name: P.reactivar }));
 
     await waitFor(() =>

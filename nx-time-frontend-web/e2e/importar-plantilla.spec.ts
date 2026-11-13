@@ -45,6 +45,7 @@ test('un ADMIN importa dos personas desde un CSV y le cambia el rol a una', asyn
   await expect(irene).toContainText(`E2E-${vuelta}`);
   await expect(tabla.getByRole('row').filter({ hasText: `oscar.${vuelta}@techcorp.demo` })).toContainText('Gestor');
 
+  await irene.getByText('Más', { exact: true }).click();
   await irene.getByRole('button', { name: 'Cambiar rol' }).click();
   const rol = page.getByRole('dialog', { name: 'Rol de Irene' });
   await rol.getByLabel('Rol').selectOption('RRHH');

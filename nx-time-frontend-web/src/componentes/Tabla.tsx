@@ -48,6 +48,20 @@ export interface Columna<F> {
   celda: (fila: F) => ReactNode;
   /** Cifras: alineadas a la derecha y con dígitos de ancho fijo, para que se puedan comparar de un vistazo. */
   numerica?: boolean;
+  /**
+   * En el móvil, con la tabla `compacta`: «cabecera» es el título de la tarjeta
+   * (sin etiqueta delante), y «ancha» ocupa toda la fila (las acciones).
+   */
+  enMovil?: 'cabecera' | 'ancha';
+}
+
+function claseDe<F>(c: Columna<F>): string | undefined {
+  const clases = [
+    c.numerica === true ? 'nx-tabla__numerica' : '',
+    c.enMovil === 'cabecera' ? 'nx-tabla__cabecera-movil' : '',
+    c.enMovil === 'ancha' ? 'nx-tabla__ancha-movil' : '',
+  ].filter((x) => x !== '');
+  return clases.length > 0 ? clases.join(' ') : undefined;
 }
 
 export function Tabla<F>({
@@ -55,12 +69,19 @@ export function Tabla<F>({
   columnas,
   filas,
   claveDeFila,
+  compacta = false,
 }: {
   /** Para quien no ve la tabla: un lector de pantalla lo anuncia al entrar en ella. */
   titulo: string;
   columnas: readonly Columna<F>[];
   filas: readonly F[];
   claveDeFila: (fila: F) => string | number;
+  /**
+   * En el móvil, cada fila como una tarjeta baja: la cabecera arriba y los datos
+   * en rejilla, con su etiqueta pequeña encima. Para los listados largos (los
+   * historiales), donde una fila por pantalla daba 18 pantallas para un mes.
+   */
+  compacta?: boolean;
 }) {
   const { ref, desborda } = useSeDesborda<HTMLDivElement>();
   return (
@@ -69,7 +90,7 @@ export function Tabla<F>({
       className="nx-tabla-contenedor"
       {...(desborda && { tabIndex: 0, role: 'region', 'aria-label': titulo })}
     >
-      <table className="nx-tabla">
+      <table className={compacta ? 'nx-tabla nx-tabla--compacta' : 'nx-tabla'}>
         <caption className="nx-solo-lector">{titulo}</caption>
         <thead>
           <tr>
@@ -84,11 +105,7 @@ export function Tabla<F>({
           {filas.map((fila) => (
             <tr key={claveDeFila(fila)}>
               {columnas.map((c) => (
-                <td
-                  key={c.clave}
-                  data-etiqueta={c.cabecera}
-                  className={c.numerica === true ? 'nx-tabla__numerica' : undefined}
-                >
+                <td key={c.clave} data-etiqueta={c.cabecera} className={claseDe(c)}>
                   {c.celda(fila)}
                 </td>
               ))}

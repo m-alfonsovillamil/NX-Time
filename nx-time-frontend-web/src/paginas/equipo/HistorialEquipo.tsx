@@ -52,11 +52,12 @@ interface Acciones {
 
 function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }: Acciones): Columna<Fila>[] {
   const todas: (Columna<Fila> | null)[] = [
-    { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha) },
+    { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha), enMovil: 'cabecera' },
     conPersona
       ? {
           clave: 'persona',
           cabecera: E.persona,
+          enMovil: 'ancha' as const,
           celda: (f) => (
             <span className="nx-con-iniciales">
               <Iniciales nombre={f.usuario?.nombre ?? ''} tamano="s" />
@@ -111,6 +112,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
     alCorregir !== null || alAuditar !== null || alDarPorBueno !== null
       ? {
           clave: 'acciones',
+          enMovil: 'ancha' as const,
           cabecera: E.acciones,
           celda: (f) => {
             if (f.id === undefined) return null;
@@ -180,6 +182,7 @@ function Jornadas({ personaId, nombre, acciones }: { personaId: number | null; n
         })}
         filas={lista.elementos}
         claveDeFila={(f) => f.id ?? 0}
+        compacta
       />
       <FinDeLista
         hayMas={lista.hasNextPage}
