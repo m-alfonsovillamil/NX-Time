@@ -66,14 +66,18 @@ class FicharScreenTest {
             pide?.let { dia -> onBlocking { getEstadoDeHoy() } doReturn Response.success(dia) }
             onBlocking { getRegistroActivo() } doAnswer { Response.success(jornada) }
             onBlocking { registrarFichaje(any()) } doAnswer { llamada ->
-                val tipo = llamada.getArgument<PeticionFichaje>(0).tipo
+                val peticion = llamada.getArgument<PeticionFichaje>(0)
+                val tipo = peticion.tipo
                 fichajes += tipo
                 val ahora = Instant.now().toString()
                 val nueva = when (tipo) {
-                    TipoFichaje.INICIO -> Registro(id = 1, horaEntrada = ahora, horaSalida = null, enPausa = false)
+                    TipoFichaje.INICIO -> Registro(
+                        id = 1, horaEntrada = ahora, horaSalida = null, enPausa = false,
+                        modalidad = peticion.modalidad, ubicacionEntrada = peticion.ubicacion
+                    )
                     TipoFichaje.PAUSA_INICIO -> jornada!!.copy(enPausa = true)
                     TipoFichaje.PAUSA_FIN -> jornada!!.copy(enPausa = false)
-                    TipoFichaje.FIN -> jornada!!.copy(horaSalida = ahora)
+                    TipoFichaje.FIN -> jornada!!.copy(horaSalida = ahora, ubicacionSalida = peticion.ubicacion)
                 }
                 jornada = nueva.takeIf { it.horaSalida == null }
                 Response.success(nueva)
@@ -158,16 +162,22 @@ class FicharScreenTest {
         assertEquals(emptyList<TipoFichaje>(), fichajes)
     }
 
+    /**
+     * En pausa, el botón grande decía «Finalizar jornada» y solo avisaba de que
+     * había que reanudar antes. Ahora dice «Reanudar» y reanuda; «Pausar» no está.
+     */
     @Test
-    fun `en pausa no deja terminar - pide reanudar y no ficha nada`() {
+    fun `en pausa el boton grande reanuda y no hay otro boton`() {
         montar(abierta = Registro(id = 1, horaEntrada = Instant.now().toString(), horaSalida = null, enPausa = true))
         seVe(R.string.fichar_reanudar)
+        noEsta(R.string.fichar_finalizar)
+        noEsta(R.string.fichar_pausar)
 
-        tocar(R.string.fichar_finalizar)
+        tocar(R.string.fichar_reanudar)
 
-        seVe(R.string.fichar_reanuda_antes)
-        noEsta(R.string.fichar_confirmar_fin_titulo)
-        assertEquals(emptyList<TipoFichaje>(), fichajes)
+        assertEquals(listOf(TipoFichaje.PAUSA_FIN), fichajes)
+        seVe(R.string.fichar_finalizar)
+        seVe(R.string.fichar_pausar)
     }
 
     /** Antes decía la hora de la entrada: la app no tenía la de la pausa. */
@@ -215,5 +225,29 @@ class FicharScreenTest {
         pantalla.waitForIdle()
         assertEquals(listOf(TipoFichaje.INICIO), fichajes)
         assertEquals(Modalidad.A_DISTANCIA, Ajustes(RuntimeEnvironment.getApplication()).ultimaModalidad)
+    }
+
+    /**
+     * Lo que se guardó, a la vista: el servidor ya guardaba modalidad y
+     * ubicación, pero quien fichaba no sabía si el permiso había funcionado.
+     */
+    @Test
+    fun `tras fichar se ve la modalidad y la ubicacion de la entrada, y luego la de la salida`() {
+        Ajustes(RuntimeEnvironment.getApplication()).ubicacionExplicada = true
+        montar(pide = EstadoDelDiaDTO(laborable = true, preguntarModalidad = true, pedirUbicacion = true))
+        pantalla.waitForIdle()
+
+        tocar(R.string.fichar_iniciar)
+        tocar(R.string.modalidad_presencial)
+        val conUbicacion = RuntimeEnvironment.getApplication().getString(R.string.fichar_con_ubicacion_precision, 25)
+        pantalla.onNodeWithText("${texto(R.string.modalidad_presencial)} · $conUbicacion").assertIsDisplayed()
+
+        tocar(R.string.fichar_finalizar)
+        tocar(R.string.fichar_confirmar_fin_si)
+        pantalla.onNodeWithText(conUbicacion).assertIsDisplayed()
+        pantalla.onNodeWithText(
+            RuntimeEnvironment.getApplication().getString(R.string.fichar_salida_fichada, "")
+                .trim(), substring = true
+        ).assertIsDisplayed()
     }
 }

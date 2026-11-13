@@ -149,15 +149,19 @@
     <!-- Fase B1: el cuadrante de hoy, solo a quien tiene cuadrante. -->
     <string name="fichar_entrada_prevista">Entrada prevista: %1$s · Ver mi cuadrante</string>
     <string name="fichar_sin_turno_hoy">Hoy no tienes turno · Ver mi cuadrante</string>
-    <string name="fichar_iniciar">Iniciar jornada</string>
-    <string name="fichar_finalizar">Finalizar jornada</string>
-    <string name="fichar_pausar">Iniciar pausa</string>
-    <string name="fichar_reanudar">Reanudar jornada</string>
-    <string name="fichar_sin_jornada">Toca para iniciar tu jornada</string>
+    <string name="fichar_iniciar">Fichar entrada</string>
+    <string name="fichar_finalizar">Fichar salida</string>
+    <string name="fichar_pausar">Pausar</string>
+    <string name="fichar_reanudar">Reanudar</string>
+    <string name="fichar_sin_jornada">Toca para fichar la entrada</string>
+    <string name="fichar_salida_fichada">Salida fichada a las %1$s</string>
+    <string name="fichar_con_ubicacion">Con ubicación</string>
+    <string name="fichar_con_ubicacion_precision">Con ubicación (± %1$d m)</string>
+    <string name="fichar_sin_ubicacion_denegada">Sin ubicación: el móvil no tiene permiso</string>
+    <string name="fichar_sin_ubicacion_no_disponible">Sin ubicación: el móvil no la ha dado</string>
     <string name="fichar_desde">Trabajando desde las %1$s</string>
     <string name="fichar_en_pausa">En pausa desde las %1$s</string>
     <string name="fichar_en_pausa_sin_hora">En pausa</string>
-    <string name="fichar_reanuda_antes">Reanuda la jornada antes de finalizarla.</string>
     <string name="fichar_inicia_antes">Inicia la jornada antes de pausarla.</string>
     <string name="fichar_confirmar_fin_titulo">¿Terminas la jornada?</string>
     <string name="fichar_confirmar_fin_entrada">Entraste a las %1$s</string>
@@ -191,7 +195,6 @@
     <!-- Composicion de la jornada abierta y progreso de la semana -->
     <string name="jornada_trabajado">%1$s trabajados</string>
     <string name="jornada_pausado">%1$s de pausa</string>
-    <string name="jornada_desde">Desde las %1$s</string>
     <string name="jornada_composicion_descripcion">
         Hoy llevas %1$s trabajados y %2$s de pausa
     </string>
@@ -277,9 +280,10 @@
     <string name="correccion_motivo">Motivo de la corrección</string>
     <string name="correccion_modalidad">Presencial o a distancia</string>
     <string name="correcciones_modalidad">%1$s → %2$s</string>
+    <string name="sin_conexion_titulo">Sin conexión</string>
     <plurals name="sin_conexion_pendientes">
-        <item quantity="one">Sin conexión: %1$d fichaje se enviará al volver la red</item>
-        <item quantity="other">Sin conexión: %1$d fichajes se enviarán al volver la red</item>
+        <item quantity="one">%1$d fichaje guardado en el móvil. Se enviará solo al volver la red.</item>
+        <item quantity="other">%1$d fichajes guardados en el móvil. Se enviarán solos al volver la red.</item>
     </plurals>
     <plurals name="sin_conexion_salir_texto">
         <item quantity="one">Tienes %1$d fichaje sin enviar. Se queda guardado en este móvil y se enviará cuando vuelvas a entrar con tu cuenta. Hasta entonces, tu empresa no lo verá.</item>
