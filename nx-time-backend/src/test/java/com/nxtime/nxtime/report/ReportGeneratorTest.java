@@ -43,9 +43,9 @@ class ReportGeneratorTest {
                 YearMonth.of(2026, 6),
                 List.of(
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 1),
-                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30, 480 * 60, false, "000123"),
+                                LocalTime.of(9, 0), LocalTime.of(17, 30), 30 * 60, 480 * 60, false, "000123"),
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 2),
-                                LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450 * 60, false),
+                                LocalTime.of(9, 0), LocalTime.of(17, 0), 30 * 60, 450 * 60, false),
                         // Jornada cerrada por el sistema (Fase 9).
                         new ReportRow("Ana Fernández", LocalDate.of(2026, 6, 3),
                                 LocalTime.of(9, 0), LocalTime.of(1, 0), 0, 960 * 60, true)));
@@ -84,7 +84,33 @@ class ReportGeneratorTest {
 
             // Fila 6: la jornada con incidencia va marcada.
             assertThat(hoja.getRow(6).getCell(6).getStringCellValue()).isEqualTo("Cierre automático");
+            assertThat(hoja.getRow(4).getCell(4).getNumericCellValue()).isEqualTo(30.0);
         }
+    }
+
+    @Test
+    @DisplayName("La columna de pausa del Excel guarda el valor exacto: sumada, cuadra con el total real")
+    void excel_laPausaSeSumaSinPerderSegundos() throws Exception {
+        // 22 jornadas con 30 min 59 s de pausa: truncadas daban 660 min, y
+        // son 681 min y 38 s.
+        List<ReportRow> filas = java.util.stream.IntStream.range(0, 22)
+                .mapToObj(i -> new ReportRow("Ana", LocalDate.of(2026, 6, 1).plusDays(i),
+                        LocalTime.of(9, 0), LocalTime.of(17, 0), 30 * 60 + 59, 7 * 3600, false))
+                .toList();
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(new MonthlyReport("Empresa", "Ana", YearMonth.of(2026, 6), filas), salida);
+
+        try (Workbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            Sheet hoja = libro.getSheetAt(0);
+            double suma = 0;
+            for (int i = 4; i < 4 + 22; i++) {
+                suma += hoja.getRow(i).getCell(4).getNumericCellValue();
+            }
+            assertThat(suma * 60).isCloseTo(22 * (30 * 60 + 59), org.assertj.core.data.Offset.offset(0.001));
+            // A la vista, sin decimales y redondeado, como en el PDF.
+            assertThat(hoja.getRow(4).getCell(4).getCellStyle().getDataFormatString()).isEqualTo("0");
+        }
+        assertThat(filas.get(0).minutosPausa()).isEqualTo(31);
     }
 
     @Test
@@ -121,7 +147,7 @@ class ReportGeneratorTest {
         int filas = 5_000;
         List<ReportRow> lineas = IntStream.rangeClosed(1, filas)
                 .mapToObj(i -> new ReportRow("Empleado " + i, LocalDate.of(2026, 6, 1).plusDays(i % 28),
-                        LocalTime.of(9, 0), LocalTime.of(17, 0), 30, 450 * 60, false))
+                        LocalTime.of(9, 0), LocalTime.of(17, 0), 30 * 60, 450 * 60, false))
                 .toList();
         MonthlyReport informe = new MonthlyReport(
                 "Empresa grande", "Todos", YearMonth.of(2026, 6), lineas);

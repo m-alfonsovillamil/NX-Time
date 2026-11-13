@@ -26,13 +26,17 @@ import java.time.LocalTime;
  *
  * "segundosNetos" ya lleva descontadas las pausas, que es lo que cuenta
  * como tiempo de trabajo efectivo.
+ *
+ * Las pausas, igual, en segundos ({@code segundosPausa}). Hasta noviembre de
+ * 2026 la fila llevaba los minutos ya truncados, y quien sumaba la columna
+ * «Pausa (min)» del Excel perdía hasta 59 segundos por jornada.
  */
 public record ReportRow(
         String nombreEmpleado,
         LocalDate fecha,
         LocalTime horaEntrada,
         LocalTime horaSalida,
-        long minutosPausa,
+        long segundosPausa,
         long segundosNetos,
         boolean incidencia,
         /** Su número en el ERP o en nóminas (ADR 053), o null. */
@@ -43,14 +47,14 @@ public record ReportRow(
 
     /** Sin código de empleado. */
     public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
-            long minutosPausa, long segundosNetos, boolean incidencia) {
-        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, null, null);
+            long segundosPausa, long segundosNetos, boolean incidencia) {
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, null, null);
     }
 
     /** Sin modalidad (lo de antes del ADR 055). */
     public ReportRow(String nombreEmpleado, LocalDate fecha, LocalTime horaEntrada, LocalTime horaSalida,
-            long minutosPausa, long segundosNetos, boolean incidencia, String codigoEmpleado) {
-        this(nombreEmpleado, fecha, horaEntrada, horaSalida, minutosPausa, segundosNetos, incidencia, codigoEmpleado,
+            long segundosPausa, long segundosNetos, boolean incidencia, String codigoEmpleado) {
+        this(nombreEmpleado, fecha, horaEntrada, horaSalida, segundosPausa, segundosNetos, incidencia, codigoEmpleado,
                 null);
     }
 
@@ -61,6 +65,15 @@ public record ReportRow(
      */
     public long minutosNetos() {
         return segundosNetos / 60;
+    }
+
+    /**
+     * Minutos de pausa de ESTA jornada, redondeados al más cercano: lo que
+     * enseña el PDF, y lo mismo que enseña el Excel con su formato «0». Solo
+     * para mostrar; el Excel guarda el valor exacto para que la suma cuadre.
+     */
+    public long minutosPausa() {
+        return Math.round(segundosPausa / 60.0);
     }
 
     /** Formato "7h 30m", el que entiende cualquiera que abra el informe. */

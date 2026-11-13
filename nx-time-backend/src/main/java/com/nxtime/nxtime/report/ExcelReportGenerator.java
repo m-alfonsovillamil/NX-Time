@@ -89,11 +89,13 @@ public class ExcelReportGenerator {
 
             CellStyle estiloCabecera = estiloCabecera(libro);
             CellStyle estiloTotal = estiloTotal(libro);
+            CellStyle estiloMinutos = libro.createCellStyle();
+            estiloMinutos.setDataFormat(libro.createDataFormat().getFormat("0"));
 
             int numeroFila = 0;
             numeroFila = escribirTitulo(hoja, informe, numeroFila);
             numeroFila = escribirCabeceras(hoja, estiloCabecera, numeroFila);
-            numeroFila = escribirFilas(hoja, informe, numeroFila);
+            numeroFila = escribirFilas(hoja, informe, estiloMinutos, numeroFila);
             escribirTotales(hoja, informe, estiloTotal, numeroFila);
 
             libro.write(salida);
@@ -126,14 +128,19 @@ public class ExcelReportGenerator {
         return numeroFila;
     }
 
-    private int escribirFilas(Sheet hoja, MonthlyReport informe, int numeroFila) {
+    private int escribirFilas(Sheet hoja, MonthlyReport informe, CellStyle estiloMinutos, int numeroFila) {
         for (ReportRow linea : informe.filas()) {
             Row fila = hoja.createRow(numeroFila++);
             fila.createCell(0).setCellValue(linea.nombreEmpleado());
             fila.createCell(1).setCellValue(linea.fecha().toString());
             fila.createCell(2).setCellValue(linea.horaEntrada().toString());
             fila.createCell(3).setCellValue(linea.horaSalida().toString());
-            fila.createCell(4).setCellValue(linea.minutosPausa());
+            // El valor exacto, en minutos con decimales, y a la vista sin
+            // ellos: así, quien sume la columna obtiene el total real. Antes
+            // iban los minutos truncados y se perdía hasta un minuto por fila.
+            Cell pausa = fila.createCell(4);
+            pausa.setCellValue(linea.segundosPausa() / 60.0);
+            pausa.setCellStyle(estiloMinutos);
             fila.createCell(5).setCellValue(linea.duracionLegible());
             // Se marcan las jornadas que cerró el sistema (Fase 9): son
             // menos fiables que el resto y hay que poder distinguirlas.
