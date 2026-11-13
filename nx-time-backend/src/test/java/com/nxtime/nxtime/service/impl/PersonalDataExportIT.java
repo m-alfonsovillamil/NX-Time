@@ -181,6 +181,30 @@ class PersonalDataExportIT {
     }
 
     @Test
+    @DisplayName("El PDF lleva la tabla de la ubicación cuando hay alguna, como el JSON")
+    void elPdfLlevaLaUbicacionYLaModalidad() throws Exception {
+        TimeEntry jornada = fichaje(ana, 1);
+        jornada.setUbicacionEntrada(com.nxtime.nxtime.domain.PuntoDeFichaje.capturada(43.3623456, -8.4115678, 25));
+        jornada.setUbicacionSalida(com.nxtime.nxtime.domain.PuntoDeFichaje.sin(
+                com.nxtime.nxtime.domain.PuntoDeFichaje.Estado.DENEGADA));
+        jornada.setModalidad(com.nxtime.nxtime.domain.Modalidad.PRESENCIAL);
+        jornada.setOrigen(com.nxtime.nxtime.domain.OrigenDelFichaje.APP_SIN_CONEXION);
+        timeEntryRepository.save(jornada);
+
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        pdfGenerator.generar(exportService.exportar(ana), salida);
+        PdfReader lector = new PdfReader(salida.toByteArray());
+        StringBuilder texto = new StringBuilder();
+        PdfTextExtractor extractor = new PdfTextExtractor(lector);
+        for (int pagina = 1; pagina <= lector.getNumberOfPages(); pagina++) {
+            texto.append(extractor.getTextFromPage(pagina));
+        }
+        // El extractor no lee las celdas de las tablas: lo de dentro lo
+        // prueba PersonalDataPdfGeneratorTest.
+        assertThat(texto.toString()).contains("Ubicación al fichar");
+    }
+
+    @Test
     @DisplayName("La contraseña no sale, ni siquiera cifrada")
     void laContrasenaNoSale() throws Exception {
         datosDe(ana, 1);
