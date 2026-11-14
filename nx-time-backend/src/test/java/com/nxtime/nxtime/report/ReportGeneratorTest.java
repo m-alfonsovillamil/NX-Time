@@ -28,10 +28,11 @@ import org.junit.jupiter.api.Test;
  */
 class ReportGeneratorTest {
 
-    private final ExcelReportGenerator excelGenerator = new ExcelReportGenerator();
-    private final PdfReportGenerator pdfGenerator = new PdfReportGenerator(
+    private final com.nxtime.nxtime.config.CondicionesDelServicio servicio =
             new com.nxtime.nxtime.config.CondicionesDelServicio("NX Time", "Titular", "privacidad@ejemplo.test",
-                    "https://nxtime-web.com", "2026-11-01", true));
+                    "https://nxtime-web.com", "2026-11-01", true);
+    private final ExcelReportGenerator excelGenerator = new ExcelReportGenerator(servicio);
+    private final PdfReportGenerator pdfGenerator = new PdfReportGenerator(servicio);
 
     // Los tiempos van en SEGUNDOS desde el arreglo del total del
     // informe (ver MonthlyReportTotalTest): se escriben como
@@ -135,7 +136,7 @@ class ReportGeneratorTest {
     }
 
     @Test
-    @DisplayName("La cabecera del Excel lleva el teal de la marca, opaco, con la letra blanca")
+    @DisplayName("La cabecera del Excel lleva el color de la marca, opaco, con la letra blanca")
     void excel_cabeceraConLaMarca() throws Exception {
         ByteArrayOutputStream salida = new ByteArrayOutputStream();
         excelGenerator.generar(informeDeEjemplo(), salida);
@@ -145,6 +146,57 @@ class ReportGeneratorTest {
                     .getCellStyle();
             assertThat(estilo.getFillForegroundXSSFColor().getARGBHex()).isEqualTo("FF1F3A5F");
             assertThat(estilo.getFont().getXSSFColor().getARGBHex()).isEqualTo("FFFFFFFF");
+        }
+    }
+
+    @Test
+    @DisplayName("El Excel es un documento de la casa: banda de título, filas alternas, cabecera fija y con filtro")
+    void excel_conElAspectoDeLaMarca() throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(informeDeEjemplo(), salida);
+
+        try (XSSFWorkbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            var hoja = libro.getSheetAt(0);
+            // El título, en una banda del primario a lo ancho de la tabla.
+            var titulo = hoja.getRow(0).getCell(0).getCellStyle();
+            assertThat(titulo.getFillForegroundXSSFColor().getARGBHex()).isEqualTo("FF1F3A5F");
+            assertThat(hoja.getMergedRegions()).extracting(Object::toString)
+                    .anyMatch(region -> region.contains("A1:J1"));
+            // El periodo dice cuándo se generó y con qué.
+            assertThat(hoja.getRow(1).getCell(0).getStringCellValue())
+                    .startsWith("Periodo: 2026-06").contains("Generado el").contains("NX Time");
+            // Filas alternas: la segunda de datos lleva el arena del fondo; la primera, nada.
+            assertThat(hoja.getRow(5).getCell(0).getCellStyle().getFillForegroundXSSFColor().getARGBHex())
+                    .isEqualTo("FFF6EFE1");
+            assertThat(hoja.getRow(4).getCell(0).getCellStyle().getFillForegroundXSSFColor()).isNull();
+            // La incidencia, en el rojo de los avisos.
+            assertThat(hoja.getRow(6).getCell(6).getCellStyle().getFont().getXSSFColor().getARGBHex())
+                    .isEqualTo("FFBA1A1A");
+            // La cabecera se queda fija y filtra.
+            assertThat(hoja.getPaneInformation().getHorizontalSplitPosition()).isEqualTo((short) 4);
+            assertThat(hoja.getPaneInformation().getVerticalSplitPosition()).isEqualTo((short) 1);
+            assertThat(hoja.getCTWorksheet().getAutoFilter().getRef()).isEqualTo("A4:J7");
+            // El total es una banda entera, no dos celdas sueltas.
+            assertThat(hoja.getRow(8).getCell(9).getCellStyle().getFillForegroundXSSFColor().getARGBHex())
+                    .isEqualTo("FFD6E0EF");
+        }
+    }
+
+    @Test
+    @DisplayName("El Excel sale preparado para imprimir: apaisado, a lo ancho de una hoja y con la cabecera repetida")
+    void excel_preparadoParaImprimir() throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        excelGenerator.generar(informeDeEjemplo(), salida);
+
+        try (XSSFWorkbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            var hoja = libro.getSheetAt(0);
+            assertThat(hoja.getPrintSetup().getLandscape()).isTrue();
+            assertThat(hoja.getPrintSetup().getFitWidth()).isEqualTo((short) 1);
+            assertThat(hoja.getRepeatingRows().formatAsString()).contains("4:4");
+            assertThat(hoja.getHeader().getLeft()).isEqualTo("NX Time · Registro horario");
+            assertThat(hoja.getHeader().getRight()).isEqualTo("TechCorp Solutions · 2026-06");
+            assertThat(hoja.getFooter().getCenter()).startsWith("Página ");
+            assertThat(libro.getProperties().getCoreProperties().getCreator()).isEqualTo("NX Time");
         }
     }
 
@@ -252,6 +304,41 @@ class ReportGeneratorTest {
         pdfGenerator.generar(informe, salida);
         try (org.openpdf.text.pdf.PdfReader lector = new org.openpdf.text.pdf.PdfReader(salida.toByteArray())) {
             return new org.openpdf.text.pdf.parser.PdfTextExtractor(lector).getTextFromPage(1);
+        }
+    }
+
+    @Test
+    @DisplayName("El PDF lleva el membrete: producto, documento, empresa, periodo en letra y la página")
+    void pdf_conMembrete() throws Exception {
+        String texto = textoDelPdf(informeDeEjemplo());
+
+        assertThat(texto).contains("NX Time")
+                .contains("Registro horario mensual")
+                .contains("TechCorp Solutions")
+                .contains("Ana Fernández")
+                .contains("junio de 2026")
+                .contains("Página 1 de");
+    }
+
+    @Test
+    @DisplayName("Un mes largo pasa a una segunda hoja, que también lleva membrete y la cabecera de la tabla")
+    void pdf_enDosHojas() throws Exception {
+        List<ReportRow> filas = new java.util.ArrayList<>();
+        for (int persona = 0; persona < 3; persona++) {
+            for (int dia = 1; dia <= 28; dia++) {
+                filas.add(new ReportRow("Ana Fernández", LocalDate.of(2026, 6, dia),
+                        LocalTime.of(9, 0), LocalTime.of(17, 0), 30 * 60, 450 * 60, false));
+            }
+        }
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        pdfGenerator.generar(new MonthlyReport("TechCorp Solutions", "Ana Fernández", YearMonth.of(2026, 6), filas),
+                salida);
+
+        try (org.openpdf.text.pdf.PdfReader lector = new org.openpdf.text.pdf.PdfReader(salida.toByteArray())) {
+            assertThat(lector.getNumberOfPages()).isGreaterThan(1);
+            String segunda = new org.openpdf.text.pdf.parser.PdfTextExtractor(lector).getTextFromPage(2);
+            assertThat(segunda).contains("NX Time").contains("TechCorp Solutions")
+                    .contains("Tiempo efectivo").contains("Página 2 de");
         }
     }
 

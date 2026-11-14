@@ -50,4 +50,16 @@ class PersonalDataPdfGeneratorTest {
                 OrigenDelFichaje.APP))).isEqualTo("Sustituido por una corrección · Presencial");
         assertThat(PersonalDataPdfGenerator.observaciones(fichaje(false, false, null, null))).isEmpty();
     }
+
+    @Test
+    @DisplayName("Los estados salen como se dicen, y lo que no es un estado se deja como viene")
+    void estadosLegibles() {
+        assertThat(PersonalDataPdfGenerator.texto("EN_INVESTIGACION")).isEqualTo("En investigación");
+        assertThat(PersonalDataPdfGenerator.texto("EMPLEADO")).isEqualTo("Empleado");
+        assertThat(PersonalDataPdfGenerator.texto("ABIERTO")).isEqualTo("Sin revisar");
+        // Un código de proyecto o el CV no son estados: no se tocan.
+        assertThat(PersonalDataPdfGenerator.texto("NX-CORE")).isEqualTo("NX-CORE");
+        assertThat(PersonalDataPdfGenerator.texto("CV")).isEqualTo("CV");
+        assertThat(PersonalDataPdfGenerator.texto(" ")).isEqualTo("—");
+    }
 }

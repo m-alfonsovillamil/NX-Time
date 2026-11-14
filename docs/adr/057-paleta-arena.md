@@ -42,6 +42,31 @@ descartaron: el blanco puro queda duro, como recuadros vacíos.
 - **El icono** cambia de fondo, del verde azulado al azul noche, en la app y en
   la web instalable. El dibujo es el mismo.
 
+## Los documentos que se descargan
+
+Los PDF y el Excel son lo que acaba en una gestoría o en una inspección, así que
+se tratan como documentos de la casa y no como volcados de datos:
+
+- **PDF (registro mensual y «Tus datos»):** un membrete común (`Membrete`) en
+  cada página, con una franja del color de la marca, el logotipo dibujado en
+  vectores (el mismo trazo que el icono), qué documento es y de qué empresa; y un
+  pie con lo mismo y «Página X de Y». La cabecera de la tabla se repite en cada
+  hoja y las firmas no se parten. El registro abre con un recuadro arena con la
+  empresa, la persona y el mes en letra. Las tablas llevan solo rayas
+  horizontales y filas alternas en arena. Un mes normal, con sus firmas, cabe en
+  una hoja.
+- **«Tus datos»** dice los estados como se dicen («En investigación», no
+  `EN_INVESTIGACION`); el JSON de la misma exportación los conserva tal cual.
+- **Excel:** el título en una banda del color de la marca, el periodo y la fecha
+  de generación sobre arena, filas alternas, las incidencias en rojo, sin la
+  cuadrícula de Excel, la cabecera y el nombre fijos al desplazarse y con filtro,
+  y preparado para imprimir (apaisado, a lo ancho de una hoja, cabecera repetida,
+  encabezado con la empresa y «Página X de Y»). **Las posiciones no cambian:** el
+  título en la fila 1, las cabeceras en la 4 y los datos desde la 5, con las
+  mismas columnas, para quien lo lea por posición.
+- **CSV:** no admiten formato. Siguen con punto y coma y BOM para que Excel los
+  abra con las tildes bien.
+
 ## Contraste
 
 Todos los pares texto/fondo llegan a 4,5:1, comprobados uno a uno. El más justo
