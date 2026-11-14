@@ -113,7 +113,7 @@ class EmailTemplateRenderingTest {
                 .contains("alt=\"NX Time\"")
                 .contains("Miguel Alfonso Villamil")
                 .contains("href=\"https://nxtime-web.com/legal/privacidad\"")
-                .contains("#0E7C86")
+                .contains("#1F3A5F")
                 .doesNotContain("#1f6feb");
     }
 

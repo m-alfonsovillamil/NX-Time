@@ -2,6 +2,10 @@
 
 (Las de la web están más abajo, en [La web](#la-web).)
 
+> **Son de la paleta anterior** (verde azulado e índigo). Desde noviembre de 2026
+> la aplicación va en arena, azul noche y petróleo ([ADR 057](../adr/057-paleta-arena.md));
+> las capturas se rehacen una sola vez, con el cambio de nombre.
+
 Rehechas el **04/09/2026**, tras aplicar la línea visual "Fichaje". Emulador
 `Medium_Phone_API_35` (Android 15) contra el backend local con el perfil `demo`.
 

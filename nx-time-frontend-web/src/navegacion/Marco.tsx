@@ -14,8 +14,8 @@
  * barra inferior no cambia.
  *
  * Desde el 5/10/2026 (ADR 035) el menú **se reconoce de un vistazo**: cada
- * apartado lleva su icono en un recuadro del color de su zona (teal en «Lo
- * mío», índigo en «Gestión», como la app), cada entrada el suyo, la que espera
+ * apartado lleva su icono en un recuadro del color de su zona (azul noche en «Lo
+ * mío», petróleo en «Gestión», como la app), cada entrada el suyo, la que espera
  * una decisión enseña cuántas (`pendientes.ts`), y el apartado de la página
  * abierta queda marcado aunque esté plegado. Arriba, el estado de la jornada
  * (`ChipDeJornada`).
@@ -300,7 +300,7 @@ export function Marco() {
   const menu = menuPara(sesion?.authorities ?? []);
 
   const { enBarra, conMas } = barraInferior(menu);
-  // El acento de la página (teal o índigo) sale de su grupo, como en la app.
+  // El acento de la página (azul noche o petróleo) sale de su grupo, como en la app.
   const zona = seccionDeRuta(useLocation().pathname)?.grupo;
   const pendientes = usePendientesPorRuta();
   usePrecargaEnReposo(enBarra);

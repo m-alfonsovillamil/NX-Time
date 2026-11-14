@@ -17,7 +17,6 @@ import org.openpdf.text.Document;
 import org.openpdf.text.Element;
 import org.openpdf.text.Font;
 import org.openpdf.text.FontFactory;
-import org.openpdf.text.PageSize;
 import org.openpdf.text.Paragraph;
 import org.openpdf.text.Phrase;
 import org.openpdf.text.pdf.PdfPCell;
@@ -46,7 +45,9 @@ public class PersonalDataPdfGenerator {
     private static final Color PRIMARIO = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.PRIMARIO);
     private static final Color TEXTO = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.TEXTO);
     private static final Color BORDE = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.BORDE);
-    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, TEXTO);
+    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, TEXTO);
+    private static final Color FONDO = com.nxtime.nxtime.config.Marca.awt(com.nxtime.nxtime.config.Marca.FONDO);
+    private static final Font ETIQUETA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, TEXTO);
     private static final Font SECCION = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, PRIMARIO);
     private static final Font NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 9, TEXTO);
     private static final Font SUAVE = FontFactory.getFont(FontFactory.HELVETICA, 9,
@@ -61,11 +62,13 @@ public class PersonalDataPdfGenerator {
     }
 
     public void generar(PersonalDataExport datos, OutputStream salida) {
-        Document documento = new Document(PageSize.A4, 36, 36, 36, 36);
-        PdfWriter.getInstance(documento, salida);
+        PersonalDataExport.Persona p = datos.persona();
+        Document documento = Membrete.documentoA4();
+        PdfWriter escritor = PdfWriter.getInstance(documento, salida);
+        // El mismo membrete que el registro mensual: logotipo, empresa y página.
+        escritor.setPageEvent(new Membrete(servicio.producto(), "Tus datos", p.empresa()));
         documento.open();
 
-        PersonalDataExport.Persona p = datos.persona();
         Horas en = new Horas(ZoneId.of(p.zonaHoraria()));
 
         documento.add(new Paragraph("Tus datos en " + servicio.producto(), TITULO));
@@ -83,7 +86,8 @@ public class PersonalDataPdfGenerator {
         fila(ficha, "Puesto", texto(p.puesto()));
         fila(ficha, "Código de empleado", texto(p.codigoEmpleado()));
         fila(ficha, "Fecha de nacimiento", p.fechaNacimiento() != null ? p.fechaNacimiento().format(FECHA) : "—");
-        fila(ficha, "Jornada semanal", p.horasSemanales() != null ? p.horasSemanales().stripTrailingZeros().toPlainString() + " h" : "—");
+        fila(ficha, "Jornada semanal", p.horasSemanales() != null
+                ? p.horasSemanales().stripTrailingZeros().toPlainString().replace('.', ',') + " h" : "—");
         fila(ficha, "Cuenta", p.activo() ? "Activa" : "De baja desde " + en.fechaHora(p.fechaBaja()));
         documento.add(ficha);
 
@@ -233,12 +237,19 @@ public class PersonalDataPdfGenerator {
             celda.setPadding(4);
             tabla.addCell(celda);
         }
+        int numero = 0;
         for (T fila : filas) {
+            // Filas alternas y solo la raya de debajo, como el registro mensual.
+            Color fondo = numero++ % 2 == 1 ? FONDO : null;
             for (String valor : celdas.apply(fila)) {
                 PdfPCell celda = new PdfPCell(new Phrase(texto(valor), CELDA));
+                celda.setBorder(org.openpdf.text.Rectangle.BOTTOM);
                 celda.setBorderColor(BORDE);
-                celda.setPadding(3);
+                celda.setPadding(4);
                 celda.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                if (fondo != null) {
+                    celda.setBackgroundColor(fondo);
+                }
                 tabla.addCell(celda);
             }
         }
@@ -253,10 +264,13 @@ public class PersonalDataPdfGenerator {
     }
 
     private void fila(PdfPTable tabla, String etiqueta, String valor) {
-        PdfPCell izquierda = new PdfPCell(new Phrase(etiqueta, CABECERA));
-        izquierda.setBackgroundColor(PRIMARIO);
-        izquierda.setBorderColor(PRIMARIO);
-        izquierda.setPadding(4);
+        // La etiqueta, sobre el arena de la marca: con diez filas, el primario
+        // hacía un bloque demasiado oscuro al lado de los datos.
+        PdfPCell izquierda = new PdfPCell(new Phrase(etiqueta, ETIQUETA));
+        izquierda.setBackgroundColor(FONDO);
+        izquierda.setBorder(org.openpdf.text.Rectangle.BOTTOM);
+        izquierda.setBorderColor(BORDE);
+        izquierda.setPadding(5);
         tabla.addCell(izquierda);
         PdfPCell derecha = new PdfPCell(new Phrase(texto(valor), CELDA));
         derecha.setBorderColor(BORDE);
@@ -348,7 +362,30 @@ public class PersonalDataPdfGenerator {
         return fecha == null ? "—" : fecha.format(FECHA);
     }
 
-    private static String texto(String valor) {
-        return valor == null || valor.isBlank() ? "—" : valor;
+    static String texto(String valor) {
+        return valor == null || valor.isBlank() ? "—" : LEGIBLE.getOrDefault(valor, valor);
     }
+
+    /**
+     * Los estados y tipos, como se dicen. El JSON los lleva tal cual (es el
+     * formato para máquinas); aquí los lee una persona, y «EN_INVESTIGACION» en
+     * un documento de la empresa no se entiende. Lo que no está en la lista se
+     * deja como viene: un código de proyecto en mayúsculas no se toca.
+     */
+    private static final java.util.Map<String, String> LEGIBLE = java.util.Map.ofEntries(
+            java.util.Map.entry("EMPLEADO", "Empleado"), java.util.Map.entry("GESTOR", "Gestor"),
+            java.util.Map.entry("ADMIN", "Administrador"),
+            java.util.Map.entry("PENDIENTE", "Pendiente"), java.util.Map.entry("APROBADA", "Aprobada"),
+            java.util.Map.entry("RECHAZADA", "Rechazada"), java.util.Map.entry("EN_DISPUTA", "En disputa"),
+            java.util.Map.entry("DIARIA", "Diaria"), java.util.Map.entry("SEMANAL", "Semanal"),
+            java.util.Map.entry("ABIERTO", "Sin revisar"), java.util.Map.entry("JUSTIFICADO", "Justificado"),
+            java.util.Map.entry("ACEPTADO", "Aceptado"),
+            java.util.Map.entry("JUSTIFICADA", "Justificada"), java.util.Map.entry("ACEPTADA", "Aceptada"),
+            java.util.Map.entry("RETRASO", "Retraso"), java.util.Map.entry("SALIDA_ANTICIPADA", "Salida anticipada"),
+            java.util.Map.entry("LIBRE", "Libre"), java.util.Map.entry("VIGENTE", "Vigente"),
+            java.util.Map.entry("INVALIDADA", "Sin efecto"),
+            java.util.Map.entry("RECIBIDA", "Recibida"), java.util.Map.entry("EN_INVESTIGACION", "En investigación"),
+            java.util.Map.entry("RESUELTA", "Resuelta"), java.util.Map.entry("ARCHIVADA", "Archivada"),
+            java.util.Map.entry("EN_PROCESO", "En proceso"), java.util.Map.entry("DESCARTADA", "Descartada"),
+            java.util.Map.entry("SELECCIONADA", "Seleccionada"), java.util.Map.entry("FOTO", "Foto"));
 }

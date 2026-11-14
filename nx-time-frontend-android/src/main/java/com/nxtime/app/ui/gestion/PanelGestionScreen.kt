@@ -296,7 +296,7 @@ private fun OpcionGestion(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Índigo, no el teal de siempre: es la señal de que has entrado
+            // Petróleo, no el azul de siempre: es la señal de que has entrado
             // en la zona de gestión. El resto de la app usa el primario, así
             // que el cambio de familia de color se lee sin tener que
             // anunciarlo. En su recuadro, como en el menú de la web (ADR 035):

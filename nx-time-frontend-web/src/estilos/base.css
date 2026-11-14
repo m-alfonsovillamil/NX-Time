@@ -2,7 +2,7 @@
  *
  * TODO el color sale de `tokens.css`, que se genera del tema de la app
  * Android: aquí no hay un solo valor hexadecimal escrito a mano, y esa es la
- * regla. El día que cambie el teal en `Color.kt`, cambia aquí sin tocar nada.
+ * regla. El día que cambie el primario en `Color.kt`, cambia aquí sin tocar nada.
  *
  * CSS a secas, sin Tailwind ni CSS-in-JS: los tokens ya dan lo que daría un
  * tema, y una capa de herramientas pesaría más que la propia web (ADR 029).
@@ -169,7 +169,7 @@ h1 {
 
 /* ---- El acento de cada zona ----
  *
- * Teal en «Lo mío» e índigo en «Gestión», la regla de la app (Color.kt:
+ * Azul noche en «Lo mío» y petróleo en «Gestión», la regla de la app (Color.kt:
  * `tertiary` reservado a la gestión). Lo que va con el color de la zona
  * (el icono de la cabecera, el elemento activo del menú, una cifra
  * destacada) usa `--nx-acento*` y no `--nx-primary` directamente.
@@ -216,7 +216,7 @@ h1 {
 
 .nx-acceso-marca {
   display: none;
-  /* Del teal de la marca al índigo de la gestión: los dos colores de la app. */
+  /* Del azul de la marca al petróleo de la gestión: los dos colores de la app. */
   --nx-marca-desde: var(--nx-primary);
   --nx-marca-hasta: color-mix(in srgb, var(--nx-primary) 55%, var(--nx-tertiary));
   --nx-marca-texto: var(--nx-on-primary);
@@ -264,7 +264,7 @@ h1 {
     font-weight: 700;
   }
 
-  /* El icono es teal sobre teal: con un borde claro se despega del fondo. */
+  /* El icono es del color de la marca sobre ese mismo color: con un borde claro se despega del fondo. */
   .nx-acceso-marca__nombre img {
     border-radius: var(--nx-radio-s);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--nx-marca-texto) 55%, transparent);
@@ -1094,7 +1094,7 @@ h1 {
 /* ---- El menú ----
  *
  * Un menú se recorre con la vista antes que leyéndolo: cada apartado lleva su
- * icono en un recuadro del color de su zona (teal en «Lo mío», índigo en
+ * icono en un recuadro del color de su zona (azul noche en «Lo mío», petróleo en
  * «Gestión»; el grupo lleva `data-zona`), y cada entrada el suyo, más
  * pequeño, colgando de una línea guía. La entrada de la página abierta va
  * rellena y con una barra sobre la guía; su apartado, con el recuadro lleno,
@@ -2200,7 +2200,7 @@ h2 {
   background: var(--nx-acento);
 }
 
-/* Por encima de lo esperado (más horas de las de la semana): sigue llena, en índigo. */
+/* Por encima de lo esperado (más horas de las de la semana): sigue llena, en petróleo. */
 .nx-cifra__relleno--pasado {
   background: var(--nx-tertiary);
 }

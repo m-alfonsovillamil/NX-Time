@@ -55,8 +55,8 @@ Lo que la página nueva tiene que respetar del sistema visual
 - **Ocupa el ancho** (`.nx-pagina`, hasta 1280 px) y se reparte con
   `.nx-composicion--principal-lateral`, `--mitades` o `--lista-detalle`. Nada
   de una columna estrecha centrada.
-- **Lo que va con el color de la zona usa `--nx-acento*`** (teal en «Lo mío»,
-  índigo en «Gestión»), y sobre un contenedor el texto es su `on-…-contenedor`.
+- **Lo que va con el color de la zona usa `--nx-acento*`** (azul noche en «Lo mío»,
+  petróleo en «Gestión»), y sobre un contenedor el texto es su `on-…-contenedor`.
 
 ## Los dos ficheros generados
 

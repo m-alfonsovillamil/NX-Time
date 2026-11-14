@@ -211,7 +211,7 @@ fun FicharScreen(
                     text = stringResource(R.string.fichar_saludo, estado.nombreUsuario),
                     style = MaterialTheme.typography.headlineMedium,
                     /*
-                     * En tinta y no en teal. Un titular de color sobre un
+                     * En tinta y no en el color de la marca. Un titular de color sobre un
                      * fondo de color es lo que ataba el degradado: con el
                      * saludo en `primary`, cualquier degradado que se
                      * notara bajaba el contraste de 4,5:1. Y a 26 sp en
@@ -730,7 +730,7 @@ private fun TarjetaTiempo(
      * `primaryContainer`: el primario de la paleta es un cian muy
      * saturado (#6FF6FF) que, puesto en un bloque de este tamaño, grita
      * al lado del resto de la pantalla. El secundario es el mismo
-     * verde azulado en versión suave y mantiene el contraste AA.
+     * azul en versión suave y mantiene el contraste AA.
      */
     // Pulsable: abre el detalle (ver DetalleDeTiempoHoja).
     Card(

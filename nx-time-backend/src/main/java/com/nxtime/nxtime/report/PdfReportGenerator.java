@@ -6,7 +6,6 @@ import org.openpdf.text.Document;
 import org.openpdf.text.Element;
 import org.openpdf.text.Font;
 import org.openpdf.text.FontFactory;
-import org.openpdf.text.PageSize;
 import org.openpdf.text.Paragraph;
 import org.openpdf.text.Phrase;
 import org.openpdf.text.pdf.PdfPCell;
@@ -37,14 +36,18 @@ import org.springframework.stereotype.Component;
  * Escribe directamente en el OutputStream de la respuesta, igual que
  * {@link ExcelReportGenerator}.
  *
- * Con los colores de la marca ({@link Marca}) desde noviembre de 2026: antes
- * llevaba el azul genérico de los correos, distinto del teal de la app.
+ * Con los colores de la marca ({@link Marca}) desde noviembre de 2026, y con
+ * el {@link Membrete} común a todos los PDF: logotipo, empresa y «Página X de
+ * Y» en cada hoja.
  */
 @Component
 public class PdfReportGenerator {
 
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter FECHA_Y_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter MES =
+            DateTimeFormatter.ofPattern("MMMM 'de' yyyy", java.util.Locale.forLanguageTag("es-ES"));
+    static final String DOCUMENTO = "Registro horario mensual";
 
     /*
      * La zona del documento es la de la empresa, que viaja en el informe
@@ -58,10 +61,10 @@ public class PdfReportGenerator {
     private static final Color BORDE = Marca.awt(Marca.BORDE);
     private static final Color FONDO = Marca.awt(Marca.FONDO);
 
-    private static final Font MARCA = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, PRIMARIO);
-    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, Marca.awt(Marca.TEXTO));
-    private static final Font SUBTITULO =
-            FontFactory.getFont(FontFactory.HELVETICA, 10, Marca.awt(Marca.TEXTO_SECUNDARIO));
+    private static final Font TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Marca.awt(Marca.TEXTO));
+    private static final Font ETIQUETA =
+            FontFactory.getFont(FontFactory.HELVETICA, 8, Marca.awt(Marca.TEXTO_SECUNDARIO));
+    private static final Font DATO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Marca.awt(Marca.TEXTO));
     private static final Font CABECERA_TABLA =
             FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Marca.awt(Marca.SOBRE_PRIMARIO));
     private static final Font CELDA = FontFactory.getFont(FontFactory.HELVETICA, 9, Marca.awt(Marca.TEXTO));
@@ -78,20 +81,15 @@ public class PdfReportGenerator {
     }
 
     public void generar(MonthlyReport informe, OutputStream salida) {
-        Document documento = new Document(PageSize.A4, 40, 40, 40, 40);
-        PdfWriter.getInstance(documento, salida);
+        Document documento = Membrete.documentoA4();
+        PdfWriter escritor = PdfWriter.getInstance(documento, salida);
+        escritor.setPageEvent(new Membrete(servicio.producto(), DOCUMENTO, informe.nombreEmpresa()));
         documento.open();
 
-        documento.add(new Paragraph(servicio.producto(), MARCA));
-        documento.add(new Paragraph("Registro horario mensual", TITULO));
-        documento.add(new Paragraph(informe.nombreEmpresa(), SUBTITULO));
-        documento.add(new Paragraph(
-                "Empleado: " + informe.nombreEmpleado() + "   |   Periodo: " + informe.mes(), SUBTITULO));
-        documento.add(espacio());
+        documento.add(new Paragraph(DOCUMENTO, TITULO));
+        documento.add(ficha(informe));
 
         documento.add(tablaDeJornadas(informe));
-        documento.add(espacio());
-
         documento.add(resumen(informe));
         if (informe.incidencias() > 0) {
             documento.add(avisoDeIncidencias(informe));
@@ -106,17 +104,41 @@ public class PdfReportGenerator {
                     + "recibió después.", PIE));
         }
 
-        documento.add(espacio());
         documento.add(bloqueDeFirma(informe.firma(), informe.zona()));
         documento.add(pieLegal(informe.zona()));
 
         documento.close();
     }
 
-    private Paragraph espacio() {
-        Paragraph espacio = new Paragraph(" ");
-        espacio.setSpacingAfter(8);
-        return espacio;
+    /**
+     * De quién es el registro y de cuándo, en un recuadro con el fondo de la
+     * marca: es lo primero que busca quien lo archiva o lo firma.
+     */
+    private PdfPTable ficha(MonthlyReport informe) {
+        PdfPTable ficha = new PdfPTable(new float[] {3f, 3f, 2f});
+        ficha.setWidthPercentage(100);
+        ficha.setSpacingBefore(8);
+        ficha.setSpacingAfter(2);
+        ficha.addCell(datoDeFicha("EMPRESA", informe.nombreEmpresa()));
+        ficha.addCell(datoDeFicha("EMPLEADO", informe.nombreEmpleado()));
+        ficha.addCell(datoDeFicha("PERIODO", informe.mes().format(MES)));
+        return ficha;
+    }
+
+    private PdfPCell datoDeFicha(String etiqueta, String valor) {
+        Paragraph contenido = new Paragraph();
+        contenido.add(new Phrase(etiqueta + "\n", ETIQUETA));
+        contenido.add(new Phrase(valor == null ? "—" : valor, DATO));
+        contenido.setLeading(14);
+        PdfPCell celda = new PdfPCell();
+        celda.addElement(contenido);
+        celda.setBackgroundColor(FONDO);
+        celda.setBorder(org.openpdf.text.Rectangle.NO_BORDER);
+        celda.setPaddingLeft(10);
+        celda.setPaddingRight(10);
+        celda.setPaddingTop(2);
+        celda.setPaddingBottom(8);
+        return celda;
     }
 
     private PdfPTable tablaDeJornadas(MonthlyReport informe) {
@@ -130,6 +152,8 @@ public class PdfReportGenerator {
         PdfPTable tabla = new PdfPTable(cabeceras.length);
         tabla.setWidthPercentage(100);
         tabla.setSpacingBefore(10);
+        // Si el mes pasa a una segunda hoja, la cabecera sale también allí.
+        tabla.setHeaderRows(1);
 
         for (String cabecera : cabeceras) {
             PdfPCell celda = new PdfPCell(new Phrase(cabecera, CABECERA_TABLA));
@@ -170,6 +194,8 @@ public class PdfReportGenerator {
         PdfPCell celda = new PdfPCell(new Phrase(texto, fuente));
         celda.setPadding(4);
         celda.setHorizontalAlignment(Element.ALIGN_CENTER);
+        // Solo la raya de debajo: una rejilla completa pesa más que los datos.
+        celda.setBorder(org.openpdf.text.Rectangle.BOTTOM);
         celda.setBorderColor(BORDE);
         if (fondo != null) {
             celda.setBackgroundColor(fondo);
@@ -181,6 +207,7 @@ public class PdfReportGenerator {
     private PdfPTable resumen(MonthlyReport informe) {
         PdfPTable caja = new PdfPTable(1);
         caja.setWidthPercentage(100);
+        caja.setSpacingBefore(12);
         PdfPCell celda = new PdfPCell(new Phrase(
                 "Días trabajados: " + informe.diasTrabajados()
                         + "        Total del periodo: " + informe.totalLegible(), TOTAL));
@@ -215,7 +242,9 @@ public class PdfReportGenerator {
     private PdfPTable bloqueDeFirma(MonthlyReport.FirmaDelInforme firma, ZoneId zona) {
         PdfPTable firmas = new PdfPTable(2);
         firmas.setWidthPercentage(100);
-        firmas.setSpacingBefore(30);
+        firmas.setSpacingBefore(26);
+        // Las firmas no se parten entre dos hojas.
+        firmas.setKeepTogether(true);
 
         if (firma == null) {
             firmas.addCell(celdaDeFirma("Firma del trabajador"));
@@ -259,7 +288,7 @@ public class PdfReportGenerator {
                 "Documento generado por " + servicio.producto() + " el " + hoyEn(zona).format(FECHA)
                         + ". Registro de jornada conforme al RD-ley 8/2019; conservar durante cuatro años.",
                 PIE);
-        pie.setSpacingBefore(20);
+        pie.setSpacingBefore(16);
         return pie;
     }
 }

@@ -77,9 +77,9 @@ fun Insignia(texto: String, tono: TonoDeInsignia = TonoDeInsignia.NEUTRO, modifi
 /**
  * Un icono en su recuadro de color.
  *
- * En la zona de gestión, índigo (`tertiaryContainer`): es la señal de que se
+ * En la zona de gestión, petróleo (`tertiaryContainer`): es la señal de que se
  * ha entrado en ella, y antes la daba solo el tinte del icono suelto. Fuera
- * de ella, el teal de la marca.
+ * de ella, el azul de la marca.
  */
 @Composable
 fun IconoEnRecuadro(
