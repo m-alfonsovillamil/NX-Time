@@ -24,11 +24,14 @@ descartaron: el blanco puro queda duro, como recuadros vacíos.
 | Tarjetas (`surface`) | marfil, `#FFFAF1` | `#201D18` |
 | Acciones (`primary`) | azul noche, `#1F3A5F` | `#A9C7F2` |
 | Gestión (`tertiary`) | petróleo, `#0A6570` | `#5FD4DE` |
-| Botones secundarios (`secondaryContainer`) | arena tostada, `#E8DCC3` | `#4A412C` |
+| Botones secundarios (`secondaryContainer`) | arena tostada, `#D3C096` | `#4A412C` |
 | Texto | tinta, `#1C2327` | `#ECE6DA` |
 
-- **El arena es un color de fondo, nunca de botón.** Es claro y poco saturado: un
-  botón arena con texto blanco no se lee y parece desactivado.
+- **El arena no vale para un botón principal.** Es claro y poco saturado: un
+  botón arena con texto blanco no se lee y parece desactivado. Los botones
+  secundarios sí van en arena, pero **tostada** (`#D3C096`) y con texto oscuro:
+  una arena más clara no se distinguía del fondo cuando el botón va fuera de
+  una tarjeta («Solicitar ausencia», «Entrar con Microsoft»).
 - **El petróleo pasa a la zona de gestión** y el índigo desaparece: con arena y
   azul, un tercer tono frío más eran demasiados.
 - **Los colores de estado no cambian** (`ColoresJornada`: verde, ámbar, rojo), ni

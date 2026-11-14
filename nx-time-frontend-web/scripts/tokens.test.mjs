@@ -191,6 +191,6 @@ describe('el tema real entero', () => {
     // Quien vaya a "ajustar un color" tiene que leer cuál es el par que
     // cae primero, y no va a abrir Color.kt para enterarse.
     const css = readFileSync(resolve(AQUI, '..', 'src', 'estilos', 'tokens.css'), 'utf8');
-    expect(css).toContain('4.67:1');
+    expect(css).toContain('4.84:1');
   });
 });

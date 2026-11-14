@@ -34,7 +34,7 @@ val LightOnPrimaryContainer = Color(0xFF0B1E38)
 
 val LightSecondary = Color(0xFF655A43)
 val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xFFE8DCC3)
+val LightSecondaryContainer = Color(0xFFD3C096)
 val LightOnSecondaryContainer = Color(0xFF2A2415)
 
 /**
