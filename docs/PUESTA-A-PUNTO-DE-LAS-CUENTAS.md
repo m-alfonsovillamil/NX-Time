@@ -23,9 +23,9 @@ código. Paso a paso y en orden.
 | 2. Sacar los `.env` de OneDrive | Hecho (8/11) | — |
 | 3. Segundo factor en todas las cuentas | Hecho (8/11) | — |
 | 4. Rotar los secretos, de uno en uno | Hecho (8/11), salvo el token de Neon AI Gateway | — |
-| 5. Conexión a Neon con `verify-full` | 5 min | Con la 4 (también toca la `DATABASE_URL`) |
+| 5. Conexión a Neon con `verify-full` | Hecho (15/11) | — |
 | 6. Proteger `main` en GitHub | Hecho (6/11) | — |
-| 7. Neon, Firebase, Sentry y Cloudflare | 30 min | Cuando sea |
+| 7. Neon, Firebase, Sentry y Cloudflare | Hecho (13/11 y 15/11) | — |
 
 Después de **cada** cambio en Render, comprobar que sigue vivo:
 
@@ -165,7 +165,13 @@ $b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create
 
 ## 5. Conexión a Neon con `verify-full`
 
-Hoy la conexión va cifrada pero con `sslmode=require`, que **no comprueba el
+> **Hecho el 15/11/2026**: las dos variables de Render terminan ya en
+> `verify-full`; tras desplegar, la salud dio UP y `/estado/tareas` respondió
+> 200. El secreto `COPIA_DATABASE_URL` se volvió a poner ese día con la
+> conexión directa y `sslmode=verify-full&sslrootcert=system`, y la «Copia
+> diaria» lanzada a mano salió en verde.
+
+Antes, la conexión iba cifrada pero con `sslmode=require`, que **no comprueba el
 certificado**: se probó que con un almacén de confianza vacío entra igual. La
 cadena buena está probada contra Neon y con la imagen de Java del `Dockerfile`
 (`DESPLIEGUE.md`, «Base de datos»).
@@ -222,6 +228,15 @@ afecta.
   Actions, que no tiene IP fija, y Render gratuito tampoco.
 
 **Firebase** (Google Cloud → *APIs y servicios* → *Credenciales*):
+
+> **Hecho el 15/11/2026**, con las dos huellas comprobadas antes contra el APK
+> de producción y el `debug.keystore`, y la web con `localhost:5173` incluido.
+> Comprobado contra Firebase Installations: 200 con el paquete, la huella o el
+> dominio buenos y 403 sin ellos. Al guardar, Google avisó de que alguien
+> usaba la clave de Android con APIs de **Maps** (la clave va en
+> `google-services.json`, que es público); ya fallaban por la restricción de
+> APIs y ahora además la clave solo vale desde la app.
+
 - la clave de Android: *Aplicaciones de Android*, con **dos** entradas, porque
   `google-services.json` lleva los dos paquetes y la misma clave sirve a ambos:
   - `com.nxtime.app` con la huella de la clave de firma,
@@ -266,6 +281,19 @@ quitarla, y volver a probar.
   datos están en la UE.
 
 **Cloudflare** (el dominio `nxtime-web.com`):
+
+> **Hecho el 15/11/2026**: DNSSEC activado (el registro DS lo publica
+> Cloudflare, que es también el registrador, y tarda hasta un día), los dos CAA
+> (Cloudflare añade por su cuenta los de las autoridades que usa), ningún
+> registro colgado entre los ocho que había, y los destinos `privacidad@` y
+> `seguridad@` borrados de *Email Routing* (las dos reglas siguen reenviando
+> al Gmail). Se añadió además **DMARC** en `_dmarc`:
+> `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; rua=…@dmarc-reports.cloudflare.net`.
+> `p=reject` desde el principio porque **nada envía correo como
+> `@nxtime-web.com`**: Brevo manda con el remitente de Gmail. El día que Brevo
+> se autentique con el dominio propio (cambio de nombre), su DKIM tiene que
+> ir alineado con el `From`, o DMARC rechazará esos correos.
+
 - **DNSSEC**: *DNS* → *Settings* → *Enable DNSSEC*. Si el dominio no está
   registrado en Cloudflare, copiar el registro DS que enseña en el registrador.
 - **CAA**: hoy los certificados los firma Google Trust Services (los tres,
