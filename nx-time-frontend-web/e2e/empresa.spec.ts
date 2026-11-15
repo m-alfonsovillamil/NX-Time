@@ -31,7 +31,7 @@ test('panel de empresa, informes e integridad para RRHH', async ({ page }) => {
   expect(fichero.suggestedFilename()).toMatch(/\.xlsx$/);
   expect(await fichero.failure()).toBeNull();
 
-  await page.getByLabel('Persona', { exact: true }).selectOption({ label: 'Javier' });
+  await page.getByLabel('Persona', { exact: true }).selectOption({ label: 'Javier López Serna' });
   const pdf = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Descargar PDF' }).click();
   const informe = await pdf;

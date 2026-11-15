@@ -24,6 +24,6 @@ test('editor de cuadrantes para una gestora', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Nueva plantilla' })).toBeVisible();
 
   await page.getByRole('tab', { name: 'Por persona' }).click();
-  await page.getByLabel('Persona', { exact: true }).selectOption({ label: 'Javier' });
+  await page.getByLabel('Persona', { exact: true }).selectOption({ label: 'Javier López Serna' });
   await expect(page.getByRole('heading', { name: 'Las próximas dos semanas' })).toBeVisible();
 });

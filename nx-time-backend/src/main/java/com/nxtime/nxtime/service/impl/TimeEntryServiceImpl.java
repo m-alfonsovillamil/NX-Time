@@ -620,7 +620,7 @@ public class TimeEntryServiceImpl implements TimeEntryService {
             List<User> destinatarios = Destinatarios.conAuthority(
                     userRepository, user.getEmpresa(), "ausencia:aprobar", user);
             eventPublisher.publishEvent(new NotificationEvents.WorkedOnNonWorkingDay(
-                    user.getEmpresa().getId(), user.getNombre(), hoy,
+                    user.getEmpresa().getId(), user.nombreCompleto(), hoy,
                     motivo.texto(), motivo.vacaciones(), destinatarios));
             log.info("Jornada iniciada en día no laborable por el usuario {}: {}", user.getId(), motivo.texto());
         });
