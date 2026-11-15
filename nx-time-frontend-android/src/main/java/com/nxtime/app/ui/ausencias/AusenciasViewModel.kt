@@ -17,7 +17,11 @@ data class AusenciasUiState(
     val cargando: Boolean = true,
     val peticiones: List<RespuestaAusencia> = emptyList(),
     val filtro: FiltroAusencias = FiltroAusencias(),
-    val error: MensajeUi? = null
+    val error: MensajeUi? = null,
+    /** Id de la que se está cancelando ahora mismo (ADR 058). */
+    val cancelando: Long? = null,
+    /** Lo que dijo el servidor al no dejar cancelar; aparte de [error], que deja la pantalla sin lista. */
+    val errorAlCancelar: MensajeUi? = null
 ) {
     /** Lo que se pinta: las peticiones que pasan el filtro. */
     val visibles: List<RespuestaAusencia> get() = FiltroAusencias.filtrar(peticiones, filtro)
@@ -42,6 +46,30 @@ class AusenciasViewModel(
     fun cambiarFiltro(filtro: FiltroAusencias) = _uiState.update { it.copy(filtro = filtro) }
 
     fun quitarFiltros() = _uiState.update { it.copy(filtro = FiltroAusencias()) }
+
+    /**
+     * Retira una ausencia propia (ADR 058). Si se puede ya lo ha dicho el
+     * servidor en `puedoCancelar`; aquí solo se manda y se recarga, para ver
+     * el estado nuevo y quién la canceló.
+     */
+    fun cancelar(peticionId: Long, motivo: String?) {
+        _uiState.update { it.copy(cancelando = peticionId, errorAlCancelar = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.cancelarAusencia(peticionId, motivo)
+                if (respuesta.isSuccessful) {
+                    _uiState.update { it.copy(cancelando = null) }
+                    cargar()
+                } else {
+                    _uiState.update { it.copy(cancelando = null, errorAlCancelar = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(cancelando = null, errorAlCancelar = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
+    fun descartarErrorAlCancelar() = _uiState.update { it.copy(errorAlCancelar = null) }
 
     fun cargar() {
         _uiState.update { it.copy(cargando = true, error = null) }

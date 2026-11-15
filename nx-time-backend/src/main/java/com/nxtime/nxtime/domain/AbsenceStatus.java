@@ -9,5 +9,16 @@ package com.nxtime.nxtime.domain;
 public enum AbsenceStatus {
     PENDIENTE,
     APROBADA,
-    RECHAZADA
+    RECHAZADA,
+    /**
+     * Retirada por quien la pidió, o anulada después de aprobarse (ADR 058).
+     * Como una rechazada, ya no ocupa el calendario ni gasta vacaciones; a
+     * diferencia de ella, nadie la ha denegado, y dice quién la canceló.
+     */
+    CANCELADA;
+
+    /** Pendiente o aprobada: la que cuenta para el calendario y los solapes. */
+    public boolean estaViva() {
+        return this == PENDIENTE || this == APROBADA;
+    }
 }

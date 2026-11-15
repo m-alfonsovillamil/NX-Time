@@ -6,5 +6,8 @@ package com.nxtime.app.data.dto
 enum class EstadoAusencia {
     PENDIENTE,
     APROBADA,
-    RECHAZADA
+    RECHAZADA,
+
+    /** Retirada por quien la pidió, o anulada por quien aprueba (ADR 058). */
+    CANCELADA
 }

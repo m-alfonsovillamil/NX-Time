@@ -692,6 +692,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 55. [Presencial o a distancia: opcional por empresa y nunca obligatoria para fichar](docs/adr/055-presencial-o-a-distancia.md)
 56. [La ubicación al fichar: opcional, solo al entrar y al salir, y borrada a los 12 meses](docs/adr/056-la-ubicacion-al-fichar.md)
 57. [Paleta arena: fondo arena, azul noche para las acciones, petróleo en gestión y tarjetas marfil](docs/adr/057-paleta-arena.md)
+58. [Cancelar una ausencia: la retira quien la pidió si no ha empezado, o la anula quien aprueba, con motivo](docs/adr/058-cancelar-una-ausencia.md)
 
 ---
 

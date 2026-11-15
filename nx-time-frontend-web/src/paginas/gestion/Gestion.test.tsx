@@ -121,4 +121,32 @@ describe('ausencias del equipo', () => {
     expect(screen.getByRole('tab', { name: G.resueltas }).getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByRole('button', { name: G.aprobar })).toBeNull();
   });
+  it('una aprobada con «puedoCancelar» se anula, y anular exige motivo (ADR 058)', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/ausencias-historial': () => ({
+        contenido: [
+          { ...SOLICITUD, estado: 'APROBADA', aprobadoPor: { nombre: 'Marta' }, fechaResolucion: '2026-09-20T10:00:00Z', puedoCancelar: true },
+          { ...SOLICITUD, id: 5, estado: 'RECHAZADA', aprobadoPor: { nombre: 'Marta' }, fechaResolucion: '2026-09-20T10:00:00Z', puedoCancelar: false },
+        ],
+        hayMas: false,
+      }),
+      'POST /api/v1/ausencias/{id}/cancelar': () => ({ ...SOLICITUD, estado: 'CANCELADA' }),
+    });
+    pintar(<PaginaAusenciasResueltas />, { sesion: sesionDe('GESTOR') });
+
+    const lista = await screen.findByRole('list', { name: G.resueltas });
+    const [aprobada, rechazada] = within(lista).getAllByRole('listitem');
+    expect(within(rechazada as HTMLElement).queryByRole('button', { name: G.anular })).toBeNull();
+    await userEvent.click(within(aprobada as HTMLElement).getByRole('button', { name: G.anular }));
+
+    const dialogo = await screen.findByRole('dialog', { name: G.anularTitulo('Javier') });
+    await userEvent.click(within(dialogo).getByRole('button', { name: G.anular }));
+    expect((await within(dialogo).findByRole('alert')).textContent).toBe(G.anularVacio);
+    await userEvent.type(within(dialogo).getByLabelText(G.comentario), 'Se incorporó antes');
+    await userEvent.click(within(dialogo).getByRole('button', { name: G.anular }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/ausencias/4/cancelar').map((l) => l.cuerpo)).toEqual([{ motivo: 'Se incorporó antes' }]),
+    );
+  });
 });

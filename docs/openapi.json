@@ -5678,6 +5678,97 @@
         } ]
       }
     },
+    "/api/v1/ausencias/{id}/cancelar" : {
+      "post" : {
+        "tags" : [ "Ausencias" ],
+        "summary" : "Cancelar una ausencia",
+        "description" : "Quien la pidió la retira mientras no haya empezado, esté pendiente o aprobada. Una aprobada ya empezada la anula quien tiene ausencia:aprobar, y entonces el motivo es obligatorio. Una pendiente ajena no se cancela: se aprueba o se rechaza. Cada respuesta de ausencia dice en «puedoCancelar» si se puede.",
+        "operationId" : "cancelar_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelAbsenceRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Cancelada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AbsenceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Anular la de otra persona sin motivo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Es de otra persona y no se aprueban ausencias, o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Petición no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya rechazada o cancelada, ya empezada (para su dueño), o pendiente y ajena",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/proyectos/{id}" : {
       "get" : {
         "tags" : [ "Proyectos" ],
@@ -14000,7 +14091,7 @@
           },
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "usuario" : {
             "$ref" : "#/components/schemas/SimpleUserDTO"
@@ -14018,6 +14109,30 @@
           "diasHabiles" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "canceladaPor" : {
+            "$ref" : "#/components/schemas/SimpleUserDTO"
+          },
+          "canceladaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "motivoCancelacion" : {
+            "type" : "string"
+          },
+          "puedoCancelar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "CancelAbsenceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "description" : "Por qué se cancela. Obligatorio al anular la ausencia de otra persona.",
+            "maxLength" : 500,
+            "minLength" : 0
           }
         }
       },
@@ -14352,7 +14467,7 @@
         "properties" : {
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "comentario" : {
             "type" : "string",
@@ -16317,7 +16432,7 @@
           },
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "propia" : {
             "type" : "boolean"
@@ -16379,7 +16494,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "AUSENCIA_CANCELADA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
           },
           "titulo" : {
             "type" : "string"
