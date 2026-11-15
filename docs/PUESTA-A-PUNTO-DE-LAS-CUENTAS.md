@@ -23,7 +23,7 @@ código. Paso a paso y en orden.
 | 2. Sacar los `.env` de OneDrive | Hecho (8/11) | — |
 | 3. Segundo factor en todas las cuentas | Hecho (8/11) | — |
 | 4. Rotar los secretos, de uno en uno | Hecho (8/11), salvo el token de Neon AI Gateway | — |
-| 5. Conexión a Neon con `verify-full` | Hecho en Render (15/11); falta confirmar la copia diaria | — |
+| 5. Conexión a Neon con `verify-full` | Hecho (15/11) | — |
 | 6. Proteger `main` en GitHub | Hecho (6/11) | — |
 | 7. Neon, Firebase, Sentry y Cloudflare | Hecho (13/11 y 15/11) | — |
 
@@ -165,11 +165,11 @@ $b = New-Object byte[] 64; [Security.Cryptography.RandomNumberGenerator]::Create
 
 ## 5. Conexión a Neon con `verify-full`
 
-> **Hecho en Render el 15/11/2026**: las dos variables terminan ya en
+> **Hecho el 15/11/2026**: las dos variables de Render terminan ya en
 > `verify-full`; tras desplegar, la salud dio UP y `/estado/tareas` respondió
-> 200. **Falta confirmar** que el secreto `COPIA_DATABASE_URL` de GitHub lleva
-> también `sslmode=verify-full` (no se puede leer: lo sabe quien lo puso el
-> 8/11 al rotar los secretos).
+> 200. El secreto `COPIA_DATABASE_URL` se volvió a poner ese día con la
+> conexión directa y `sslmode=verify-full&sslrootcert=system`, y la «Copia
+> diaria» lanzada a mano salió en verde.
 
 Antes, la conexión iba cifrada pero con `sslmode=require`, que **no comprueba el
 certificado**: se probó que con un almacén de confianza vacío entra igual. La
