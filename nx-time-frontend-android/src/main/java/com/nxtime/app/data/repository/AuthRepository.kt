@@ -99,6 +99,7 @@ interface AuthRepository {
 
     /** Los contadores de las bandejas del panel de gestión. */
     suspend fun getPendientes(): Response<PendientesDTO>
+    suspend fun getEquipoAhora(): Response<EquipoAhoraDTO>
     suspend fun getMisCorrecciones(pagina: Int = 0): Response<PaginaDTO<CorreccionDTO>>
     suspend fun resolverCorreccion(
         correccionId: Long,

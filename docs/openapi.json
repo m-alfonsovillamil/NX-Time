@@ -9013,6 +9013,49 @@
         } ]
       }
     },
+    "/api/v1/gestor/equipo-ahora" : {
+      "get" : {
+        "tags" : [ "Gestión" ],
+        "summary" : "Quién está trabajando ahora y quién no ha fichado hoy",
+        "description" : "Una foto de este momento de la plantilla activa: cuántos trabajan, están en pausa, han terminado, no han fichado o hoy no les toca, y persona a persona desde cuándo. «conRetraso» marca a quien no ha fichado pasados diez minutos de la entrada de su cuadrante. Primero sale lo que pide atención. Sin la ubicación.",
+        "operationId" : "ahora",
+        "responses" : {
+          "200" : {
+            "description" : "El equipo ahora",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EquipoAhoraResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'fichaje:leer:equipo'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/ausencias-historial" : {
       "get" : {
         "tags" : [ "Gestión" ],
@@ -15801,6 +15844,85 @@
           },
           "alLimite" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "EquipoAhoraResponse" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "El día de hoy en la zona de la empresa"
+          },
+          "trabajando" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "enPausa" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "terminada" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "sinFichar" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "conRetraso" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "De ellos, quienes ya deberían haber entrado según su cuadrante"
+          },
+          "noLaborable" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "personas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PersonaAhora"
+            }
+          }
+        }
+      },
+      "PersonaAhora" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "TRABAJANDO", "EN_PAUSA", "TERMINADA", "SIN_FICHAR", "NO_LABORABLE" ]
+          },
+          "desde" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "minutosHoy" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          },
+          "entradaPrevista" : {
+            "type" : [ "string", "null" ],
+            "example" : "09:00"
+          },
+          "conRetraso" : {
+            "type" : "boolean"
+          },
+          "modalidad" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },

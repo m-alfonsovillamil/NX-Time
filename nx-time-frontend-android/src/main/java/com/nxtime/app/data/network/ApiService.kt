@@ -283,6 +283,10 @@ interface ApiService {
     @GET("api/v1/dashboard/pendientes")
     suspend fun getPendientes(): Response<PendientesDTO>
 
+    /** Quién está trabajando ahora y quién no ha fichado hoy (plan N, paso N7). */
+    @GET("api/v1/gestor/equipo-ahora")
+    suspend fun getEquipoAhora(): Response<EquipoAhoraDTO>
+
     @GET("api/v1/correcciones/pendientes")
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
 

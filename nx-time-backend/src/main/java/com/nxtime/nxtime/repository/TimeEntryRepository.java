@@ -351,6 +351,15 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
     List<TimeEntry> findByUsuarioOrderByHoraEntradaAsc(User usuario);
 
     /**
+     * Las jornadas abiertas ahora mismo en una empresa (plan N, paso N7): quién
+     * está trabajando, aunque entrara ayer. Con la persona ya cargada, para no
+     * hacer una consulta por cada una.
+     */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.empresa = :empresa AND t.horaSalida IS NULL AND t.anulado = false")
+    List<TimeEntry> findAbiertasDeEmpresa(@Param("empresa") com.nxtime.nxtime.domain.Company empresa);
+
+    /**
      * Los fichajes vivos de varias personas que EMPIEZAN entre dos instantes
      * (Fase B2). Para el barrido de incidencias: una consulta por día, no una
      * por persona. Sin los anulados: una corrección deja el original anulado

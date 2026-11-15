@@ -2744,6 +2744,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gestor/equipo-ahora": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién está trabajando ahora y quién no ha fichado hoy
+         * @description Una foto de este momento de la plantilla activa: cuántos trabajan, están en pausa, han terminado, no han fichado o hoy no les toca, y persona a persona desde cuándo. «conRetraso» marca a quien no ha fichado pasados diez minutos de la entrada de su cuadrante. Primero sale lo que pide atención. Sin la ubicación.
+         */
+        get: operations["ahora"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gestor/ausencias-historial": {
         parameters: {
             query?: never;
@@ -5484,6 +5504,46 @@ export interface components {
             /** Format: int64 */
             avisosAbiertos?: number;
             alLimite?: boolean;
+        };
+        EquipoAhoraResponse: {
+            /**
+             * Format: date
+             * @description El día de hoy en la zona de la empresa
+             */
+            fecha?: string;
+            /** Format: int32 */
+            trabajando?: number;
+            /** Format: int32 */
+            enPausa?: number;
+            /** Format: int32 */
+            terminada?: number;
+            /** Format: int32 */
+            sinFichar?: number;
+            /**
+             * Format: int32
+             * @description De ellos, quienes ya deberían haber entrado según su cuadrante
+             */
+            conRetraso?: number;
+            /** Format: int32 */
+            noLaborable?: number;
+            personas?: components["schemas"]["PersonaAhora"][];
+        };
+        PersonaAhora: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nombre?: string;
+            /** @enum {string} */
+            estado?: "TRABAJANDO" | "EN_PAUSA" | "TERMINADA" | "SIN_FICHAR" | "NO_LABORABLE";
+            /** Format: date-time */
+            desde?: string | null;
+            /** Format: int64 */
+            minutosHoy?: number;
+            motivo?: string | null;
+            /** @example 09:00 */
+            entradaPrevista?: string | null;
+            conRetraso?: boolean;
+            /** @enum {string|null} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA" | null;
         };
         PaginaDTOAbsenceResponse: {
             contenido?: components["schemas"]["AbsenceResponse"][];
@@ -13079,6 +13139,44 @@ export interface operations {
                 };
             };
             /** @description Sin la authority 'empleado:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    ahora: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El equipo ahora */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EquipoAhoraResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'fichaje:leer:equipo' */
             403: {
                 headers: {
                     [name: string]: unknown;

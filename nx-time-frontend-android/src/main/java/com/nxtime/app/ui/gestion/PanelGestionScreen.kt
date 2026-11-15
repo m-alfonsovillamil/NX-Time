@@ -28,6 +28,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.pluralStringResource
+import com.nxtime.app.data.dto.EquipoAhoraDTO
+import com.nxtime.app.data.dto.PersonaAhoraDTO
+import com.nxtime.app.ui.util.DateFormats
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +99,7 @@ fun PanelGestionScreen(
     viewModel: PanelGestionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val pendientes by viewModel.pendientes.collectAsStateWithLifecycle()
+    val equipoAhora by viewModel.equipoAhora.collectAsStateWithLifecycle()
 
     // Al volver de resolver algo en una bandeja, el contador tiene que
     // bajar: ON_RESUME y no solo al entrar (ver HistorialEquipoScreen).
@@ -138,6 +143,12 @@ fun PanelGestionScreen(
              * puede decidir ninguno, y el servicio ni siquiera los manda
              * en esa lista.
              */
+            // Plan N, paso N7: lo primero que se mira por la mañana.
+            equipoAhora?.takeIf { it.personas.isNotEmpty() }?.let { foto ->
+                CabeceraDeSeccion(stringResource(R.string.ahora_titulo))
+                TarjetaAhora(foto)
+            }
+
             CabeceraDeSeccion(stringResource(R.string.gestion_seccion_pendiente))
             OpcionGestion(
                 texto = stringResource(R.string.gestion_ausencias_pendientes),
@@ -273,6 +284,73 @@ private fun CabeceraDeSeccion(texto: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 4.dp, top = 12.dp)
     )
+}
+
+/**
+ * Cuántos hay en cada estado y, debajo, quien pide atención (llega tarde o no
+ * ha fichado) y quien está trabajando. El orden lo pone el servidor; quien ha
+ * terminado o hoy no tenía que venir solo cuenta en el resumen.
+ */
+@Composable
+private fun TarjetaAhora(foto: EquipoAhoraDTO) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionDeTarjeta(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = stringResource(
+                    R.string.ahora_resumen, foto.trabajando, foto.enPausa, foto.sinFichar, foto.noLaborable
+                ),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (foto.conRetraso > 0) {
+                Text(
+                    text = pluralStringResource(R.plurals.ahora_con_retraso, foto.conRetraso, foto.conRetraso),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            val aLaVista = foto.personas.filter {
+                it.estado == PersonaAhoraDTO.SIN_FICHAR || it.estado == PersonaAhoraDTO.TRABAJANDO ||
+                    it.estado == PersonaAhoraDTO.EN_PAUSA
+            }
+            aLaVista.take(MAXIMO_A_LA_VISTA).forEach { persona ->
+                FilaAhora(persona)
+            }
+            if (aLaVista.size > MAXIMO_A_LA_VISTA) {
+                Text(
+                    text = stringResource(R.string.ahora_y_mas, aLaVista.size - MAXIMO_A_LA_VISTA),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private const val MAXIMO_A_LA_VISTA = 12
+
+@Composable
+private fun FilaAhora(persona: PersonaAhoraDTO) {
+    val detalle = when {
+        persona.conRetraso && persona.entradaPrevista != null ->
+            stringResource(R.string.ahora_debia_entrar, persona.entradaPrevista)
+        persona.estado == PersonaAhoraDTO.SIN_FICHAR -> stringResource(R.string.ahora_sin_fichar)
+        persona.estado == PersonaAhoraDTO.EN_PAUSA ->
+            stringResource(R.string.ahora_en_pausa, DateFormats.minutos(persona.minutosHoy))
+        else -> stringResource(R.string.ahora_trabajando, DateFormats.minutos(persona.minutosHoy))
+    }
+    Column {
+        Text(text = persona.nombre, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = detalle,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (persona.conRetraso) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Composable

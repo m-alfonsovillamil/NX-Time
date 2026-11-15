@@ -50,6 +50,43 @@ describe('panel de gestión', () => {
     expect(screen.queryByRole('link', { name: P.titulo })).toBeNull();
   });
 
+  it('«Ahora mismo»: cuántos en cada estado y, primero, quien llega tarde (plan N, N7)', async () => {
+    simularApi({
+      'GET /api/v1/dashboard/pendientes': () => ({ ausencias: 0, correcciones: 0, horasExtra: 0, borrados: 0 }),
+      'GET /api/v1/gestor/equipo-ahora': () => ({
+        fecha: '2026-11-17',
+        trabajando: 1,
+        enPausa: 0,
+        terminada: 0,
+        sinFichar: 1,
+        conRetraso: 1,
+        noLaborable: 1,
+        personas: [
+          { usuarioId: 5, nombre: 'Dani Prueba', estado: 'SIN_FICHAR', desde: null, minutosHoy: 0, motivo: null, entradaPrevista: '09:00', conRetraso: true, modalidad: null },
+          { usuarioId: 2, nombre: 'Ana Prueba', estado: 'TRABAJANDO', desde: '2026-11-17T07:00:00Z', minutosHoy: 90, motivo: null, entradaPrevista: null, conRetraso: false, modalidad: 'A_DISTANCIA' },
+          { usuarioId: 6, nombre: 'Eva Prueba', estado: 'NO_LABORABLE', desde: null, minutosHoy: 0, motivo: 'Vacaciones', entradaPrevista: null, conRetraso: false, modalidad: null },
+        ],
+      }),
+    });
+    pintar(<PanelGestion />, { sesion: sesionDe('GESTOR') });
+
+    const tabla = await screen.findByRole('table', { name: gestion.ahora.tabla });
+    const filas = within(tabla).getAllByRole('row').slice(1);
+    expect(filas[0]?.textContent).toContain('Dani Prueba');
+    expect(filas[0]?.textContent).toContain(gestion.ahora.retraso('09:00'));
+    expect(filas[1]?.textContent).toContain('1h 30m');
+    expect(filas[1]?.textContent).toContain(gestion.ahora.aDistancia);
+    expect(filas[2]?.textContent).toContain('Vacaciones');
+    expect(screen.getByText(gestion.ahora.deEllosConRetraso(1))).toBeTruthy();
+  });
+
+  it('un EMPLEADO no ve «Ahora mismo» (no tiene fichaje:leer:equipo)', () => {
+    const llamadas = simularApi({ 'GET /api/v1/dashboard/pendientes': () => ({}) });
+    pintar(<PanelGestion />, { sesion: sesionDe('EMPLEADO') });
+    expect(screen.queryByRole('heading', { name: gestion.ahora.titulo })).toBeNull();
+    expect(llamadas.a('GET', '/api/v1/gestor/equipo-ahora')).toHaveLength(0);
+  });
+
   it('sin nada pendiente, lo dice en vez de enseñar ceros', async () => {
     simularApi({ 'GET /api/v1/dashboard/pendientes': () => ({ ausencias: 0, correcciones: 0, horasExtra: 0, borrados: 0 }) });
     pintar(<PanelGestion />, { sesion: sesionDe('GESTOR') });
