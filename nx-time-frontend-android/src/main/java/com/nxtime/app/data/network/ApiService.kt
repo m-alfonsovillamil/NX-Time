@@ -550,6 +550,13 @@ interface ApiService {
     @GET("api/v1/perfil/borrado")
     suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
 
+    /** Cómo me llegan los avisos, por categoría (ADR 059). */
+    @GET("api/v1/perfil/avisos")
+    suspend fun getPreferenciasDeAvisos(): Response<List<PreferenciaDeAvisoDTO>>
+
+    @PUT("api/v1/perfil/avisos")
+    suspend fun guardarPreferenciasDeAvisos(@Body peticion: GuardarPreferenciasRequest): Response<List<PreferenciaDeAvisoDTO>>
+
     @POST("api/v1/perfil/borrado/cancelar")
     suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
 

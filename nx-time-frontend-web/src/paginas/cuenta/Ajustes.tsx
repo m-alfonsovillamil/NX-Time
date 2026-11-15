@@ -38,6 +38,7 @@ import {
 import { aplicarTema, temaGuardado, type Tema } from '../../util/tema';
 import { DOCUMENTOS } from '../legal/documentos';
 import { CuentasVinculadas, useCuentasVinculadas } from './CuentasVinculadas';
+import { PreferenciasDeAvisos } from './PreferenciasDeAvisos';
 import { TarjetaSegundoFactor } from './SegundoFactor';
 
 const J = cuenta.ajustes;
@@ -385,6 +386,7 @@ function Borrado() {
 const INDICE: readonly { id: string; icono: NombreIcono; texto: string; soloConSso?: boolean }[] = [
   { id: 'ajustes-apariencia', icono: 'tema', texto: J.apariencia },
   { id: 'ajustes-notificaciones', icono: 'campana', texto: J.notificaciones.titulo },
+  { id: 'ajustes-avisos', icono: 'bandeja', texto: cuenta.preferenciasDeAvisos.titulo },
   { id: 'ajustes-cuenta', icono: 'persona', texto: J.cuenta },
   { id: 'ajustes-segundo-factor', icono: 'candado', texto: J.segundoFactor.titulo },
   { id: 'ajustes-vinculadas', icono: 'enlace', texto: J.vinculadas.titulo, soloConSso: true },
@@ -424,6 +426,7 @@ export function Ajustes() {
         <div className="nx-columna">
           <Apariencia />
           <Notificaciones />
+          <PreferenciasDeAvisos />
           <Cuenta />
           <TarjetaSegundoFactor />
           {vinculadas.hay && <CuentasVinculadas {...vinculadas} />}

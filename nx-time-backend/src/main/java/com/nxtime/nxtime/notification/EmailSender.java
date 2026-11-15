@@ -49,13 +49,36 @@ public class EmailSender {
     @Value("${application.mail.from}")
     private String remitente;
 
+    /** Lo que ha elegido cada persona (ADR 059). Null en los tests que no lo usan: todo sale. */
+    private final com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias;
+
     public EmailSender(JavaMailSender mailSender, TemplateEngine templateEngine, CondicionesDelServicio servicio) {
+        this(mailSender, templateEngine, servicio, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public EmailSender(JavaMailSender mailSender, TemplateEngine templateEngine, CondicionesDelServicio servicio,
+            com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
         this.servicio = servicio;
+        this.preferencias = preferencias;
     }
 
+    /**
+     * Un correo de aviso, que no sale si su destinatario ha apagado el correo
+     * de esa categoría (ADR 059). La categoría sale del aviso al que lleva su
+     * botón ({@link BotonDelCorreo}): un correo sin botón (códigos de acceso,
+     * el ciclo de vida de la empresa) no es un aviso y sale siempre. Lo que
+     * tiene que salir pase lo que pase va por {@link #enviarObligatorio}.
+     */
     public void enviar(String destinatario, String asunto, String plantilla, Map<String, Object> variables) {
+        if (preferencias != null && BotonDelCorreo.de(plantilla)
+                .map(boton -> !preferencias.quiereCorreo(destinatario, boton.aviso()))
+                .orElse(false)) {
+            log.info("Correo '{}' no enviado: su destinatario lo tiene apagado", plantilla);
+            return;
+        }
         try {
             enviarObligatorio(destinatario, asunto, plantilla, variables);
         } catch (EmailNotSentException e) {

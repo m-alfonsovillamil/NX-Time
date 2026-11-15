@@ -265,6 +265,8 @@ interface AuthRepository {
     /** Borrado de datos personales (RGPD, art. 17; ADR 016). */
     suspend fun solicitarBorrado(motivo: String?): Response<SolicitudBorradoDTO>
     suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
+    suspend fun getPreferenciasDeAvisos(): Response<List<PreferenciaDeAvisoDTO>>
+    suspend fun guardarPreferenciaDeAvisos(cambio: CambioDePreferenciaDTO): Response<List<PreferenciaDeAvisoDTO>>
     suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
     suspend fun getBorradosPendientes(): Response<List<SolicitudBorradoDTO>>
     suspend fun registrarBorrado(usuarioId: Long, comoLlego: String): Response<SolicitudBorradoDTO>

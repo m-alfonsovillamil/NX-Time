@@ -41,7 +41,9 @@ data class AjustesUiState(
     val confirmandoBorrado: Boolean = false,
     val enviandoBorrado: Boolean = false,
     val error: MensajeUi? = null,
-    val aviso: MensajeUi? = null
+    val aviso: MensajeUi? = null,
+    /** Cómo me llegan los avisos (ADR 059). Vacía si no se han podido cargar: la tarjeta no sale. */
+    val preferenciasDeAvisos: List<com.nxtime.app.data.dto.PreferenciaDeAvisoDTO> = emptyList()
 )
 
 /**
@@ -268,6 +270,43 @@ class AjustesViewModel(
                 }
             } catch (e: Exception) {
                 // Ver arriba.
+            }
+        }
+    }
+
+    /**
+     * Cómo me llegan los avisos (ADR 059). Como la solicitud de borrado: lo pide
+     * la pantalla, y si falla la tarjeta no sale, sin error.
+     */
+    fun cargarPreferenciasDeAvisos() {
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.getPreferenciasDeAvisos()
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    _uiState.update { it.copy(preferenciasDeAvisos = cuerpo) }
+                }
+            } catch (e: Exception) {
+                // Ver arriba.
+            }
+        }
+    }
+
+    /** Guarda una categoría al tocar su interruptor. Lo que vuelve ya está guardado. */
+    fun cambiarPreferenciaDeAvisos(categoria: String, correo: Boolean, push: Boolean) {
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.guardarPreferenciaDeAvisos(
+                    com.nxtime.app.data.dto.CambioDePreferenciaDTO(categoria, correo, push)
+                )
+                val cuerpo = respuesta.body()
+                if (respuesta.isSuccessful && cuerpo != null) {
+                    _uiState.update { it.copy(preferenciasDeAvisos = cuerpo) }
+                } else {
+                    _uiState.update { it.copy(error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
             }
         }
     }
