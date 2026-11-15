@@ -8,6 +8,16 @@ import com.nxtime.nxtime.exception.ResourceNotFoundException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.report.MonthlyReport;
 import com.nxtime.nxtime.report.ReportRow;
+import com.nxtime.nxtime.report.ResumenDePersona;
+import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.AbsenceStatus;
+import com.nxtime.nxtime.domain.AbsenceType;
+import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.OvertimeAlert;
+import com.nxtime.nxtime.domain.OvertimeStatus;
+import com.nxtime.nxtime.repository.AbsenceRequestRepository;
+import com.nxtime.nxtime.repository.OvertimeAlertRepository;
+import com.nxtime.nxtime.service.WorkingDayService;
 import com.nxtime.nxtime.domain.OrigenDelFichaje;
 import com.nxtime.nxtime.repository.FichajeRecibidoRepository;
 import com.nxtime.nxtime.repository.MonthlySignatureRepository;
@@ -16,10 +26,16 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.ReportService;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +60,9 @@ public class ReportServiceImpl implements ReportService {
     private final MonthlySignatureRepository signatureRepository;
     private final RegistroDeAccesos accesos;
     private final FichajeRecibidoRepository recibidos;
+    private final AbsenceRequestRepository ausencias;
+    private final OvertimeAlertRepository horasExtra;
+    private final WorkingDayService diasHabiles;
 
     /** Cuántos ids van en cada consulta: un informe anual de una empresa grande pasaría del tope de parámetros de PostgreSQL. */
     static final int IDS_POR_CONSULTA = 1000;
@@ -53,7 +72,13 @@ public class ReportServiceImpl implements ReportService {
             UserRepository userRepository,
             MonthlySignatureRepository signatureRepository,
             RegistroDeAccesos accesos,
-            FichajeRecibidoRepository recibidos) {
+            FichajeRecibidoRepository recibidos,
+            AbsenceRequestRepository ausencias,
+            OvertimeAlertRepository horasExtra,
+            WorkingDayService diasHabiles) {
+        this.ausencias = ausencias;
+        this.horasExtra = horasExtra;
+        this.diasHabiles = diasHabiles;
         this.timeEntryRepository = timeEntryRepository;
         this.userRepository = userRepository;
         this.signatureRepository = signatureRepository;
@@ -71,13 +96,96 @@ public class ReportServiceImpl implements ReportService {
         accesos.anotar(solicitante, DatoConsultado.INFORME_EMPRESA, null, "Excel de horas de " + mes);
 
         Set<Long> sinConexion = conFichajeSinConexion(fichajes);
+        // Las filas de cada persona, en el mismo orden: el resumen sale de
+        // ellas, así que no puede contradecir a la hoja de las jornadas.
+        Map<Long, List<ReportRow>> filasPorPersona = new LinkedHashMap<>();
+        Map<Long, User> personas = new LinkedHashMap<>();
+        List<ReportRow> filas = new ArrayList<>(fichajes.size());
+        for (TimeEntry fichaje : fichajes) {
+            ReportRow fila = aFila(fichaje, zona, sinConexion);
+            filas.add(fila);
+            personas.putIfAbsent(fichaje.getUsuario().getId(), fichaje.getUsuario());
+            filasPorPersona.computeIfAbsent(fichaje.getUsuario().getId(), id -> new ArrayList<>()).add(fila);
+        }
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 "Todos los empleados",
                 mes,
-                fichajes.stream().map(fichaje -> aFila(fichaje, zona, sinConexion)).toList(),
+                filas,
                 null,
-                zona);
+                zona,
+                resumenPorPersona(solicitante.getEmpresa(), mes, personas, filasPorPersona));
+    }
+
+    /**
+     * Una fila por persona con lo que pide una gestoría (plan N, paso N6).
+     *
+     * Sale quien fichó en el mes y también quien no fichó pero estuvo de
+     * ausencia aprobada: alguien de vacaciones el mes entero tiene que
+     * aparecer en el resumen de la nómina, aunque no tenga ninguna jornada.
+     *
+     * Las ausencias cuentan los días hábiles que caen DENTRO del mes, con el
+     * mismo calendario que el saldo de vacaciones: unas del 28 de diciembre al
+     * 8 de enero salen repartidas entre los dos meses. Las horas extra son las
+     * ACEPTADAS cuya fecha (el día, o el lunes de la semana) cae en el mes.
+     */
+    private List<ResumenDePersona> resumenPorPersona(Company empresa, YearMonth mes, Map<Long, User> personas,
+            Map<Long, List<ReportRow>> filasPorPersona) {
+        LocalDate primero = mes.atDay(1);
+        LocalDate ultimo = mes.atEndOfMonth();
+
+        Map<Long, Map<AbsenceType, Integer>> diasPorTipo = new LinkedHashMap<>();
+        for (AbsenceRequest ausencia : ausencias.findSolapadasDeEmpresa(empresa.getId(), primero, ultimo)) {
+            if (ausencia.getEstado() != AbsenceStatus.APROBADA) {
+                continue;
+            }
+            LocalDate desde = ausencia.getFechaInicio().isBefore(primero) ? primero : ausencia.getFechaInicio();
+            LocalDate hasta = ausencia.getFechaFin().isAfter(ultimo) ? ultimo : ausencia.getFechaFin();
+            int dias = diasHabiles.contarDiasHabiles(empresa, desde, hasta);
+            if (dias == 0) {
+                continue;
+            }
+            personas.putIfAbsent(ausencia.getUsuario().getId(), ausencia.getUsuario());
+            diasPorTipo.computeIfAbsent(ausencia.getUsuario().getId(), id -> new EnumMap<>(AbsenceType.class))
+                    .merge(ausencia.getTipo(), dias, Integer::sum);
+        }
+
+        Map<Long, Long> minutosExtra = new LinkedHashMap<>();
+        for (OvertimeAlert aviso : horasExtra.findDeEmpresaEnRango(empresa.getId(), primero, ultimo)) {
+            if (aviso.getEstado() == OvertimeStatus.ACEPTADO) {
+                personas.putIfAbsent(aviso.getUsuario().getId(), aviso.getUsuario());
+                minutosExtra.merge(aviso.getUsuario().getId(), (long) aviso.getMinutosExtra(), Long::sum);
+            }
+        }
+
+        Collator orden = Collator.getInstance(Locale.of("es", "ES"));
+        return personas.values().stream()
+                .sorted((a, b) -> orden.compare(a.nombreCompleto(), b.nombreCompleto()))
+                .map(persona -> {
+                    List<ReportRow> suyas = filasPorPersona.getOrDefault(persona.getId(), List.of());
+                    Map<AbsenceType, Integer> tipos = diasPorTipo.getOrDefault(persona.getId(), Map.of());
+                    int vacaciones = tipos.getOrDefault(AbsenceType.VACACIONES, 0);
+                    int otras = tipos.entrySet().stream()
+                            .filter(e -> e.getKey() != AbsenceType.VACACIONES)
+                            .mapToInt(Map.Entry::getValue).sum();
+                    String detalle = new java.util.TreeMap<>(tipos).entrySet().stream()
+                            .map(e -> e.getKey().getEtiqueta() + " " + e.getValue())
+                            .collect(Collectors.joining(" · "));
+                    return new ResumenDePersona(
+                            persona.nombreCompleto(),
+                            persona.getCodigoEmpleado(),
+                            suyas.stream().map(ReportRow::fecha).distinct().count(),
+                            suyas.stream().mapToLong(ReportRow::segundosNetos).sum(),
+                            suyas.stream().mapToLong(ReportRow::segundosPausa).sum(),
+                            suyas.stream().filter(ReportRow::incidencia).count(),
+                            suyas.stream().filter(ReportRow::aRevisar).count(),
+                            suyas.stream().filter(ReportRow::sinConexion).count(),
+                            minutosExtra.getOrDefault(persona.getId(), 0L),
+                            vacaciones,
+                            otras,
+                            detalle);
+                })
+                .toList();
     }
 
     @Override
