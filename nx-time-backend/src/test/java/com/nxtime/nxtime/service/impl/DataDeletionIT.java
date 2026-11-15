@@ -313,7 +313,8 @@ class DataDeletionIT {
         DeletionResponse registrada = service.registrar(rrhh, javi.getId(), "Correo del 12/09 a rrhh@empresa");
 
         assertThat(registrada.estado()).isEqualTo("PENDIENTE");
-        assertThat(registrada.registradaPor()).isEqualTo("Rita");
+        // Nombre y apellidos: en una empresa de cien personas hay dos «Rita».
+        assertThat(registrada.registradaPor()).isEqualTo("Rita Pruebas");
         assertThat(registrada.motivo()).isEqualTo("Correo del 12/09 a rrhh@empresa");
         assertThat(service.candidatos(rrhh)).extracting(c -> c.id()).doesNotContain(javi.getId());
 

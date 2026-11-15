@@ -363,7 +363,7 @@ class IncidenciasIT {
 
         ScheduleIncidentResponse decidida = incidentService.resolver(incidencia.getId(), true, null, gestor);
         assertThat(decidida.estado()).isEqualTo(ScheduleIncidentStatus.ACEPTADA);
-        assertThat(decidida.resueltaPor()).isEqualTo("Gestora");
+        assertThat(decidida.resueltaPor()).isEqualTo("Gestora Prueba");
         assertThat(incidentService.bandeja(gestor, false, PAGINA).contenido()).isEmpty();
         assertThat(incidentService.bandeja(gestor, true, PAGINA).contenido()).hasSize(1);
     }

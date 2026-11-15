@@ -58,6 +58,7 @@ fun AusenciasEquipoScreen(
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     var peticionARechazar by remember { mutableStateOf<RespuestaAusencia?>(null) }
+    var peticionAAnular by remember { mutableStateOf<RespuestaAusencia?>(null) }
 
     LaunchedEffect(resueltas) {
         viewModel.mostrar(resueltas)
@@ -122,6 +123,15 @@ fun AusenciasEquipoScreen(
                                     onAprobar = { viewModel.aprobar(peticion.id) },
                                     onRechazar = { peticionARechazar = peticion }
                                 )
+                            } else if (peticion.puedoCancelar) {
+                                // ADR 058: una aprobada se anula, con motivo.
+                                Spacer(Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = { peticionAAnular = peticion },
+                                    enabled = estado.resolviendo == null
+                                ) {
+                                    Text(stringResource(R.string.resueltas_anular))
+                                }
                             }
                         }
                     }
@@ -130,6 +140,17 @@ fun AusenciasEquipoScreen(
             }
         }
         }
+    }
+
+    peticionAAnular?.let { peticion ->
+        DialogoAnular(
+            quien = peticion.usuario.nombre,
+            onCancelar = { peticionAAnular = null },
+            onConfirmar = { motivo ->
+                viewModel.anular(peticion.id, motivo)
+                peticionAAnular = null
+            }
+        )
     }
 
     peticionARechazar?.let { peticion ->
@@ -175,6 +196,42 @@ private fun BotonesResolucion(
             Text(stringResource(R.string.pendientes_aprobar))
         }
     }
+}
+
+/** Pide el motivo de la anulación, que le llega a la persona (ADR 058). */
+@Composable
+private fun DialogoAnular(
+    quien: String,
+    onCancelar: () -> Unit,
+    onConfirmar: (String) -> Unit
+) {
+    var motivo by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text(stringResource(R.string.resueltas_anular_titulo, quien)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.resueltas_anular_texto))
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { motivo = it.take(500) },
+                    label = { Text(stringResource(R.string.pendientes_comentario)) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirmar(motivo) }, enabled = motivo.isNotBlank()) {
+                Text(stringResource(R.string.resueltas_anular))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancelar) { Text(stringResource(R.string.cancelar)) }
+        }
+    )
 }
 
 /**

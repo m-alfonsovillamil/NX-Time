@@ -161,7 +161,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
      */
     @Query(value = """
             SELECT u.id                AS usuarioId,
-                   u.nombre            AS nombre,
+                   TRIM(u.nombre || ' ' || COALESCE(u.apellidos, '')) AS nombre,
                    u.activo            AS activo,
                    COALESCE(SUM(
                        EXTRACT(EPOCH FROM (r.hora_salida - r.hora_entrada))
@@ -173,7 +173,7 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
               AND r.hora_salida IS NOT NULL
               AND r.hora_entrada >= :desde
               AND r.hora_entrada < :hasta
-            GROUP BY u.id, u.nombre, u.activo
+            GROUP BY u.id, u.nombre, u.apellidos, u.activo
             ORDER BY segundos DESC
             """, nativeQuery = true)
     List<EmployeeHoursProjection> sumarSegundosPorEmpleado(
@@ -349,6 +349,15 @@ public interface TimeEntryRepository extends JpaRepository<TimeEntry, Long> {
 
     /** Todos, sin paginar: para la exportación de datos personales (RGPD, arts. 15 y 20). */
     List<TimeEntry> findByUsuarioOrderByHoraEntradaAsc(User usuario);
+
+    /**
+     * Las jornadas abiertas ahora mismo en una empresa (plan N, paso N7): quién
+     * está trabajando, aunque entrara ayer. Con la persona ya cargada, para no
+     * hacer una consulta por cada una.
+     */
+    @Query("SELECT t FROM registros t JOIN FETCH t.usuario "
+            + "WHERE t.empresa = :empresa AND t.horaSalida IS NULL AND t.anulado = false")
+    List<TimeEntry> findAbiertasDeEmpresa(@Param("empresa") com.nxtime.nxtime.domain.Company empresa);
 
     /**
      * Los fichajes vivos de varias personas que EMPIEZAN entre dos instantes

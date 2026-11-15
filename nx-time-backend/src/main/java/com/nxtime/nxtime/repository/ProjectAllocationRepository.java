@@ -48,7 +48,7 @@ public interface ProjectAllocationRepository extends JpaRepository<ProjectAlloca
     /** Lo mismo para un único proyecto, repartido por persona. */
     @Query(value = """
             SELECT u.id     AS usuarioId,
-                   u.nombre AS nombre,
+                   TRIM(u.nombre || ' ' || COALESCE(u.apellidos, '')) AS nombre,
                    COALESCE(SUM(i.segundos), 0) AS segundos
             FROM imputaciones_proyecto i
             JOIN registros r ON r.id = i.registro_id
@@ -57,7 +57,7 @@ public interface ProjectAllocationRepository extends JpaRepository<ProjectAlloca
               AND r.anulado = false
               AND r.hora_entrada >= :desde
               AND r.hora_entrada < :hasta
-            GROUP BY u.id, u.nombre
+            GROUP BY u.id, u.nombre, u.apellidos
             ORDER BY segundos DESC
             """, nativeQuery = true)
     List<ProjectAssignmentRepository.EmployeeProjectHoursProjection> sumarSegundosDelProyectoPorEmpleado(

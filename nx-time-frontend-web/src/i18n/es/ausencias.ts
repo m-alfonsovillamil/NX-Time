@@ -13,7 +13,7 @@ type TipoAusencia =
   | 'VIAJE_TRABAJO'
   | 'OTROS';
 
-type EstadoAusencia = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+type EstadoAusencia = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'CANCELADA';
 
 const tipos: Record<TipoAusencia, string> = {
   VACACIONES: 'Vacaciones',
@@ -33,6 +33,7 @@ const estados: Record<EstadoAusencia, string> = {
   PENDIENTE: 'Pendiente',
   APROBADA: 'Aprobada',
   RECHAZADA: 'Rechazada',
+  CANCELADA: 'Cancelada',
 };
 
 export const ausencias = {
@@ -76,12 +77,28 @@ export const ausencias = {
     dias: 'Días hábiles',
     estado: 'Estado',
     detalle: 'Detalle',
+    acciones: 'Acciones',
   },
   rango: (desde: string, hasta: string) => (desde === hasta ? desde : `Del ${desde} al ${hasta}`),
   diasHabiles: (n: number) => (n === 1 ? '1 día hábil' : `${n} días hábiles`),
   resueltaPor: (nombre: string) => `Resuelta por ${nombre}`,
   respuesta: (texto: string) => `Respuesta: ${texto}`,
   motivo: (texto: string) => `Motivo: ${texto}`,
+  canceladaPor: (nombre: string) => `Cancelada por ${nombre}`,
+  motivoCancelacion: (texto: string) => `Por qué: ${texto}`,
+
+  cancelar: {
+    boton: 'Cancelar la ausencia',
+    titulo: '¿Cancelar esta ausencia?',
+    explicacion: (rango: string) =>
+      `${rango}. Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a tu saldo. No se puede deshacer: si cambias de idea, la pides otra vez.`,
+    aprobadaAviso: 'Ya estaba aprobada: avisaremos a quien aprueba las ausencias.',
+    motivo: 'Por qué (opcional)',
+    confirmar: 'Cancelar la ausencia',
+    volver: 'Volver',
+    hecha: 'Ausencia cancelada.',
+    accionesDe: (rango: string) => `Ausencia ${rango}`,
+  },
 
   solicitud: {
     titulo: 'Solicitar ausencia',

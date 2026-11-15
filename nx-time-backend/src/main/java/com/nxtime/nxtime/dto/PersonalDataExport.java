@@ -56,7 +56,9 @@ public record PersonalDataExport(
             String departamento, String puesto, LocalDate fechaNacimiento, BigDecimal horasSemanales,
             boolean activo, Instant fechaBaja, String zonaHoraria,
             /* Su número en el ERP o en nóminas (ADR 053): también es un dato suyo. */
-            String codigoEmpleado) {
+            String codigoEmpleado,
+            /* Su fecha de alta (plan N, N10). */
+            LocalDate fechaAlta) {
     }
 
     public record Fichaje(

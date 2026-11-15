@@ -58,6 +58,7 @@ final class LectorDePlantilla {
     static final String HORAS = "horas";
     static final String VACACIONES = "vacaciones";
     static final String CODIGO = "codigo";
+    static final String FECHA_ALTA = "fecha de alta";
 
     /** El primer y el segundo apellido en columnas separadas: se juntan en {@link #APELLIDOS}. */
     private static final String APELLIDO_1 = "apellido 1";
@@ -107,6 +108,15 @@ final class LectorDePlantilla {
             Map.entry("dias vacaciones", VACACIONES),
             // El código de empleado (ADR 053), con los nombres que le dan los
             // ERP y los programas de nóminas al exportar.
+            // La fecha de alta (plan N, N10), con los nombres de las exportaciones de nóminas.
+            Map.entry("fecha de alta", FECHA_ALTA),
+            Map.entry("fecha alta", FECHA_ALTA),
+            Map.entry("alta", FECHA_ALTA),
+            Map.entry("fecha de incorporacion", FECHA_ALTA),
+            Map.entry("incorporacion", FECHA_ALTA),
+            Map.entry("fecha de antiguedad", FECHA_ALTA),
+            Map.entry("hire date", FECHA_ALTA),
+            Map.entry("start date", FECHA_ALTA),
             Map.entry("codigo", CODIGO),
             Map.entry("codigo de empleado", CODIGO),
             Map.entry("codigo empleado", CODIGO),

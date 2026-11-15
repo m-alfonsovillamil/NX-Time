@@ -11,6 +11,7 @@ import com.nxtime.nxtime.notification.Destinatarios;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
+import com.nxtime.nxtime.dto.CancelAbsenceRequest;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -132,7 +133,7 @@ public class AbsenceServiceImpl implements AbsenceService {
 
         log.info("Nueva petición de ausencia de {} ({} - {}, {} días hábiles)",
                 email, saved.getFechaInicio(), saved.getFechaFin(), diasHabiles);
-        return toResponse(saved);
+        return toResponse(saved, user);
     }
 
     private void comprobarSolapamiento(User user, AbsenceRequestDTO requestDTO) {
@@ -206,7 +207,7 @@ public class AbsenceServiceImpl implements AbsenceService {
             throw new BusinessException(String.format(
                     "No puedes aprobarla: %s tiene %d días de vacaciones en %d, ya lleva %d aprobados "
                             + "y esta petición son %d más.",
-                    empleado.getNombre(), derecho, anio, yaAprobados, diasDeEsta),
+                    empleado.nombreCompleto(), derecho, anio, yaAprobados, diasDeEsta),
                     HttpStatus.CONFLICT);
         }
     }
@@ -225,8 +226,9 @@ public class AbsenceServiceImpl implements AbsenceService {
     public com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getMyRequests(
             String email, LocalDate desde, LocalDate hasta, org.springframework.data.domain.Pageable pagina) {
         if (desde == null || hasta == null) {
-            return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findByUsuarioOrderByFechaInicioDescIdDesc(getUser(email), pagina),
-                    this::toResponse);
+            User actor = getUser(email);
+            return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findByUsuarioOrderByFechaInicioDescIdDesc(actor, pagina),
+                    peticion -> toResponse(peticion, actor));
         }
         if (desde.isAfter(hasta)) {
             throw new BusinessException(
@@ -235,8 +237,9 @@ public class AbsenceServiceImpl implements AbsenceService {
         if (ChronoUnit.DAYS.between(desde, hasta) + 1 > MAXIMO_DIAS) {
             throw new BusinessException("El periodo no puede pasar de un año.", HttpStatus.BAD_REQUEST);
         }
-        User user = getUser(email);
-        return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findDeUsuarioEnRango(user, desde, hasta, pagina), this::toResponse);
+        User actor = getUser(email);
+        return com.nxtime.nxtime.dto.PaginaDTO.de(absenceRequestRepository.findDeUsuarioEnRango(actor, desde, hasta, pagina),
+                peticion -> toResponse(peticion, actor));
     }
 
     @Override
@@ -244,7 +247,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         User manager = getUser(managerEmail);
         long companyId = manager.getEmpresa().getId();
         return absenceRequestRepository.findByEmpresa_IdAndEstado(companyId, AbsenceStatus.PENDIENTE)
-                .stream().map(this::toResponse).toList();
+                .stream().map(peticion -> toResponse(peticion, manager)).toList();
     }
 
     @Override
@@ -272,6 +275,12 @@ public class AbsenceServiceImpl implements AbsenceService {
         if (request.estado() == AbsenceStatus.PENDIENTE) {
             throw new BusinessException(
                     "No se puede devolver una petición al estado PENDIENTE.", HttpStatus.BAD_REQUEST);
+        }
+        if (request.estado() == AbsenceStatus.CANCELADA) {
+            // Cancelar es otra cosa (ADR 058): tiene su ruta, dice quién y
+            // por qué, y una pendiente ajena se aprueba o se rechaza.
+            throw new BusinessException(
+                    "Una petición pendiente se aprueba o se rechaza.", HttpStatus.BAD_REQUEST);
         }
 
         // Rechazar sin explicar por qué no es aceptable de cara al
@@ -301,7 +310,85 @@ public class AbsenceServiceImpl implements AbsenceService {
         eventPublisher.publishEvent(new NotificationEvents.AbsenceResolved(saved));
 
         log.info("Petición de ausencia {} cambiada a {}", requestId, request.estado());
-        return toResponse(saved);
+        return toResponse(saved, manager);
+    }
+
+    /**
+     * Cancelar una ausencia (ADR 058).
+     *
+     * Quien la pidió la retira mientras no haya empezado, aprobada o no. Una
+     * aprobada que ya ha empezado (o pasado) solo la anula quien aprueba
+     * ausencias, y diciendo por qué: puede que se haya vuelto al trabajo antes,
+     * pero eso lo tiene que saber alguien más que el interesado. Una pendiente
+     * ajena no se cancela: se aprueba o se rechaza.
+     */
+    @Override
+    @Transactional
+    public AbsenceResponse cancelar(String email, long requestId, CancelAbsenceRequest request) {
+        User actor = getUser(email);
+        AbsenceRequest peticion = absenceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Petición no encontrada."));
+        if (peticion.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("No puedes cancelar peticiones de otra empresa.");
+        }
+        boolean esSuya = peticion.getUsuario().getId() == actor.getId();
+        if (!esSuya && !RoleAuthorities.tiene(actor, AUTHORITY_APROBAR)) {
+            throw new TenantAccessException("No puedes cancelar la ausencia de otra persona.");
+        }
+        if (!peticion.getEstado().estaViva()) {
+            throw new BusinessException(peticion.getEstado() == AbsenceStatus.RECHAZADA
+                    ? "Esa petición ya está rechazada." : "Esa petición ya está cancelada.");
+        }
+        if (!puedeCancelar(peticion, actor)) {
+            throw new BusinessException(esSuya
+                    ? "Esta ausencia ya ha empezado: pide a quien aprueba las ausencias que la anule."
+                    : "Una petición pendiente se aprueba o se rechaza.");
+        }
+        String motivo = request == null || request.motivo() == null || request.motivo().isBlank()
+                ? null : request.motivo().trim();
+        if (!esSuya && motivo == null) {
+            throw new BusinessException(
+                    "Al anular la ausencia de otra persona hay que explicar por qué.", HttpStatus.BAD_REQUEST);
+        }
+
+        AbsenceStatus antes = peticion.getEstado();
+        peticion.setEstado(AbsenceStatus.CANCELADA);
+        peticion.setCanceladaPor(actor);
+        peticion.setCanceladaEn(Instant.now());
+        peticion.setMotivoCancelacion(motivo);
+        AbsenceRequest saved = absenceRequestRepository.save(peticion);
+
+        // A quién se avisa: al dueño si se la anula otro; a quien aprueba si
+        // el dueño retira una que ya contaba como concedida. Retirar una
+        // pendiente propia no avisa a nadie: sale de la bandeja y ya está.
+        List<User> destinatarios = !esSuya
+                ? List.of(saved.getUsuario())
+                : antes == AbsenceStatus.APROBADA
+                        ? Destinatarios.conAuthority(userRepository, actor.getEmpresa(), AUTHORITY_APROBAR, actor)
+                        : List.of();
+        if (!destinatarios.isEmpty()) {
+            eventPublisher.publishEvent(new NotificationEvents.AbsenceCancelled(saved, destinatarios));
+        }
+
+        log.info("Petición de ausencia {} cancelada por el usuario {} (estaba {})", requestId, actor.getId(), antes);
+        return toResponse(saved, actor);
+    }
+
+    /**
+     * Si {@code actor} puede cancelar esta petición ahora. La única definición
+     * de la regla: la usa {@link #cancelar} y viaja resuelta en cada respuesta
+     * ({@code puedoCancelar}), para que ni la web ni la app la repitan.
+     */
+    private boolean puedeCancelar(AbsenceRequest peticion, User actor) {
+        if (peticion.getEmpresa().getId() != actor.getEmpresa().getId() || !peticion.getEstado().estaViva()) {
+            return false;
+        }
+        boolean esSuya = peticion.getUsuario().getId() == actor.getId();
+        if (esSuya && (peticion.getEstado() == AbsenceStatus.PENDIENTE
+                || peticion.getFechaInicio().isAfter(LocalDate.now(actor.zona())))) {
+            return true;
+        }
+        return peticion.getEstado() == AbsenceStatus.APROBADA && RoleAuthorities.tiene(actor, AUTHORITY_APROBAR);
     }
 
     @Override
@@ -309,7 +396,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         User manager = getUser(managerEmail);
         long companyId = manager.getEmpresa().getId();
         return PaginaDTO.de(absenceRequestRepository.findByEmpresa_IdAndEstadoIsNotOrderByFechaInicioDescIdDesc(
-                companyId, AbsenceStatus.PENDIENTE, pagina), this::toResponse);
+                companyId, AbsenceStatus.PENDIENTE, pagina), peticion -> toResponse(peticion, manager));
     }
 
     @Override
@@ -328,9 +415,9 @@ public class AbsenceServiceImpl implements AbsenceService {
     // la tabla de festivos es diminuta. El arreglo natural, si algún día
     // molesta, es cachear los festivos por empresa y año con @Cacheable
     // (Fase 10 ya introduce Caffeine) en vez de complicar este método.
-    private AbsenceResponse toResponse(AbsenceRequest request) {
+    private AbsenceResponse toResponse(AbsenceRequest request, User actor) {
         int diasHabiles = workingDayService.contarDiasHabiles(
                 request.getEmpresa(), request.getFechaInicio(), request.getFechaFin());
-        return absenceMapper.toResponse(request, diasHabiles);
+        return absenceMapper.toResponse(request, diasHabiles, puedeCancelar(request, actor));
     }
 }

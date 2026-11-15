@@ -45,6 +45,8 @@ public record ProfileResponse(
         boolean activo,
         BigDecimal horasSemanales,
         int diasVacaciones,
-        List<String> authorities
+        List<String> authorities,
+        /* Fecha de alta en la empresa (plan N, N10). */
+        LocalDate fechaAlta
 ) {
 }

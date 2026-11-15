@@ -26,6 +26,7 @@ public final class TextoDePush {
         return switch (tipo) {
             case AUSENCIA_SOLICITADA -> "Tienes una ausencia del equipo por revisar.";
             case AUSENCIA_RESUELTA -> "Hay novedades en tus ausencias.";
+            case AUSENCIA_CANCELADA -> "Se ha cancelado una ausencia.";
             case BIENVENIDA -> "Tu cuenta ya está activa.";
             case CORRECCION_SOLICITADA -> "Tienes una corrección de fichaje por revisar.";
             case CORRECCION_RESUELTA -> "Hay novedades en una corrección que pediste.";

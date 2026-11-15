@@ -490,4 +490,18 @@ class EmployeeProfileServiceImplTest {
         assertThat(ficha.horasSemanales()).isEqualByComparingTo("37.5");
         assertThat(ficha.diasVacaciones()).isEqualTo(25);
     }
+
+    @Test
+    @DisplayName("La ficha cambia la fecha de alta, pero no a dentro de más de un año (plan N, N10)")
+    void laFichaCambiaLaFechaDeAlta() {
+        org.mockito.Mockito.lenient().when(userRepository.findById(10L)).thenReturn(java.util.Optional.of(empleado));
+
+        service.updateProfile(10L, new UpdateEmployeeProfileRequest(null, null, null,
+                java.time.LocalDate.of(2024, 9, 2)), rrhh);
+        org.assertj.core.api.Assertions.assertThat(empleado.getFechaAlta()).isEqualTo(java.time.LocalDate.of(2024, 9, 2));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.updateProfile(10L,
+                new UpdateEmployeeProfileRequest(null, null, null, java.time.LocalDate.now().plusYears(2)), rrhh))
+                .isInstanceOf(com.nxtime.nxtime.exception.BusinessException.class);
+    }
 }

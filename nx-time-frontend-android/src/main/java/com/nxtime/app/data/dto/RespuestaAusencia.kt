@@ -24,5 +24,11 @@ data class RespuestaAusencia(
     val aprobadoPor: UsuarioSimpleDTO? = null,
     val fechaResolucion: String? = null,
     val comentarioResolucion: String? = null,
-    val diasHabiles: Int = 0
+    val diasHabiles: Int = 0,
+    // ADR 058: quién la canceló y por qué, y si quien pregunta puede
+    // cancelarla ahora (lo decide el servidor, la app no repite la regla).
+    val canceladaPor: UsuarioSimpleDTO? = null,
+    val canceladaEn: String? = null,
+    val motivoCancelacion: String? = null,
+    val puedoCancelar: Boolean = false
 )

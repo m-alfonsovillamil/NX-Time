@@ -274,7 +274,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .findDeUsuarioEnRango(persona.getId(), request.fecha(), request.fecha()).stream()
                 .anyMatch(asignacion -> asignacion.vigenteEl(request.fecha()));
         if (!tieneCuadrante) {
-            throw new BusinessException(persona.getNombre() + " no tiene cuadrante ese día, así que no "
+            throw new BusinessException(persona.nombreCompleto() + " no tiene cuadrante ese día, así que no "
                     + "hay nada que cambiar. Asígnale uno primero.", HttpStatus.BAD_REQUEST);
         }
 
@@ -403,7 +403,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 Destinatarios.conAuthority(userRepository, actor.getEmpresa(), QUIEN_FIJA_LA_JORNADA, actor)));
 
         return "La plantilla suma " + ReglasDeCuadrante.duracion(minutosPlantilla) + " a la semana y la "
-                + "jornada contratada de " + persona.getNombre() + " es de "
+                + "jornada contratada de " + persona.nombreCompleto() + " es de "
                 + ReglasDeCuadrante.duracion(minutosContrato) + ". Se ha avisado a quien lleva los "
                 + "contratos. Sus horas extra se calcularán contra el cuadrante.";
     }

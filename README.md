@@ -692,6 +692,8 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 55. [Presencial o a distancia: opcional por empresa y nunca obligatoria para fichar](docs/adr/055-presencial-o-a-distancia.md)
 56. [La ubicación al fichar: opcional, solo al entrar y al salir, y borrada a los 12 meses](docs/adr/056-la-ubicacion-al-fichar.md)
 57. [Paleta arena: fondo arena, azul noche para las acciones, petróleo en gestión y tarjetas marfil](docs/adr/057-paleta-arena.md)
+58. [Cancelar una ausencia: la retira quien la pidió si no ha empezado, o la anula quien aprueba, con motivo](docs/adr/058-cancelar-una-ausencia.md)
+59. [Cómo le llegan los avisos: cada persona elige por categoría el correo y el push; la campana y las obligatorias, siempre](docs/adr/059-preferencias-de-avisos.md)
 60. [Las vacaciones que sobran pasan al año siguiente, hasta una fecha tope, calculado al leer](docs/adr/060-arrastre-de-vacaciones.md)
 
 ---
@@ -718,7 +720,7 @@ la única forma de recibirlas ([ADR 031](docs/adr/031-push-en-la-web.md)). Tiene
 recorridos, accesibilidad con axe en todas las páginas, móvil en Chromium y
 WebKit, y la carga por áreas).
 
-**Entrar con Google, funcionando; con Microsoft, hecho y sin encender**
+**Entrar con Google o con Microsoft, funcionando**
 ([ADR 036](docs/adr/036-entrar-con-google-o-microsoft.md) y
 [038](docs/adr/038-sso-lo-que-faltaba.md)), en la web y en la app, para quien ya
 tiene cuenta: no crea usuarios, y la contraseña sigue valiendo. También se puede
@@ -727,10 +729,13 @@ código; y vincularlas desde Ajustes, en la web y en la app. Lo que decide si al
 proveedor, una vez vinculada; el correo solo sirve la primera vez, y solo si el
 proveedor lo garantiza (el de Microsoft no siempre). Google está
 encendido en producción y probado de verdad en la web y en la app (octubre de
-2026). Microsoft está apagado hasta poner sus credenciales
-([`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md)), y **no se ha probado contra
-Microsoft de verdad**: sí de punta a punta, en un navegador y en un emulador de
-Android, contra un proveedor de mentira que firma sus propios ID token.
+2026). Microsoft está encendido en producción desde el 15 de noviembre de 2026
+([`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md)) y probado de verdad en la web, con
+una cuenta que ya tenía alta; falta probarlo en la app y con una cuenta sin
+alta. Antes se había probado de punta a punta, en un navegador y en un emulador
+de Android, contra un proveedor de mentira que firma sus propios ID token. Para
+que lo use otra organización, su administrador tiene que dar el consentimiento
+en Entra, porque la aplicación aún no tiene editor verificado.
 
 **Pendiente:**
 

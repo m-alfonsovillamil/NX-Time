@@ -67,6 +67,8 @@ class PersonalDataEraser {
         // Su segundo factor (ADR 051): el secreto y los códigos de recuperación.
         int segundoFactor = jdbc.update("DELETE FROM segundo_factor WHERE usuario_id = ?", usuarioId)
                 + jdbc.update("DELETE FROM codigos_recuperacion WHERE usuario_id = ?", usuarioId);
+        // Cómo quería recibir los avisos (ADR 059): ya no recibirá ninguno.
+        jdbc.update("DELETE FROM preferencias_avisos WHERE usuario_id = ?", usuarioId);
         // Si era Responsable del canal de denuncias (ADR 048), deja de serlo.
         jdbc.update("UPDATE empresas SET responsable_canal_id = NULL, responsable_canal_desde = NULL "
                 + "WHERE responsable_canal_id = ?", usuarioId);

@@ -90,4 +90,18 @@ class PushSenderTest {
         assertThat(Arrays.stream(NoticeType.values()).map(TextoDePush::de))
                 .allSatisfy(texto -> assertThat(texto).isNotBlank().hasSizeLessThanOrEqualTo(80));
     }
+
+    @Test
+    @DisplayName("Si la persona ha apagado el push de esa categoría, no se manda (ADR 059)")
+    void conElPushApagadoNoEnvia() {
+        when(proveedor.getIfAvailable()).thenReturn(gateway);
+        com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias =
+                org.mockito.Mockito.mock(com.nxtime.nxtime.service.PreferenciasDeAvisosService.class);
+        when(preferencias.quierePush(10L, NoticeType.CORRECCION_RESUELTA)).thenReturn(false);
+
+        new PushSender(deviceRepository, proveedor, preferencias).enviar(evento);
+
+        verify(deviceRepository, never()).findTokensDeUsuarioActivo(anyLong());
+        verify(gateway, never()).enviar(any(), any());
+    }
 }

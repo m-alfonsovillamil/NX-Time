@@ -17,6 +17,6 @@ public interface TimeEntryAuditMapper {
     TimeEntryAuditResponse toResponse(TimeEntryAudit audit);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
-        return new SimpleUserDTO(user.getNombre());
+        return SimpleUserDTO.de(user);
     }
 }

@@ -56,7 +56,7 @@ public interface TimeEntryMapper {
     TeamTimeEntryDTO toTeamDTO(TimeEntry entry);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
-        return new SimpleUserDTO(user.getNombre());
+        return SimpleUserDTO.de(user);
     }
 
     @Named("segundosAMinutos")

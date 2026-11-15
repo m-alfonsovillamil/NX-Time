@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.notification;
 
+import com.nxtime.nxtime.domain.NoticeType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -70,5 +71,26 @@ class BotonDelCorreoTest {
     @DisplayName("Sin web configurada no hay botón (no se inventa una dirección)")
     void sinWebNoHayBoton() {
         assertThat(conWeb("").completar("signature-reminder", Map.of())).doesNotContainKey("botonUrl");
+    }
+
+    @Test
+    @DisplayName("Un correo de aviso no sale si su destinatario lo ha apagado; uno sin botón sale siempre (ADR 059)")
+    void elCorreoApagadoNoSale() {
+        CondicionesDelServicio servicio = new CondicionesDelServicio(
+                "NX Time", "Titular", "privacidad@ejemplo.test", "https://nxtime-web.com", "2026-11-01", true);
+        JavaMailSender correo = mock(JavaMailSender.class);
+        com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias =
+                mock(com.nxtime.nxtime.service.PreferenciasDeAvisosService.class);
+        org.mockito.Mockito.when(preferencias.quiereCorreo("ana@nxtime.test", NoticeType.AUSENCIA_RESUELTA))
+                .thenReturn(false);
+        EmailSender remitente = new EmailSender(correo, mock(TemplateEngine.class), servicio, preferencias);
+
+        remitente.enviar("ana@nxtime.test", "Tu ausencia", "absence-resolved", new HashMap<>());
+
+        org.mockito.Mockito.verify(correo, org.mockito.Mockito.never()).createMimeMessage();
+        // Un correo sin botón no es un aviso: ni se pregunta.
+        org.mockito.Mockito.verify(preferencias, org.mockito.Mockito.never())
+                .quiereCorreo(org.mockito.ArgumentMatchers.eq("ana@nxtime.test"),
+                        org.mockito.ArgumentMatchers.eq(NoticeType.BIENVENIDA));
     }
 }
