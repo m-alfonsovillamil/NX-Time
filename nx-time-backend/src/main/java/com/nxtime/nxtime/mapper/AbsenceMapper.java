@@ -24,6 +24,6 @@ public interface AbsenceMapper {
     AbsenceResponse toResponse(AbsenceRequest request, int diasHabiles);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
-        return user == null ? null : new SimpleUserDTO(user.getNombre());
+        return SimpleUserDTO.de(user);
     }
 }

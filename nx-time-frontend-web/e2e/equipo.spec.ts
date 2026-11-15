@@ -47,7 +47,7 @@ test('historial del equipo con filtro por persona y la traza de auditoría', asy
   await expect(tabla.getByRole('cell', { name: 'Javier' }).first()).toBeVisible();
 
   // Con una persona elegida, la columna «Persona» sobra y no sale.
-  await page.getByLabel('Empleado').selectOption({ label: 'Javier' });
+  await page.getByLabel('Empleado').selectOption({ label: 'Javier López Serna' });
   await expect(page).toHaveURL(/persona=\d+/);
   await expect(tabla.getByRole('columnheader', { name: 'Persona' })).toBeHidden();
   await expect(tabla.getByRole('row').nth(1)).toBeVisible();

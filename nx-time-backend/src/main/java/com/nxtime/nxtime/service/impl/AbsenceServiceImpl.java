@@ -204,7 +204,7 @@ public class AbsenceServiceImpl implements AbsenceService {
             throw new BusinessException(String.format(
                     "No puedes aprobarla: %s tiene %d días de vacaciones en %d, ya lleva %d aprobados "
                             + "y esta petición son %d más.",
-                    empleado.getNombre(), derecho, anio, yaAprobados, diasDeEsta),
+                    empleado.nombreCompleto(), derecho, anio, yaAprobados, diasDeEsta),
                     HttpStatus.CONFLICT);
         }
     }
