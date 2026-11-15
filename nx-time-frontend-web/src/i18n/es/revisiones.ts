@@ -20,14 +20,26 @@ export const revisiones = {
     revisadoPor: (nombre: string) => `Revisado por ${nombre}`,
     tipos: { DIARIA: 'Jornada', SEMANAL: 'Semana' } as Record<string, string>,
     estados: { ABIERTO: 'Sin revisar', JUSTIFICADO: 'No computa', ACEPTADO: 'Horas extra' } as Record<string, string>,
-    aceptar: 'Son horas extra',
+    aceptar: 'Se pagan',
+    // ADR 061: compensadas con descanso en los cuatro meses siguientes, no
+    // gastan bolsa (art. 35.2 ET).
+    compensar: 'Se compensan con descanso',
+    seCompensan: (antesDe: string) => `Se compensan con descanso antes del ${antesDe}. Mientras, no gastan bolsa.`,
+    sePagan: 'Se pagan.',
+    descansadas: (dia: string) => `Descansadas el ${dia}.`,
+    caducadas: (antesDe: string) =>
+      `No se descansaron antes del ${antesDe}: cuentan en la bolsa como horas extra.`,
+    diaDelDescanso: 'Día del descanso',
+    apuntarDescanso: 'Apuntar el descanso',
+    descansoApuntado: 'Descanso apuntado.',
+    compensada: 'Se compensarán con descanso.',
     justificar: 'No computan',
     justificarTitulo: 'No computan como horas extra',
     justificarAyuda:
       'El exceso se archiva y no consume bolsa anual. Hace falta explicar por qué: una jornada intensiva pactada, un turno partido mal fichado, una guardia…',
     motivo: 'Motivo',
     motivoVacio: 'Explica por qué no computan.',
-    aceptada: 'Contabilizadas como horas extra.',
+    aceptada: 'Se pagarán como horas extra.',
     justificada: 'Archivado sin computar.',
   },
 

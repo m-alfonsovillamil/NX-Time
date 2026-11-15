@@ -115,6 +115,35 @@ public class OvertimeController {
         return ResponseEntity.ok(overtimeService.revisar(id, request, usuario.getUser()));
     }
 
+    /** El día en que se descansaron unas horas extra (ADR 061). Sin cuerpo o sin fecha, hoy. */
+    public record DescansoDisfrutadoRequest(java.time.LocalDate fecha) {
+    }
+
+    @Operation(summary = "Apuntar que unas horas extra ya se descansaron",
+            description = "Para las aceptadas con compensación DESCANSO (ADR 061). Con eso dejan de contar para "
+                    + "la bolsa de 80 h para siempre; sin apuntarlo, dejan de contar solo mientras estén dentro "
+                    + "de sus cuatro meses. El día, entre el de las horas extra y cuatro meses después, y no en "
+                    + "el futuro. Nadie apunta las suyas propias.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Apuntado",
+                    content = @Content(schema = @Schema(implementation = OvertimeAlertResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Día fuera de su plazo o en el futuro",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Es de otra empresa, o son tus propias horas",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "No se compensan con descanso, o ya estaba apuntado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @org.springframework.web.bind.annotation.PostMapping("/{id}/descanso")
+    @PreAuthorize("hasAuthority('horasextra:revisar')")
+    public ResponseEntity<OvertimeAlertResponse> descansoDisfrutado(
+            @PathVariable long id,
+            @RequestBody(required = false) DescansoDisfrutadoRequest request,
+            @AuthenticationPrincipal SecurityUser usuario) {
+        return ResponseEntity.ok(overtimeService.marcarDescansoDisfrutado(
+                id, request == null ? null : request.fecha(), usuario.getUser()));
+    }
+
     @Operation(summary = "La bolsa anual de horas extra",
             description = "Las 80 h del art. 35.2 ET y lo que va consumido. Sin 'usuarioId' "
                     + "devuelve la propia; con él, la de otra persona, y eso sí pide "

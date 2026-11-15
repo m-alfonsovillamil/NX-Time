@@ -103,11 +103,19 @@ public interface OvertimeAlertRepository extends JpaRepository<OvertimeAlert, Lo
     @Query("SELECT COALESCE(SUM(a.minutosExtra), 0) FROM avisos_horas_extra a "
             + "WHERE a.usuario.id = :usuarioId "
             + "AND a.estado = com.nxtime.nxtime.domain.OvertimeStatus.ACEPTADO "
-            + "AND a.fecha >= :desde AND a.fecha <= :hasta")
+            + "AND a.fecha >= :desde AND a.fecha <= :hasta "
+            // ADR 061: las que se compensan con descanso no cuentan si ya se
+            // descansaron o si aún están dentro de sus cuatro meses; pasados
+            // sin descansar, sí. Escrito sin NOT: con la compensación a null
+            // (las de antes de V58) un NOT dejaría fuera la fila entera.
+            + "AND (a.compensacion IS NULL "
+            + "     OR a.compensacion <> com.nxtime.nxtime.domain.CompensacionDeHorasExtra.DESCANSO "
+            + "     OR (a.descansoDisfrutadoEn IS NULL AND a.fecha < :caducadasAntesDe))")
     int sumarMinutosAceptados(
             @Param("usuarioId") long usuarioId,
             @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+            @Param("hasta") LocalDate hasta,
+            @Param("caducadasAntesDe") LocalDate caducadasAntesDe);
 
     /**
      * Avisos todavía sin revisar cuyo periodo cae en el rango.

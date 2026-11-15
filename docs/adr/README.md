@@ -67,3 +67,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [055](055-presencial-o-a-distancia.md) | Presencial o a distancia |
 | [056](056-la-ubicacion-al-fichar.md) | La ubicación al fichar |
 | [057](057-paleta-arena.md) | Paleta arena |
+| [061](061-compensar-horas-extra-con-descanso.md) | Compensar las horas extra con descanso |

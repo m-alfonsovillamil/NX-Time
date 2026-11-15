@@ -18,6 +18,11 @@ import jakarta.validation.constraints.Size;
  */
 public record ReviewOvertimeRequest(
         @NotNull Boolean aceptar,
-        @Size(max = 500) String justificacion
+        @Size(max = 500) String justificacion,
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Al aceptar: PAGO (por defecto) o DESCANSO (ADR 061)")
+        com.nxtime.nxtime.domain.CompensacionDeHorasExtra compensacion
 ) {
+    public ReviewOvertimeRequest(Boolean aceptar, String justificacion) {
+        this(aceptar, justificacion, null);
+    }
 }

@@ -951,6 +951,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/horas-extra/{id}/descanso": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apuntar que unas horas extra ya se descansaron
+         * @description Para las aceptadas con compensación DESCANSO (ADR 061). Con eso dejan de contar para la bolsa de 80 h para siempre; sin apuntarlo, dejan de contar solo mientras estén dentro de sus cuatro meses. El día, entre el de las horas extra y cuatro meses después, y no en el futuro. Nadie apunta las suyas propias.
+         */
+        post: operations["descansoDisfrutado"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gestor/plantilla/invitaciones/enviar": {
         parameters: {
             query?: never;
@@ -4238,6 +4258,38 @@ export interface components {
         JustifyIncidentRequest: {
             texto: string;
         };
+        DescansoDisfrutadoRequest: {
+            /** Format: date */
+            fecha?: string;
+        };
+        OvertimeAlertResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuario?: string;
+            tipo?: string;
+            /** Format: date */
+            fecha?: string;
+            /** Format: date */
+            fechaFin?: string;
+            /** Format: int32 */
+            minutosExtra?: number;
+            /** Format: int64 */
+            minutosEsperados?: number;
+            /** Format: int64 */
+            registroId?: number;
+            estado?: string;
+            justificacion?: string;
+            revisadoPor?: string;
+            /** Format: date-time */
+            fechaRevision?: string;
+            compensacion?: string;
+            /** Format: date */
+            descansoAntesDe?: string;
+            /** Format: date */
+            descansoDisfrutadoEn?: string;
+        };
         /** @description Las invitaciones de alta de la empresa */
         EstadoInvitacionesResponse: {
             /**
@@ -4749,29 +4801,11 @@ export interface components {
         ReviewOvertimeRequest: {
             aceptar: boolean;
             justificacion?: string;
-        };
-        OvertimeAlertResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            usuarioId?: number;
-            usuario?: string;
-            tipo?: string;
-            /** Format: date */
-            fecha?: string;
-            /** Format: date */
-            fechaFin?: string;
-            /** Format: int32 */
-            minutosExtra?: number;
-            /** Format: int64 */
-            minutosEsperados?: number;
-            /** Format: int64 */
-            registroId?: number;
-            estado?: string;
-            justificacion?: string;
-            revisadoPor?: string;
-            /** Format: date-time */
-            fechaRevision?: string;
+            /**
+             * @description Al aceptar: PAGO (por defecto) o DESCANSO (ADR 061)
+             * @enum {string}
+             */
+            compensacion?: "PAGO" | "DESCANSO";
         };
         /** @description El rol nuevo */
         CambioDeRolRequest: {
@@ -8519,6 +8553,59 @@ export interface operations {
                 };
             };
             /** @description Ya está decidida */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    descansoDisfrutado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DescansoDisfrutadoRequest"];
+            };
+        };
+        responses: {
+            /** @description Apuntado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OvertimeAlertResponse"];
+                };
+            };
+            /** @description Día fuera de su plazo o en el futuro */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Es de otra empresa, o son tus propias horas */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No se compensan con descanso, o ya estaba apuntado */
             409: {
                 headers: {
                     [name: string]: unknown;

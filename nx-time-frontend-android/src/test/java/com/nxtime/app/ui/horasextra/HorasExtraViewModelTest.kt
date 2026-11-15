@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.horasextra
 
+import com.nxtime.app.R
 import com.nxtime.app.ReglaDispatcherPrincipal
 import com.nxtime.app.data.dto.BolsaHorasExtraDTO
 import com.nxtime.app.data.dto.HorasExtraDTO
@@ -169,7 +170,7 @@ class HorasExtraViewModelTest {
     fun `aceptar recarga tambien la bolsa`() = runTest {
         whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
-        whenever(repositorio.revisarHorasExtra(eq(2L), eq(true), anyOrNull()))
+        whenever(repositorio.revisarHorasExtra(eq(2L), eq(true), anyOrNull(), eq("PAGO")))
             .thenReturn(Response.success(aviso(2, estado = "ACEPTADO")))
 
         val vm = HorasExtraViewModel(repositorio, sesion)
@@ -189,7 +190,7 @@ class HorasExtraViewModelTest {
     fun `justificar manda el motivo`() = runTest {
         whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
-        whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull()))
+        whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull(), anyOrNull()))
             .thenReturn(Response.success(aviso(2, estado = "JUSTIFICADO")))
 
         val vm = HorasExtraViewModel(repositorio, sesion)
@@ -200,14 +201,53 @@ class HorasExtraViewModelTest {
 
         // El motivo NO es opcional en este camino: el servidor rechaza
         // con 400 una justificación vacía.
-        verify(repositorio).revisarHorasExtra(2L, false, "Jornada intensiva pactada")
+        verify(repositorio).revisarHorasExtra(2L, false, "Jornada intensiva pactada", null)
+    }
+
+    @Test
+    fun `compensar con descanso lo dice al servidor`() = runTest {
+        whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
+        conRespuestasNormales()
+        whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull(), anyOrNull()))
+            .thenReturn(Response.success(aviso(2, estado = "ACEPTADO")))
+
+        val vm = HorasExtraViewModel(repositorio, sesion)
+        advanceUntilIdle()
+
+        vm.compensarConDescanso(2L)
+        advanceUntilIdle()
+
+        verify(repositorio).revisarHorasExtra(2L, true, null, "DESCANSO")
+        assertEquals(R.string.horas_extra_compensada, vm.uiState.value.aviso?.id)
+    }
+
+    @Test
+    fun `dice como se compensan las aceptadas`() {
+        val hoy = java.time.LocalDate.of(2026, 11, 15)
+        val descanso = aviso(2, estado = "ACEPTADO").copy(compensacion = "DESCANSO", descansoAntesDe = "2026-12-21")
+        assertEquals(TextoDeCompensacion(R.string.horas_extra_se_compensan, "2026-12-21"), textoDeCompensacion(descanso, hoy))
+        assertEquals(
+            TextoDeCompensacion(R.string.horas_extra_caducadas, "2026-12-21"),
+            textoDeCompensacion(descanso, java.time.LocalDate.of(2026, 12, 22))
+        )
+        assertEquals(
+            TextoDeCompensacion(R.string.horas_extra_descansadas, "2026-10-02"),
+            textoDeCompensacion(descanso.copy(descansoDisfrutadoEn = "2026-10-02"), hoy)
+        )
+        assertEquals(
+            TextoDeCompensacion(R.string.horas_extra_se_pagan),
+            textoDeCompensacion(descanso.copy(compensacion = "PAGO"), hoy)
+        )
+        // Las aceptadas antes de poder elegir no dicen nada: cuentan como pagadas.
+        assertEquals(null, textoDeCompensacion(descanso.copy(compensacion = null), hoy))
+        assertEquals(null, textoDeCompensacion(aviso(2, estado = "ABIERTO"), hoy))
     }
 
     @Test
     fun `un fallo al revisar deja el error y no dice que se haya hecho`() = runTest {
         whenever(sesion.fetchAuthorities()).thenReturn(CON_REVISAR)
         conRespuestasNormales()
-        whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull()))
+        whenever(repositorio.revisarHorasExtra(any(), any(), anyOrNull(), anyOrNull()))
             .thenReturn(error<HorasExtraDTO>(409))
 
         val vm = HorasExtraViewModel(repositorio, sesion)

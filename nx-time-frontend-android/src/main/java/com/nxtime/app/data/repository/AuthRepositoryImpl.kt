@@ -222,10 +222,11 @@ class AuthRepositoryImpl(
     override suspend fun revisarHorasExtra(
         avisoId: Long,
         aceptar: Boolean,
-        justificacion: String?
+        justificacion: String?,
+        compensacion: String?
     ): Response<HorasExtraDTO> {
         return apiService.revisarHorasExtra(
-            avisoId, RevisarHorasExtraRequest(aceptar, justificacion))
+            avisoId, RevisarHorasExtraRequest(aceptar, justificacion, compensacion))
     }
 
     override suspend fun getBolsaHorasExtra(
