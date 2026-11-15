@@ -53,6 +53,8 @@ export const ausencias = {
     pendientes: 'Pedidos sin aprobar',
     totales: 'Del año',
     dias: (n: number) => (n === 1 ? '1 día' : `${n} días`),
+    arrastrados: (n: number, hasta: string | null) =>
+      `Incluye ${n === 1 ? '1 día' : `${n} días`} del año anterior${hasta ? `, que caducan el ${hasta} si no empiezas antes unas vacaciones` : ''}.`,
   },
 
   filtros: {

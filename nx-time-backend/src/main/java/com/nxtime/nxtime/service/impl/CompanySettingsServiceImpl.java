@@ -48,7 +48,7 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
         Company empresa = suEmpresa(actor);
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
                 empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), 0, empresa.isPreguntarModalidad(),
-                empresa.isUbicacionAlFichar());
+                empresa.isUbicacionAlFichar(), empresa.isArrastreVacaciones(), empresa.getArrastreVacacionesHasta());
     }
 
     /**
@@ -93,6 +93,18 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
                     request.ubicacionAlFichar() ? "empieza a" : "deja de", empresa.getId());
             empresa.setUbicacionAlFichar(request.ubicacionAlFichar());
         }
+        if (request.arrastreVacaciones() != null) {
+            empresa.setArrastreVacaciones(request.arrastreVacaciones());
+        }
+        if (request.arrastreVacacionesHasta() != null) {
+            // El patrón deja pasar el 31 de abril: aquí se mira que exista.
+            try {
+                java.time.MonthDay.parse("--" + request.arrastreVacacionesHasta());
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new BusinessException("La fecha tope del arrastre no existe.", HttpStatus.BAD_REQUEST);
+            }
+            empresa.setArrastreVacacionesHasta(request.arrastreVacacionesHasta());
+        }
         companyRepository.saveAndFlush(empresa);
 
         int invalidadas = 0;
@@ -106,7 +118,8 @@ public class CompanySettingsServiceImpl implements CompanySettingsService {
         }
         return new CompanySettingsResponse(empresa.getNombre(), empresa.getZonaHoraria(),
                 empresa.getContactoPrivacidad(), empresa.isExigirSegundoFactor(), invalidadas,
-                empresa.isPreguntarModalidad(), empresa.isUbicacionAlFichar());
+                empresa.isPreguntarModalidad(), empresa.isUbicacionAlFichar(), empresa.isArrastreVacaciones(),
+                empresa.getArrastreVacacionesHasta());
     }
 
     /**

@@ -67,3 +67,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [055](055-presencial-o-a-distancia.md) | Presencial o a distancia |
 | [056](056-la-ubicacion-al-fichar.md) | La ubicación al fichar |
 | [057](057-paleta-arena.md) | Paleta arena |
+| [060](060-arrastre-de-vacaciones.md) | Las vacaciones que sobran pasan al año siguiente |

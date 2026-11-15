@@ -57,14 +57,66 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
 
     @Override
     public VacationBalanceResponse getBalance(User usuario, int anio) {
-        int diasTotales = vacationBalanceRepository.findByUsuarioAndAnio(usuario, anio)
-                .map(VacationBalance::getDiasTotales)
-                .orElse(DIAS_POR_DEFECTO);
+        return getBalance(usuario, anio, LocalDate.now(usuario.zona()));
+    }
 
+    @Override
+    public VacationBalanceResponse getBalance(User usuario, int anio, LocalDate referencia) {
+        int derecho = derecho(usuario, anio);
         int diasConsumidos = contarDiasAprobados(usuario, anio);
         int diasPendientes = contarDiasPendientes(usuario, anio);
+        Arrastre arrastre = arrastre(usuario, anio, referencia);
+        int diasTotales = derecho + arrastre.dias();
         return new VacationBalanceResponse(anio, diasTotales, diasConsumidos, diasPendientes,
-                diasTotales - diasConsumidos - diasPendientes);
+                diasTotales - diasConsumidos - diasPendientes, arrastre.dias(), arrastre.caducaEl());
+    }
+
+    private int derecho(User usuario, int anio) {
+        return vacationBalanceRepository.findByUsuarioAndAnio(usuario, anio)
+                .map(VacationBalance::getDiasTotales)
+                .orElse(DIAS_POR_DEFECTO);
+    }
+
+    /** Lo arrastrado del año anterior que cuenta, y hasta cuándo (null si no hay o ya caducó). */
+    record Arrastre(int dias, LocalDate caducaEl) {
+        static final Arrastre NINGUNO = new Arrastre(0, null);
+    }
+
+    /**
+     * Lo que pasa del año anterior (ADR 060), calculado al leer.
+     *
+     * <ul>
+     *   <li>Lo que sobró: el derecho del año anterior menos lo aprobado en él.
+     *       Sin encadenar: lo arrastrado a aquel año no vuelve a pasar a este.</li>
+     *   <li>Hasta la fecha tope cuenta entero. Pasada, solo lo que se gastó en
+     *       vacaciones que EMPEZABAN antes del tope (aprobadas o pedidas): el
+     *       resto caduca. La misma regla al pedir y al aprobar, con la fecha
+     *       de inicio de la ausencia: unas vacaciones de junio no pueden gastar
+     *       días que caducan en marzo.</li>
+     * </ul>
+     */
+    private Arrastre arrastre(User usuario, int anio, LocalDate referencia) {
+        com.nxtime.nxtime.domain.Company empresa = usuario.getEmpresa();
+        if (empresa == null || !empresa.isArrastreVacaciones()) {
+            return Arrastre.NINGUNO;
+        }
+        int sobrante = Math.max(0, derecho(usuario, anio - 1) - contarDiasAprobados(usuario, anio - 1));
+        if (sobrante == 0) {
+            return Arrastre.NINGUNO;
+        }
+        LocalDate tope = empresa.topeDelArrastre(anio);
+        if (!referencia.isAfter(tope)) {
+            return new Arrastre(sobrante, tope);
+        }
+        LocalDate inicioDeAnio = LocalDate.of(anio, 1, 1);
+        LocalDate finDeAnio = LocalDate.of(anio, 12, 31);
+        List<AbsenceRequest> antesDelTope = new java.util.ArrayList<>();
+        absenceRequestRepository.findVacacionesAprobadasDelAnio(usuario, inicioDeAnio, finDeAnio).stream()
+                .filter(p -> !p.getFechaInicio().isAfter(tope)).forEach(antesDelTope::add);
+        absenceRequestRepository.findVacacionesPendientesDelAnio(usuario, inicioDeAnio, finDeAnio).stream()
+                .filter(p -> !p.getFechaInicio().isAfter(tope)).forEach(antesDelTope::add);
+        int usado = contarDiasHabilesDe(antesDelTope, usuario, inicioDeAnio, finDeAnio);
+        return new Arrastre(Math.min(sobrante, usado), null);
     }
 
     @Override

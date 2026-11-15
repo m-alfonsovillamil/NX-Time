@@ -13,6 +13,14 @@ public interface VacationBalanceService {
     VacationBalanceResponse getBalance(User usuario, int anio);
 
     /**
+     * El saldo de unas vacaciones que empiezan en {@code inicioDeLaAusencia}
+     * (ADR 060): si es después de la fecha tope, lo arrastrado del año anterior
+     * solo cuenta en lo que ya se había usado antes. Es lo que hay que mirar al
+     * pedir y al aprobar; {@link #getBalance(User, int)} mira desde hoy.
+     */
+    VacationBalanceResponse getBalance(User usuario, int anio, java.time.LocalDate inicioDeLaAusencia);
+
+    /**
      * Días hábiles de vacaciones ya APROBADAS de ese año, sin contar lo
      * pendiente.
      *
