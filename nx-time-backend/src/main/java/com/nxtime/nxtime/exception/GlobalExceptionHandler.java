@@ -62,6 +62,13 @@ public class GlobalExceptionHandler {
      * de llegar aquí; los de los cuadrantes dependen de este manejador.
      */
     private static final String EXCLUSION_VIOLATION = "23P01";
+    /**
+     * SQLSTATE de PostgreSQL: un carácter que no cabe en un texto, en la
+     * práctica el nulo (U+0000). Lo de un cuerpo JSON ya se para al leerlo
+     * ({@code TextoSinCaracterNulo}); esto es la red para lo que llegue por
+     * otro camino. Es un dato que no vale, no un fallo nuestro: 400.
+     */
+    private static final String CARACTER_NO_VALIDO = "22021";
 
     /**
      * Qué decirle a quien está delante cuando gana el índice en vez de la
@@ -266,6 +273,12 @@ public class GlobalExceptionHandler {
             log.warn("Conflicto de referencia ({}): {}", constraint, ex.getMostSpecificCause().getMessage());
             return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                     "No se puede hacer eso porque hay datos que dependen de ello.");
+        }
+
+        if (CARACTER_NO_VALIDO.equals(sqlState)) {
+            log.warn("Texto con un carácter que no se puede guardar: {}", ex.getMostSpecificCause().getMessage());
+            return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                    "Un texto lleva un carácter que no se puede guardar.");
         }
 
         log.error("Violación de integridad no esperada ({}, SQLSTATE {})", constraint, sqlState, ex);

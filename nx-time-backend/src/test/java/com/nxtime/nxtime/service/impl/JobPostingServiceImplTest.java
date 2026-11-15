@@ -338,6 +338,22 @@ class JobPostingServiceImplTest {
         }
 
         @Test
+        @DisplayName("una candidatura en proceso no vuelve a RECIBIDA (antes, un 500 de la base)")
+        void volverARecibida_da400() {
+            JobApplication enProceso = candidatura(empleado, ApplicationStatus.EN_PROCESO);
+            when(applicationRepository.findById(30L)).thenReturn(Optional.of(enProceso));
+
+            assertThatThrownBy(() -> service.valorar(30L,
+                    new UpdateApplicationStatusRequest(ApplicationStatus.RECIBIDA, null),
+                    gestor))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getStatus())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(enProceso.getEstado()).isEqualTo(ApplicationStatus.EN_PROCESO);
+            verify(applicationRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("valorar avisa al candidato")
         void avisaAlCandidato() {
             when(applicationRepository.findById(30L))
@@ -434,6 +450,32 @@ class JobPostingServiceImplTest {
                     new UpdateJobPostingStatusRequest(JobPostingStatus.ABIERTA), gestor))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("no se reabre");
+        }
+
+        @Test
+        @DisplayName("un borrador que nunca se publicó no se cierra (antes, un 500 de la base)")
+        void borradorSinPublicar_noSeCierra() {
+            JobPosting borrador = oferta(JobPostingStatus.BORRADOR, null);
+            when(jobPostingRepository.findConDetalle(5L)).thenReturn(Optional.of(borrador));
+
+            assertThatThrownBy(() -> service.cambiarEstado(5L,
+                    new UpdateJobPostingStatusRequest(JobPostingStatus.CERRADA), gestor))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getStatus())
+                    .isEqualTo(HttpStatus.CONFLICT);
+            assertThat(borrador.getEstado()).isEqualTo(JobPostingStatus.BORRADOR);
+        }
+
+        @Test
+        @DisplayName("un borrador que ya estuvo publicado sí se cierra")
+        void borradorQueEstuvoPublicado_seCierra() {
+            JobPosting retirada = oferta(JobPostingStatus.BORRADOR, null);
+            retirada.setFechaPublicacion(Instant.now().minusSeconds(86_400));
+            when(jobPostingRepository.findConDetalle(5L)).thenReturn(Optional.of(retirada));
+
+            service.cambiarEstado(5L, new UpdateJobPostingStatusRequest(JobPostingStatus.CERRADA), gestor);
+
+            assertThat(retirada.getEstado()).isEqualTo(JobPostingStatus.CERRADA);
         }
 
         @Test
