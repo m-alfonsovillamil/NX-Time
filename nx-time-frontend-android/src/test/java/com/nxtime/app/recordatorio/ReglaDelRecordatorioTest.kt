@@ -101,4 +101,13 @@ class ReglaDelRecordatorioTest {
         assertEquals(24 * 60L, minutos)
         assertTrue(minutos >= 1)
     }
+
+    @Test
+    fun `un festivo o en vacaciones no se recuerda fichar la entrada`() {
+        assertFalse(ReglaDelRecordatorio.toca(TipoDeAviso.ENTRADA, false, DayOfWeek.MONDAY, laborableSegunElServidor = false))
+        // Pero si alguien trabaja ese día y se deja la jornada abierta, sí.
+        assertTrue(ReglaDelRecordatorio.toca(TipoDeAviso.SALIDA, true, DayOfWeek.MONDAY, laborableSegunElServidor = false))
+        // Sin saberlo (por defecto), como antes: se avisa.
+        assertTrue(ReglaDelRecordatorio.toca(TipoDeAviso.ENTRADA, false, DayOfWeek.MONDAY))
+    }
 }

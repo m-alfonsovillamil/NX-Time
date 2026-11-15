@@ -17,6 +17,9 @@ import java.util.List;
  *
  * {@code zona} es la de la empresa (ADR 032): las filas ya vienen en ella, y
  * el PDF la usa para las fechas de las firmas y la del pie.
+ *
+ * {@code resumen} solo lo lleva el informe de la empresa (plan N, paso N6): una
+ * fila por persona, con lo que pide una gestoría. Vacío en el de una persona.
  */
 public record MonthlyReport(
         String nombreEmpresa,
@@ -24,8 +27,15 @@ public record MonthlyReport(
         YearMonth mes,
         List<ReportRow> filas,
         FirmaDelInforme firma,
-        ZoneId zona
+        ZoneId zona,
+        List<ResumenDePersona> resumen
 ) {
+
+    /** Sin resumen por persona: el registro de una persona. */
+    public MonthlyReport(String nombreEmpresa, String nombreEmpleado, YearMonth mes, List<ReportRow> filas,
+            FirmaDelInforme firma, ZoneId zona) {
+        this(nombreEmpresa, nombreEmpleado, mes, filas, firma, zona, List.of());
+    }
 
     /** Sin firma: el Excel de la empresa, o un mes que nadie ha firmado. */
     public MonthlyReport(String nombreEmpresa, String nombreEmpleado, YearMonth mes, List<ReportRow> filas) {

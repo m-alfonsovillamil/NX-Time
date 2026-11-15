@@ -437,6 +437,7 @@
     <string name="ausencias_filtro_pendientes">Pendientes</string>
     <string name="ausencias_filtro_aprobadas">Aprobadas</string>
     <string name="ausencias_filtro_rechazadas">Rechazadas</string>
+    <string name="ausencias_filtro_canceladas">Canceladas</string>
     <string name="ausencias_filtro_anio">Año</string>
     <string name="ausencias_filtro_todos_los_anios">Todos los años</string>
     <string name="ausencias_filtro_tipo">Tipo</string>
@@ -445,6 +446,15 @@
     <string name="ausencias_filtro_sin_resultados">No hay ausencias con estos filtros.</string>
     <string name="ausencias_estado_aprobada">Aprobada</string>
     <string name="ausencias_estado_rechazada">Rechazada</string>
+    <string name="ausencias_estado_cancelada">Cancelada</string>
+    <string name="ausencias_cancelada_por">Cancelada por %1$s</string>
+    <string name="ausencias_motivo_cancelacion">Por qué: %1$s</string>
+    <string name="ausencias_cancelar">Cancelar la ausencia</string>
+    <string name="ausencias_cancelar_titulo">¿Cancelar esta ausencia?</string>
+    <string name="ausencias_cancelar_texto">Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a tu saldo. No se puede deshacer: si cambias de idea, la pides otra vez.</string>
+    <string name="ausencias_cancelar_aprobada">Ya estaba aprobada: avisaremos a quien aprueba las ausencias.</string>
+    <string name="ausencias_cancelar_motivo">Por qué (opcional)</string>
+    <string name="ausencias_volver">Volver</string>
     <string name="ausencias_rango">Del %1$s al %2$s</string>
     <string name="ausencias_resuelta_por">Resuelta por %1$s</string>
     <string name="ausencias_comentario">Respuesta: %1$s</string>
@@ -509,6 +519,17 @@
       configuración, que se visitan cuando hace falta.
     -->
     <string name="gestion_seccion_pendiente">Pendiente de resolver</string>
+    <string name="ahora_titulo">Ahora mismo</string>
+    <string name="ahora_resumen">Trabajando: %1$d · En pausa: %2$d · Sin fichar: %3$d · Hoy no les toca: %4$d</string>
+    <plurals name="ahora_con_retraso">
+        <item quantity="one">%d persona debía haber entrado ya</item>
+        <item quantity="other">%d personas debían haber entrado ya</item>
+    </plurals>
+    <string name="ahora_debia_entrar">Debía entrar a las %1$s</string>
+    <string name="ahora_sin_fichar">Sin fichar</string>
+    <string name="ahora_trabajando">Trabajando · %1$s hoy</string>
+    <string name="ahora_en_pausa">En pausa · %1$s hoy</string>
+    <string name="ahora_y_mas">Y %1$d más en el historial del equipo</string>
     <string name="gestion_seccion_equipo">Equipo</string>
     <plurals name="gestion_pendientes">
         <item quantity="one">%1$d pendiente</item>
@@ -540,6 +561,10 @@
     <string name="resueltas_titulo">Ausencias resueltas</string>
     <string name="resueltas_vacio_titulo">Todavía no hay resueltas</string>
     <string name="resueltas_vacio_texto">Aquí quedarán las solicitudes que apruebes o rechaces.</string>
+    <string name="resueltas_anular">Anular</string>
+    <string name="resueltas_anular_titulo">Anular la ausencia de %1$s</string>
+    <string name="resueltas_anular_texto">Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a su saldo. Le avisaremos con este motivo.</string>
+    <string name="resueltas_anular_motivo_obligatorio">Para anular la ausencia de otra persona hay que indicar un motivo.</string>
 
     <string name="alta_empleado_titulo">Nuevo empleado</string>
     <string name="alta_gestor_titulo">Nuevo gestor</string>

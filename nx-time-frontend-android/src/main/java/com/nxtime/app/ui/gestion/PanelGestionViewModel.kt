@@ -2,6 +2,7 @@ package com.nxtime.app.ui.gestion
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nxtime.app.data.dto.EquipoAhoraDTO
 import com.nxtime.app.data.dto.PendientesDTO
 import com.nxtime.app.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,13 @@ class PanelGestionViewModel(private val authRepository: AuthRepository) : ViewMo
     private val _pendientes = MutableStateFlow<PendientesDTO?>(null)
     val pendientes: StateFlow<PendientesDTO?> = _pendientes.asStateFlow()
 
+    /**
+     * Quién está trabajando ahora (plan N, paso N7). Como los contadores: si
+     * falla, se queda lo que hubiera, y sin datos la sección no sale.
+     */
+    private val _equipoAhora = MutableStateFlow<EquipoAhoraDTO?>(null)
+    val equipoAhora: StateFlow<EquipoAhoraDTO?> = _equipoAhora.asStateFlow()
+
     fun cargar() {
         viewModelScope.launch {
             val respuesta = try {
@@ -38,6 +46,16 @@ class PanelGestionViewModel(private val authRepository: AuthRepository) : ViewMo
             // es más útil que ninguno, y el siguiente ON_RESUME lo repite.
             if (respuesta != null) {
                 _pendientes.value = respuesta
+            }
+        }
+        viewModelScope.launch {
+            val foto = try {
+                authRepository.getEquipoAhora().takeIf { it.isSuccessful }?.body()
+            } catch (e: Exception) {
+                null
+            }
+            if (foto != null) {
+                _equipoAhora.value = foto
             }
         }
     }

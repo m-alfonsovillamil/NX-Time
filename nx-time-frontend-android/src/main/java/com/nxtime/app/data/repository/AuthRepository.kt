@@ -99,6 +99,7 @@ interface AuthRepository {
 
     /** Los contadores de las bandejas del panel de gestión. */
     suspend fun getPendientes(): Response<PendientesDTO>
+    suspend fun getEquipoAhora(): Response<EquipoAhoraDTO>
     suspend fun getMisCorrecciones(pagina: Int = 0): Response<PaginaDTO<CorreccionDTO>>
     suspend fun resolverCorreccion(
         correccionId: Long,
@@ -206,6 +207,9 @@ interface AuthRepository {
         estado: EstadoAusencia,
         comentario: String? = null
     ): Response<RespuestaAusencia>
+
+    /** ADR 058: el motivo es obligatorio solo al anular la de otra persona. */
+    suspend fun cancelarAusencia(peticionId: Long, motivo: String?): Response<RespuestaAusencia>
 
     suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
     suspend fun getHistorialAusencias(pagina: Int = 0): Response<PaginaDTO<RespuestaAusencia>>

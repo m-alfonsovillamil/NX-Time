@@ -322,7 +322,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
     private SimpleEmployeeDTO toDto(User empleado, Map<Long, Integer> saldosPorUsuario, boolean invitacionPendiente) {
         return new SimpleEmployeeDTO(
                 empleado.getId(),
-                empleado.getNombre(),
+                empleado.nombreCompleto(),
                 empleado.getEmail(),
                 empleado.isActivo(),
                 empleado.getHorasSemanales(),

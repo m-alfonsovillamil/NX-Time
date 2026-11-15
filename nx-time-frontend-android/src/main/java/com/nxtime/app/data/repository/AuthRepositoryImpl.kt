@@ -184,6 +184,7 @@ class AuthRepositoryImpl(
         apiService.deshacerPausa(fichajeId, pausaId)
 
     override suspend fun getPendientes(): Response<PendientesDTO> = apiService.getPendientes()
+    override suspend fun getEquipoAhora(): Response<EquipoAhoraDTO> = apiService.getEquipoAhora()
 
     override suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>> {
         return apiService.getCorreccionesPendientes()
@@ -441,6 +442,9 @@ class AuthRepositoryImpl(
             CambioEstadoAusenciaRequest(estado, comentario)
         )
     }
+
+    override suspend fun cancelarAusencia(peticionId: Long, motivo: String?): Response<RespuestaAusencia> =
+        apiService.cancelarAusencia(peticionId, CancelarAusenciaRequest(motivo?.trim()?.takeIf { it.isNotEmpty() }))
 
     override suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO> {
         return apiService.getSaldoVacaciones()

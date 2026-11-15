@@ -11,6 +11,33 @@ export const gestion = {
     accesos: 'Gestión',
   },
 
+  ahora: {
+    titulo: 'Ahora mismo',
+    vacio: 'No hay nadie de alta en la empresa.',
+    trabajando: 'Trabajando',
+    enPausa: 'En pausa',
+    sinFichar: 'Sin fichar',
+    deEllosConRetraso: (n: number) => (n === 1 ? '1 llega tarde' : `${n} llegan tarde`),
+    terminada: 'Ya han terminado',
+    noLaborable: 'Hoy no les toca',
+    tabla: 'El equipo ahora mismo',
+    persona: 'Persona',
+    estado: 'Estado',
+    desde: 'Desde',
+    hoy: 'Hoy',
+    nota: 'Nota',
+    estados: {
+      TRABAJANDO: 'Trabajando',
+      EN_PAUSA: 'En pausa',
+      TERMINADA: 'Ha terminado',
+      SIN_FICHAR: 'Sin fichar',
+      NO_LABORABLE: 'Hoy no le toca',
+    } as Record<string, string>,
+    retraso: (hora: string) => `Debía entrar a las ${hora}`,
+    entraA: (hora: string) => `Entra a las ${hora}`,
+    aDistancia: 'A distancia',
+  },
+
   ausencias: {
     titulo: 'Ausencias del equipo',
     pestanas: 'Qué ausencias',
@@ -32,5 +59,12 @@ export const gestion = {
     resueltaPor: (quien: string, cuando: string) => `Resuelta por ${quien} el ${cuando}`,
     respuesta: (texto: string) => `Respuesta: ${texto}`,
     accionesDe: (quien: string) => `Solicitud de ${quien}`,
+    anular: 'Anular',
+    anularTitulo: (quien: string) => `Anular la ausencia de ${quien}`,
+    anularAyuda:
+      'Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a su saldo. Le avisaremos con este motivo.',
+    anularVacio: 'Para anular la ausencia de otra persona hay que indicar un motivo.',
+    anulada: 'Ausencia anulada.',
+    canceladaPor: (quien: string, cuando: string) => `Cancelada por ${quien} el ${cuando}`,
   },
 } as const;

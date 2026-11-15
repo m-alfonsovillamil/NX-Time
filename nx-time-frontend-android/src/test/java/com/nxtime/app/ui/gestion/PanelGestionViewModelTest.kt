@@ -68,4 +68,25 @@ class PanelGestionViewModelTest {
 
         assertEquals(PendientesDTO(2, 0, 0), viewModel.pendientes.value)
     }
+
+    @Test
+    fun `carga quién está trabajando ahora, y si falla no se inventa nada`() = runTest {
+        whenever(repositorio.getPendientes()).thenReturn(Response.success(PendientesDTO(0, 0, 0)))
+        val foto = com.nxtime.app.data.dto.EquipoAhoraDTO(
+            trabajando = 2, sinFichar = 1, conRetraso = 1,
+            personas = listOf(com.nxtime.app.data.dto.PersonaAhoraDTO(usuarioId = 5, nombre = "Dani Prueba",
+                estado = com.nxtime.app.data.dto.PersonaAhoraDTO.SIN_FICHAR, entradaPrevista = "09:00", conRetraso = true))
+        )
+        whenever(repositorio.getEquipoAhora()).thenReturn(Response.success(foto))
+        val viewModel = PanelGestionViewModel(repositorio)
+        viewModel.cargar()
+        advanceUntilIdle()
+        org.junit.Assert.assertEquals(foto, viewModel.equipoAhora.value)
+
+        whenever(repositorio.getEquipoAhora()).thenThrow(RuntimeException("sin red"))
+        viewModel.cargar()
+        advanceUntilIdle()
+        // Se queda la foto de antes: mejor una de hace un minuto que ninguna.
+        org.junit.Assert.assertEquals(foto, viewModel.equipoAhora.value)
+    }
 }

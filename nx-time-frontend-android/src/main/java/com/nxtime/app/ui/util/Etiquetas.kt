@@ -35,4 +35,5 @@ val EstadoAusencia.etiqueta: Int
         EstadoAusencia.PENDIENTE -> R.string.ausencias_estado_pendiente
         EstadoAusencia.APROBADA -> R.string.ausencias_estado_aprobada
         EstadoAusencia.RECHAZADA -> R.string.ausencias_estado_rechazada
+        EstadoAusencia.CANCELADA -> R.string.ausencias_estado_cancelada
     }

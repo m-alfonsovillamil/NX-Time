@@ -1,7 +1,8 @@
 /**
  * Mi cuadrante, las incidencias y la firma mensual contra el backend de
- * verdad, sin escribir nada: la demo no trae cuadrantes, así que lo que se ve
- * es «sin cuadrante», y la firma enseña los meses terminados de la persona.
+ * verdad, sin escribir nada. Desde noviembre de 2026 la demo le da a Carlos un
+ * cuadrante en turno partido y unos retrasos, así que tiene semana e
+ * incidencias; la firma enseña los meses terminados de la persona.
  *
  * Con datos (una plantilla con turno partido y noche, una excepción) y
  * firmando un mes de verdad se comprobó a mano al cerrar W4a (ver su PR):

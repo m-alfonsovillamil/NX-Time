@@ -139,4 +139,39 @@ class AusenciasEquipoViewModelTest {
         verify(repositorio, org.mockito.kotlin.times(2)).getPeticionesPendientes()
         assertEquals(null, viewModel.uiState.value.resolviendo)
     }
+
+    // ---- ADR 058: anular una aprobada ----
+
+    @Test
+    fun `anular sin motivo no llega al servidor`() = runTest {
+        whenever(repositorio.getHistorialAusencias(any())).thenReturn(unaPagina(emptyList()))
+        val viewModel = AusenciasEquipoViewModel(repositorio).also { it.mostrar(resueltas = true) }
+        advanceUntilIdle()
+
+        viewModel.anular(7, "  ")
+        advanceUntilIdle()
+
+        assertEquals(
+            MensajeUi.Recurso(R.string.resueltas_anular_motivo_obligatorio),
+            viewModel.uiState.value.error
+        )
+        verify(repositorio, never()).cancelarAusencia(any(), anyOrNull())
+    }
+
+    @Test
+    fun `anular con motivo lo manda limpio y recarga las resueltas`() = runTest {
+        val aprobada = pendiente.copy(estado = EstadoAusencia.APROBADA, puedoCancelar = true)
+        whenever(repositorio.getHistorialAusencias(any())).thenReturn(unaPagina(listOf(aprobada)))
+        whenever(repositorio.cancelarAusencia(any(), anyOrNull()))
+            .thenReturn(Response.success(aprobada.copy(estado = EstadoAusencia.CANCELADA, puedoCancelar = false)))
+        val viewModel = AusenciasEquipoViewModel(repositorio).also { it.mostrar(resueltas = true) }
+        advanceUntilIdle()
+
+        viewModel.anular(7, "  Se incorporó antes  ")
+        advanceUntilIdle()
+
+        verify(repositorio).cancelarAusencia(eq(7L), eq("Se incorporó antes"))
+        verify(repositorio, org.mockito.kotlin.times(2)).getHistorialAusencias(0)
+        assertEquals(null, viewModel.uiState.value.resolviendo)
+    }
 }

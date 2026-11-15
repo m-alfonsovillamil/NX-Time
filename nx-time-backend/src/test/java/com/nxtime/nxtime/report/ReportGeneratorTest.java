@@ -55,6 +55,53 @@ class ReportGeneratorTest {
     // ---- Excel ----
 
     @Test
+    @DisplayName("El Excel de la empresa lleva detrás la hoja «Resumen por persona», con números que se suman")
+    void excel_conResumenPorPersona() throws Exception {
+        MonthlyReport base = informeDeEjemplo();
+        List<ResumenDePersona> resumen = List.of(
+                new ResumenDePersona("Ana Fernández", "000123", 3, 1890 * 60 + 25, 60 * 60, 1, 0, 0, 75, 0, 1,
+                        "Consulta médica 1"),
+                new ResumenDePersona("Luis Abad", null, 0, 0, 0, 0, 0, 0, 0, 5, 0, "Vacaciones 5"));
+        MonthlyReport informe = new MonthlyReport(base.nombreEmpresa(), "Todos los empleados", base.mes(),
+                base.filas(), null, ZoneId.of("Europe/Madrid"), resumen);
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+
+        excelGenerator.generar(informe, salida);
+
+        try (Workbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            // La de las jornadas sigue siendo la primera.
+            assertThat(libro.getSheetAt(0).getSheetName()).contains("2026-06");
+            Sheet hoja = libro.getSheetAt(1);
+            assertThat(hoja.getSheetName()).isEqualTo("Resumen por persona");
+            assertThat(hoja.getRow(3).getCell(0).getStringCellValue()).isEqualTo("Empleado");
+            assertThat(hoja.getRow(3).getCell(4).getStringCellValue()).isEqualTo("Horas (decimal)");
+            // Ana: 31h 30m 25s -> «31h 30m» y 31,51 horas, como NÚMERO.
+            assertThat(hoja.getRow(4).getCell(0).getStringCellValue()).isEqualTo("Ana Fernández");
+            assertThat(hoja.getRow(4).getCell(3).getStringCellValue()).isEqualTo("31h 30m");
+            assertThat(hoja.getRow(4).getCell(4).getNumericCellValue()).isCloseTo(31.507, org.assertj.core.data.Offset.offset(0.001));
+            assertThat(hoja.getRow(4).getCell(6).getStringCellValue()).isEqualTo("1h 15m");
+            assertThat(hoja.getRow(4).getCell(8).getNumericCellValue()).isEqualTo(1.0);
+            assertThat(hoja.getRow(5).getCell(7).getNumericCellValue()).isEqualTo(5.0);
+            assertThat(hoja.getRow(5).getCell(9).getStringCellValue()).isEqualTo("Vacaciones 5");
+            // Total: dos personas, y las horas de la hoja cuadran con las de las jornadas.
+            assertThat(hoja.getRow(7).getCell(0).getStringCellValue()).isEqualTo("TOTAL (2 personas)");
+            assertThat(hoja.getRow(7).getCell(3).getStringCellValue()).isEqualTo("31h 30m");
+        }
+    }
+
+    @Test
+    @DisplayName("Sin resumen (el registro de una persona), el Excel tiene una sola hoja, como siempre")
+    void excel_sinResumen_unaHoja() throws Exception {
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+
+        excelGenerator.generar(informeDeEjemplo(), salida);
+
+        try (Workbook libro = new XSSFWorkbook(new ByteArrayInputStream(salida.toByteArray()))) {
+            assertThat(libro.getNumberOfSheets()).isEqualTo(1);
+        }
+    }
+
+    @Test
     @DisplayName("El Excel generado se puede volver a abrir y contiene las filas y el total")
     void excel_seGeneraYSePuedeReleer() throws Exception {
         ByteArrayOutputStream salida = new ByteArrayOutputStream();

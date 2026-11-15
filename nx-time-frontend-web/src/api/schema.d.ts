@@ -1712,6 +1712,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ausencias/{id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancelar una ausencia
+         * @description Quien la pidió la retira mientras no haya empezado, esté pendiente o aprobada. Una aprobada ya empezada la anula quien tiene ausencia:aprobar, y entonces el motivo es obligatorio. Una pendiente ajena no se cancela: se aprueba o se rechaza. Cada respuesta de ausencia dice en «puedoCancelar» si se puede.
+         */
+        post: operations["cancelar_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proyectos/{id}": {
         parameters: {
             query?: never;
@@ -2740,6 +2760,26 @@ export interface paths {
          * @description Los EMPLEADO de la empresa de quien pregunta, con su jornada semanal y sus días de vacaciones efectivos del año en curso.
          */
         get: operations["getMyEmployees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gestor/equipo-ahora": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quién está trabajando ahora y quién no ha fichado hoy
+         * @description Una foto de este momento de la plantilla activa: cuántos trabajan, están en pausa, han terminado, no han fichado o hoy no les toca, y persona a persona desde cuándo. «conRetraso» marca a quien no ha fichado pasados diez minutos de la entrada de su cuadrante. Primero sale lo que pide atención. Sin la ubicación.
+         */
+        get: operations["ahora"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4740,7 +4780,7 @@ export interface components {
             tipo?: "VACACIONES" | "ASUNTOS_PROPIOS" | "MATRIMONIO" | "FALLECIMIENTO_FAMILIAR" | "HOSPITALIZACION_FAMILIAR" | "LACTANCIA" | "MATERNIDAD_PATERNIDAD" | "MEDICO" | "TRASLADO_DOMICILIO" | "VIAJE_TRABAJO" | "OTROS";
             motivo?: string;
             /** @enum {string} */
-            estado?: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+            estado?: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "CANCELADA";
             usuario?: components["schemas"]["SimpleUserDTO"];
             aprobadoPor?: components["schemas"]["SimpleUserDTO"];
             /** Format: date-time */
@@ -4748,6 +4788,15 @@ export interface components {
             comentarioResolucion?: string;
             /** Format: int32 */
             diasHabiles?: number;
+            canceladaPor?: components["schemas"]["SimpleUserDTO"];
+            /** Format: date-time */
+            canceladaEn?: string;
+            motivoCancelacion?: string;
+            puedoCancelar?: boolean;
+        };
+        CancelAbsenceRequest: {
+            /** @description Por qué se cancela. Obligatorio al anular la ausencia de otra persona. */
+            motivo?: string;
         };
         UpdateProjectStatusRequest: {
             activo: boolean;
@@ -4876,7 +4925,7 @@ export interface components {
         };
         UpdateAbsenceStatusRequest: {
             /** @enum {string} */
-            estado: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+            estado: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "CANCELADA";
             comentario?: string;
         };
         KioskPerson: {
@@ -5499,6 +5548,46 @@ export interface components {
             avisosAbiertos?: number;
             alLimite?: boolean;
         };
+        EquipoAhoraResponse: {
+            /**
+             * Format: date
+             * @description El día de hoy en la zona de la empresa
+             */
+            fecha?: string;
+            /** Format: int32 */
+            trabajando?: number;
+            /** Format: int32 */
+            enPausa?: number;
+            /** Format: int32 */
+            terminada?: number;
+            /** Format: int32 */
+            sinFichar?: number;
+            /**
+             * Format: int32
+             * @description De ellos, quienes ya deberían haber entrado según su cuadrante
+             */
+            conRetraso?: number;
+            /** Format: int32 */
+            noLaborable?: number;
+            personas?: components["schemas"]["PersonaAhora"][];
+        };
+        PersonaAhora: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nombre?: string;
+            /** @enum {string} */
+            estado?: "TRABAJANDO" | "EN_PAUSA" | "TERMINADA" | "SIN_FICHAR" | "NO_LABORABLE";
+            /** Format: date-time */
+            desde?: string | null;
+            /** Format: int64 */
+            minutosHoy?: number;
+            motivo?: string | null;
+            /** @example 09:00 */
+            entradaPrevista?: string | null;
+            conRetraso?: boolean;
+            /** @enum {string|null} */
+            modalidad?: "PRESENCIAL" | "A_DISTANCIA" | null;
+        };
         PaginaDTOAbsenceResponse: {
             contenido?: components["schemas"]["AbsenceResponse"][];
             /** Format: int32 */
@@ -5777,7 +5866,7 @@ export interface components {
             /** @enum {string} */
             tipo?: "VACACIONES" | "ASUNTOS_PROPIOS" | "MATRIMONIO" | "FALLECIMIENTO_FAMILIAR" | "HOSPITALIZACION_FAMILIAR" | "LACTANCIA" | "MATERNIDAD_PATERNIDAD" | "MEDICO" | "TRASLADO_DOMICILIO" | "VIAJE_TRABAJO" | "OTROS";
             /** @enum {string} */
-            estado?: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+            estado?: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "CANCELADA";
             propia?: boolean;
         };
         CalendarResponse: {
@@ -5800,7 +5889,7 @@ export interface components {
             /** Format: int64 */
             id?: number;
             /** @enum {string} */
-            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS" | "RECORDATORIO_FIRMA" | "FIRMA_INVALIDADA" | "PIN_KIOSCO_ANULADO" | "PIN_KIOSCO_ANULADO_EQUIPO";
+            tipo?: "AUSENCIA_SOLICITADA" | "AUSENCIA_RESUELTA" | "AUSENCIA_CANCELADA" | "BIENVENIDA" | "CORRECCION_SOLICITADA" | "CORRECCION_RESUELTA" | "CORRECCION_EN_DISPUTA" | "HORAS_EXTRA_DETECTADAS" | "BOLSA_HORAS_EXTRA_AL_LIMITE" | "RESUMEN_HORAS_EXTRA" | "DENUNCIA_RECIBIDA" | "DENUNCIA_ACTUALIZADA" | "OFERTA_PUBLICADA" | "CANDIDATURA_RECIBIDA" | "CANDIDATURA_ACTUALIZADA" | "BORRADO_SOLICITADO" | "BORRADO_RECHAZADO" | "TRABAJO_EN_DIA_NO_LABORABLE" | "CUADRANTE_DISTINTO_DE_JORNADA" | "INCIDENCIA_DETECTADA" | "RESUMEN_INCIDENCIAS" | "RECORDATORIO_FIRMA" | "FIRMA_INVALIDADA" | "PIN_KIOSCO_ANULADO" | "PIN_KIOSCO_ANULADO_EQUIPO";
             titulo?: string;
             cuerpo?: string;
             rutaDestino?: string;
@@ -10596,6 +10685,77 @@ export interface operations {
             };
         };
     };
+    cancelar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelAbsenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Cancelada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AbsenceResponse"];
+                };
+            };
+            /** @description Anular la de otra persona sin motivo */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Es de otra persona y no se aprueban ausencias, o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Petición no encontrada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Ya rechazada o cancelada, ya empezada (para su dueño), o pendiente y ajena */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     detalle_1: {
         parameters: {
             query?: {
@@ -13075,6 +13235,44 @@ export interface operations {
                 };
             };
             /** @description Sin la authority 'empleado:leer' */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    ahora: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El equipo ahora */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EquipoAhoraResponse"];
+                };
+            };
+            /** @description No autenticado */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Sin la authority 'fichaje:leer:equipo' */
             403: {
                 headers: {
                     [name: string]: unknown;

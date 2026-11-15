@@ -132,7 +132,7 @@ public class KioskProfileServiceImpl implements KioskProfileService {
 
     private KioskCard tarjetaDe(User persona) {
         String codigo = tarjeta.codigo(persona.getId(), persona.getKioscoTarjetaVersion());
-        return new KioskCard(persona.getId(), persona.getNombre(), codigo, tarjeta.svg(codigo));
+        return new KioskCard(persona.getId(), persona.nombreCompleto(), codigo, tarjeta.svg(codigo));
     }
 
     private static MyKioskStatus estadoDe(User persona) {

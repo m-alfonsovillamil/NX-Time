@@ -6,6 +6,7 @@ import com.nxtime.nxtime.support.Paginas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,6 +25,7 @@ import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.notification.NotificationEvents;
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
+import com.nxtime.nxtime.dto.CancelAbsenceRequest;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -78,7 +80,7 @@ class AbsenceServiceImplTest {
     private User gestor;
 
     private static final AbsenceResponse RESPUESTA_CUALQUIERA =
-            new AbsenceResponse(1L, null, null, null, null, AbsenceStatus.PENDIENTE, null, null, null, null, 0);
+            new AbsenceResponse(1L, null, null, null, null, AbsenceStatus.PENDIENTE, null, null, null, null, 0, null, null, null, false);
 
     @BeforeEach
     void setUp() {
@@ -98,7 +100,7 @@ class AbsenceServiceImplTest {
 
         // lenient: varios tests cortan con una excepción antes de llegar
         // a mapear la respuesta o a contar días.
-        lenient().when(absenceMapper.toResponse(any(AbsenceRequest.class), anyInt()))
+        lenient().when(absenceMapper.toResponse(any(AbsenceRequest.class), anyInt(), anyBoolean()))
                 .thenReturn(RESPUESTA_CUALQUIERA);
         lenient().when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(3);
     }
@@ -513,5 +515,163 @@ class AbsenceServiceImplTest {
         when(vacationBalanceService.getBalance(empleado, 2026)).thenReturn(saldo);
 
         assertThat(service.getMyVacationBalance(empleado.getEmail(), 2026)).isEqualTo(saldo);
+    }
+
+    // ---- cancelar (ADR 058) ----
+
+    private AbsenceRequest ausencia(User de, AbsenceStatus estado, LocalDate desde) {
+        AbsenceRequest peticion = AbsenceRequest.builder().id(7L).usuario(de).empresa(empresa)
+                .fechaInicio(desde).fechaFin(desde.plusDays(2)).tipo(AbsenceType.VACACIONES)
+                .estado(estado).build();
+        if (estado != AbsenceStatus.PENDIENTE) {
+            peticion.setAprobadoPor(gestor);
+            peticion.setFechaResolucion(java.time.Instant.now());
+        }
+        lenient().when(absenceRequestRepository.findById(7L)).thenReturn(Optional.of(peticion));
+        lenient().when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+        return peticion;
+    }
+
+    private LocalDate dentroDe(int dias) {
+        return LocalDate.now(empresa.zona()).plusDays(dias);
+    }
+
+    @Test
+    @DisplayName("cancelar: quien la pidió retira una pendiente, sin motivo y sin avisar a nadie")
+    void cancelar_pendientePropia() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        AbsenceRequest peticion = ausencia(empleado, AbsenceStatus.PENDIENTE, dentroDe(10));
+
+        service.cancelar(empleado.getEmail(), 7L, null);
+
+        assertThat(peticion.getEstado()).isEqualTo(AbsenceStatus.CANCELADA);
+        assertThat(peticion.getCanceladaPor()).isEqualTo(empleado);
+        assertThat(peticion.getCanceladaEn()).isNotNull();
+        assertThat(peticion.getAprobadoPor()).isNull();
+        verify(eventPublisher, never()).publishEvent(any(NotificationEvents.AbsenceCancelled.class));
+    }
+
+    @Test
+    @DisplayName("cancelar: una aprobada que no ha empezado la retira su dueño, y se avisa a quien aprueba")
+    void cancelar_aprobadaFuturaPropia_avisaAQuienAprueba() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        MockDeDestinatarios.plantilla(userRepository, empresa, empleado, gestor);
+        AbsenceRequest peticion = ausencia(empleado, AbsenceStatus.APROBADA, dentroDe(3));
+
+        service.cancelar(empleado.getEmail(), 7L, new CancelAbsenceRequest("  "));
+
+        assertThat(peticion.getEstado()).isEqualTo(AbsenceStatus.CANCELADA);
+        // Sigue constando quién la aprobó.
+        assertThat(peticion.getAprobadoPor()).isEqualTo(gestor);
+        assertThat(peticion.getMotivoCancelacion()).isNull();
+        ArgumentCaptor<NotificationEvents.AbsenceCancelled> evento =
+                ArgumentCaptor.forClass(NotificationEvents.AbsenceCancelled.class);
+        verify(eventPublisher).publishEvent(evento.capture());
+        assertThat(evento.getValue().destinatarios()).containsExactly(gestor);
+    }
+
+    @Test
+    @DisplayName("cancelar: una aprobada que ya ha empezado no la retira su dueño (409)")
+    void cancelar_aprobadaEmpezadaPropia_409() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        AbsenceRequest peticion = ausencia(empleado, AbsenceStatus.APROBADA, dentroDe(0));
+
+        assertThatThrownBy(() -> service.cancelar(empleado.getEmail(), 7L, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ya ha empezado")
+                .extracting(e -> ((BusinessException) e).getStatus()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+        assertThat(peticion.getEstado()).isEqualTo(AbsenceStatus.APROBADA);
+    }
+
+    @Test
+    @DisplayName("cancelar: quien aprueba anula una aprobada ya empezada, con motivo, y se avisa al dueño")
+    void cancelar_gestorAnulaAprobadaEmpezada() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        AbsenceRequest peticion = ausencia(empleado, AbsenceStatus.APROBADA, dentroDe(-1));
+
+        service.cancelar(gestor.getEmail(), 7L, new CancelAbsenceRequest(" Volvió el martes. "));
+
+        assertThat(peticion.getEstado()).isEqualTo(AbsenceStatus.CANCELADA);
+        assertThat(peticion.getCanceladaPor()).isEqualTo(gestor);
+        assertThat(peticion.getMotivoCancelacion()).isEqualTo("Volvió el martes.");
+        ArgumentCaptor<NotificationEvents.AbsenceCancelled> evento =
+                ArgumentCaptor.forClass(NotificationEvents.AbsenceCancelled.class);
+        verify(eventPublisher).publishEvent(evento.capture());
+        assertThat(evento.getValue().destinatarios()).containsExactly(empleado);
+    }
+
+    @Test
+    @DisplayName("cancelar: anular la de otra persona sin motivo da 400")
+    void cancelar_gestorSinMotivo_400() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        ausencia(empleado, AbsenceStatus.APROBADA, dentroDe(5));
+
+        assertThatThrownBy(() -> service.cancelar(gestor.getEmail(), 7L, new CancelAbsenceRequest(null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("cancelar: una pendiente ajena no se cancela, se aprueba o se rechaza")
+    void cancelar_pendienteAjena_409() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        ausencia(empleado, AbsenceStatus.PENDIENTE, dentroDe(5));
+
+        assertThatThrownBy(() -> service.cancelar(gestor.getEmail(), 7L, new CancelAbsenceRequest("No.")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("se aprueba o se rechaza");
+    }
+
+    @Test
+    @DisplayName("cancelar: un empleado no cancela la de un compañero (403)")
+    void cancelar_ajenaSinAuthority_403() {
+        User companero = User.builder().id(11L).email("companero@nxtime.test")
+                .rol(Role.EMPLEADO).empresa(empresa).activo(true).build();
+        when(userRepository.findByEmail(companero.getEmail())).thenReturn(Optional.of(companero));
+        ausencia(empleado, AbsenceStatus.PENDIENTE, dentroDe(5));
+
+        assertThatThrownBy(() -> service.cancelar(companero.getEmail(), 7L, null))
+                .isInstanceOf(TenantAccessException.class);
+    }
+
+    @Test
+    @DisplayName("cancelar: ni la de otra empresa (403), ni una ya rechazada (409)")
+    void cancelar_otraEmpresaORechazada() {
+        User deFuera = User.builder().id(30L).email("fuera@nxtime.test")
+                .rol(Role.GESTOR).empresa(otraEmpresa).activo(true).build();
+        when(userRepository.findByEmail(deFuera.getEmail())).thenReturn(Optional.of(deFuera));
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        ausencia(empleado, AbsenceStatus.RECHAZADA, dentroDe(5));
+
+        assertThatThrownBy(() -> service.cancelar(deFuera.getEmail(), 7L, new CancelAbsenceRequest("x")))
+                .isInstanceOf(TenantAccessException.class);
+        assertThatThrownBy(() -> service.cancelar(empleado.getEmail(), 7L, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ya está rechazada");
+    }
+
+    @Test
+    @DisplayName("aprobar no sirve para cancelar: el PATCH de estado con CANCELADA da 400")
+    void changeRequestStatus_conCancelada_400() {
+        when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
+        ausencia(empleado, AbsenceStatus.PENDIENTE, dentroDe(5));
+
+        assertThatThrownBy(() -> service.changeRequestStatus(gestor.getEmail(), 7L,
+                new UpdateAbsenceStatusRequest(AbsenceStatus.CANCELADA, "x")))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("puedoCancelar viaja resuelto en la respuesta: cierto para el dueño de una pendiente")
+    void puedoCancelar_viajaResuelto() {
+        when(userRepository.findByEmail(empleado.getEmail())).thenReturn(Optional.of(empleado));
+        AbsenceRequest peticion = ausencia(empleado, AbsenceStatus.PENDIENTE, dentroDe(5));
+        when(absenceRequestRepository.findByUsuarioOrderByFechaInicioDescIdDesc(eq(empleado), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(peticion)));
+
+        service.getMyRequests(empleado.getEmail(), null, null, PageRequest.of(0, 20));
+
+        verify(absenceMapper).toResponse(peticion, 3, true);
     }
 }

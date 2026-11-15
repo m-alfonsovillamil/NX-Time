@@ -63,6 +63,12 @@ class ReportServiceImplTest {
     private RegistroDeAccesos accesos;
     @Mock
     private com.nxtime.nxtime.repository.FichajeRecibidoRepository recibidos;
+    @Mock
+    private com.nxtime.nxtime.repository.AbsenceRequestRepository ausencias;
+    @Mock
+    private com.nxtime.nxtime.repository.OvertimeAlertRepository horasExtra;
+    @Mock
+    private com.nxtime.nxtime.service.WorkingDayService diasHabiles;
 
     private ReportServiceImpl service;
 
@@ -71,7 +77,8 @@ class ReportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository, accesos, recibidos);
+        service = new ReportServiceImpl(timeEntryRepository, userRepository, signatureRepository, accesos, recibidos,
+                ausencias, horasExtra, diasHabiles);
         empresa = Company.builder().id(1L).nombre("TechCorp").build();
         solicitante = User.builder().id(10L).email("rrhh@nxtime.test").nombre("RRHH")
                 .rol(Role.RRHH).empresa(empresa).activo(true).build();
@@ -280,5 +287,73 @@ class ReportServiceImplTest {
         long segundosPorJornada = 8L * 3600 - 20;
         assertThat(informe.totalSegundos()).isEqualTo(3 * segundosPorJornada);
         assertThat(informe.totalMinutos()).isEqualTo((3 * segundosPorJornada) / 60);
+    }
+
+    // ---- Resumen por persona (plan N, paso N6) ----
+
+    @Test
+    @DisplayName("El resumen suma segundos exactos por persona y añade a quien solo tuvo ausencias")
+    void resumen_porPersona() {
+        when(userRepository.findByEmail(solicitante.getEmail())).thenReturn(Optional.of(solicitante));
+        TimeEntry lunes = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 40);
+        TimeEntry martes = jornada(LocalTime.of(9, 0), LocalTime.of(17, 0), 50);
+        martes.setId(101L);
+        martes.setHoraEntrada(martes.getHoraEntrada().plus(java.time.Duration.ofDays(1)));
+        martes.setHoraSalida(martes.getHoraSalida().plus(java.time.Duration.ofDays(1)));
+        when(timeEntryRepository.findParaInforme(any(), any(), any())).thenReturn(List.of(lunes, martes));
+
+        User luis = User.builder().id(30L).nombre("Luis").apellidos("Abad").empresa(empresa).codigoEmpleado("E-7").build();
+        com.nxtime.nxtime.domain.AbsenceRequest deVacaciones = com.nxtime.nxtime.domain.AbsenceRequest.builder()
+                .usuario(luis).empresa(empresa).tipo(com.nxtime.nxtime.domain.AbsenceType.VACACIONES)
+                .estado(com.nxtime.nxtime.domain.AbsenceStatus.APROBADA)
+                .fechaInicio(LocalDate.of(2026, 5, 25)).fechaFin(LocalDate.of(2026, 6, 5)).build();
+        com.nxtime.nxtime.domain.AbsenceRequest pendiente = com.nxtime.nxtime.domain.AbsenceRequest.builder()
+                .usuario(luis).empresa(empresa).tipo(com.nxtime.nxtime.domain.AbsenceType.MEDICO)
+                .estado(com.nxtime.nxtime.domain.AbsenceStatus.PENDIENTE)
+                .fechaInicio(LocalDate.of(2026, 6, 10)).fechaFin(LocalDate.of(2026, 6, 10)).build();
+        when(ausencias.findSolapadasDeEmpresa(1L, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of(deVacaciones, pendiente));
+        // Solo lo que cae en junio: del 1 al 5.
+        when(diasHabiles.contarDiasHabiles(empresa, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5))).thenReturn(5);
+
+        User ana = lunes.getUsuario();
+        com.nxtime.nxtime.domain.OvertimeAlert aceptado = com.nxtime.nxtime.domain.OvertimeAlert.builder()
+                .usuario(ana).empresa(empresa).minutosExtra(75)
+                .estado(com.nxtime.nxtime.domain.OvertimeStatus.ACEPTADO).build();
+        com.nxtime.nxtime.domain.OvertimeAlert abierto = com.nxtime.nxtime.domain.OvertimeAlert.builder()
+                .usuario(ana).empresa(empresa).minutosExtra(500)
+                .estado(com.nxtime.nxtime.domain.OvertimeStatus.ABIERTO).build();
+        when(horasExtra.findDeEmpresaEnRango(1L, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30)))
+                .thenReturn(List.of(aceptado, abierto));
+
+        List<com.nxtime.nxtime.report.ResumenDePersona> resumen =
+                service.informeDeEmpresa(solicitante.getEmail(), YearMonth.of(2026, 6)).resumen();
+
+        // Por nombre: «Ana» antes que «Luis Abad».
+        assertThat(resumen).extracting(com.nxtime.nxtime.report.ResumenDePersona::nombre)
+                .containsExactly("Ana", "Luis Abad");
+        com.nxtime.nxtime.report.ResumenDePersona deAna = resumen.get(0);
+        assertThat(deAna.diasTrabajados()).isEqualTo(2);
+        assertThat(deAna.segundosNetos()).isEqualTo(2 * 8 * 3600 - 90);
+        assertThat(com.nxtime.nxtime.report.ResumenDePersona.duracion(deAna.segundosNetos())).isEqualTo("15h 58m");
+        assertThat(deAna.minutosHorasExtra()).isEqualTo(75);
+        assertThat(deAna.diasVacaciones()).isZero();
+        com.nxtime.nxtime.report.ResumenDePersona deLuis = resumen.get(1);
+        assertThat(deLuis.diasTrabajados()).isZero();
+        assertThat(deLuis.diasVacaciones()).isEqualTo(5);
+        assertThat(deLuis.diasOtrasAusencias()).isZero();
+        assertThat(deLuis.detalleAusencias()).isEqualTo("Vacaciones 5");
+        assertThat(deLuis.codigoEmpleado()).isEqualTo("E-7");
+    }
+
+    @Test
+    @DisplayName("El registro de una persona no lleva resumen")
+    void resumen_noEnElDeUnaPersona() {
+        when(userRepository.findByEmail(solicitante.getEmail())).thenReturn(Optional.of(solicitante));
+        User empleado = User.builder().id(20L).nombre("Ana").empresa(empresa).build();
+        when(userRepository.findById(20L)).thenReturn(Optional.of(empleado));
+        when(timeEntryRepository.findParaInformeDeEmpleado(any(), any(), any())).thenReturn(List.of());
+
+        assertThat(service.informeDeEmpleado(solicitante.getEmail(), 20L, YearMonth.of(2026, 6)).resumen()).isEmpty();
     }
 }
