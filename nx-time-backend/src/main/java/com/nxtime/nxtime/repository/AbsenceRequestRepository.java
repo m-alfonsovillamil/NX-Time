@@ -94,7 +94,8 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
 
     /**
      * Peticiones del usuario que se solapan con el rango dado y siguen
-     * "vivas" (PENDIENTE o APROBADA); las RECHAZADAS no estorban.
+     * "vivas" (PENDIENTE o APROBADA); las RECHAZADAS y las CANCELADAS
+     * (ADR 058) no estorban.
      * Fase 9: antes no se comprobaba el solapamiento en absoluto (ver
      * auditoría del plan) -- se podían pedir las mismas vacaciones dos
      * veces, o vacaciones encima de una baja médica ya aprobada.
@@ -103,7 +104,8 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
      * más simple y más fiable que enumerar los cuatro casos a mano.
      */
     @Query("SELECT a FROM peticiones_ausencia a WHERE a.usuario = :usuario "
-            + "AND a.estado <> com.nxtime.nxtime.domain.AbsenceStatus.RECHAZADA "
+            + "AND a.estado IN (com.nxtime.nxtime.domain.AbsenceStatus.PENDIENTE, "
+            + "com.nxtime.nxtime.domain.AbsenceStatus.APROBADA) "
             + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde")
     List<AbsenceRequest> findSolapadas(
             @Param("usuario") User usuario,
@@ -127,7 +129,8 @@ public interface AbsenceRequestRepository extends JpaRepository<AbsenceRequest, 
      */
     @Query("SELECT a FROM peticiones_ausencia a JOIN FETCH a.usuario "
             + "WHERE a.empresa.id = :empresaId "
-            + "AND a.estado <> com.nxtime.nxtime.domain.AbsenceStatus.RECHAZADA "
+            + "AND a.estado IN (com.nxtime.nxtime.domain.AbsenceStatus.PENDIENTE, "
+            + "com.nxtime.nxtime.domain.AbsenceStatus.APROBADA) "
             + "AND a.fechaInicio <= :hasta AND a.fechaFin >= :desde "
             + "ORDER BY a.fechaInicio")
     List<AbsenceRequest> findSolapadasDeEmpresa(

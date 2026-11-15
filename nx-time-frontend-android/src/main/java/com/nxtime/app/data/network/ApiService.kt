@@ -627,6 +627,13 @@ interface ApiService {
         @Body cambio: CambioEstadoAusenciaRequest
     ): Response<RespuestaAusencia>
 
+    /** Retirar una ausencia propia, o anular una aprobada del equipo (ADR 058). */
+    @POST("api/v1/ausencias/{id}/cancelar")
+    suspend fun cancelarAusencia(
+        @Path("id") peticionId: Long,
+        @Body cuerpo: CancelarAusenciaRequest
+    ): Response<RespuestaAusencia>
+
     @GET("api/v1/ausencias/saldo-vacaciones")
     suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
 

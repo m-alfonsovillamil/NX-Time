@@ -49,6 +49,15 @@ public final class NotificationEvents {
     public record AbsenceResolved(AbsenceRequest peticion) {
     }
 
+    /**
+     * Se ha cancelado una ausencia (ADR 058). Si la anuló otra persona, el
+     * destinatario es su dueño; si la retiró él después de aprobarse, quienes
+     * aprueban ausencias, que contaban con ella. Retirar una pendiente no avisa
+     * a nadie: desaparece de la bandeja y ya está.
+     */
+    public record AbsenceCancelled(AbsenceRequest peticion, List<User> destinatarios) {
+    }
+
     /** Se ha dado de alta a un empleado: se le da la bienvenida. */
     public record EmployeeCreated(User empleado, String nombreEmpresa) {
     }

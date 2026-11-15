@@ -32,6 +32,12 @@ public interface AbsenceService {
      */
     AbsenceResponse changeRequestStatus(String managerEmail, long requestId, UpdateAbsenceStatusRequest request);
 
+    /**
+     * Retirar una ausencia propia que no ha empezado, o anular una aprobada
+     * de la empresa con {@code ausencia:aprobar} (ADR 058).
+     */
+    AbsenceResponse cancelar(String email, long requestId, com.nxtime.nxtime.dto.CancelAbsenceRequest request);
+
     com.nxtime.nxtime.dto.PaginaDTO<AbsenceResponse> getHistory(
             String managerEmail, org.springframework.data.domain.Pageable pagina);
 

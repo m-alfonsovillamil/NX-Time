@@ -442,6 +442,9 @@ class AuthRepositoryImpl(
         )
     }
 
+    override suspend fun cancelarAusencia(peticionId: Long, motivo: String?): Response<RespuestaAusencia> =
+        apiService.cancelarAusencia(peticionId, CancelarAusenciaRequest(motivo?.trim()?.takeIf { it.isNotEmpty() }))
+
     override suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO> {
         return apiService.getSaldoVacaciones()
     }

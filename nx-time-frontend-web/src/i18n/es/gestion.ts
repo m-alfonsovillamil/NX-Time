@@ -32,5 +32,12 @@ export const gestion = {
     resueltaPor: (quien: string, cuando: string) => `Resuelta por ${quien} el ${cuando}`,
     respuesta: (texto: string) => `Respuesta: ${texto}`,
     accionesDe: (quien: string) => `Solicitud de ${quien}`,
+    anular: 'Anular',
+    anularTitulo: (quien: string) => `Anular la ausencia de ${quien}`,
+    anularAyuda:
+      'Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a su saldo. Le avisaremos con este motivo.',
+    anularVacio: 'Para anular la ausencia de otra persona hay que indicar un motivo.',
+    anulada: 'Ausencia anulada.',
+    canceladaPor: (quien: string, cuando: string) => `Cancelada por ${quien} el ${cuando}`,
   },
 } as const;

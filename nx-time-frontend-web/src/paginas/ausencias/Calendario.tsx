@@ -50,7 +50,7 @@ export function semanasDelMes(anio: number, mes: number): string[][] {
 /** Las ausencias vivas (no rechazadas) que tocan un día. */
 export function ausenciasDelDia(lista: readonly AusenciaDelCalendario[], dia: string): AusenciaDelCalendario[] {
   return lista.filter(
-    (a) => a.estado !== 'RECHAZADA' && (a.fechaInicio ?? '') <= dia && dia <= (a.fechaFin ?? a.fechaInicio ?? ''),
+    (a) => (a.estado === 'PENDIENTE' || a.estado === 'APROBADA') && (a.fechaInicio ?? '') <= dia && dia <= (a.fechaFin ?? a.fechaInicio ?? ''),
   );
 }
 

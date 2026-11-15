@@ -207,6 +207,9 @@ interface AuthRepository {
         comentario: String? = null
     ): Response<RespuestaAusencia>
 
+    /** ADR 058: el motivo es obligatorio solo al anular la de otra persona. */
+    suspend fun cancelarAusencia(peticionId: Long, motivo: String?): Response<RespuestaAusencia>
+
     suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO>
     suspend fun getHistorialAusencias(pagina: Int = 0): Response<PaginaDTO<RespuestaAusencia>>
 

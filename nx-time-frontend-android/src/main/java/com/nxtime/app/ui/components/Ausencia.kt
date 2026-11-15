@@ -135,6 +135,22 @@ fun TarjetaAusencia(
                 )
             }
 
+            peticion.canceladaPor?.let { quien ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.ausencias_cancelada_por, quien.nombre),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            peticion.motivoCancelacion?.takeIf { it.isNotBlank() }?.let { motivo ->
+                Text(
+                    text = stringResource(R.string.ausencias_motivo_cancelacion, motivo),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
             acciones()
         }
     }
@@ -163,6 +179,11 @@ private fun EtiquetaEstado(estado: EstadoAusencia) {
         }
         EstadoAusencia.RECHAZADA -> {
             fondo = colores.parado; contenido = colores.onParado
+        }
+        // Gris: no la ha denegado nadie, simplemente ya no va (ADR 058).
+        EstadoAusencia.CANCELADA -> {
+            fondo = MaterialTheme.colorScheme.surfaceVariant
+            contenido = MaterialTheme.colorScheme.onSurfaceVariant
         }
     }
 
