@@ -71,6 +71,9 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
                 diasTotales - diasConsumidos - diasPendientes, arrastre.dias(), arrastre.caducaEl());
     }
 
+    private static final int ANIO_MINIMO = 2000;
+    private static final int ANIO_MAXIMO = 2200;
+
     private int derecho(User usuario, int anio) {
         return vacationBalanceRepository.findByUsuarioAndAnio(usuario, anio)
                 .map(VacationBalance::getDiasTotales)
@@ -97,7 +100,9 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
      */
     private Arrastre arrastre(User usuario, int anio, LocalDate referencia) {
         com.nxtime.nxtime.domain.Company empresa = usuario.getEmpresa();
-        if (empresa == null || !empresa.isArrastreVacaciones()) {
+        // El año llega de la petición: fuera de un rango razonable no hay
+        // arrastre (y «anio - 1» no puede desbordar).
+        if (empresa == null || !empresa.isArrastreVacaciones() || anio < ANIO_MINIMO || anio > ANIO_MAXIMO) {
             return Arrastre.NINGUNO;
         }
         int sobrante = Math.max(0, derecho(usuario, anio - 1) - contarDiasAprobados(usuario, anio - 1));
