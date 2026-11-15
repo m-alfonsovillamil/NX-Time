@@ -568,6 +568,18 @@ class AuthRepositoryImpl(
         )
     }
 
+    override suspend fun getJustificantes(peticiones: List<Long>) = apiService.getJustificantes(peticiones)
+
+    override suspend fun subirJustificante(
+        peticionId: Long,
+        contenido: ByteArray,
+        nombre: String,
+        mime: String
+    ): Response<com.nxtime.app.data.dto.JustificanteDTO> {
+        val cuerpo = contenido.toRequestBody(mime.toMediaTypeOrNull())
+        return apiService.subirJustificante(peticionId, MultipartBody.Part.createFormData("fichero", nombre, cuerpo))
+    }
+
     override suspend fun descargarAdjunto(adjuntoId: Long): Response<ResponseBody> {
         return apiService.descargarAdjunto(adjuntoId)
     }

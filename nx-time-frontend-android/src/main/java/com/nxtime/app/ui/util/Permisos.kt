@@ -81,6 +81,15 @@ object Permisos {
     fun puedeVerAuditoria(authorities: Set<String>): Boolean =
         "fichaje:auditoria" in authorities
 
+    /**
+     * Ve el justificante de la ausencia de otra persona
+     * (`ausencia:justificante:leer`, ADR 062): RRHH y ADMIN. Es un dato de
+     * salud; la app no lo enseña aún (se ve en la web), pero el permiso se
+     * empareja aquí como todos.
+     */
+    fun puedeVerJustificantes(authorities: Set<String>): Boolean =
+        "ausencia:justificante:leer" in authorities
+
     /** Exporta los informes en Excel y PDF (`informe:exportar`). */
     fun puedeExportarInformes(authorities: Set<String>): Boolean =
         "informe:exportar" in authorities

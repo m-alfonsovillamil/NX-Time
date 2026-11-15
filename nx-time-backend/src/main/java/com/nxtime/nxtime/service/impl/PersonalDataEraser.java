@@ -54,7 +54,12 @@ class PersonalDataEraser {
         // no dejaría borrar el CV.
         int candidaturas = jdbc.update("DELETE FROM candidaturas WHERE usuario_id = ?", usuarioId);
         // CV y foto, vigentes y antiguos. adjunto_datos se va en cascada.
-        int adjuntos = jdbc.update("DELETE FROM adjuntos WHERE usuario_id = ?", usuarioId);
+        int adjuntos = jdbc.update("DELETE FROM adjuntos WHERE usuario_id = ?", usuarioId)
+                // Los justificantes de sus ausencias (ADR 062): datos de salud.
+                + jdbc.update("""
+                        DELETE FROM justificantes_ausencia
+                         WHERE peticion_id IN (SELECT id FROM peticiones_ausencia WHERE usuario_id = ?)
+                        """, usuarioId);
         int avisos = jdbc.update("DELETE FROM avisos WHERE destinatario_id = ?", usuarioId);
         int sesiones = jdbc.update("DELETE FROM refresh_tokens WHERE usuario_id = ?", usuarioId);
         // Los móviles que recibían sus push (Fase B5): identifican aparatos de

@@ -433,6 +433,14 @@
     <string name="ausencias_titulo">Mis ausencias</string>
     <string name="ausencias_vacio_titulo">No tienes solicitudes</string>
     <string name="ausencias_vacio_texto">Aquí verás las ausencias que solicites y su estado.</string>
+    <!-- ADR 062: justificante de la ausencia (dato de salud: solo la persona y RRHH) -->
+    <string name="justificante_sin">Sin justificante</string>
+    <string name="justificante_adjuntado">Justificante: %1$s</string>
+    <string name="justificante_adjuntar">Adjuntar justificante</string>
+    <string name="justificante_cambiar">Cambiar</string>
+    <string name="justificante_subido">Justificante adjuntado. Solo lo veis tú y RRHH.</string>
+    <string name="justificante_vacio">El fichero está vacío.</string>
+    <string name="justificante_grande">El justificante no puede pasar de 5 MB.</string>
     <string name="ausencias_estado_pendiente">Pendiente</string>
     <string name="ausencias_filtro_pendientes">Pendientes</string>
     <string name="ausencias_filtro_aprobadas">Aprobadas</string>

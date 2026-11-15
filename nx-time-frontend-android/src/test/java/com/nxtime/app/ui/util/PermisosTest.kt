@@ -51,7 +51,7 @@ class PermisosTest {
     private val deRrhh = deGestor + setOf(
         "empleado:gestionar", "empleado:configurar", "departamento:gestionar",
         "correccion:disputa:resolver", "fichaje:corregir", "fichaje:auditoria",
-        "informe:exportar"
+        "informe:exportar", "ausencia:justificante:leer"
     )
     private val deAdmin = deRrhh + setOf("gestor:crear", "denuncia:instruir")
 
@@ -116,6 +116,9 @@ class PermisosTest {
         assertTrue(Permisos.puedeVerAuditoria(setOf("fichaje:auditoria")))
         assertTrue(Permisos.puedeDarPorBueno(setOf("correccion:aprobar")))
         assertTrue(Permisos.puedeExportarInformes(setOf("informe:exportar")))
+        assertTrue(Permisos.puedeVerJustificantes(setOf("ausencia:justificante:leer")))
+        assertFalse(Permisos.puedeVerJustificantes(deGestor))
+        assertTrue(Permisos.puedeVerJustificantes(deRrhh))
         assertTrue(Permisos.puedeCrearGestores(setOf("gestor:crear")))
         assertTrue(Permisos.puedeGestionarCalendario(setOf("calendario:gestionar")))
         assertTrue(Permisos.puedeGestionarProyectos(setOf("proyecto:gestionar")))

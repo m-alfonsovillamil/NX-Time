@@ -80,6 +80,19 @@ export const ausencias = {
   resueltaPor: (nombre: string) => `Resuelta por ${nombre}`,
   respuesta: (texto: string) => `Respuesta: ${texto}`,
   motivo: (texto: string) => `Motivo: ${texto}`,
+  // ADR 062: un dato de salud; solo lo ven la persona y RRHH.
+  justificante: {
+    columna: 'Justificante',
+    ver: (nombre: string) => `Ver ${nombre}`,
+    adjuntar: 'Adjuntar justificante',
+    cambiar: 'Cambiar',
+    quitar: 'Quitar',
+    subido: 'Justificante adjuntado. Solo lo veis tú y RRHH.',
+    quitado: 'Justificante quitado.',
+    vacio: 'El fichero está vacío.',
+    grande: 'El justificante no puede pasar de 5 MB.',
+    errorDescarga: 'No se ha podido descargar el justificante.',
+  },
 
   solicitud: {
     titulo: 'Solicitar ausencia',

@@ -108,6 +108,15 @@ public class ConservacionDeDatos {
                    AND hora_entrada < ?
                 """, Timestamp.from(ahora.atOffset(ZoneOffset.UTC).minusMonths(MESES_DE_UBICACION).toInstant())));
 
+        // Los justificantes (ADR 062), lo mismo que el registro que explican:
+        // cuatro años desde que acabó la ausencia.
+        paso(hecho, "justificantes", () -> jdbc.update("""
+                DELETE FROM justificantes_ausencia j
+                 USING peticiones_ausencia p
+                 WHERE p.id = j.peticion_id AND p.fecha_fin < ?
+                """, java.sql.Date.valueOf(java.time.LocalDate.ofInstant(ahora, ZoneOffset.UTC)
+                        .minusYears(ANIOS_DEL_REGISTRO))));
+
         paso(hecho, "ejecucionesDeTareas", () -> jdbc.update(
                 "DELETE FROM ejecuciones_tarea WHERE inicio < ?", antes(ahora, EJECUCIONES)));
 

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { reiniciarEstadoDeRed } from '../../api/cliente';
 import { cerrarSesion } from '../../api/sesion';
+import { ausencias } from '../../i18n/es/ausencias';
 import { gestion } from '../../i18n/es/gestion';
 import { AUTHORITIES, pintar, sesionDe, simularApi } from '../../pruebas/api';
 import { AusenciasEquipo, PaginaAusenciasResueltas } from './AusenciasEquipo';
@@ -97,6 +98,26 @@ describe('ausencias del equipo', () => {
         ['/api/v1/ausencias/5/estado', { estado: 'RECHAZADA', comentario: 'Coincide con el cierre trimestral' }],
       ]),
     );
+  });
+
+  /* ADR 062: el gestor ni pregunta por los justificantes; RRHH los ve. */
+  it('el justificante: el gestor no lo pide, RRHH lo ve en la tarjeta', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/ausencias/gestor/pendientes': () => [SOLICITUD],
+      'GET /api/v1/ausencias/justificantes': () => ({
+        activo: true,
+        justificantes: [{ peticionId: 4, nombre: 'parte.pdf', mime: 'application/pdf', tamanoBytes: 900 }],
+      }),
+    });
+    const { unmount } = pintar(<AusenciasEquipo />, { sesion: sesionDe('GESTOR') });
+    await screen.findByRole('list', { name: G.pendientes });
+    expect(llamadas.a('GET', '/api/v1/ausencias/justificantes')).toHaveLength(0);
+    unmount();
+
+    pintar(<AusenciasEquipo />, { sesion: sesionDe('RRHH') });
+    expect(await screen.findByRole('button', { name: ausencias.justificante.ver('parte.pdf') })).toBeTruthy();
+    // Es de otra persona: ni cambiarlo ni quitarlo.
+    expect(screen.queryByRole('button', { name: ausencias.justificante.quitar })).toBeNull();
   });
 
   it('/ausencias-equipo/resueltas abre esa pestaña, con quién resolvió y su respuesta', async () => {

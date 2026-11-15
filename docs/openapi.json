@@ -43,6 +43,9 @@
     "name" : "Departamentos",
     "description" : "Departamentos de la empresa y a cuál pertenece cada empleado."
   }, {
+    "name" : "Justificantes",
+    "description" : "El justificante de una ausencia: solo la persona y RRHH/ADMIN."
+  }, {
     "name" : "Proyectos",
     "description" : "Proyectos de la empresa, asignaciones con vigencia y horas imputadas."
   }, {
@@ -424,6 +427,39 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/empresa/justificantes" : {
+      "put" : {
+        "tags" : [ "Justificantes" ],
+        "summary" : "Activar los justificantes en las ausencias",
+        "description" : "Apagado por defecto. Desactivarlo no borra los que haya: se siguen viendo.",
+        "operationId" : "activarJustificantes",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ActivarJustificantesRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JustificantesResponse"
                 }
               }
             }
@@ -5678,6 +5714,126 @@
         } ]
       }
     },
+    "/api/v1/ausencias/{id}/justificante" : {
+      "get" : {
+        "tags" : [ "Justificantes" ],
+        "summary" : "Descargar el justificante de una ausencia",
+        "description" : "La persona, o quien tenga ausencia:justificante:leer en su empresa (queda anotado).",
+        "operationId" : "descargarJustificante",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "403" : {
+            "description" : "Ni es tuya ni puedes ver justificantes de otros",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "La ausencia no existe o no tiene justificante",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Justificantes" ],
+        "summary" : "Adjuntar el justificante de una ausencia mía",
+        "description" : "multipart/form-data, campo «fichero». PDF, JPEG o PNG, comprobado por los primeros bytes. Máximo 5 MB. Reemplaza el que hubiera.",
+        "operationId" : "subirJustificante",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "fichero" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "fichero" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "403" : {
+            "description" : "La ausencia es de otra persona o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "La empresa no tiene activados los justificantes",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Justificantes" ],
+        "summary" : "Quitar el justificante de una ausencia mía",
+        "operationId" : "borrarJustificante",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/proyectos/{id}" : {
       "get" : {
         "tags" : [ "Proyectos" ],
@@ -10722,6 +10878,41 @@
         } ]
       }
     },
+    "/api/v1/ausencias/justificantes" : {
+      "get" : {
+        "tags" : [ "Justificantes" ],
+        "summary" : "Los justificantes de unas ausencias",
+        "description" : "Dice si la empresa los tiene activados y, de las ausencias pedidas (hasta 200), los justificantes que quien pregunta puede ver: los suyos, y con ausencia:justificante:leer los de su empresa. Sin los bytes.",
+        "operationId" : "justificantesDeAusencias",
+        "parameters" : [ {
+          "name" : "peticiones",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JustificantesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/ausencias/gestor/pendientes" : {
       "get" : {
         "tags" : [ "Ausencias" ],
@@ -11797,6 +11988,52 @@
         "properties" : {
           "nombre" : {
             "type" : "string"
+          }
+        }
+      },
+      "ActivarJustificantesRequest" : {
+        "type" : "object",
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "activo" ]
+      },
+      "JustificanteResponse" : {
+        "type" : "object",
+        "properties" : {
+          "peticionId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "mime" : {
+            "type" : "string"
+          },
+          "tamanoBytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "subidoEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "JustificantesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "activo" : {
+            "type" : "boolean"
+          },
+          "justificantes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/JustificanteResponse"
+            }
           }
         }
       },

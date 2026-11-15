@@ -89,6 +89,22 @@ export const empresa = {
       preguntada: 'Desde ahora se pregunta presencial o a distancia al entrar.',
       noPreguntada: 'Ya no se pregunta presencial o a distancia.',
     },
+    // ADR 062.
+    justificantes: {
+      titulo: 'Justificantes en las ausencias',
+      texto:
+        'Que cada persona pueda adjuntar a su ausencia un parte o un justificante médico. Solo lo ven ella y RRHH o ADMIN; el gestor aprueba la ausencia sin verlo, y cada vez que alguien abre el de otra persona queda anotado.',
+      activar: 'Dejar adjuntar justificantes',
+      guardar: 'Aplicar',
+      activados: 'Ya se pueden adjuntar justificantes.',
+      desactivados: 'Ya no se pueden adjuntar. Los que hay se siguen viendo.',
+      confirmarTitulo: '¿Dejar adjuntar justificantes?',
+      confirmarSalud:
+        'Un justificante médico es un dato de salud (art. 9 del RGPD): la empresa solo puede pedirlo para lo que diga la ley o el convenio, y tiene que informar antes a la plantilla.',
+      confirmarAsesoria:
+        'Revisadlo antes con quien os asesore en protección de datos. Se borran a los cuatro años de acabar la ausencia.',
+      confirmar: 'Sí, dejar adjuntarlos',
+    },
     // ADR 056.
     ubicacion: {
       titulo: 'Ubicación al fichar',
@@ -170,6 +186,7 @@ export const empresa = {
       INFORME_EMPRESA: 'Excel de horas',
       DENUNCIA: 'Expediente de denuncia',
       EXPORTACION: 'Exportación',
+      JUSTIFICANTE: 'Justificante de ausencia',
     },
     varias: 'Varias personas',
     denuncia: 'No se anota',

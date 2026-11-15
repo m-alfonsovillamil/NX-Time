@@ -76,6 +76,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/empresa/justificantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Activar los justificantes en las ausencias
+         * @description Apagado por defecto. Desactivarlo no borra los que haya: se siguen viendo.
+         */
+        put: operations["activarJustificantes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/empresa/canal-denuncias": {
         parameters: {
             query?: never;
@@ -1683,6 +1703,31 @@ export interface paths {
          */
         post: operations["requestAbsence"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ausencias/{id}/justificante": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar el justificante de una ausencia
+         * @description La persona, o quien tenga ausencia:justificante:leer en su empresa (queda anotado).
+         */
+        get: operations["descargarJustificante"];
+        put?: never;
+        /**
+         * Adjuntar el justificante de una ausencia mía
+         * @description multipart/form-data, campo «fichero». PDF, JPEG o PNG, comprobado por los primeros bytes. Máximo 5 MB. Reemplaza el que hubiera.
+         */
+        post: operations["subirJustificante"];
+        /** Quitar el justificante de una ausencia mía */
+        delete: operations["borrarJustificante"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3444,6 +3489,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ausencias/justificantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Los justificantes de unas ausencias
+         * @description Dice si la empresa los tiene activados y, de las ausencias pedidas (hasta 200), los justificantes que quien pregunta puede ver: los suyos, y con ausencia:justificante:leer los de su empresa. Sin los bytes.
+         */
+        get: operations["justificantesDeAusencias"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ausencias/gestor/pendientes": {
         parameters: {
             query?: never;
@@ -3833,6 +3898,23 @@ export interface components {
         };
         SimpleUserDTO: {
             nombre?: string;
+        };
+        ActivarJustificantesRequest: {
+            activo: boolean;
+        };
+        JustificanteResponse: {
+            /** Format: int64 */
+            peticionId?: number;
+            nombre?: string;
+            mime?: string;
+            /** Format: int64 */
+            tamanoBytes?: number;
+            /** Format: date-time */
+            subidoEn?: string;
+        };
+        JustificantesResponse: {
+            activo?: boolean;
+            justificantes?: components["schemas"]["JustificanteResponse"][];
         };
         UpdateComplaintChannelRequest: {
             /** Format: int64 */
@@ -6199,6 +6281,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    activarJustificantes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivarJustificantesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JustificantesResponse"];
                 };
             };
         };
@@ -10500,6 +10606,95 @@ export interface operations {
             };
         };
     };
+    descargarJustificante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ni es tuya ni puedes ver justificantes de otros */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description La ausencia no existe o no tiene justificante */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    subirJustificante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    fichero: string;
+                };
+            };
+        };
+        responses: {
+            /** @description La ausencia es de otra persona o de otra empresa */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description La empresa no tiene activados los justificantes */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    borrarJustificante: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     detalle_1: {
         parameters: {
             query?: {
@@ -14298,6 +14493,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    justificantesDeAusencias: {
+        parameters: {
+            query?: {
+                peticiones?: number[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JustificantesResponse"];
                 };
             };
         };
