@@ -153,6 +153,45 @@ public class NotificationListener {
     }
 
     /**
+     * Una ausencia cancelada (ADR 058). Al dueño, si se la anuló otra persona,
+     * aviso y correo: se entera de que esos días vuelve a trabajar. A quien
+     * aprueba, si la retiró su dueño, solo el aviso: es una cortesía, como la
+     * petición nueva sin responder.
+     */
+    @Async(AsyncConfig.EMAIL_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAbsenceCancelled(NotificationEvents.AbsenceCancelled evento) {
+        AbsenceRequest peticion = evento.peticion();
+        User dueno = peticion.getUsuario();
+        User quien = peticion.getCanceladaPor();
+        for (User destinatario : evento.destinatarios()) {
+            boolean esElDueno = destinatario.getId() == dueno.getId();
+            avisar(new CreateNoticeCommand(
+                    peticion.getEmpresa().getId(),
+                    destinatario.getId(),
+                    NoticeType.AUSENCIA_CANCELADA,
+                    esElDueno
+                            ? "Han anulado tu ausencia"
+                            : dueno.getNombre() + " ha cancelado una ausencia aprobada",
+                    rango(peticion) + (peticion.getMotivoCancelacion() != null
+                            ? ". " + peticion.getMotivoCancelacion() : ""),
+                    esElDueno ? NoticeType.AUSENCIA_CANCELADA.getRutaDestinoPorDefecto() : "ausencias-equipo/resueltas"));
+            if (esElDueno) {
+                emailSender.enviar(
+                        dueno.getEmail(),
+                        "Han anulado tu ausencia",
+                        "absence-cancelled",
+                        variables(
+                                "nombreEmpleado", dueno.getNombre(),
+                                "tipo", peticion.getTipo().getEtiqueta(),
+                                "fechaInicio", peticion.getFechaInicio(),
+                                "fechaFin", peticion.getFechaFin(),
+                                "quien", quien != null ? quien.getNombre() : "un gestor"));
+            }
+        }
+    }
+
+    /**
      * Solo el aviso dentro de la aplicación.
      *
      * El correo de bienvenida de la Fase 10 ya no sale de aquí desde el

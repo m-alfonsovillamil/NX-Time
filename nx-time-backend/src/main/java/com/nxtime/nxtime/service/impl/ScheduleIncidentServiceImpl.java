@@ -330,9 +330,7 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
 
     static ScheduleIncidentResponse toResponse(ScheduleIncident incidencia) {
         User persona = incidencia.getUsuario();
-        String nombre = persona.getApellidos() == null || persona.getApellidos().isBlank()
-                ? persona.getNombre()
-                : persona.getNombre() + " " + persona.getApellidos();
+        String nombre = persona.nombreCompleto();
         return new ScheduleIncidentResponse(
                 incidencia.getId(),
                 persona.getId(),
@@ -346,7 +344,7 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
                 incidencia.getJustificacion(),
                 incidencia.getJustificadaEn(),
                 incidencia.getComentarioResolucion(),
-                incidencia.getResueltaPor() != null ? incidencia.getResueltaPor().getNombre() : null,
+                incidencia.getResueltaPor() != null ? incidencia.getResueltaPor().nombreCompleto() : null,
                 incidencia.getResueltaEn());
     }
 }

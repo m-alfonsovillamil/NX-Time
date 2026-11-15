@@ -717,7 +717,7 @@ public class OvertimeServiceImpl implements OvertimeService {
         return new OvertimeAlertResponse(
                 aviso.getId(),
                 aviso.getUsuario().getId(),
-                aviso.getUsuario().getNombre(),
+                aviso.getUsuario().nombreCompleto(),
                 aviso.getTipo().name(),
                 aviso.getFecha(),
                 semanal ? aviso.getFecha().plusDays(6) : aviso.getFecha(),
@@ -726,7 +726,7 @@ public class OvertimeServiceImpl implements OvertimeService {
                 aviso.getRegistro() == null ? null : aviso.getRegistro().getId(),
                 aviso.getEstado().name(),
                 aviso.getJustificacion(),
-                aviso.getRevisadoPor() == null ? null : aviso.getRevisadoPor().getNombre(),
+                aviso.getRevisadoPor() == null ? null : aviso.getRevisadoPor().nombreCompleto(),
                 aviso.getFechaRevision());
     }
 }

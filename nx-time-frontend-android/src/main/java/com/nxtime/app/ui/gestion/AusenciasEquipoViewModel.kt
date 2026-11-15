@@ -162,6 +162,31 @@ class AusenciasEquipoViewModel(
         }
     }
 
+    /**
+     * Anula una ausencia aprobada (ADR 058). Como al rechazar, el motivo es
+     * obligatorio (el backend responde 400 sin él) y se para aquí antes.
+     */
+    fun anular(peticionId: Long, motivo: String) {
+        if (motivo.isBlank()) {
+            _uiState.update { it.copy(error = MensajeUi.Recurso(R.string.resueltas_anular_motivo_obligatorio)) }
+            return
+        }
+        _uiState.update { it.copy(resolviendo = peticionId, error = null) }
+        viewModelScope.launch {
+            try {
+                val respuesta = authRepository.cancelarAusencia(peticionId, motivo.trim())
+                if (respuesta.isSuccessful) {
+                    _uiState.update { it.copy(resolviendo = null) }
+                    cargar()
+                } else {
+                    _uiState.update { it.copy(resolviendo = null, error = ApiErrorParser.mensajeDe(respuesta)) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(resolviendo = null, error = ApiErrorParser.mensajeDeRed(e)) }
+            }
+        }
+    }
+
     fun descartarError() = _uiState.update { it.copy(error = null) }
 
 }

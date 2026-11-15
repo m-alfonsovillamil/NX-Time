@@ -206,7 +206,7 @@ public class ProjectServiceImpl implements ProjectService {
                     // que cualquier participio concordado se equivoca la
                     // mitad de las veces ("Ana ya está asignado").
                     throw new BusinessException(
-                            persona.getNombre() + " ya tiene una asignación en "
+                            persona.nombreCompleto() + " ya tiene una asignación en "
                                     + existente.getProyecto().getCodigo() + " en esas fechas.");
                 });
 
@@ -293,7 +293,7 @@ public class ProjectServiceImpl implements ProjectService {
             if (mensajeCompleto(e).contains(RESTRICCION_SOLAPE)) {
                 // Sin participio concordado, por lo mismo que arriba.
                 throw new BusinessException(
-                        persona.getNombre() + " ya tiene una asignación en este proyecto en alguna "
+                        persona.nombreCompleto() + " ya tiene una asignación en este proyecto en alguna "
                                 + "de esas fechas. Cierra la anterior antes de crear la nueva.");
             }
             throw e;
@@ -372,7 +372,7 @@ public class ProjectServiceImpl implements ProjectService {
         return new ProjectAssignmentResponse(
                 asignacion.getId(),
                 persona.getId(),
-                persona.getNombre(),
+                persona.nombreCompleto(),
                 proyecto.getId(),
                 proyecto.getCodigo(),
                 proyecto.getNombre(),

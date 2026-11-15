@@ -67,6 +67,18 @@ export const cuenta = {
     adjuntoGrande: 'El fichero pasa de 5 MB.',
   },
 
+  preferenciasDeAvisos: {
+    titulo: 'Cómo te llegan los avisos',
+    descripcion: 'En la campana de la aplicación los tienes siempre. Aquí eliges cuáles te llegan también por correo y al móvil.',
+    categoria: 'Avisos',
+    correo: 'Correo',
+    push: 'Móvil',
+    correoDe: (categoria: string) => `${categoria} por correo`,
+    pushDe: (categoria: string) => `${categoria} al móvil`,
+    siempre: 'Siempre, por correo y al móvil',
+    guardado: 'Guardado.',
+  },
+
   ajustes: {
     indice: 'Secciones de los ajustes',
     titulo: 'Ajustes',

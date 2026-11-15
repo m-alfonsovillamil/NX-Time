@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!--/* Aviso al empleado: quien aprueba las ausencias ha anulado una suya (ADR 058). */-->
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:replace="~{email/layout :: marco('Han anulado tu ausencia', ~{:: #contenido})}">
+<div id="contenido">
+    <p>Hola <span th:text="${nombreEmpleado}">Empleado</span>,</p>
+
+    <p>
+        <span th:text="${quien}">Gestor</span> ha anulado tu
+        <span th:text="${tipo}">Vacaciones</span>
+        del <strong th:text="${#temporals.format(fechaInicio, 'dd/MM/yyyy')}">01/01/2026</strong>
+        al <strong th:text="${#temporals.format(fechaFin, 'dd/MM/yyyy')}">05/01/2026</strong>.
+        Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a tu saldo.
+    </p>
+
+    <!--/*
+      Sin el motivo que escribió quien la anuló (plan J, J5: minimización), como
+      en el correo de la resolución: se lee dentro de la aplicación.
+    */-->
+    <p style="margin-top: 16px;">El motivo lo tienes en la aplicación.</p>
+</div>
+</body>
+</html>

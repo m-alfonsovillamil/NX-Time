@@ -205,9 +205,32 @@ describe('ajustes', () => {
     return simularApi({
       'GET /api/v1/perfil/borrado': () => sinContenido(),
       'GET /api/v1/perfil/segundo-factor': () => ({ activo: false, obligatorio: false, codigosDeRecuperacion: 0 }),
+      'GET /api/v1/perfil/avisos': () => PREFERENCIAS,
       ...extra,
     });
   }
+
+  const PREFERENCIAS = [
+    { categoria: 'AUSENCIAS', etiqueta: 'Ausencias', descripcion: 'Peticiones', correo: true, push: true, configurable: true },
+    { categoria: 'OBLIGATORIOS', etiqueta: 'Cuenta, firma y denuncias', descripcion: 'No se pueden apagar', correo: true, push: true, configurable: false },
+  ];
+
+  it('cómo llegan los avisos: una casilla guarda esa categoría, y las obligatorias no tienen (ADR 059)', async () => {
+    const P = cuenta.preferenciasDeAvisos;
+    const llamadas = api({ 'PUT /api/v1/perfil/avisos': () => PREFERENCIAS });
+    pintar(<Ajustes />, { sesion: sesionDe('EMPLEADO') });
+
+    const correo = await screen.findByRole('checkbox', { name: P.correoDe('Ausencias') });
+    expect(screen.queryByRole('checkbox', { name: P.correoDe('Cuenta, firma y denuncias') })).toBeNull();
+    expect(screen.getByText(P.siempre)).toBeTruthy();
+    await userEvent.click(correo);
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/perfil/avisos').map((l) => l.cuerpo)).toEqual([
+        { preferencias: [{ categoria: 'AUSENCIAS', correo: false, push: true }] },
+      ]),
+    );
+  });
 
   it('las notificaciones: sin configurar se dice, y encenderlas cambia la tarjeta', async () => {
     const N = cuenta.ajustes.notificaciones;

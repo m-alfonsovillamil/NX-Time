@@ -21,6 +21,7 @@ import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Icono, type NombreIcono } from '../../componentes/Icono';
 import { gestion } from '../../i18n/es/gestion';
 import { bandejasPara, usePendientes } from '../../navegacion/pendientes';
+import { EquipoAhora } from './EquipoAhora';
 import { menuPara, SECCIONES } from '../../navegacion/secciones';
 
 const P = gestion.panel;
@@ -74,6 +75,9 @@ export function PanelGestion() {
           }
         </EstadoDeConsulta>
       </section>
+
+      {/* Plan N, paso N7: quién está trabajando ahora y quién no ha fichado. */}
+      {authorities.includes('fichaje:leer:equipo') && <EquipoAhora />}
 
       <section className="nx-tarjeta" aria-labelledby="panel-accesos">
         <h2 id="panel-accesos">{P.accesos}</h2>

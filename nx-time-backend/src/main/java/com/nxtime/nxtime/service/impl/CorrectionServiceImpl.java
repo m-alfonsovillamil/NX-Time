@@ -740,8 +740,8 @@ public class CorrectionServiceImpl implements CorrectionService {
         return new CorrectionResponse(
                 solicitud.getId(),
                 fichaje.getId(),
-                new SimpleUserDTO(solicitud.getDuenoDelFichaje().getNombre()),
-                new SimpleUserDTO(solicitud.getSolicitante().getNombre()),
+                SimpleUserDTO.de(solicitud.getDuenoDelFichaje()),
+                SimpleUserDTO.de(solicitud.getSolicitante()),
                 fichaje.getHoraEntrada(),
                 fichaje.getHoraSalida(),
                 solicitud.getHoraEntradaPropuesta(),
@@ -750,8 +750,7 @@ public class CorrectionServiceImpl implements CorrectionService {
                 solicitud.getPausaFinPropuesta(),
                 solicitud.getMotivo(),
                 solicitud.getEstado(),
-                solicitud.getAprobador() != null
-                        ? new SimpleUserDTO(solicitud.getAprobador().getNombre()) : null,
+                SimpleUserDTO.de(solicitud.getAprobador()),
                 solicitud.getFechaResolucion(),
                 solicitud.getComentarioResolucion(),
                 solicitud.getMotivoDisputa(),

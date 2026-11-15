@@ -185,7 +185,7 @@ public class AddedPauseServiceImpl implements AddedPauseService {
                         p.getFin(),
                         p.getSegundos() / 60,
                         p.getMotivo(),
-                        new SimpleUserDTO(p.getCreadaPor().getNombre()),
+                        SimpleUserDTO.de(p.getCreadaPor()),
                         p.getCreadaEn(),
                         p.getSolicitud() != null))
                 .toList();

@@ -38,10 +38,21 @@ object ReglaDelRecordatorio {
      * exactamente lo que hace que se silencien las notificaciones de una
      * aplicación.
      */
-    fun toca(tipo: TipoDeAviso, hayJornadaAbierta: Boolean, dia: DayOfWeek): Boolean {
+    fun toca(
+        tipo: TipoDeAviso,
+        hayJornadaAbierta: Boolean,
+        dia: DayOfWeek,
+        laborableSegunElServidor: Boolean = true
+    ): Boolean {
         if (!esLaborable(dia)) return false
         return when (tipo) {
-            TipoDeAviso.ENTRADA -> !hayJornadaAbierta
+            // Un festivo o un día de vacaciones aprobadas tampoco se ficha
+            // (plan N, paso N8): antes solo se miraba el fin de semana, y el
+            // día de Navidad o en mitad de unas vacaciones llegaba «¿se te ha
+            // olvidado fichar?». Lo sabe el servidor (`/fichaje/hoy`).
+            TipoDeAviso.ENTRADA -> !hayJornadaAbierta && laborableSegunElServidor
+            // Al de salida le da igual: si hay jornada abierta, se está
+            // trabajando, sea el día que sea, y hay que cerrarla.
             TipoDeAviso.SALIDA -> hayJornadaAbierta
         }
     }
