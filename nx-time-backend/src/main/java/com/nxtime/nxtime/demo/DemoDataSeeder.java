@@ -20,6 +20,13 @@ import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.JobApplication;
 import com.nxtime.nxtime.domain.JobPosting;
 import com.nxtime.nxtime.domain.JobPostingStatus;
+import com.nxtime.nxtime.domain.Kiosk;
+import com.nxtime.nxtime.domain.Modalidad;
+import com.nxtime.nxtime.domain.OrigenDelFichaje;
+import com.nxtime.nxtime.domain.PuntoDeFichaje;
+import com.nxtime.nxtime.domain.ScheduleAssignment;
+import com.nxtime.nxtime.domain.ScheduleSlot;
+import com.nxtime.nxtime.domain.ScheduleTemplate;
 import com.nxtime.nxtime.domain.HolidayScope;
 import com.nxtime.nxtime.domain.Notice;
 import com.nxtime.nxtime.domain.NoticeType;
@@ -30,7 +37,12 @@ import com.nxtime.nxtime.domain.SegundoFactor;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.domain.VacationBalance;
+import com.nxtime.nxtime.audit.Canonico;
+import com.nxtime.nxtime.dto.CorrectionRequestDTO;
+import com.nxtime.nxtime.dto.CorrectionResponse;
+import com.nxtime.nxtime.dto.MonthlySignatureResponse;
 import com.nxtime.nxtime.dto.OvertimeAlertResponse;
+import com.nxtime.nxtime.dto.ResolveCorrectionRequest;
 import com.nxtime.nxtime.dto.ReviewOvertimeRequest;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.AttachmentDataRepository;
@@ -43,6 +55,10 @@ import com.nxtime.nxtime.repository.DepartmentRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.JobApplicationRepository;
 import com.nxtime.nxtime.repository.JobPostingRepository;
+import com.nxtime.nxtime.repository.KioskRepository;
+import com.nxtime.nxtime.repository.ScheduleAssignmentRepository;
+import com.nxtime.nxtime.repository.ScheduleSlotRepository;
+import com.nxtime.nxtime.repository.ScheduleTemplateRepository;
 import com.nxtime.nxtime.repository.NoticeRepository;
 import com.nxtime.nxtime.repository.ProjectAssignmentRepository;
 import com.nxtime.nxtime.repository.ProjectRepository;
@@ -56,7 +72,10 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import com.nxtime.nxtime.service.CorrectionService;
+import com.nxtime.nxtime.service.MonthlySignatureService;
 import com.nxtime.nxtime.service.NationalHolidayGenerator;
+import com.nxtime.nxtime.service.ScheduleIncidentService;
 import com.nxtime.nxtime.service.OvertimeService;
 import com.nxtime.nxtime.service.ProjectAllocationService;
 import com.nxtime.nxtime.service.TrackingCode;
@@ -65,12 +84,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import javax.imageio.ImageIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,6 +161,13 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final SegundoFactorRepository segundoFactorRepository;
     private final SecretosTotp secretosTotp;
+    private final KioskRepository kioskRepository;
+    private final ScheduleTemplateRepository scheduleTemplateRepository;
+    private final ScheduleSlotRepository scheduleSlotRepository;
+    private final ScheduleAssignmentRepository scheduleAssignmentRepository;
+    private final ScheduleIncidentService scheduleIncidentService;
+    private final MonthlySignatureService monthlySignatureService;
+    private final CorrectionService correctionService;
 
     public DemoDataSeeder(
             CompanyRepository companyRepository,
@@ -163,7 +191,14 @@ public class DemoDataSeeder implements CommandLineRunner {
             ProjectAllocationService projectAllocationService,
             PasswordEncoder passwordEncoder,
             SegundoFactorRepository segundoFactorRepository,
-            SecretosTotp secretosTotp
+            SecretosTotp secretosTotp,
+            KioskRepository kioskRepository,
+            ScheduleTemplateRepository scheduleTemplateRepository,
+            ScheduleSlotRepository scheduleSlotRepository,
+            ScheduleAssignmentRepository scheduleAssignmentRepository,
+            ScheduleIncidentService scheduleIncidentService,
+            MonthlySignatureService monthlySignatureService,
+            CorrectionService correctionService
     ) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
@@ -187,6 +222,13 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.segundoFactorRepository = segundoFactorRepository;
         this.secretosTotp = secretosTotp;
+        this.kioskRepository = kioskRepository;
+        this.scheduleTemplateRepository = scheduleTemplateRepository;
+        this.scheduleSlotRepository = scheduleSlotRepository;
+        this.scheduleAssignmentRepository = scheduleAssignmentRepository;
+        this.scheduleIncidentService = scheduleIncidentService;
+        this.monthlySignatureService = monthlySignatureService;
+        this.correctionService = correctionService;
     }
 
     /** Le deja el segundo factor ya activado, con un secreto conocido (ver {@link #SECRETO_TOTP_DE_LUCIA}). */
@@ -257,12 +299,25 @@ public class DemoDataSeeder implements CommandLineRunner {
         sembrarAusencias(empleadosTech, gestorTech);
         sembrarAusencias(empleadosIberica, gestorIberica);
 
-        for (User empleado : empleadosTech) {
-            sembrarFichajes(empleado, techCorp);
-        }
-        for (User empleado : empleadosIberica) {
-            sembrarFichajes(empleado, consultoraIberica);
-        }
+        // Noviembre de 2026: la demo enseña también lo que se añadió después
+        // de escribir el seeder y salía vacío (revisión del 15/11). Lucía
+        // ficha en el kiosco de la recepción; Carlos llega tarde algunos días,
+        // para que su cuadrante tenga incidencias; y la Consultora Ibérica
+        // pregunta la modalidad y pide la ubicación, con un fichaje sin
+        // conexión que llegó tarde. Ibérica y no TechCorp porque los e2e de la
+        // web fichan con TechCorp, y encender esto allí les cambiaría el flujo.
+        Kiosk recepcion = crearKiosco(techCorp, adminTech, "Recepción");
+        consultoraIberica.setPreguntarModalidad(true);
+        consultoraIberica.setUbicacionAlFichar(true);
+        companyRepository.save(consultoraIberica);
+
+        sembrarFichajes(empleadosTech.get(0), techCorp, ComoFicha.NORMAL);
+        sembrarFichajes(empleadosTech.get(1), techCorp, ComoFicha.NORMAL);
+        sembrarFichajes(empleadosTech.get(2), techCorp, ComoFicha.NORMAL.llegandoTarde());
+        sembrarFichajes(empleadosTech.get(3), techCorp, ComoFicha.NORMAL.enKiosco(recepcion));
+        sembrarFichajes(empleadosIberica.get(0), consultoraIberica, ComoFicha.CON_UBICACION);
+        sembrarFichajes(empleadosIberica.get(1), consultoraIberica, ComoFicha.CON_UBICACION.conFichajesSinConexion());
+        sembrarFichajes(empleadosIberica.get(2), consultoraIberica, ComoFicha.CON_UBICACION);
 
         // Fase D. Sin esto, las barras de horas por proyecto salen
         // vacías en la demo desplegada y la pantalla de proyectos
@@ -307,6 +362,12 @@ public class DemoDataSeeder implements CommandLineRunner {
         // sitios que deciden qué es un exceso), y cada arranque de la
         // demo es una prueba de humo del proceso nocturno.
         sembrarHorasExtra(gestorTech, gestorIberica);
+
+        // Noviembre de 2026. Después de las horas extra a propósito: a quien
+        // tiene cuadrante se le miden contra él, y los avisos de la demo ya
+        // estaban calculados contra la jornada contratada.
+        sembrarCuadrantes(techCorp, List.of(empleadosTech.get(2), empleadosTech.get(3)));
+        sembrarFirmas(empleadosTech.get(0), empleadosTech.get(1), rrhhTech, gestorTech);
 
         // Fase G. Solo en TechCorp, que es la única empresa de la demo
         // con ADMIN: sin alguien que pueda instruirlas, la bandeja del
@@ -364,7 +425,7 @@ public class DemoDataSeeder implements CommandLineRunner {
      * la mitad de los empleados, así la demo también puede mostrar el
      * endpoint "fichaje activo" sin que haya que fichar a mano primero.
      */
-    private void sembrarFichajes(User empleado, Company empresa) {
+    private void sembrarFichajes(User empleado, Company empresa, ComoFicha como) {
         LocalDate hoy = LocalDate.now(MADRID_ZONE);
         LocalDate inicio = hoy.minusDays(90);
         // Variación determinista por usuario, para que no todos los
@@ -400,8 +461,11 @@ public class DemoDataSeeder implements CommandLineRunner {
                 continue; // este empleado aún no ha fichado hoy en la demo
             }
 
-            Instant horaEntrada = ZonedDateTime.of(fecha, LocalTime.of(9, 0).plusMinutes(jitterMinutos), MADRID_ZONE)
-                    .toInstant();
+            LocalTime entrada = como.conRetrasos() && llegaTarde(fecha, hoy)
+                    // De 9:20 a 9:34: más allá de los diez minutos de margen.
+                    ? LocalTime.of(9, 20).plusMinutes(fecha.toEpochDay() % 3 * 7)
+                    : LocalTime.of(9, 0).plusMinutes(jitterMinutos);
+            Instant horaEntrada = ZonedDateTime.of(fecha, entrada, MADRID_ZONE).toInstant();
             if (esHoy && horaEntrada.isAfter(Instant.now())) {
                 // Sembrando de madrugada, las nueve de hoy todavía no han
                 // llegado: esa jornada estaría abierta EN EL FUTURO. Se cuela
@@ -420,6 +484,7 @@ public class DemoDataSeeder implements CommandLineRunner {
                     .empresa(empresa)
                     .horaEntrada(horaEntrada)
                     .enPausa(false);
+            como.aplicar(builder, empleado, fecha, hoy, esHoy);
 
             if (esHoy) {
                 // Jornada de hoy: abierta, sin pausas todavía.
@@ -431,10 +496,11 @@ public class DemoDataSeeder implements CommandLineRunner {
                 // vacía -- con la jornada normal de 9:00 a 17:30 nadie
                 // se acerca a las nueve horas del art. 34.3 ET.
                 LocalTime salida = esJornadaLarga(empleado, fecha)
-                        ? LocalTime.of(20, 30)
-                        : LocalTime.of(17, 30);
-                Instant horaSalida = ZonedDateTime.of(fecha, salida.plusMinutes(jitterMinutos), MADRID_ZONE)
-                        .toInstant();
+                        ? LocalTime.of(20, 30).plusMinutes(jitterMinutos)
+                        : como.conRetrasos() && saleAntes(fecha, hoy)
+                                ? LocalTime.of(16, 40)
+                                : LocalTime.of(17, 30).plusMinutes(jitterMinutos);
+                Instant horaSalida = ZonedDateTime.of(fecha, salida, MADRID_ZONE).toInstant();
                 long segundosPausa = ChronoUnit.SECONDS.between(
                         LocalTime.of(0, 0), LocalTime.of(0, 30).plusMinutes(jitterMinutos % 5)); // ~30 min de comida
                 builder.horaSalida(horaSalida).segundosPausaAcumulados(Math.max(segundosPausa, 900));
@@ -460,6 +526,188 @@ public class DemoDataSeeder implements CommandLineRunner {
      */
     private boolean esJornadaLarga(User empleado, LocalDate fecha) {
         return (fecha.toEpochDay() + empleado.getId()) % 6 == 0;
+    }
+
+    /** Los días que llega tarde quien tiene retrasos: unos cuatro en las tres últimas semanas. */
+    private static boolean llegaTarde(LocalDate fecha, LocalDate hoy) {
+        return !fecha.isBefore(hoy.minusDays(21)) && fecha.toEpochDay() % 5 == 0;
+    }
+
+    /** Y los que se va antes de hora, sin coincidir con un retraso. */
+    private static boolean saleAntes(LocalDate fecha, LocalDate hoy) {
+        return !fecha.isBefore(hoy.minusDays(21)) && fecha.toEpochDay() % 7 == 2 && !llegaTarde(fecha, hoy);
+    }
+
+    /**
+     * Lo que distingue cómo ficha alguien en la demo (noviembre de 2026).
+     *
+     * Sin esto, las pantallas de cuadrantes, incidencias, kioscos, modalidad,
+     * ubicación y fichajes sin conexión salían vacías, y quien abre la demo no
+     * veía nada de lo añadido desde octubre.
+     *
+     * @param conRetrasos   llega tarde y se va antes algunos días recientes,
+     *                      para que su cuadrante tenga incidencias.
+     * @param kiosco        ficha en ese kiosco las tres últimas semanas.
+     * @param conUbicacion  dice la modalidad y la ubicación el último mes:
+     *                      presencial en la oficina; a distancia los viernes.
+     * @param sinConexion   la jornada de hace unos días llegó sin conexión y
+     *                      pasadas 72 h (queda por revisar), y la de ayer,
+     *                      sin conexión pero a tiempo.
+     */
+    private record ComoFicha(boolean conRetrasos, Kiosk kiosco, boolean conUbicacion, boolean sinConexion) {
+
+        static final ComoFicha NORMAL = new ComoFicha(false, null, false, false);
+        static final ComoFicha CON_UBICACION = new ComoFicha(false, null, true, false);
+
+        /** Una oficina de ejemplo, en el centro de Madrid. */
+        private static final double OFICINA_LATITUD = 40.4380;
+        private static final double OFICINA_LONGITUD = -3.6795;
+
+        ComoFicha llegandoTarde() {
+            return new ComoFicha(true, kiosco, conUbicacion, sinConexion);
+        }
+
+        ComoFicha enKiosco(Kiosk enEste) {
+            return new ComoFicha(conRetrasos, enEste, conUbicacion, sinConexion);
+        }
+
+        ComoFicha conFichajesSinConexion() {
+            return new ComoFicha(conRetrasos, kiosco, conUbicacion, true);
+        }
+
+        void aplicar(TimeEntry.TimeEntryBuilder fichaje, User empleado, LocalDate fecha, LocalDate hoy, boolean esHoy) {
+            if (kiosco != null && !fecha.isBefore(hoy.minusDays(21))) {
+                fichaje.kiosco(kiosco).origen(OrigenDelFichaje.KIOSCO);
+            }
+            if (conUbicacion && !fecha.isBefore(hoy.minusDays(30))) {
+                boolean aDistancia = fecha.getDayOfWeek() == java.time.DayOfWeek.FRIDAY;
+                PuntoDeFichaje punto = puntoDe(empleado, aDistancia);
+                fichaje.origen(OrigenDelFichaje.APP)
+                        .modalidad(aDistancia ? Modalidad.A_DISTANCIA : Modalidad.PRESENCIAL)
+                        .ubicacionEntrada(punto);
+                if (!esHoy) {
+                    fichaje.ubicacionSalida(punto);
+                }
+            }
+            if (sinConexion && !esHoy) {
+                if (fecha.equals(laborableDesde(hoy.minusDays(4)))) {
+                    // Llegó pasadas las 72 h (ADR 054): cuenta, pero alguien
+                    // tiene que darla por buena.
+                    fichaje.origen(OrigenDelFichaje.APP_SIN_CONEXION).revisarPorLlegarTarde(true);
+                } else if (fecha.equals(laborableDesde(hoy.minusDays(1)))) {
+                    fichaje.origen(OrigenDelFichaje.APP_SIN_CONEXION);
+                }
+            }
+        }
+
+        /** Ese día, o el viernes de antes si cae en fin de semana. */
+        private static LocalDate laborableDesde(LocalDate dia) {
+            LocalDate laborable = dia;
+            while (laborable.getDayOfWeek().getValue() >= 6) {
+                laborable = laborable.minusDays(1);
+            }
+            return laborable;
+        }
+
+        /**
+         * En la oficina, a unos metros según la persona; a distancia, desde
+         * casa, salvo quien no da permiso (se ficha igual, «sin ubicación»).
+         */
+        private static PuntoDeFichaje puntoDe(User empleado, boolean aDistancia) {
+            double desvio = (empleado.getId() % 7) / 10_000d;
+            if (!aDistancia) {
+                return PuntoDeFichaje.capturada(OFICINA_LATITUD + desvio, OFICINA_LONGITUD - desvio,
+                        (int) (10 + empleado.getId() % 20));
+            }
+            if (empleado.getId() % 2 == 0) {
+                return PuntoDeFichaje.sin(PuntoDeFichaje.Estado.DENEGADA);
+            }
+            return PuntoDeFichaje.capturada(OFICINA_LATITUD + 0.03 + desvio, OFICINA_LONGITUD + 0.02, 35);
+        }
+    }
+
+    /**
+     * Un kiosco ya emparejado (ADR 033). El token es uno cualquiera: la tablet
+     * de la demo no existe, así que no tiene que servir para entrar, solo que
+     * el kiosco salga en la lista y los fichajes digan dónde se hicieron.
+     */
+    private Kiosk crearKiosco(Company empresa, User admin, String nombre) {
+        return kioskRepository.save(Kiosk.builder()
+                .empresa(empresa)
+                .nombre(nombre)
+                .tokenHash(Canonico.sha256(UUID.randomUUID().toString()))
+                .creadoPor(admin)
+                .creadoEn(Instant.now().minus(30, ChronoUnit.DAYS))
+                .ultimoUso(Instant.now().minus(1, ChronoUnit.DAYS))
+                .build());
+    }
+
+    /**
+     * Un cuadrante de oficina en turno partido para dos personas, y el
+     * detector de incidencias DE VERDAD sobre las tres últimas semanas, como
+     * con las horas extra: los datos de la demo no pueden contradecir a la
+     * lógica. Como Carlos llega tarde algunos días, salen sus incidencias; las
+     * de Lucía, ninguna, que es lo normal.
+     *
+     * Los tramos suman ocho horas (9:00-14:00 y 14:30-17:30), lo mismo que las
+     * jornadas sembradas una vez descontada la comida.
+     */
+    private void sembrarCuadrantes(Company empresa, List<User> personas) {
+        ScheduleTemplate oficina = scheduleTemplateRepository.save(ScheduleTemplate.builder()
+                .empresa(empresa)
+                .nombre("Oficina, turno partido")
+                .descripcion("De lunes a viernes, de 9:00 a 14:00 y de 14:30 a 17:30.")
+                .build());
+        for (short dia = 1; dia <= 5; dia++) {
+            scheduleSlotRepository.save(ScheduleSlot.builder().plantilla(oficina).diaSemana(dia).inicio(9 * 60).fin(14 * 60).build());
+            scheduleSlotRepository.save(ScheduleSlot.builder().plantilla(oficina).diaSemana(dia).inicio(14 * 60 + 30).fin(17 * 60 + 30).build());
+        }
+
+        LocalDate hoy = LocalDate.now(MADRID_ZONE);
+        LocalDate desde = hoy.minusWeeks(6).with(java.time.DayOfWeek.MONDAY);
+        for (User persona : personas) {
+            scheduleAssignmentRepository.save(ScheduleAssignment.builder()
+                    .empresa(empresa)
+                    .usuario(persona)
+                    .plantilla(oficina)
+                    .fechaInicio(desde)
+                    .build());
+        }
+
+        // El detector lee con consultas nativas: ver sembrarHorasExtra.
+        timeEntryRepository.flush();
+        scheduleAssignmentRepository.flush();
+        scheduleIncidentService.detectar(hoy.minusDays(21), hoy.minusDays(1));
+    }
+
+    /**
+     * Firmas del mes pasado (ADR 025), con los servicios de verdad: Javier
+     * firma y RRHH le da el visto bueno; Ana firma, pide después corregir un
+     * día de ese mes, se lo aprueban y su firma se invalida sola, que es lo
+     * que hace distinta a esta firma.
+     */
+    private void sembrarFirmas(User conVisado, User conCorreccion, User rrhh, User gestor) {
+        timeEntryRepository.flush();
+        YearMonth mesPasado = YearMonth.now(MADRID_ZONE).minusMonths(1);
+
+        MonthlySignatureResponse firma = monthlySignatureService.firmar(conVisado, mesPasado, "192.0.2.10");
+        monthlySignatureService.visar(firma.id(), rrhh);
+
+        monthlySignatureService.firmar(conCorreccion, mesPasado, "192.0.2.11");
+        Instant inicioDelMes = mesPasado.atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
+        Instant finDelMes = mesPasado.plusMonths(1).atDay(1).atStartOfDay(MADRID_ZONE).toInstant();
+        timeEntryRepository.findHistoryByUsuarioEntre(conCorreccion, inicioDelMes, finDelMes, PageRequest.of(0, 50))
+                .stream()
+                .filter(dia -> dia.getHoraSalida() != null && !dia.isAnulado())
+                .reduce((primero, segundo) -> segundo)
+                .ifPresent(dia -> {
+                    CorrectionResponse pedida = correctionService.solicitar(dia.getId(), new CorrectionRequestDTO(
+                            dia.getHoraEntrada().minus(20, ChronoUnit.MINUTES), dia.getHoraSalida(),
+                            "Entré a las ocho y media, pero el móvil se quedó sin batería y no pude fichar.",
+                            null, null, null), conCorreccion);
+                    correctionService.resolver(pedida.id(),
+                            new ResolveCorrectionRequest(true, "Comprobado con el control de acceso."), gestor);
+                });
     }
 
     /**
