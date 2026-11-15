@@ -132,6 +132,34 @@ class EquipoAhoraServiceImplTest {
         assertThat(foto.noLaborable()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("En fin de semana no le toca a quien no tiene cuadrante; con cuadrante, manda el cuadrante")
+    void finDeSemanaYDiaLibre() {
+        Instant domingo = ZonedDateTime.of(LocalDate.of(2026, 11, 15), LocalTime.of(11, 0), MADRID).toInstant();
+        service = new EquipoAhoraServiceImpl(userRepository, timeEntryRepository, nonWorkingDayService,
+                scheduleService, Clock.fixed(domingo, MADRID));
+        User sinCuadrante = persona(2L, "Ana", Role.EMPLEADO);
+        User trabajaElDomingo = persona(3L, "Bea", Role.EMPLEADO);
+        User libreEnCuadrante = persona(4L, "Carla", Role.EMPLEADO);
+        when(userRepository.findByEmpresaAndActivoTrue(empresa))
+                .thenReturn(List.of(sinCuadrante, trabajaElDomingo, libreEnCuadrante));
+        when(timeEntryRepository.findVivosDeUsuariosQueEmpiezanEntre(anyCollection(), any(), any())).thenReturn(List.of());
+        when(timeEntryRepository.findAbiertasDeEmpresa(empresa)).thenReturn(List.of());
+        when(nonWorkingDayService.motivosDelDia(anyCollection(), any())).thenReturn(Map.of());
+        when(scheduleService.equipo(any(), eq(gestora))).thenReturn(List.of(
+                new TeamScheduleEntryResponse(3L, "Bea Prueba", dia("10:00", 300)),
+                new TeamScheduleEntryResponse(4L, "Carla Prueba", dia(null, 0))));
+
+        EquipoAhoraResponse foto = service.ahora(gestora);
+
+        assertThat(estado(foto, 2L)).returns(EstadoAhora.NO_LABORABLE, PersonaAhora::estado)
+                .returns("Fin de semana", PersonaAhora::motivo);
+        assertThat(estado(foto, 3L)).returns(EstadoAhora.SIN_FICHAR, PersonaAhora::estado)
+                .returns(true, PersonaAhora::conRetraso);
+        assertThat(estado(foto, 4L)).returns(EstadoAhora.NO_LABORABLE, PersonaAhora::estado)
+                .returns("Libre según su cuadrante", PersonaAhora::motivo);
+    }
+
     private static TheoreticalDayResponse dia(String entrada, int minutos) {
         return new TheoreticalDayResponse(HOY, JornadaTeoricaService.Origen.CUADRANTE, minutos, entrada, List.of(), null, null);
     }

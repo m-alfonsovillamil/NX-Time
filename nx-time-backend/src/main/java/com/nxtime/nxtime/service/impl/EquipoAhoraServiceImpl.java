@@ -48,6 +48,9 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
     /** El margen de las incidencias de cuadrante (ADR 024). */
     static final Duration MARGEN = Duration.ofMinutes(10);
 
+    static final String MOTIVO_FIN_DE_SEMANA = "Fin de semana";
+    static final String MOTIVO_LIBRE_EN_CUADRANTE = "Libre según su cuadrante";
+
     private final UserRepository userRepository;
     private final TimeEntryRepository timeEntryRepository;
     private final NonWorkingDayService nonWorkingDayService;
@@ -88,20 +91,32 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
             abiertas.put(abierta.getUsuario().getId(), abierta);
         }
         Map<Long, NonWorkingDayService.Motivo> noLaborables = nonWorkingDayService.motivosDelDia(plantilla, hoy);
-        Map<Long, String> entradas = new HashMap<>();
+        // Quien tiene cuadrante hoy: su entrada, o null si hoy le toca libre.
+        Map<Long, String> conCuadrante = new HashMap<>();
         for (TeamScheduleEntryResponse cuadrante : scheduleService.equipo(hoy, actor)) {
-            if (cuadrante.dia() != null && cuadrante.dia().entrada() != null && cuadrante.dia().minutos() > 0) {
-                entradas.put(cuadrante.usuarioId(), cuadrante.dia().entrada());
+            if (cuadrante.dia() != null) {
+                conCuadrante.put(cuadrante.usuarioId(),
+                        cuadrante.dia().minutos() > 0 ? cuadrante.dia().entrada() : null);
             }
         }
+        boolean finDeSemana = hoy.getDayOfWeek().getValue() >= 6;
         LocalTime horaAhora = LocalTime.ofInstant(ahora, zona);
 
         List<PersonaAhora> personas = new ArrayList<>(plantilla.size());
         for (User persona : plantilla) {
             List<TimeEntry> suyas = deHoy.getOrDefault(persona.getId(), List.of());
             TimeEntry abierta = abiertas.get(persona.getId());
-            NonWorkingDayService.Motivo motivo = noLaborables.get(persona.getId());
-            String entradaPrevista = motivo == null ? entradas.get(persona.getId()) : null;
+            NonWorkingDayService.Motivo festivoOAusencia = noLaborables.get(persona.getId());
+            String entradaPrevista = festivoOAusencia == null ? conCuadrante.get(persona.getId()) : null;
+            // Por qué hoy no le toca, si no le toca. Los festivos y las ausencias
+            // los dice NonWorkingDayService. Además, con cuadrante manda el
+            // cuadrante (un día sin tramos es libre, aunque sea martes); sin él,
+            // el fin de semana. Se vio ejecutándolo un domingo: salía toda la
+            // plantilla «sin fichar».
+            String motivo = festivoOAusencia != null ? festivoOAusencia.texto()
+                    : conCuadrante.containsKey(persona.getId())
+                            ? (entradaPrevista == null ? MOTIVO_LIBRE_EN_CUADRANTE : null)
+                            : finDeSemana ? MOTIVO_FIN_DE_SEMANA : null;
 
             EstadoAhora estado;
             Instant desde = null;
@@ -125,7 +140,7 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
                     estado,
                     desde,
                     minutosDeHoy(suyas, abierta, ahora),
-                    motivo == null ? null : motivo.texto(),
+                    motivo,
                     entradaPrevista,
                     conRetraso,
                     abierta != null ? abierta.getModalidad() : null));
