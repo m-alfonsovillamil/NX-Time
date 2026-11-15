@@ -34,6 +34,7 @@ export const cuenta = {
     jornadaValor: (horas: string) => `${horas} horas`,
     vacaciones: 'Vacaciones de este año',
     vacacionesValor: (dias: number) => `${dias} días`,
+    fechaAlta: 'Fecha de alta',
     soloRrhh: 'Estos datos los gestiona Recursos Humanos.',
     sinDato: '—',
     nombreObligatorio: 'El nombre no puede quedarse vacío.',

@@ -12956,6 +12956,11 @@
           "codigoEmpleado" : {
             "type" : "string",
             "description" : "Su número en el ERP o en nóminas (ADR 053), o null"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Su fecha de alta (plan N, N10), o null: entonces, el día que se importa"
           }
         }
       },
@@ -14118,6 +14123,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -14227,6 +14236,11 @@
             "type" : "string",
             "description" : "Null: no tocar. Vacío: quitarlo.",
             "maxLength" : 50
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de alta en la empresa (plan N, N10). Null: no tocar."
           }
         }
       },
@@ -14272,6 +14286,10 @@
           },
           "codigoEmpleado" : {
             "type" : "string"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -15440,6 +15458,10 @@
           },
           "codigoEmpleado" : {
             "type" : "string"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },

@@ -86,6 +86,7 @@ public class PersonalDataPdfGenerator {
         fila(ficha, "Puesto", texto(p.puesto()));
         fila(ficha, "Código de empleado", texto(p.codigoEmpleado()));
         fila(ficha, "Fecha de nacimiento", p.fechaNacimiento() != null ? p.fechaNacimiento().format(FECHA) : "—");
+        fila(ficha, "Fecha de alta", p.fechaAlta() != null ? p.fechaAlta().format(FECHA) : "—");
         fila(ficha, "Jornada semanal", p.horasSemanales() != null
                 ? p.horasSemanales().stripTrailingZeros().toPlainString().replace('.', ',') + " h" : "—");
         fila(ficha, "Cuenta", p.activo() ? "Activa" : "De baja desde " + en.fechaHora(p.fechaBaja()));

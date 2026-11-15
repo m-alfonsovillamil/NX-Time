@@ -47,11 +47,19 @@ public record UpdateEmployeeProfileRequest(
         Integer diasVacaciones,
 
         @io.swagger.v3.oas.annotations.media.Schema(description = "Null: no tocar. Vacío: quitarlo.", maxLength = 50)
-        String codigoEmpleado
+        String codigoEmpleado,
+
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Fecha de alta en la empresa (plan N, N10). Null: no tocar.")
+        java.time.LocalDate fechaAlta
 ) {
 
     /** Sin código: como era el cuerpo antes de V49. */
     public UpdateEmployeeProfileRequest(BigDecimal horasSemanales, Integer diasVacaciones) {
-        this(horasSemanales, diasVacaciones, null);
+        this(horasSemanales, diasVacaciones, null, null);
+    }
+
+    /** Sin fecha de alta: como era el cuerpo antes de V56. */
+    public UpdateEmployeeProfileRequest(BigDecimal horasSemanales, Integer diasVacaciones, String codigoEmpleado) {
+        this(horasSemanales, diasVacaciones, codigoEmpleado, null);
     }
 }

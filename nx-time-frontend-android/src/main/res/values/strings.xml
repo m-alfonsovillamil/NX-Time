@@ -644,6 +644,7 @@
     <string name="perfil_jornada">Jornada semanal</string>
     <string name="perfil_jornada_valor">%1$s horas</string>
     <string name="perfil_vacaciones">Vacaciones de este año</string>
+    <string name="perfil_fecha_alta">Fecha de alta</string>
     <string name="perfil_vacaciones_valor">%1$d días</string>
     <string name="perfil_laborales_solo_rrhh">Estos datos los gestiona Recursos Humanos.</string>
     <string name="perfil_sin_dato">—</string>

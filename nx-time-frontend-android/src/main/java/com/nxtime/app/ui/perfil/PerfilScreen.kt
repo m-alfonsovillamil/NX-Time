@@ -346,6 +346,10 @@ private fun DatosLaborales(perfil: PerfilDTO, proyecto: AsignacionProyectoDTO?) 
                 stringResource(R.string.perfil_vacaciones),
                 stringResource(R.string.perfil_vacaciones_valor, perfil.diasVacaciones)
             )
+            Dato(
+                stringResource(R.string.perfil_fecha_alta),
+                perfil.fechaAlta?.let { DateFormats.fechaCorta(it) }
+            )
             Spacer(Modifier.height(8.dp))
             // Decirlo en la pantalla evita que alguien busque un lápiz
             // que no existe.

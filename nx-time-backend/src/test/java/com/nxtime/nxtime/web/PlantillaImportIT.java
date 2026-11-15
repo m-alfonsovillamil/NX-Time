@@ -196,6 +196,37 @@ class PlantillaImportIT {
     }
 
     @Test
+    @DisplayName("La fecha de alta se importa en cualquier formato habitual; sin ella, la de hoy (plan N, N10)")
+    void importaLaFechaDeAlta() {
+        Company empresa = empresa();
+        User admin = persona(empresa, Role.ADMIN);
+
+        JsonNode simulada = cuerpo(subir(token(admin), """
+                nombre;apellidos;email;Fecha de alta
+                Luis;Martín;luis.alta@importadora.test;15/09/2024
+                Eva;Ruiz;eva.alta@importadora.test;2023-02-01
+                Pau;Gil;pau.alta@importadora.test;31/02/2024
+                Sara;Ríos;sara.alta@importadora.test;
+                """, true));
+        assertThat(errores(simulada, 2)).isEmpty();
+        assertThat(errores(simulada, 4)).anyMatch(e -> e.contains("no se entiende"));
+
+        ResponseEntity<String> respuesta = subir(token(admin), """
+                nombre;apellidos;email;Fecha de alta
+                Luis;Martín;luis.alta@importadora.test;15/9/24
+                Eva;Ruiz;eva.alta@importadora.test;2023-02-01
+                Sara;Ríos;sara.alta@importadora.test;
+                """, false);
+        assertThat(respuesta.getStatusCode().value()).as(respuesta.getBody()).isEqualTo(200);
+        assertThat(userRepository.findByEmail("luis.alta@importadora.test").orElseThrow().getFechaAlta())
+                .isEqualTo(java.time.LocalDate.of(2024, 9, 15));
+        assertThat(userRepository.findByEmail("eva.alta@importadora.test").orElseThrow().getFechaAlta())
+                .isEqualTo(java.time.LocalDate.of(2023, 2, 1));
+        assertThat(userRepository.findByEmail("sara.alta@importadora.test").orElseThrow().getFechaAlta())
+                .isEqualTo(java.time.LocalDate.now(empresa.zona()));
+    }
+
+    @Test
     @DisplayName("El código de empleado se importa, y no puede repetirse ni en el fichero ni en la empresa (ADR 053)")
     void importaElCodigoDeEmpleado() {
         Company empresa = empresa();
