@@ -19,7 +19,7 @@ test('plantilla entera y departamentos para RRHH', async ({ page }) => {
   await irASeccion(page, 'Plantilla');
   const tabla = page.getByRole('table', { name: 'Personas de la empresa' });
   // Marta es GESTOR: en «mis empleados» no salía.
-  await expect(tabla.getByRole('cell', { name: 'Marta', exact: true })).toBeVisible();
+  await expect(tabla.getByRole('cell', { name: 'Marta Sánchez Prieto', exact: true })).toBeVisible();
   await expect(tabla.getByRole('cell', { name: 'Gestor' }).first()).toBeVisible();
 
   await irASeccion(page, 'Departamentos');

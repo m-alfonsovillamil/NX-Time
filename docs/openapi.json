@@ -173,6 +173,76 @@
         } ]
       }
     },
+    "/api/v1/perfil/avisos" : {
+      "get" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Cómo me llegan los avisos",
+        "description" : "Por categoría, si llegan por correo y al móvil. La campana de la aplicación los recibe siempre. Las obligatorias (cuenta, firma, denuncias, borrado de datos) no se pueden apagar.",
+        "operationId" : "misPreferenciasDeAvisos",
+        "responses" : {
+          "200" : {
+            "description" : "Todas las categorías",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenciaDeAviso"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Cambiar cómo me llegan los avisos",
+        "description" : "Solo las categorías que vienen; las demás se quedan como estaban. Devuelve todas.",
+        "operationId" : "guardarPreferenciasDeAvisos",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuardarPreferenciasRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Todas las categorías, ya guardadas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenciaDeAviso"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Una categoría obligatoria, o el cuerpo mal formado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/ofertas/{id}" : {
       "get" : {
         "tags" : [ "Ofertas internas" ],
@@ -3241,6 +3311,77 @@
         } ]
       }
     },
+    "/api/v1/horas-extra/{id}/descanso" : {
+      "post" : {
+        "tags" : [ "Horas extra" ],
+        "summary" : "Apuntar que unas horas extra ya se descansaron",
+        "description" : "Para las aceptadas con compensación DESCANSO (ADR 061). Con eso dejan de contar para la bolsa de 80 h para siempre; sin apuntarlo, dejan de contar solo mientras estén dentro de sus cuatro meses. El día, entre el de las horas extra y cuatro meses después, y no en el futuro. Nadie apunta las suyas propias.",
+        "operationId" : "descansoDisfrutado",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DescansoDisfrutadoRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Apuntado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OvertimeAlertResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Día fuera de su plazo o en el futuro",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Es de otra empresa, o son tus propias horas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No se compensan con descanso, o ya estaba apuntado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/plantilla/invitaciones/enviar" : {
       "post" : {
         "tags" : [ "Plantilla" ],
@@ -5827,6 +5968,97 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/api/v1/ausencias/{id}/cancelar" : {
+      "post" : {
+        "tags" : [ "Ausencias" ],
+        "summary" : "Cancelar una ausencia",
+        "description" : "Quien la pidió la retira mientras no haya empezado, esté pendiente o aprobada. Una aprobada ya empezada la anula quien tiene ausencia:aprobar, y entonces el motivo es obligatorio. Una pendiente ajena no se cancela: se aprueba o se rechaza. Cada respuesta de ausencia dice en «puedoCancelar» si se puede.",
+        "operationId" : "cancelar_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelAbsenceRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Cancelada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AbsenceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Anular la de otra persona sin motivo",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Es de otra persona y no se aprueban ausencias, o de otra empresa",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Petición no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Ya rechazada o cancelada, ya empezada (para su dueño), o pendiente y ajena",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
           }
         },
         "security" : [ {
@@ -9078,6 +9310,49 @@
         } ]
       }
     },
+    "/api/v1/gestor/equipo-ahora" : {
+      "get" : {
+        "tags" : [ "Gestión" ],
+        "summary" : "Quién está trabajando ahora y quién no ha fichado hoy",
+        "description" : "Una foto de este momento de la plantilla activa: cuántos trabajan, están en pausa, han terminado, no han fichado o hoy no les toca, y persona a persona desde cuándo. «conRetraso» marca a quien no ha fichado pasados diez minutos de la entrada de su cuadrante. Primero sale lo que pide atención. Sin la ubicación.",
+        "operationId" : "ahora",
+        "responses" : {
+          "200" : {
+            "description" : "El equipo ahora",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EquipoAhoraResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "No autenticado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin la authority 'fichaje:leer:equipo'",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/ausencias-historial" : {
       "get" : {
         "tags" : [ "Gestión" ],
@@ -11690,6 +11965,88 @@
           }
         }
       },
+      "CambioDePreferencia" : {
+        "type" : "object",
+        "properties" : {
+          "categoria" : {
+            "type" : "string",
+            "enum" : [ "AUSENCIAS", "CORRECCIONES", "HORAS_EXTRA", "INCIDENCIAS", "OFERTAS", "EQUIPO", "OBLIGATORIOS" ]
+          },
+          "correo" : {
+            "type" : "boolean"
+          },
+          "push" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "categoria" ]
+      },
+      "GuardarPreferenciasRequest" : {
+        "type" : "object",
+        "properties" : {
+          "preferencias" : {
+            "type" : "array",
+            "description" : "Las categorías que se cambian; las que no van, se quedan como estaban",
+            "items" : {
+              "$ref" : "#/components/schemas/CambioDePreferencia"
+            },
+            "maxItems" : 20,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "preferencias" ]
+      },
+      "PreferenciaDeAviso" : {
+        "type" : "object",
+        "properties" : {
+          "categoria" : {
+            "type" : "string",
+            "enum" : [ "AUSENCIAS", "CORRECCIONES", "HORAS_EXTRA", "INCIDENCIAS", "OFERTAS", "EQUIPO", "OBLIGATORIOS" ]
+          },
+          "etiqueta" : {
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "boolean"
+          },
+          "push" : {
+            "type" : "boolean"
+          },
+          "configurable" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        }
+      },
       "JobPostingRequest" : {
         "type" : "object",
         "properties" : {
@@ -11765,33 +12122,6 @@
           "candidaturas" : {
             "type" : "integer",
             "format" : "int64"
-          }
-        }
-      },
-      "ProblemDetail" : {
-        "type" : "object",
-        "properties" : {
-          "type" : {
-            "type" : "string",
-            "format" : "uri"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "detail" : {
-            "type" : "string"
-          },
-          "instance" : {
-            "type" : "string",
-            "format" : "uri"
-          },
-          "properties" : {
-            "type" : "object",
-            "additionalProperties" : { }
           }
         }
       },
@@ -12096,6 +12426,13 @@
           },
           "ubicacionAlFichar" : {
             "type" : "boolean"
+          },
+          "arrastreVacaciones" : {
+            "type" : "boolean"
+          },
+          "arrastreVacacionesHasta" : {
+            "type" : "string",
+            "pattern" : "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -12124,6 +12461,12 @@
           },
           "ubicacionAlFichar" : {
             "type" : "boolean"
+          },
+          "arrastreVacaciones" : {
+            "type" : "boolean"
+          },
+          "arrastreVacacionesHasta" : {
+            "type" : "string"
           }
         }
       },
@@ -13128,6 +13471,78 @@
         },
         "required" : [ "texto" ]
       },
+      "DescansoDisfrutadoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
+      "OvertimeAlertResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuario" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "fechaFin" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "minutosExtra" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "minutosEsperados" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "registroId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "justificacion" : {
+            "type" : "string"
+          },
+          "revisadoPor" : {
+            "type" : "string"
+          },
+          "fechaRevision" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "compensacion" : {
+            "type" : "string"
+          },
+          "descansoAntesDe" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "descansoDisfrutadoEn" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
       "EstadoInvitacionesResponse" : {
         "type" : "object",
         "description" : "Las invitaciones de alta de la empresa",
@@ -13193,6 +13608,11 @@
           "codigoEmpleado" : {
             "type" : "string",
             "description" : "Su número en el ERP o en nóminas (ADR 053), o null"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Su fecha de alta (plan N, N10), o null: entonces, el día que se importa"
           }
         }
       },
@@ -14237,7 +14657,7 @@
           },
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "usuario" : {
             "$ref" : "#/components/schemas/SimpleUserDTO"
@@ -14255,6 +14675,30 @@
           "diasHabiles" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "canceladaPor" : {
+            "$ref" : "#/components/schemas/SimpleUserDTO"
+          },
+          "canceladaEn" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "motivoCancelacion" : {
+            "type" : "string"
+          },
+          "puedoCancelar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "CancelAbsenceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "description" : "Por qué se cancela. Obligatorio al anular la ausencia de otra persona.",
+            "maxLength" : 500,
+            "minLength" : 0
           }
         }
       },
@@ -14355,6 +14799,10 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -14378,61 +14826,14 @@
             "type" : "string",
             "maxLength" : 500,
             "minLength" : 0
+          },
+          "compensacion" : {
+            "type" : "string",
+            "description" : "Al aceptar: PAGO (por defecto) o DESCANSO (ADR 061)",
+            "enum" : [ "PAGO", "DESCANSO" ]
           }
         },
         "required" : [ "aceptar" ]
-      },
-      "OvertimeAlertResponse" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "usuarioId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "usuario" : {
-            "type" : "string"
-          },
-          "tipo" : {
-            "type" : "string"
-          },
-          "fecha" : {
-            "type" : "string",
-            "format" : "date"
-          },
-          "fechaFin" : {
-            "type" : "string",
-            "format" : "date"
-          },
-          "minutosExtra" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "minutosEsperados" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "registroId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "estado" : {
-            "type" : "string"
-          },
-          "justificacion" : {
-            "type" : "string"
-          },
-          "revisadoPor" : {
-            "type" : "string"
-          },
-          "fechaRevision" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
       },
       "CambioDeRolRequest" : {
         "type" : "object",
@@ -14464,6 +14865,11 @@
             "type" : "string",
             "description" : "Null: no tocar. Vacío: quitarlo.",
             "maxLength" : 50
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de alta en la empresa (plan N, N10). Null: no tocar."
           }
         }
       },
@@ -14509,6 +14915,10 @@
           },
           "codigoEmpleado" : {
             "type" : "string"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -14589,7 +14999,7 @@
         "properties" : {
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "comentario" : {
             "type" : "string",
@@ -15677,6 +16087,10 @@
           },
           "codigoEmpleado" : {
             "type" : "string"
+          },
+          "fechaAlta" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -15923,6 +16337,85 @@
           },
           "alLimite" : {
             "type" : "boolean"
+          }
+        }
+      },
+      "EquipoAhoraResponse" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "El día de hoy en la zona de la empresa"
+          },
+          "trabajando" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "enPausa" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "terminada" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "sinFichar" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "conRetraso" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "De ellos, quienes ya deberían haber entrado según su cuadrante"
+          },
+          "noLaborable" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "personas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PersonaAhora"
+            }
+          }
+        }
+      },
+      "PersonaAhora" : {
+        "type" : "object",
+        "properties" : {
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nombre" : {
+            "type" : "string"
+          },
+          "estado" : {
+            "type" : "string",
+            "enum" : [ "TRABAJANDO", "EN_PAUSA", "TERMINADA", "SIN_FICHAR", "NO_LABORABLE" ]
+          },
+          "desde" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "minutosHoy" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "motivo" : {
+            "type" : [ "string", "null" ]
+          },
+          "entradaPrevista" : {
+            "type" : [ "string", "null" ],
+            "example" : "09:00"
+          },
+          "conRetraso" : {
+            "type" : "boolean"
+          },
+          "modalidad" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "PRESENCIAL", "A_DISTANCIA" ]
           }
         }
       },
@@ -16345,6 +16838,14 @@
           "diasDisponibles" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "diasArrastrados" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "arrastreCaducaEl" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },
@@ -16554,7 +17055,7 @@
           },
           "estado" : {
             "type" : "string",
-            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA" ]
+            "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "propia" : {
             "type" : "boolean"
@@ -16616,7 +17117,7 @@
           },
           "tipo" : {
             "type" : "string",
-            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
+            "enum" : [ "AUSENCIA_SOLICITADA", "AUSENCIA_RESUELTA", "AUSENCIA_CANCELADA", "BIENVENIDA", "CORRECCION_SOLICITADA", "CORRECCION_RESUELTA", "CORRECCION_EN_DISPUTA", "HORAS_EXTRA_DETECTADAS", "BOLSA_HORAS_EXTRA_AL_LIMITE", "RESUMEN_HORAS_EXTRA", "DENUNCIA_RECIBIDA", "DENUNCIA_ACTUALIZADA", "OFERTA_PUBLICADA", "CANDIDATURA_RECIBIDA", "CANDIDATURA_ACTUALIZADA", "BORRADO_SOLICITADO", "BORRADO_RECHAZADO", "TRABAJO_EN_DIA_NO_LABORABLE", "CUADRANTE_DISTINTO_DE_JORNADA", "INCIDENCIA_DETECTADA", "RESUMEN_INCIDENCIAS", "RECORDATORIO_FIRMA", "FIRMA_INVALIDADA", "PIN_KIOSCO_ANULADO", "PIN_KIOSCO_ANULADO_EQUIPO" ]
           },
           "titulo" : {
             "type" : "string"

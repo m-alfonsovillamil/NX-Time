@@ -34,6 +34,7 @@ export const cuenta = {
     jornadaValor: (horas: string) => `${horas} horas`,
     vacaciones: 'Vacaciones de este año',
     vacacionesValor: (dias: number) => `${dias} días`,
+    fechaAlta: 'Fecha de alta',
     soloRrhh: 'Estos datos los gestiona Recursos Humanos.',
     sinDato: '—',
     nombreObligatorio: 'El nombre no puede quedarse vacío.',
@@ -64,6 +65,18 @@ export const cuenta = {
     },
     adjuntoVacio: 'El fichero elegido está vacío.',
     adjuntoGrande: 'El fichero pasa de 5 MB.',
+  },
+
+  preferenciasDeAvisos: {
+    titulo: 'Cómo te llegan los avisos',
+    descripcion: 'En la campana de la aplicación los tienes siempre. Aquí eliges cuáles te llegan también por correo y al móvil.',
+    categoria: 'Avisos',
+    correo: 'Correo',
+    push: 'Móvil',
+    correoDe: (categoria: string) => `${categoria} por correo`,
+    pushDe: (categoria: string) => `${categoria} al móvil`,
+    siempre: 'Siempre, por correo y al móvil',
+    guardado: 'Guardado.',
   },
 
   ajustes: {

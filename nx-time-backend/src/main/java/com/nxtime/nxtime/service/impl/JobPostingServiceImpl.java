@@ -163,6 +163,14 @@ public class JobPostingServiceImpl implements JobPostingService {
             throw new BusinessException(
                     "Una oferta cerrada no se reabre: publica una nueva.");
         }
+        if (destino == JobPostingStatus.CERRADA && oferta.getFechaPublicacion() == null) {
+            // Cerrar es terminar el plazo de algo que se publicó. Un borrador
+            // que nunca vio nadie no tiene plazo que terminar, y la base no
+            // admite una cerrada sin fecha de publicación
+            // (ck_ofertas_publicacion_coherente): sin esto, era un 500.
+            throw new BusinessException(
+                    "Una oferta que nunca se ha publicado no se cierra: publícala o déjala en borrador.");
+        }
 
         boolean seEstrena = destino == JobPostingStatus.ABIERTA
                 && oferta.getFechaPublicacion() == null;
@@ -314,6 +322,14 @@ public class JobPostingServiceImpl implements JobPostingService {
         if (candidatura.getEstado().esFinal()) {
             throw new BusinessException("Esa candidatura ya está resuelta.");
         }
+        if (destino == ApplicationStatus.RECIBIDA) {
+            // RECIBIDA es como nace, no una decisión: volver a ella borraría
+            // quién la movió y cuándo, y la base no admite una RECIBIDA con
+            // resolución (ck_candidaturas_resolucion_coherente): sin esto, un
+            // 500. Misma regla que con las ausencias, que no vuelven a PENDIENTE.
+            throw new BusinessException(
+                    "Una candidatura no vuelve a «Recibida».", HttpStatus.BAD_REQUEST);
+        }
         if (destino == ApplicationStatus.DESCARTADA && !hayComentario) {
             throw new BusinessException(
                     "Al descartar una candidatura hay que explicar por qué.",
@@ -462,7 +478,7 @@ public class JobPostingServiceImpl implements JobPostingService {
                 oferta.getDescripcion(),
                 oferta.getPuesto(),
                 oferta.getDepartamento() != null ? oferta.getDepartamento().getNombre() : null,
-                oferta.getPublicadaPor().getNombre(),
+                oferta.getPublicadaPor().nombreCompleto(),
                 oferta.getEstado(),
                 oferta.getFechaPublicacion(),
                 oferta.getFechaCierre(),
@@ -478,11 +494,11 @@ public class JobPostingServiceImpl implements JobPostingService {
                 candidatura.getOferta().getId(),
                 candidatura.getOferta().getTitulo(),
                 candidatura.getUsuario().getId(),
-                candidatura.getUsuario().getNombre(),
+                candidatura.getUsuario().nombreCompleto(),
                 candidatura.getCarta(),
                 candidatura.getEstado(),
                 candidatura.getResueltaPor() != null
-                        ? candidatura.getResueltaPor().getNombre() : null,
+                        ? candidatura.getResueltaPor().nombreCompleto() : null,
                 candidatura.getFechaResolucion(),
                 candidatura.getComentario(),
                 candidatura.getCreadoEn(),

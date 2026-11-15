@@ -15,7 +15,15 @@ package com.nxtime.nxtime.dto;
  * @param ubicacionAlFichar si se pide la ubicación al entrar y al salir (ADR 056)
  */
 public record CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,
-        boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad, boolean ubicacionAlFichar) {
+        boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad, boolean ubicacionAlFichar,
+        /* ADR 060: si sobran vacaciones pasan al año siguiente, y hasta cuándo ("MM-DD"). */
+        boolean arrastreVacaciones, String arrastreVacacionesHasta) {
+
+    public CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,
+            boolean exigirSegundoFactor, int firmasInvalidadas, boolean preguntarModalidad, boolean ubicacionAlFichar) {
+        this(nombre, zonaHoraria, contactoPrivacidad, exigirSegundoFactor, firmasInvalidadas, preguntarModalidad,
+                ubicacionAlFichar, false, "03-31");
+    }
 
     /** Lo de antes del ADR 056. */
     public CompanySettingsResponse(String nombre, String zonaHoraria, String contactoPrivacidad,

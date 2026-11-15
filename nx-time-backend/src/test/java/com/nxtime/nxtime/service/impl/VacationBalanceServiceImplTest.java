@@ -175,4 +175,66 @@ class VacationBalanceServiceImplTest {
         // Ni siquiera pregunta por las pendientes.
         verify(absenceRequestRepository, never()).findVacacionesPendientesDelAnio(any(), any(), any());
     }
+
+    // ---- Arrastre al año siguiente (ADR 060) ----
+
+    private com.nxtime.nxtime.domain.AbsenceRequest vacaciones(LocalDate desde, LocalDate hasta) {
+        return com.nxtime.nxtime.domain.AbsenceRequest.builder().usuario(empleado).empresa(empleado.getEmpresa())
+                .tipo(com.nxtime.nxtime.domain.AbsenceType.VACACIONES).fechaInicio(desde).fechaFin(hasta).build();
+    }
+
+    /** 2025: derecho de 22 y 17 aprobados (sobran 5). 2026: unas de 3 días que empiezan el 10 de marzo. */
+    private void conDosAnios() {
+        empleado.getEmpresa().setArrastreVacaciones(true);
+        when(vacationBalanceRepository.findByUsuarioAndAnio(eq(empleado), anyInt())).thenReturn(Optional.empty());
+        var de2025 = vacaciones(LocalDate.of(2025, 8, 4), LocalDate.of(2025, 8, 26));
+        var de2026 = vacaciones(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 12));
+        when(absenceRequestRepository.findVacacionesAprobadasDelAnio(empleado, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)))
+                .thenReturn(List.of(de2025));
+        when(absenceRequestRepository.findVacacionesAprobadasDelAnio(empleado, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)))
+                .thenReturn(List.of(de2026));
+        org.mockito.Mockito.lenient().when(absenceRequestRepository.findVacacionesPendientesDelAnio(any(), any(), any()))
+                .thenReturn(List.of());
+        when(workingDayService.contarDiasHabiles(any(), eq(de2025.getFechaInicio()), eq(de2025.getFechaFin()))).thenReturn(17);
+        when(workingDayService.contarDiasHabiles(any(), eq(de2026.getFechaInicio()), eq(de2026.getFechaFin()))).thenReturn(3);
+    }
+
+    @Test
+    @DisplayName("Antes del tope, lo que sobró el año anterior se suma entero, con su fecha de caducidad")
+    void arrastre_antesDelTope() {
+        conDosAnios();
+
+        VacationBalanceResponse saldo = service.getBalance(empleado, 2026, LocalDate.of(2026, 2, 1));
+
+        assertThat(saldo.diasArrastrados()).isEqualTo(5);
+        assertThat(saldo.diasTotales()).isEqualTo(27);
+        assertThat(saldo.arrastreCaducaEl()).isEqualTo(LocalDate.of(2026, 3, 31));
+        assertThat(saldo.diasDisponibles()).isEqualTo(27 - 3);
+    }
+
+    @Test
+    @DisplayName("Pasado el tope, solo queda lo arrastrado que se gastó en vacaciones que empezaban antes")
+    void arrastre_despuesDelTope() {
+        conDosAnios();
+
+        VacationBalanceResponse saldo = service.getBalance(empleado, 2026, LocalDate.of(2026, 6, 1));
+
+        assertThat(saldo.diasArrastrados()).isEqualTo(3);
+        assertThat(saldo.diasTotales()).isEqualTo(25);
+        assertThat(saldo.arrastreCaducaEl()).isNull();
+        // Lo usado sigue cubierto: el saldo no se queda en negativo al caducar.
+        assertThat(saldo.diasDisponibles()).isEqualTo(22);
+    }
+
+    @Test
+    @DisplayName("Con el arrastre apagado (lo normal), el saldo es el de siempre")
+    void arrastre_apagado() {
+        when(vacationBalanceRepository.findByUsuarioAndAnio(empleado, 2026)).thenReturn(Optional.empty());
+        when(absenceRequestRepository.findVacacionesAprobadasDelAnio(any(), any(), any())).thenReturn(List.of());
+
+        VacationBalanceResponse saldo = service.getBalance(empleado, 2026, LocalDate.of(2026, 2, 1));
+
+        assertThat(saldo.diasArrastrados()).isZero();
+        assertThat(saldo.diasTotales()).isEqualTo(22);
+    }
 }

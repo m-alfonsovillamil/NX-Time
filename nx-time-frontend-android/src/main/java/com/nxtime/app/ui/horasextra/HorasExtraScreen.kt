@@ -48,6 +48,7 @@ import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
+import java.time.LocalDate
 
 /**
  * Horas extra (Fase F).
@@ -139,6 +140,7 @@ fun HorasExtraScreen(
                             aviso = aviso,
                             conNombre = true,
                             onAceptar = { viewModel.aceptar(aviso.id) },
+                            onCompensar = { viewModel.compensarConDescanso(aviso.id) },
                             onJustificar = { aJustificar = aviso }
                         )
                     }
@@ -250,6 +252,7 @@ private fun TarjetaHorasExtra(
     aviso: HorasExtraDTO,
     conNombre: Boolean,
     onAceptar: (() -> Unit)? = null,
+    onCompensar: (() -> Unit)? = null,
     onJustificar: (() -> Unit)? = null
 ) {
     val tipo = TipoHorasExtra.de(aviso.tipo)
@@ -304,6 +307,19 @@ private fun TarjetaHorasExtra(
                 )
             }
 
+            textoDeCompensacion(aviso, LocalDate.now(DateFormats.zona))?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (it.fecha == null) {
+                        stringResource(it.texto)
+                    } else {
+                        stringResource(it.texto, DateFormats.fechaCorta(it.fecha))
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             aviso.revisadoPor?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -313,17 +329,26 @@ private fun TarjetaHorasExtra(
                 )
             }
 
-            if (estado?.esperaDecision == true && onAceptar != null && onJustificar != null) {
+            if (estado?.esperaDecision == true && onAceptar != null && onCompensar != null &&
+                onJustificar != null
+            ) {
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onJustificar) {
-                        Text(stringResource(R.string.horas_extra_justificar))
+                // Tres botones no caben en una fila en un móvil estrecho:
+                // el de descanso va debajo, alineado con los otros.
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth()) {
+                    Row(horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onJustificar) {
+                            Text(stringResource(R.string.horas_extra_justificar))
+                        }
+                        TextButton(onClick = onAceptar) {
+                            Text(
+                                stringResource(R.string.horas_extra_aceptar),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    TextButton(onClick = onAceptar) {
-                        Text(
-                            stringResource(R.string.horas_extra_aceptar),
-                            fontWeight = FontWeight.Bold
-                        )
+                    TextButton(onClick = onCompensar) {
+                        Text(stringResource(R.string.horas_extra_compensar))
                     }
                 }
             }

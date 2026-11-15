@@ -47,9 +47,9 @@ test('un ADMIN importa dos personas desde un CSV y le cambia el rol a una', asyn
 
   await irene.getByText('Más', { exact: true }).click();
   await irene.getByRole('button', { name: 'Cambiar rol' }).click();
-  const rol = page.getByRole('dialog', { name: 'Rol de Irene' });
+  const rol = page.getByRole('dialog', { name: `Rol de Irene Importada ${vuelta}` });
   await rol.getByLabel('Rol').selectOption('RRHH');
   await rol.getByRole('button', { name: 'Guardar' }).click();
-  await expect(page.getByRole('status').getByText('Irene es ahora RRHH.')).toBeVisible();
+  await expect(page.getByRole('status').getByText(`Irene Importada ${vuelta} es ahora RRHH.`)).toBeVisible();
   await expect(irene).toContainText('RRHH');
 });

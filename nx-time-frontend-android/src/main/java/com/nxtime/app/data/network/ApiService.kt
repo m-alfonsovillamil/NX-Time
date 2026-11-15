@@ -285,6 +285,10 @@ interface ApiService {
     @GET("api/v1/dashboard/pendientes")
     suspend fun getPendientes(): Response<PendientesDTO>
 
+    /** Quién está trabajando ahora y quién no ha fichado hoy (plan N, paso N7). */
+    @GET("api/v1/gestor/equipo-ahora")
+    suspend fun getEquipoAhora(): Response<EquipoAhoraDTO>
+
     @GET("api/v1/correcciones/pendientes")
     suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>>
 
@@ -552,6 +556,13 @@ interface ApiService {
     @GET("api/v1/perfil/borrado")
     suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO>
 
+    /** Cómo me llegan los avisos, por categoría (ADR 059). */
+    @GET("api/v1/perfil/avisos")
+    suspend fun getPreferenciasDeAvisos(): Response<List<PreferenciaDeAvisoDTO>>
+
+    @PUT("api/v1/perfil/avisos")
+    suspend fun guardarPreferenciasDeAvisos(@Body peticion: GuardarPreferenciasRequest): Response<List<PreferenciaDeAvisoDTO>>
+
     @POST("api/v1/perfil/borrado/cancelar")
     suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO>
 
@@ -627,6 +638,13 @@ interface ApiService {
     suspend fun cambiarEstadoPeticion(
         @Path("id") peticionId: Long,
         @Body cambio: CambioEstadoAusenciaRequest
+    ): Response<RespuestaAusencia>
+
+    /** Retirar una ausencia propia, o anular una aprobada del equipo (ADR 058). */
+    @POST("api/v1/ausencias/{id}/cancelar")
+    suspend fun cancelarAusencia(
+        @Path("id") peticionId: Long,
+        @Body cuerpo: CancelarAusenciaRequest
     ): Response<RespuestaAusencia>
 
     @GET("api/v1/ausencias/saldo-vacaciones")

@@ -30,6 +30,12 @@ public enum NoticeType {
 
     /** Tu petición de ausencia ha sido aprobada o rechazada. */
     AUSENCIA_RESUELTA("ausencias"),
+    /**
+     * Una ausencia cancelada (ADR 058). Le llega a quien la pidió si la anula
+     * otra persona, y a quien aprueba ausencias si la retira su dueño después
+     * de aprobarse. A cada uno con su ruta: la por defecto es la del dueño.
+     */
+    AUSENCIA_CANCELADA("ausencias"),
 
     /** Te acaban de dar de alta en una empresa. */
     BIENVENIDA("fichar"),

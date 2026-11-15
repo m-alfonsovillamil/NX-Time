@@ -136,6 +136,23 @@ public class Company {
     @Column(name = "ubicacion_al_fichar", nullable = false)
     private boolean ubicacionAlFichar = false;
 
+    /**
+     * Si las vacaciones que sobran de un año pasan al siguiente (V57, ADR 060),
+     * hasta {@link #arrastreVacacionesHasta} ("MM-DD"). Apagado por defecto.
+     */
+    @Builder.Default
+    @Column(name = "arrastre_vacaciones", nullable = false)
+    private boolean arrastreVacaciones = false;
+
+    @Builder.Default
+    @Column(name = "arrastre_vacaciones_hasta", nullable = false)
+    private String arrastreVacacionesHasta = "03-31";
+
+    /** Hasta cuándo se puede usar en {@code anio} lo que sobró de {@code anio - 1}. El 29 de febrero, el 28 si no es bisiesto. */
+    public java.time.LocalDate topeDelArrastre(int anio) {
+        return java.time.MonthDay.parse("--" + arrastreVacacionesHasta).atYear(anio);
+    }
+
     public boolean estaActiva() {
         return estado == CompanyStatus.ACTIVA;
     }

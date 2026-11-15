@@ -40,7 +40,16 @@ data class HorasExtraDTO(
     val estado: String,
     val justificacion: String? = null,
     val revisadoPor: String? = null,
-    val fechaRevision: String? = null
+    val fechaRevision: String? = null,
+
+    /**
+     * ADR 061: "PAGO", "DESCANSO", o null (sin aceptar, o aceptadas antes de
+     * poder elegir, que cuentan como pagadas). Texto por lo mismo que `estado`.
+     */
+    val compensacion: String? = null,
+    /** Si se descansan: hasta cuándo, para no gastar bolsa. */
+    val descansoAntesDe: String? = null,
+    val descansoDisfrutadoEn: String? = null
 )
 
 /**
@@ -72,5 +81,7 @@ data class BolsaHorasExtraDTO(
  */
 data class RevisarHorasExtraRequest(
     val aceptar: Boolean,
-    val justificacion: String? = null
+    val justificacion: String? = null,
+    /** Al aceptar: "PAGO" (lo que entiende el servidor si no se dice) o "DESCANSO". */
+    val compensacion: String? = null
 )

@@ -599,7 +599,7 @@ public class ComplaintServiceImpl implements ComplaintService {
                 denuncia.getDescripcion(),
                 denuncia.getEstado(),
                 denuncia.esAnonima(),
-                denuncia.esAnonima() ? null : denuncia.getDenunciante().getNombre(),
+                denuncia.esAnonima() ? null : denuncia.getDenunciante().nombreCompleto(),
                 denuncia.getCreadoEn(),
                 denuncia.getAcuseReciboEn(),
                 denuncia.getResueltaEn(),
@@ -619,7 +619,7 @@ public class ComplaintServiceImpl implements ComplaintService {
                 .map(mensaje -> new ComplaintMessageResponse(
                         mensaje.getId(),
                         mensaje.getAutorRol(),
-                        mensaje.getAutor() != null ? mensaje.getAutor().getNombre() : null,
+                        mensaje.getAutor() != null ? mensaje.getAutor().nombreCompleto() : null,
                         mensaje.getTexto(),
                         mensaje.getCreadoEn()))
                 .toList();

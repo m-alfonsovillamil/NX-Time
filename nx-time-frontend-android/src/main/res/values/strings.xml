@@ -399,6 +399,8 @@
     <string name="detalle_festivo">Festivo: %1$s</string>
     <string name="detalle_ausencia">%1$s</string>
     <string name="detalle_vacaciones_disponibles">Días disponibles</string>
+    <string name="detalle_vacaciones_arrastrados">Del año anterior</string>
+    <string name="detalle_vacaciones_arrastrados_hasta">Del año anterior (hasta el %1$s)</string>
     <string name="detalle_vacaciones_consumidos">Días usados</string>
     <string name="detalle_vacaciones_pendientes">Días pedidos sin aprobar</string>
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>
@@ -445,6 +447,7 @@
     <string name="ausencias_filtro_pendientes">Pendientes</string>
     <string name="ausencias_filtro_aprobadas">Aprobadas</string>
     <string name="ausencias_filtro_rechazadas">Rechazadas</string>
+    <string name="ausencias_filtro_canceladas">Canceladas</string>
     <string name="ausencias_filtro_anio">Año</string>
     <string name="ausencias_filtro_todos_los_anios">Todos los años</string>
     <string name="ausencias_filtro_tipo">Tipo</string>
@@ -453,6 +456,15 @@
     <string name="ausencias_filtro_sin_resultados">No hay ausencias con estos filtros.</string>
     <string name="ausencias_estado_aprobada">Aprobada</string>
     <string name="ausencias_estado_rechazada">Rechazada</string>
+    <string name="ausencias_estado_cancelada">Cancelada</string>
+    <string name="ausencias_cancelada_por">Cancelada por %1$s</string>
+    <string name="ausencias_motivo_cancelacion">Por qué: %1$s</string>
+    <string name="ausencias_cancelar">Cancelar la ausencia</string>
+    <string name="ausencias_cancelar_titulo">¿Cancelar esta ausencia?</string>
+    <string name="ausencias_cancelar_texto">Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a tu saldo. No se puede deshacer: si cambias de idea, la pides otra vez.</string>
+    <string name="ausencias_cancelar_aprobada">Ya estaba aprobada: avisaremos a quien aprueba las ausencias.</string>
+    <string name="ausencias_cancelar_motivo">Por qué (opcional)</string>
+    <string name="ausencias_volver">Volver</string>
     <string name="ausencias_rango">Del %1$s al %2$s</string>
     <string name="ausencias_resuelta_por">Resuelta por %1$s</string>
     <string name="ausencias_comentario">Respuesta: %1$s</string>
@@ -517,6 +529,17 @@
       configuración, que se visitan cuando hace falta.
     -->
     <string name="gestion_seccion_pendiente">Pendiente de resolver</string>
+    <string name="ahora_titulo">Ahora mismo</string>
+    <string name="ahora_resumen">Trabajando: %1$d · En pausa: %2$d · Sin fichar: %3$d · Hoy no les toca: %4$d</string>
+    <plurals name="ahora_con_retraso">
+        <item quantity="one">%d persona debía haber entrado ya</item>
+        <item quantity="other">%d personas debían haber entrado ya</item>
+    </plurals>
+    <string name="ahora_debia_entrar">Debía entrar a las %1$s</string>
+    <string name="ahora_sin_fichar">Sin fichar</string>
+    <string name="ahora_trabajando">Trabajando · %1$s hoy</string>
+    <string name="ahora_en_pausa">En pausa · %1$s hoy</string>
+    <string name="ahora_y_mas">Y %1$d más en el historial del equipo</string>
     <string name="gestion_seccion_equipo">Equipo</string>
     <plurals name="gestion_pendientes">
         <item quantity="one">%1$d pendiente</item>
@@ -548,6 +571,10 @@
     <string name="resueltas_titulo">Ausencias resueltas</string>
     <string name="resueltas_vacio_titulo">Todavía no hay resueltas</string>
     <string name="resueltas_vacio_texto">Aquí quedarán las solicitudes que apruebes o rechaces.</string>
+    <string name="resueltas_anular">Anular</string>
+    <string name="resueltas_anular_titulo">Anular la ausencia de %1$s</string>
+    <string name="resueltas_anular_texto">Esos días vuelven a ser de trabajo y, si eran vacaciones, vuelven a su saldo. Le avisaremos con este motivo.</string>
+    <string name="resueltas_anular_motivo_obligatorio">Para anular la ausencia de otra persona hay que indicar un motivo.</string>
 
     <string name="alta_empleado_titulo">Nuevo empleado</string>
     <string name="alta_gestor_titulo">Nuevo gestor</string>
@@ -652,6 +679,7 @@
     <string name="perfil_jornada">Jornada semanal</string>
     <string name="perfil_jornada_valor">%1$s horas</string>
     <string name="perfil_vacaciones">Vacaciones de este año</string>
+    <string name="perfil_fecha_alta">Fecha de alta</string>
     <string name="perfil_vacaciones_valor">%1$d días</string>
     <string name="perfil_laborales_solo_rrhh">Estos datos los gestiona Recursos Humanos.</string>
     <string name="perfil_sin_dato">—</string>
@@ -713,6 +741,11 @@
          de la etiqueta del interruptor: usar el mismo texto para los dos
          dejaba "Recordarme fichar" repetido dentro de la misma tarjeta. -->
     <!-- Notificaciones push (Fase B5) -->
+    <string name="ajustes_avisos_seccion">Cómo te llegan los avisos</string>
+    <string name="ajustes_avisos_detalle">En la campana de la app los tienes siempre. Aquí eliges cuáles te llegan también por correo y al móvil.</string>
+    <string name="ajustes_avisos_correo">Por correo</string>
+    <string name="ajustes_avisos_movil">Al móvil</string>
+    <string name="ajustes_avisos_siempre">Siempre, por correo y al móvil</string>
     <string name="ajustes_push_seccion">Notificaciones</string>
     <string name="ajustes_push">Avisarme en el móvil</string>
     <string name="ajustes_push_detalle">Te llega una notificación cuando tienes un aviso nuevo: una ausencia resuelta, una corrección, una incidencia. Solo dice de qué va; el detalle lo ves al abrir la app, porque la notificación pasa por los servidores de Google.</string>
@@ -1064,11 +1097,18 @@
     <string name="horas_extra_estado_justificado">No computa</string>
     <string name="horas_extra_estado_aceptado">Horas extra</string>
 
-    <string name="horas_extra_aceptar">Son horas extra</string>
+    <string name="horas_extra_aceptar">Se pagan</string>
+    <!-- ADR 061: compensadas con descanso en cuatro meses, no gastan bolsa -->
+    <string name="horas_extra_compensar">Se compensan con descanso</string>
+    <string name="horas_extra_compensada">Se compensarán con descanso.</string>
+    <string name="horas_extra_se_pagan">Se pagan.</string>
+    <string name="horas_extra_se_compensan">Se compensan con descanso antes del %1$s. Mientras, no gastan bolsa.</string>
+    <string name="horas_extra_descansadas">Descansadas el %1$s.</string>
+    <string name="horas_extra_caducadas">No se descansaron antes del %1$s: cuentan en la bolsa como horas extra.</string>
     <string name="horas_extra_justificar">No computan</string>
     <string name="horas_extra_justificar_ayuda">El exceso se archiva y no consume bolsa anual. Hace falta explicar por qué: una jornada intensiva pactada, un turno partido mal fichado, una guardia…</string>
     <string name="horas_extra_justificacion_etiqueta">Motivo</string>
-    <string name="horas_extra_aceptada">Contabilizadas como horas extra.</string>
+    <string name="horas_extra_aceptada">Se pagarán como horas extra.</string>
     <string name="horas_extra_justificada">Archivado sin computar.</string>
 
     <!-- Entrada desde el perfil y desde el panel de gestión -->

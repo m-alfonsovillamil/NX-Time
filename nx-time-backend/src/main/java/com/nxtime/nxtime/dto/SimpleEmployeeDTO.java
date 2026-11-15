@@ -77,6 +77,9 @@ public record SimpleEmployeeDTO(
          * Su número en el ERP o en nóminas (V49, ADR 053), o null. Viaja en
          * la lista para que la ficha lo precargue y la tabla lo enseñe.
          */
-        String codigoEmpleado
+        String codigoEmpleado,
+
+        /** Fecha de alta en la empresa (plan N, N10), o null en las cuentas de antes que nunca ficharon. */
+        java.time.LocalDate fechaAlta
 ) {
 }

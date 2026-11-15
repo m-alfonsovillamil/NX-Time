@@ -105,6 +105,18 @@ export const empresa = {
         'Revisadlo antes con quien os asesore en protección de datos. Se borran a los cuatro años de acabar la ausencia.',
       confirmar: 'Sí, dejar adjuntarlos',
     },
+    // ADR 060.
+    arrastre: {
+      titulo: 'Vacaciones que sobran',
+      texto:
+        'Si alguien no gasta todas sus vacaciones, lo que le sobre pasa al año siguiente y puede usarlo en vacaciones que empiecen antes de la fecha tope. Lo que no use para entonces caduca. Según vuestro convenio.',
+      pasar: 'Pasar al año siguiente lo que sobre',
+      hasta: 'Hasta el (día y mes)',
+      ayudaHasta: 'Por ejemplo, 31/03.',
+      malHasta: 'Escribe el día y el mes, como 31/03.',
+      guardar: 'Aplicar',
+      guardado: 'Guardado.',
+    },
     // ADR 056.
     ubicacion: {
       titulo: 'Ubicación al fichar',

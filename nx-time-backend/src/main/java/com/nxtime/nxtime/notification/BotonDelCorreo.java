@@ -41,6 +41,7 @@ final class BotonDelCorreo {
     private static final Map<String, Boton> POR_PLANTILLA = Map.ofEntries(
             Map.entry("absence-requested", new Boton(NoticeType.AUSENCIA_SOLICITADA, "Revisar la petición")),
             Map.entry("absence-resolved", new Boton(NoticeType.AUSENCIA_RESUELTA, "Ver mis ausencias")),
+            Map.entry("absence-cancelled", new Boton(NoticeType.AUSENCIA_CANCELADA, "Ver mis ausencias")),
             Map.entry("correction-requested", new Boton(NoticeType.CORRECCION_SOLICITADA, "Revisar la corrección")),
             Map.entry("correction-disputed", new Boton(NoticeType.CORRECCION_EN_DISPUTA, "Revisar la corrección")),
             Map.entry("correction-resolved", new Boton(NoticeType.CORRECCION_RESUELTA, "Ver mi historial")),

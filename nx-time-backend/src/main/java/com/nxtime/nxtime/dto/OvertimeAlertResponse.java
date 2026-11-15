@@ -29,6 +29,17 @@ public record OvertimeAlertResponse(
         String estado,
         String justificacion,
         String revisadoPor,
-        Instant fechaRevision
+        Instant fechaRevision,
+        /* ADR 061: PAGO, DESCANSO, o null (sin aceptar, o aceptadas antes de V58: pagadas). */
+        String compensacion,
+        /* Si se descansan: hasta cuándo, para que no cuenten en la bolsa. */
+        LocalDate descansoAntesDe,
+        LocalDate descansoDisfrutadoEn
 ) {
+    public OvertimeAlertResponse(long id, long usuarioId, String usuario, String tipo, LocalDate fecha,
+            LocalDate fechaFin, int minutosExtra, long minutosEsperados, Long registroId, String estado,
+            String justificacion, String revisadoPor, Instant fechaRevision) {
+        this(id, usuarioId, usuario, tipo, fecha, fechaFin, minutosExtra, minutosEsperados, registroId, estado,
+                justificacion, revisadoPor, fechaRevision, null, null, null);
+    }
 }

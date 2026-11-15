@@ -12,7 +12,7 @@ import { revisiones } from '../../i18n/es/revisiones';
 import { pintar, problema, sesionDe, simularApi } from '../../pruebas/api';
 import { fechaCorta } from '../../util/fechas';
 import { Correcciones, HorasQueCambian, cambiosDe } from './Correcciones';
-import { HorasExtra, periodoDe } from './HorasExtra';
+import { HorasExtra, periodoDe, textoDeCompensacion } from './HorasExtra';
 
 const H = revisiones.horasExtra;
 const C = revisiones.correcciones;
@@ -103,8 +103,57 @@ describe('horas extra', () => {
 
     await waitFor(() =>
       expect(llamadas.llamadas.filter((l) => l.metodo === 'PATCH').map((l) => [l.ruta, l.cuerpo])).toEqual([
-        ['/api/v1/horas-extra/5', { aceptar: true }],
+        ['/api/v1/horas-extra/5', { aceptar: true, compensacion: 'PAGO' }],
         ['/api/v1/horas-extra/6', { aceptar: false, justificacion: 'Jornada intensiva pactada' }],
+      ]),
+    );
+  });
+
+  /* ADR 061: compensadas con descanso, con su fecha límite; pasada, cuentan como horas extra. */
+  it('dice cómo se compensan las aceptadas', () => {
+    const BASE = { id: 5, fecha: '2026-09-21', estado: 'ABIERTO' };
+    const descanso = { ...BASE, estado: 'ACEPTADO', compensacion: 'DESCANSO', descansoAntesDe: '2026-12-21' };
+    expect(textoDeCompensacion(descanso, '2026-11-15')).toBe(H.seCompensan(fechaCorta('2026-12-21')));
+    expect(textoDeCompensacion(descanso, '2026-12-22')).toBe(H.caducadas(fechaCorta('2026-12-21')));
+    expect(textoDeCompensacion({ ...descanso, descansoDisfrutadoEn: '2026-10-02' }, '2026-12-22')).toBe(
+      H.descansadas(fechaCorta('2026-10-02')),
+    );
+    expect(textoDeCompensacion({ ...BASE, estado: 'ACEPTADO', compensacion: 'PAGO' }, '2026-11-15')).toBe(H.sePagan);
+    // Las aceptadas antes de poder elegir no dicen nada: cuentan como pagadas.
+    expect(textoDeCompensacion({ ...BASE, estado: 'ACEPTADO' }, '2026-11-15')).toBeNull();
+    expect(textoDeCompensacion(BASE, '2026-11-15')).toBeNull();
+  });
+
+  it('en el equipo se puede compensar con descanso y apuntar el día en que se descansó', async () => {
+    const pendiente = {
+      ...AVISO,
+      id: 8,
+      fecha: '2026-01-10',
+      estado: 'ACEPTADO',
+      compensacion: 'DESCANSO',
+      descansoAntesDe: '2026-05-10',
+      revisadoPor: 'Marta',
+    };
+    const llamadas = simularApi({
+      'GET /api/v1/horas-extra/bolsa': () => BOLSA,
+      'GET /api/v1/horas-extra': () => [],
+      'GET /api/v1/horas-extra/equipo': () => [AVISO, pendiente],
+      'PATCH /api/v1/horas-extra/{id}': () => ({ ...AVISO, estado: 'ACEPTADO', compensacion: 'DESCANSO' }),
+      'POST /api/v1/horas-extra/{id}/descanso': () => ({ ...pendiente, descansoDisfrutadoEn: '2026-05-10' }),
+    });
+    pintar(<HorasExtra />, { sesion: sesionDe('GESTOR') });
+
+    await userEvent.click(await screen.findByRole('tab', { name: H.delEquipo }));
+    const [abierto, aDescansar] = await screen.findAllByRole('listitem');
+    await userEvent.click(within(abierto as HTMLElement).getByRole('button', { name: H.compensar }));
+    // El último día que vale ya pasó: se propone ese, no hoy.
+    expect((within(aDescansar as HTMLElement).getByLabelText(H.diaDelDescanso) as HTMLInputElement).value).toBe('2026-05-10');
+    await userEvent.click(within(aDescansar as HTMLElement).getByRole('button', { name: H.apuntarDescanso }));
+
+    await waitFor(() =>
+      expect(llamadas.llamadas.filter((l) => l.metodo !== 'GET').map((l) => [l.metodo, l.ruta, l.cuerpo])).toEqual([
+        ['PATCH', '/api/v1/horas-extra/5', { aceptar: true, compensacion: 'DESCANSO' }],
+        ['POST', '/api/v1/horas-extra/8/descanso', { fecha: '2026-05-10' }],
       ]),
     );
   });

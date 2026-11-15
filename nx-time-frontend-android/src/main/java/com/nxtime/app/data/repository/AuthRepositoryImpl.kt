@@ -184,6 +184,7 @@ class AuthRepositoryImpl(
         apiService.deshacerPausa(fichajeId, pausaId)
 
     override suspend fun getPendientes(): Response<PendientesDTO> = apiService.getPendientes()
+    override suspend fun getEquipoAhora(): Response<EquipoAhoraDTO> = apiService.getEquipoAhora()
 
     override suspend fun getCorreccionesPendientes(): Response<List<CorreccionDTO>> {
         return apiService.getCorreccionesPendientes()
@@ -222,10 +223,11 @@ class AuthRepositoryImpl(
     override suspend fun revisarHorasExtra(
         avisoId: Long,
         aceptar: Boolean,
-        justificacion: String?
+        justificacion: String?,
+        compensacion: String?
     ): Response<HorasExtraDTO> {
         return apiService.revisarHorasExtra(
-            avisoId, RevisarHorasExtraRequest(aceptar, justificacion))
+            avisoId, RevisarHorasExtraRequest(aceptar, justificacion, compensacion))
     }
 
     override suspend fun getBolsaHorasExtra(
@@ -441,6 +443,9 @@ class AuthRepositoryImpl(
             CambioEstadoAusenciaRequest(estado, comentario)
         )
     }
+
+    override suspend fun cancelarAusencia(peticionId: Long, motivo: String?): Response<RespuestaAusencia> =
+        apiService.cancelarAusencia(peticionId, CancelarAusenciaRequest(motivo?.trim()?.takeIf { it.isNotEmpty() }))
 
     override suspend fun getSaldoVacaciones(): Response<SaldoVacacionesDTO> {
         return apiService.getSaldoVacaciones()
@@ -682,6 +687,10 @@ class AuthRepositoryImpl(
         apiService.solicitarBorrado(PeticionBorrado(motivo?.trim()?.ifBlank { null }))
 
     override suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO> = apiService.getMiSolicitudBorrado()
+    override suspend fun getPreferenciasDeAvisos(): Response<List<PreferenciaDeAvisoDTO>> =
+        apiService.getPreferenciasDeAvisos()
+    override suspend fun guardarPreferenciaDeAvisos(cambio: CambioDePreferenciaDTO): Response<List<PreferenciaDeAvisoDTO>> =
+        apiService.guardarPreferenciasDeAvisos(GuardarPreferenciasRequest(listOf(cambio)))
 
     override suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO> = apiService.cancelarBorrado()
 

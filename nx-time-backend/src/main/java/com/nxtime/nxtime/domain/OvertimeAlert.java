@@ -97,6 +97,13 @@ public class OvertimeAlert {
 
     private Instant fechaRevision;
 
+    /** Al aceptarlo (V58, ADR 061): pagarlas o descansarlas. Null en las aceptadas antes: cuentan como pagadas. */
+    @Enumerated(EnumType.STRING)
+    private CompensacionDeHorasExtra compensacion;
+
+    /** El día en que se descansaron, si se compensan con descanso y ya se ha hecho. */
+    private java.time.LocalDate descansoDisfrutadoEn;
+
     @Builder.Default
     private Instant creadoEn = Instant.now();
 

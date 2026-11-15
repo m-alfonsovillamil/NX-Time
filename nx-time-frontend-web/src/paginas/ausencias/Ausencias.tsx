@@ -23,7 +23,7 @@ import { fechaCorta, hoyEnEmpresa } from '../../util/fechas';
 import { TRAS_SOLICITAR, useMisAusencias, useSaldoDeVacaciones, type Ausencia } from './consultas';
 import { JustificanteDeAusencia, useJustificantes } from './Justificantes';
 
-const TONO: Record<EstadoAusencia, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error' };
+const TONO: Record<EstadoAusencia, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error', CANCELADA: 'neutro' };
 
 export interface FiltroDeAusencias {
   anio: string;
@@ -77,6 +77,9 @@ function Saldo() {
         <Cifra icono="horas-extra" etiqueta={A.saldo.pendientes} valor={A.saldo.dias(s.diasPendientes ?? 0)} />
         <Cifra icono="calendario" etiqueta={A.saldo.totales} valor={A.saldo.dias(s.diasTotales ?? 0)} />
       </Cifras>
+      {(s.diasArrastrados ?? 0) > 0 && (
+        <p className="nx-sutil">{A.saldo.arrastrados(s.diasArrastrados ?? 0, s.arrastreCaducaEl ? fechaCorta(s.arrastreCaducaEl) : null)}</p>
+      )}
     </Tarjeta>
   );
 }
@@ -159,6 +162,8 @@ function Detalle({ a }: { a: Ausencia }) {
     a.motivo ? A.motivo(a.motivo) : null,
     a.aprobadoPor?.nombre ? A.resueltaPor(a.aprobadoPor.nombre) : null,
     a.comentarioResolucion ? A.respuesta(a.comentarioResolucion) : null,
+    a.canceladaPor?.nombre ? A.canceladaPor(a.canceladaPor.nombre) : null,
+    a.motivoCancelacion ? A.motivoCancelacion(a.motivoCancelacion) : null,
   ].filter((l): l is string => l !== null);
   if (lineas.length === 0) return null;
   return (
@@ -170,8 +175,72 @@ function Detalle({ a }: { a: Ausencia }) {
   );
 }
 
+/**
+ * Cancelar una ausencia propia (ADR 058): si se puede lo dice el servidor
+ * (`puedoCancelar`); aquí solo se pregunta. El motivo es opcional: es la suya.
+ */
+function DialogoDeCancelar({ a, alCerrar }: { a: Ausencia | null; alCerrar: () => void }) {
+  const [motivo, setMotivo] = useState('');
+  const cancelar = useMutacion(
+    ({ id, motivo }: { id: number; motivo?: string }) =>
+      pedir(cliente.POST('/api/v1/ausencias/{id}/cancelar', { params: { path: { id } }, body: motivo ? { motivo } : {} })),
+    {
+      invalida: TRAS_SOLICITAR,
+      exito: A.cancelar.hecha,
+      alTerminar: () => {
+        setMotivo('');
+        alCerrar();
+      },
+    },
+  );
+  const rango = a ? A.rango(fechaCorta(a.fechaInicio), fechaCorta(a.fechaFin)) : '';
+  return (
+    <Dialogo
+      abierto={a !== null}
+      titulo={A.cancelar.titulo}
+      alCerrar={() => {
+        cancelar.reset();
+        setMotivo('');
+        alCerrar();
+      }}
+      acciones={null}
+    >
+      {a !== null && (
+        <form
+          className="nx-formulario-dialogo"
+          noValidate
+          onSubmit={(evento) => {
+            evento.preventDefault();
+            if (a.id !== undefined) cancelar.mutate({ id: a.id, ...(motivo.trim() !== '' ? { motivo: motivo.trim() } : {}) });
+          }}
+        >
+          <p>{A.cancelar.explicacion(rango)}</p>
+          {a.estado === 'APROBADA' && <p className="nx-sutil">{A.cancelar.aprobadaAviso}</p>}
+          <AreaDeTexto
+            id="cancelar-motivo"
+            etiqueta={A.cancelar.motivo}
+            maxLength={500}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+          />
+          {cancelar.error !== null && <Aviso>{cancelar.error.message}</Aviso>}
+          <div className="nx-dialogo__acciones">
+            <Boton variante="texto" onClick={alCerrar}>
+              {A.cancelar.volver}
+            </Boton>
+            <Boton type="submit" variante="peligro" ocupado={cancelar.isPending}>
+              {A.cancelar.confirmar}
+            </Boton>
+          </div>
+        </form>
+      )}
+    </Dialogo>
+  );
+}
+
 function Lista({ lista }: { lista: readonly Ausencia[] }) {
   const [filtro, setFiltro] = useState<FiltroDeAusencias>(SIN_FILTRO);
+  const [cancelando, setCancelando] = useState<Ausencia | null>(null);
   const visibles = filtrar(lista, filtro);
   const justificantes = useJustificantes(visibles.map((a) => a.id));
   const conJustificantes = justificantes.activo || justificantes.porId.size > 0;
@@ -252,9 +321,20 @@ function Lista({ lista }: { lista: readonly Ausencia[] }) {
                   },
                 ]
               : []),
+            {
+              clave: 'acciones',
+              cabecera: A.tabla.acciones,
+              celda: (a) =>
+                a.puedoCancelar ? (
+                  <Boton variante="secundario" onClick={() => setCancelando(a)}>
+                    {A.cancelar.boton}
+                  </Boton>
+                ) : null,
+            },
           ]}
         />
       )}
+      <DialogoDeCancelar a={cancelando} alCerrar={() => setCancelando(null)} />
     </>
   );
 }

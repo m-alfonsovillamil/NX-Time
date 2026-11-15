@@ -152,6 +152,7 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
   const [dias, setDias] = useState(String(persona.diasVacaciones ?? 22));
   const [departamento, setDepartamento] = useState(persona.departamentoId !== undefined ? String(persona.departamentoId) : '');
   const [codigo, setCodigo] = useState(persona.codigoEmpleado ?? '');
+  const [alta, setAlta] = useState(persona.fechaAlta ?? '');
   const [error, setError] = useState<string | null>(null);
 
   const departamentos = useQuery({
@@ -166,18 +167,21 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
       diasVacaciones,
       departamentoId,
       codigoEmpleado,
+      fechaAlta,
     }: {
       horasSemanales: number;
       diasVacaciones: number;
       departamentoId: number | null;
       codigoEmpleado: string;
+      fechaAlta?: string;
     }) => {
       const id = persona.id ?? 0;
       // El código siempre: vacío lo quita (en este PATCH, null sería «no tocar»).
       await pedir(
         cliente.PATCH('/api/v1/gestor/empleados/{id}/ficha', {
           params: { path: { id } },
-          body: { horasSemanales, diasVacaciones, codigoEmpleado },
+          // La fecha de alta solo si hay: sin ella, null, que aquí es «no tocar».
+          body: { horasSemanales, diasVacaciones, codigoEmpleado, ...(fechaAlta ? { fechaAlta } : {}) },
         }),
       );
       const antes = persona.departamentoId ?? null;
@@ -203,7 +207,13 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
     const codigoEmpleado = codigoValido(codigo);
     if (codigoEmpleado === null) return setError(P.fichaCodigoMal);
     setError(null);
-    guardar.mutate({ horasSemanales, diasVacaciones, departamentoId: departamento === '' ? null : Number(departamento), codigoEmpleado });
+    guardar.mutate({
+      horasSemanales,
+      diasVacaciones,
+      departamentoId: departamento === '' ? null : Number(departamento),
+      codigoEmpleado,
+      ...(alta !== '' ? { fechaAlta: alta } : {}),
+    });
   }
 
   const mensaje = error ?? guardar.error?.message ?? null;
@@ -223,6 +233,7 @@ function FormularioDeFicha({ persona, alTerminar }: { persona: Persona; alTermin
         value={codigo}
         onChange={(e) => setCodigo(e.target.value)}
       />
+      <Campo id="ficha-alta" etiqueta={P.fichaAlta} type="date" value={alta} onChange={(e) => setAlta(e.target.value)} />
       {conDepartamento && (
         <Selector
           id="ficha-departamento"

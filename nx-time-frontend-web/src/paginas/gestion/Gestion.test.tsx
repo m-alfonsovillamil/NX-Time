@@ -51,6 +51,43 @@ describe('panel de gestión', () => {
     expect(screen.queryByRole('link', { name: P.titulo })).toBeNull();
   });
 
+  it('«Ahora mismo»: cuántos en cada estado y, primero, quien llega tarde (plan N, N7)', async () => {
+    simularApi({
+      'GET /api/v1/dashboard/pendientes': () => ({ ausencias: 0, correcciones: 0, horasExtra: 0, borrados: 0 }),
+      'GET /api/v1/gestor/equipo-ahora': () => ({
+        fecha: '2026-11-17',
+        trabajando: 1,
+        enPausa: 0,
+        terminada: 0,
+        sinFichar: 1,
+        conRetraso: 1,
+        noLaborable: 1,
+        personas: [
+          { usuarioId: 5, nombre: 'Dani Prueba', estado: 'SIN_FICHAR', desde: null, minutosHoy: 0, motivo: null, entradaPrevista: '09:00', conRetraso: true, modalidad: null },
+          { usuarioId: 2, nombre: 'Ana Prueba', estado: 'TRABAJANDO', desde: '2026-11-17T07:00:00Z', minutosHoy: 90, motivo: null, entradaPrevista: null, conRetraso: false, modalidad: 'A_DISTANCIA' },
+          { usuarioId: 6, nombre: 'Eva Prueba', estado: 'NO_LABORABLE', desde: null, minutosHoy: 0, motivo: 'Vacaciones', entradaPrevista: null, conRetraso: false, modalidad: null },
+        ],
+      }),
+    });
+    pintar(<PanelGestion />, { sesion: sesionDe('GESTOR') });
+
+    const tabla = await screen.findByRole('table', { name: gestion.ahora.tabla });
+    const filas = within(tabla).getAllByRole('row').slice(1);
+    expect(filas[0]?.textContent).toContain('Dani Prueba');
+    expect(filas[0]?.textContent).toContain(gestion.ahora.retraso('09:00'));
+    expect(filas[1]?.textContent).toContain('1h 30m');
+    expect(filas[1]?.textContent).toContain(gestion.ahora.aDistancia);
+    expect(filas[2]?.textContent).toContain('Vacaciones');
+    expect(screen.getByText(gestion.ahora.deEllosConRetraso(1))).toBeTruthy();
+  });
+
+  it('un EMPLEADO no ve «Ahora mismo» (no tiene fichaje:leer:equipo)', () => {
+    const llamadas = simularApi({ 'GET /api/v1/dashboard/pendientes': () => ({}) });
+    pintar(<PanelGestion />, { sesion: sesionDe('EMPLEADO') });
+    expect(screen.queryByRole('heading', { name: gestion.ahora.titulo })).toBeNull();
+    expect(llamadas.a('GET', '/api/v1/gestor/equipo-ahora')).toHaveLength(0);
+  });
+
   it('sin nada pendiente, lo dice en vez de enseñar ceros', async () => {
     simularApi({ 'GET /api/v1/dashboard/pendientes': () => ({ ausencias: 0, correcciones: 0, horasExtra: 0, borrados: 0 }) });
     pintar(<PanelGestion />, { sesion: sesionDe('GESTOR') });
@@ -141,5 +178,33 @@ describe('ausencias del equipo', () => {
     expect(screen.getByText(/^Resuelta por Marta el/)).toBeTruthy();
     expect(screen.getByRole('tab', { name: G.resueltas }).getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByRole('button', { name: G.aprobar })).toBeNull();
+  });
+  it('una aprobada con «puedoCancelar» se anula, y anular exige motivo (ADR 058)', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/ausencias-historial': () => ({
+        contenido: [
+          { ...SOLICITUD, estado: 'APROBADA', aprobadoPor: { nombre: 'Marta' }, fechaResolucion: '2026-09-20T10:00:00Z', puedoCancelar: true },
+          { ...SOLICITUD, id: 5, estado: 'RECHAZADA', aprobadoPor: { nombre: 'Marta' }, fechaResolucion: '2026-09-20T10:00:00Z', puedoCancelar: false },
+        ],
+        hayMas: false,
+      }),
+      'POST /api/v1/ausencias/{id}/cancelar': () => ({ ...SOLICITUD, estado: 'CANCELADA' }),
+    });
+    pintar(<PaginaAusenciasResueltas />, { sesion: sesionDe('GESTOR') });
+
+    const lista = await screen.findByRole('list', { name: G.resueltas });
+    const [aprobada, rechazada] = within(lista).getAllByRole('listitem');
+    expect(within(rechazada as HTMLElement).queryByRole('button', { name: G.anular })).toBeNull();
+    await userEvent.click(within(aprobada as HTMLElement).getByRole('button', { name: G.anular }));
+
+    const dialogo = await screen.findByRole('dialog', { name: G.anularTitulo('Javier') });
+    await userEvent.click(within(dialogo).getByRole('button', { name: G.anular }));
+    expect((await within(dialogo).findByRole('alert')).textContent).toBe(G.anularVacio);
+    await userEvent.type(within(dialogo).getByLabelText(G.comentario), 'Se incorporó antes');
+    await userEvent.click(within(dialogo).getByRole('button', { name: G.anular }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/ausencias/4/cancelar').map((l) => l.cuerpo)).toEqual([{ motivo: 'Se incorporó antes' }]),
+    );
   });
 });

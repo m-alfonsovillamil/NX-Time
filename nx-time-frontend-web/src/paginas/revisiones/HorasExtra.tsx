@@ -20,7 +20,7 @@ import { cliente } from '../../api/cliente';
 import { pedir, useMutacion } from '../../api/consultas';
 import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
-import { Aviso, Boton, Insignia, Selector, type Tono } from '../../componentes/Basicos';
+import { Aviso, Boton, Campo, Insignia, Selector, type Tono } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
@@ -35,6 +35,47 @@ type Bolsa = components['schemas']['OvertimeBalanceResponse'];
 
 const TONO: Record<string, Tono> = { ABIERTO: 'aviso', JUSTIFICADO: 'info', ACEPTADO: 'exito' };
 const CLAVE = ['horas-extra'] as const;
+type Compensacion = 'PAGO' | 'DESCANSO';
+
+/**
+ * Cómo se compensan unas aceptadas (ADR 061). Las aceptadas antes de poder
+ * elegir llegan sin compensación y cuentan como pagadas: no se dice nada.
+ */
+export function textoDeCompensacion(a: AvisoDeHorasExtra, hoy: string): string | null {
+  if (a.estado !== 'ACEPTADO' || a.compensacion === undefined || a.compensacion === null) return null;
+  if (a.compensacion === 'PAGO') return H.sePagan;
+  if (a.descansoDisfrutadoEn) return H.descansadas(fechaCorta(a.descansoDisfrutadoEn));
+  const antesDe = a.descansoAntesDe ?? a.fecha ?? hoy;
+  return antesDe < hoy ? H.caducadas(fechaCorta(antesDe)) : H.seCompensan(fechaCorta(antesDe));
+}
+
+/** Apuntar el día en que se descansaron (por defecto hoy, o el último día que vale). */
+function ApuntarDescanso({ a, hoy }: { a: AvisoDeHorasExtra; hoy: string }) {
+  const tope = a.descansoAntesDe !== undefined && a.descansoAntesDe < hoy ? a.descansoAntesDe : hoy;
+  const [dia, setDia] = useState(tope);
+  const apuntar = useMutacion(
+    (fecha: string) =>
+      pedir(cliente.POST('/api/v1/horas-extra/{id}/descanso', { params: { path: { id: a.id ?? 0 } }, body: { fecha } })),
+    { invalida: [CLAVE, ['dashboard']], exito: H.descansoApuntado },
+  );
+  return (
+    <div className="nx-acciones-fila nx-acciones-fila--con-aire">
+      <Campo
+        id={`descanso-${a.id}`}
+        etiqueta={H.diaDelDescanso}
+        type="date"
+        min={a.fecha}
+        max={tope}
+        value={dia}
+        onChange={(e) => setDia(e.target.value)}
+      />
+      <Boton variante="secundario" ocupado={apuntar.isPending} onClick={() => dia !== '' && apuntar.mutate(dia)}>
+        {H.apuntarDescanso}
+      </Boton>
+      {apuntar.error !== null && <Aviso>{apuntar.error.message}</Aviso>}
+    </div>
+  );
+}
 
 /**
  * «El lun, 21 sept» o «Semana del lun, 14 sept al dom, 20 sept». Un aviso
@@ -89,11 +130,15 @@ function TarjetaDeAviso({
 }: {
   a: AvisoDeHorasExtra;
   delEquipo: boolean;
-  ocupado?: boolean;
-  alAceptar?: () => void;
+  ocupado?: Compensacion | null;
+  alAceptar?: (compensacion: Compensacion) => void;
   alJustificar?: () => void;
 }) {
   const esperaDecision = a.estado === 'ABIERTO';
+  const hoy = hoyEnEmpresa();
+  const compensacion = textoDeCompensacion(a, hoy);
+  const descansoPendiente =
+    a.estado === 'ACEPTADO' && a.compensacion === 'DESCANSO' && !a.descansoDisfrutadoEn && (a.fecha ?? hoy) <= hoy;
   return (
     <li className="nx-incidencia">
       <div className="nx-incidencia__cabecera">
@@ -105,11 +150,16 @@ function TarjetaDeAviso({
       </div>
       <span>{H.exceso(minutos(a.minutosExtra ?? 0), minutos(a.minutosEsperados ?? 0))}</span>
       {a.justificacion && <span className="nx-sutil">{H.justificacion(a.justificacion)}</span>}
+      {compensacion !== null && <span className="nx-sutil">{compensacion}</span>}
       {a.revisadoPor && <span className="nx-sutil">{H.revisadoPor(a.revisadoPor)}</span>}
+      {delEquipo && descansoPendiente && <ApuntarDescanso a={a} hoy={hoy} />}
       {delEquipo && esperaDecision && alAceptar && alJustificar && (
         <div className="nx-acciones-fila nx-acciones-fila--con-aire">
-          <Boton ocupado={ocupado === true} onClick={alAceptar}>
+          <Boton ocupado={ocupado === 'PAGO'} onClick={() => alAceptar('PAGO')}>
             {H.aceptar}
+          </Boton>
+          <Boton variante="secundario" ocupado={ocupado === 'DESCANSO'} onClick={() => alAceptar('DESCANSO')}>
+            {H.compensar}
           </Boton>
           <Boton variante="secundario" onClick={alJustificar}>
             {H.justificar}
@@ -158,16 +208,30 @@ function DelEquipo({ anio }: { anio: number }) {
   });
 
   const revisar = useMutacion(
-    ({ id, aceptar, justificacion }: { id: number; aceptar: boolean; justificacion?: string }) =>
+    ({
+      id,
+      aceptar,
+      justificacion,
+      compensacion,
+    }: {
+      id: number;
+      aceptar: boolean;
+      justificacion?: string;
+      compensacion?: Compensacion;
+    }) =>
       pedir(
         cliente.PATCH('/api/v1/horas-extra/{id}', {
           params: { path: { id } },
-          body: { aceptar, ...(justificacion !== undefined ? { justificacion } : {}) },
+          body: {
+            aceptar,
+            ...(justificacion !== undefined ? { justificacion } : {}),
+            ...(compensacion !== undefined ? { compensacion } : {}),
+          },
         }),
       ),
     {
       invalida: [CLAVE, ['dashboard']],
-      exito: (_r, v) => (v.aceptar ? H.aceptada : H.justificada),
+      exito: (_r, v) => (!v.aceptar ? H.justificada : v.compensacion === 'DESCANSO' ? H.compensada : H.aceptada),
       alTerminar: () => setJustificando(null),
     },
   );
@@ -186,8 +250,14 @@ function DelEquipo({ anio }: { anio: number }) {
                   key={a.id}
                   a={a}
                   delEquipo
-                  ocupado={revisar.isPending && revisar.variables?.id === a.id && revisar.variables.aceptar}
-                  alAceptar={() => a.id !== undefined && revisar.mutate({ id: a.id, aceptar: true })}
+                  ocupado={
+                    revisar.isPending && revisar.variables?.id === a.id && revisar.variables.aceptar
+                      ? (revisar.variables.compensacion ?? 'PAGO')
+                      : null
+                  }
+                  alAceptar={(compensacion) =>
+                    a.id !== undefined && revisar.mutate({ id: a.id, aceptar: true, compensacion })
+                  }
                   alJustificar={() => setJustificando(a)}
                 />
               ))}
