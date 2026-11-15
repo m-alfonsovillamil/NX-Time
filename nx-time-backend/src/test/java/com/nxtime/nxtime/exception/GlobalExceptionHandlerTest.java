@@ -140,6 +140,15 @@ class GlobalExceptionHandlerTest {
         assertThat(problema.getDetail()).isEqualTo("No se puede hacer eso porque hay datos que dependen de ello.");
     }
 
+    @Test
+    @DisplayName("Un carácter que no cabe en un texto (el nulo) es un 400, no un 500")
+    void caracterNoValido_400() {
+        ProblemDetail problema = handler.handleDataIntegrity(violacion("22021", null));
+
+        assertThat(problema.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problema.getDetail()).isEqualTo("Un texto lleva un carácter que no se puede guardar.");
+    }
+
     @ParameterizedTest(name = "SQLSTATE {0}")
     @DisplayName("Un NOT NULL o un CHECK violados siguen siendo 500: son un bug nuestro, no un conflicto")
     @CsvSource({"23502", "23514"})
