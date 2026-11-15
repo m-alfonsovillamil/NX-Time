@@ -62,6 +62,46 @@ afterEach(() => {
 });
 
 describe('mis ausencias', () => {
+  it('cancelar solo sale donde el servidor lo permite, y manda el motivo si lo hay (ADR 058)', async () => {
+    const llamadas = api({
+      'GET /api/v1/ausencias/mis-peticiones': () => ({
+        contenido: [{ ...DE_2026, puedoCancelar: true }, { ...RECHAZADA, puedoCancelar: false }],
+        hayMas: false,
+      }),
+      'POST /api/v1/ausencias/{id}/cancelar': () => ({ ...DE_2026, estado: 'CANCELADA' }),
+    });
+    pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
+
+    const tabla = await screen.findByRole('table', { name: A.tabla.titulo });
+    const botones = within(tabla).getAllByRole('button', { name: A.cancelar.boton });
+    expect(botones).toHaveLength(1);
+    await userEvent.click(botones[0] as HTMLElement);
+
+    const dialogo = await screen.findByRole('dialog', { name: A.cancelar.titulo });
+    await userEvent.type(within(dialogo).getByLabelText(A.cancelar.motivo), '  Cambio de planes ');
+    await userEvent.click(within(dialogo).getByRole('button', { name: A.cancelar.confirmar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/ausencias/2/cancelar').map((l) => l.cuerpo)).toEqual([{ motivo: 'Cambio de planes' }]),
+    );
+  });
+
+  it('una cancelada dice quién la canceló y por qué', async () => {
+    api({
+      'GET /api/v1/ausencias/mis-peticiones': () => ({
+        contenido: [
+          { ...DE_2025, estado: 'CANCELADA', canceladaPor: { nombre: 'Marta Sánchez' }, motivoCancelacion: 'Se incorporó antes' },
+        ],
+        hayMas: false,
+      }),
+    });
+    pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
+
+    expect(await screen.findByText(A.canceladaPor('Marta Sánchez'))).toBeTruthy();
+    expect(screen.getByText(A.motivoCancelacion('Se incorporó antes'))).toBeTruthy();
+    expect(screen.getAllByText(A.estados.CANCELADA).length).toBeGreaterThan(0);
+  });
+
   /* ADR 027: el filtro es local, así que primero hacen falta TODAS las páginas. */
   it('pide todas las páginas antes de pintar', async () => {
     const llamadas = api({

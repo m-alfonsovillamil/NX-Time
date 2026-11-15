@@ -65,7 +65,7 @@ class ProfileControllerTest {
                 10L, "ana@nxtime.test", "Ana", "Fernández", "Ana Fernández", "AF",
                 LocalDate.of(1995, 3, 14), "Analista", 3L, "Operaciones",
                 Role.EMPLEADO, true, new BigDecimal("40.0"), 22,
-                RoleAuthorities.enOrden(Role.EMPLEADO));
+                RoleAuthorities.enOrden(Role.EMPLEADO), LocalDate.of(2024, 9, 2));
     }
 
     @Test

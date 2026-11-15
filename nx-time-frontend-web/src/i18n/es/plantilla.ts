@@ -44,6 +44,7 @@ export const plantilla = {
   fichaHorasMal: 'La jornada tiene que ser de más de 0 y como mucho 60 horas, con un decimal como mucho.',
   fichaDiasMal: 'Los días de vacaciones tienen que estar entre 0 y 365.',
   fichaCodigo: 'Código de empleado',
+  fichaAlta: 'Fecha de alta',
   fichaCodigoAyuda: 'Su número en vuestro ERP o programa de nóminas, para casar las horas. Opcional.',
   fichaCodigoMal:
     'El código de empleado admite hasta 50 letras, números y . _ / -, sin espacios, y tiene que empezar por letra o número.',

@@ -77,6 +77,17 @@ public class AbsenceRequest {
 
     private String comentarioResolucion;
 
+    // La cancelación (ADR 058), aparte de la resolución: si se anula una
+    // aprobada, sigue constando quién la aprobó. Van juntos, y solo en una
+    // CANCELADA (ck_peticiones_resolucion_coherente, V54).
+    @ManyToOne
+    @JoinColumn(name = "cancelada_por_id")
+    private User canceladaPor;
+
+    private Instant canceladaEn;
+
+    private String motivoCancelacion;
+
     @Version
     private long version;
 

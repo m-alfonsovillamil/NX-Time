@@ -245,7 +245,7 @@ public class CalendarServiceImpl implements CalendarService {
         return new CalendarAbsenceDTO(
                 ausencia.getId(),
                 persona.getId(),
-                persona.getNombre(),
+                persona.nombreCompleto(),
                 ausencia.getFechaInicio(),
                 ausencia.getFechaFin(),
                 ausencia.getTipo(),

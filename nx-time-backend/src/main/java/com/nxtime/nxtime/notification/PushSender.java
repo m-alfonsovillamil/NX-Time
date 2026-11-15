@@ -40,9 +40,19 @@ public class PushSender {
     private final PushDeviceRepository deviceRepository;
     private final ObjectProvider<PushGateway> gateway;
 
+    /** Lo que ha elegido cada persona (ADR 059). Null en los tests que no lo usan: todo llega. */
+    private final com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias;
+
     public PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway) {
+        this(deviceRepository, gateway, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway,
+            com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias) {
         this.deviceRepository = deviceRepository;
         this.gateway = gateway;
+        this.preferencias = preferencias;
     }
 
     /**
@@ -60,6 +70,11 @@ public class PushSender {
     void enviar(NotificationEvents.NoticePublished evento) {
         PushGateway salida = gateway.getIfAvailable();
         if (salida == null) {
+            return;
+        }
+        // Quien ha apagado el push de esa categoría lo sigue teniendo en la
+        // campana (ADR 059): el aviso ya está guardado, solo no se manda al móvil.
+        if (preferencias != null && !preferencias.quierePush(evento.destinatarioId(), evento.tipo())) {
             return;
         }
         try {

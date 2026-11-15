@@ -14,7 +14,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -39,12 +45,14 @@ import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.Avatar
+import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.EstadoErrorPantalla
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.TarjetaAusencia
+import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.etiqueta
 import com.nxtime.app.ui.util.resolver
 
@@ -58,6 +66,7 @@ fun AusenciasScreen(
     viewModel: AusenciasViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    var aCancelar by remember { mutableStateOf<RespuestaAusencia?>(null) }
 
     // Sin flecha de volver: es un destino de la barra de navegación.
     PantallaConBarra(
@@ -103,6 +112,12 @@ fun AusenciasScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Un fallo al cancelar no tapa la lista, que sigue valiendo.
+                    estado.errorAlCancelar?.let { mensaje ->
+                        item {
+                            BannerError(mensaje = mensaje.resolver(), onReintentar = viewModel::descartarErrorAlCancelar)
+                        }
+                    }
                     item {
                         Filtros(
                             peticiones = estado.peticiones,
@@ -116,13 +131,89 @@ fun AusenciasScreen(
                         item { SinResultados(onQuitar = viewModel::quitarFiltros) }
                     } else {
                         items(visibles, key = { it.id }) { peticion ->
-                            TarjetaAusencia(peticion = peticion)
+                            TarjetaAusencia(peticion = peticion) {
+                                if (peticion.puedoCancelar) {
+                                    Spacer(Modifier.height(12.dp))
+                                    OutlinedButton(
+                                        onClick = { aCancelar = peticion },
+                                        enabled = estado.cancelando == null
+                                    ) {
+                                        Text(stringResource(R.string.ausencias_cancelar))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    aCancelar?.let { peticion ->
+        DialogoCancelar(
+            peticion = peticion,
+            onVolver = { aCancelar = null },
+            onConfirmar = { motivo ->
+                viewModel.cancelar(peticion.id, motivo)
+                aCancelar = null
+            }
+        )
+    }
+}
+
+/** ¿Cancelar esta ausencia? El motivo es opcional: es la suya (ADR 058). */
+@Composable
+private fun DialogoCancelar(
+    peticion: RespuestaAusencia,
+    onVolver: () -> Unit,
+    onConfirmar: (String?) -> Unit
+) {
+    var motivo by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onVolver,
+        title = { Text(stringResource(R.string.ausencias_cancelar_titulo)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(
+                        R.string.ausencias_rango,
+                        DateFormats.fechaCorta(peticion.fechaInicio),
+                        DateFormats.fechaCorta(peticion.fechaFin)
+                    ),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(stringResource(R.string.ausencias_cancelar_texto))
+                if (peticion.estado == EstadoAusencia.APROBADA) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.ausencias_cancelar_aprobada),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { motivo = it.take(500) },
+                    label = { Text(stringResource(R.string.ausencias_cancelar_motivo)) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmar(motivo) },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.ausencias_cancelar))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onVolver) { Text(stringResource(R.string.ausencias_volver)) }
+        }
+    )
 }
 
 /**
@@ -150,7 +241,8 @@ private fun Filtros(
         listOf(
             EstadoAusencia.PENDIENTE to R.string.ausencias_filtro_pendientes,
             EstadoAusencia.APROBADA to R.string.ausencias_filtro_aprobadas,
-            EstadoAusencia.RECHAZADA to R.string.ausencias_filtro_rechazadas
+            EstadoAusencia.RECHAZADA to R.string.ausencias_filtro_rechazadas,
+            EstadoAusencia.CANCELADA to R.string.ausencias_filtro_canceladas
         ).forEach { (valor, texto) ->
             FilterChip(
                 selected = filtro.estado == valor,

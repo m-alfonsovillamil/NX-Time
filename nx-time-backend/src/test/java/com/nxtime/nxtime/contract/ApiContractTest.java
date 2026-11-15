@@ -3424,6 +3424,53 @@ class ApiContractTest {
     }
 
     // ------------------------------------------------------------------
+    // 7c. PETICIONES MAL FORMADAS (revisión del 15/11/2026)
+    // ------------------------------------------------------------------
+
+    @Test
+    @Order(86)
+    void peticionesMalFormadas_dan400EnEspanolYDicenQueCampoEs() throws Exception {
+        // Con el backend levantado, porque lo que se comprueba es que Spring
+        // Boot registra de verdad el lector de textos (JsonDeLaApiConfig) y
+        // que estos manejadores ganan al suyo, que contestaba en inglés. Antes,
+        // un carácter nulo en cualquier texto llegaba al INSERT y era un 500.
+        ResponseEntity<String> login = rest.postForEntity(url("/auth/login"),
+                new HttpEntity<>(toJson(mapOf("email", EMAIL_EMPLEADO, "contrasena", "nuevaPassword123")), jsonHeaders()),
+                String.class);
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String token = bodyOf(login).get("token").asText();
+
+        ResponseEntity<String> nulo = rest.exchange(url("/api/v1/ausencias"), HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("fechaInicio", "2099-03-02", "fechaFin", "2099-03-02",
+                        "tipo", "VACACIONES", "motivo", "a\u0000b")), authHeaders(token)), String.class);
+        assertThat(nulo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(nulo).get("detail").asText())
+                .isEqualTo("El dato «motivo» lleva un carácter que no se puede guardar.");
+
+        ResponseEntity<String> tipoQueNoExiste = rest.exchange(url("/api/v1/ausencias"), HttpMethod.POST,
+                new HttpEntity<>(toJson(mapOf("fechaInicio", "2099-03-02", "fechaFin", "2099-03-02",
+                        "tipo", "NO_EXISTE")), authHeaders(token)), String.class);
+        assertThat(tipoQueNoExiste.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(tipoQueNoExiste).get("detail").asText()).isEqualTo("El dato «tipo» no es válido.");
+
+        ResponseEntity<String> sinCuerpo = rest.exchange(url("/api/v1/ausencias"), HttpMethod.POST,
+                new HttpEntity<>("{no es json", authHeaders(token)), String.class);
+        assertThat(sinCuerpo.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(sinCuerpo).get("detail").asText())
+                .isEqualTo("Falta el cuerpo de la petición o no es un JSON válido.");
+
+        ResponseEntity<String> sinParametro = rest.exchange(url("/api/v1/dashboard/horas-por-dia"), HttpMethod.GET,
+                new HttpEntity<>(authHeaders(token)), String.class);
+        assertThat(sinParametro.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(sinParametro).get("detail").asText()).isEqualTo("Falta el parámetro «desde».");
+
+        ResponseEntity<String> idQueNoEsNumero = rest.exchange(url("/api/v1/avisos/abc/leido"), HttpMethod.PATCH,
+                new HttpEntity<>(authHeaders(token)), String.class);
+        assertThat(idQueNoEsNumero.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf(idQueNoEsNumero).get("detail").asText()).isEqualTo("El parámetro «id» no es válido.");
+    }
+
+    // ------------------------------------------------------------------
     // 8. BAJA DE EMPLEADOS (Fase 4)
     // ------------------------------------------------------------------
 

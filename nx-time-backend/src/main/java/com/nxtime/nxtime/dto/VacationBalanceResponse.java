@@ -17,6 +17,14 @@ public record VacationBalanceResponse(
         int diasTotales,
         int diasConsumidos,
         int diasPendientes,
-        int diasDisponibles
+        int diasDisponibles,
+        /* Los que vienen del año anterior y ya están dentro de diasTotales (ADR 060). */
+        int diasArrastrados,
+        /* Hasta cuándo se pueden usar los arrastrados, o null si no hay o ya caducaron. */
+        java.time.LocalDate arrastreCaducaEl
 ) {
+    /** Sin arrastre: como era antes de V57. */
+    public VacationBalanceResponse(int anio, int diasTotales, int diasConsumidos, int diasPendientes, int diasDisponibles) {
+        this(anio, diasTotales, diasConsumidos, diasPendientes, diasDisponibles, 0, null);
+    }
 }

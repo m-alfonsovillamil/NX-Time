@@ -101,6 +101,25 @@ public class User {
      */
     private String codigoEmpleado;
 
+    /**
+     * Cuándo empezó a trabajar en la empresa (V56; plan N, paso N10). La pone
+     * RRHH o la importación; si nadie la da, el día en que se crea la cuenta
+     * ({@link #fechaDeAltaPorDefecto}). No es la de la analítica, que cuenta
+     * desde la primera jornada fichada (ADR 026).
+     */
+    private LocalDate fechaAlta;
+
+    /**
+     * Sin fecha de alta, la de hoy en la zona de su empresa: sirve para los
+     * cinco sitios donde nace una cuenta. Lo llama {@link #alCrearse}, porque
+     * JPA solo admite un {@code @PrePersist} por entidad.
+     */
+    void fechaDeAltaPorDefecto() {
+        if (fechaAlta == null) {
+            fechaAlta = LocalDate.now(zona());
+        }
+    }
+
     @ManyToOne
     @JoinColumn(name = "departamento_id")
     private Department departamento;
@@ -174,7 +193,18 @@ public class User {
      * mayúsculas: se guardaría bien, pero el correo que le mandamos a esa
      * persona llevaría una dirección que luego ella no podría teclear igual.
      */
+    /** Al crearse: el correo normalizado y, si no la trae, la fecha de alta de hoy. */
     @PrePersist
+    private void alCrearse() {
+        normalizarEmail();
+        fechaDeAltaPorDefecto();
+    }
+
+    /**
+     * Al cambiar, solo el correo: una cuenta de antes de V56 que nunca fichó se
+     * queda sin fecha de alta, que es mejor que inventarle la del día en que
+     * alguien le cambió otra cosa.
+     */
     @PreUpdate
     private void normalizarEmail() {
         this.email = Emails.normalizar(this.email);

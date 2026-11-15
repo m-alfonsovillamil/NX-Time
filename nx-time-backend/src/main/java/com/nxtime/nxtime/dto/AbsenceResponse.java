@@ -25,6 +25,14 @@ public record AbsenceResponse(
         SimpleUserDTO aprobadoPor,
         Instant fechaResolucion,
         String comentarioResolucion,
-        int diasHabiles
+        int diasHabiles,
+        // ADR 058: quién la canceló, cuándo y por qué (nulos si no está
+        // CANCELADA), y si quien pregunta puede cancelarla ahora. La regla
+        // viaja resuelta, como «puedoResolver» en las correcciones: los
+        // clientes no la reimplementan.
+        SimpleUserDTO canceladaPor,
+        Instant canceladaEn,
+        String motivoCancelacion,
+        boolean puedoCancelar
 ) {
 }

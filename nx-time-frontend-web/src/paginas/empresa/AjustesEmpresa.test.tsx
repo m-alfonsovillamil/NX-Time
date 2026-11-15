@@ -14,7 +14,7 @@ import { empresa } from '../../i18n/es/empresa';
 import { kiosco } from '../../i18n/es/kiosco';
 import { pintar, problema, sesionDe, simularApi } from '../../pruebas/api';
 import { zonaActual } from '../../util/fechas';
-import { AjustesEmpresa } from './AjustesEmpresa';
+import { AjustesEmpresa, aMesDia } from './AjustesEmpresa';
 
 const A = empresa.ajustes;
 
@@ -72,6 +72,34 @@ describe('ajustes de la empresa', () => {
     expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
       { nombre: 'Talleres Ana', zonaHoraria: 'Atlantic/Canary', contactoPrivacidad: '' },
     ]);
+  });
+
+  /* ADR 060: lo que sobra de vacaciones pasa al año siguiente, hasta una fecha. */
+  it('el arrastre de vacaciones se escribe como 31/03 y viaja como 03-31', async () => {
+    expect(aMesDia('31/3')).toBe('03-31');
+    expect(aMesDia('1/12')).toBe('12-01');
+    expect(aMesDia('32/01')).toBeNull();
+    expect(aMesDia('marzo')).toBeNull();
+
+    const llamadas = simularApi({
+      'GET /api/v1/empresa/ajustes': () => ({ ...AJUSTES, arrastreVacaciones: false, arrastreVacacionesHasta: '03-31' }),
+      'PUT /api/v1/empresa/ajustes': ({ cuerpo }) => ({ ...(cuerpo as object), firmasInvalidadas: 0 }),
+    });
+    pintar(<AjustesEmpresa />, { sesion: sesionDe('ADMIN') });
+
+    await userEvent.click(await screen.findByLabelText(A.arrastre.pasar));
+    const hasta = screen.getByLabelText(A.arrastre.hasta);
+    expect((hasta as HTMLInputElement).value).toBe('31/03');
+    await userEvent.clear(hasta);
+    await userEvent.type(hasta, '30/4');
+    const tarjeta = hasta.closest('.nx-columna') as HTMLElement;
+    await userEvent.click(within(tarjeta).getByRole('button', { name: A.arrastre.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PUT', '/api/v1/empresa/ajustes').map((l) => l.cuerpo)).toEqual([
+        { nombre: 'Talleres Ana', zonaHoraria: 'Europe/Madrid', contactoPrivacidad: '', arrastreVacaciones: true, arrastreVacacionesHasta: '04-30' },
+      ]),
+    );
   });
 
   /* ADR 056: encenderla obliga a informar antes a la plantilla, y apagarla no obliga a nada. */

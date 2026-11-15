@@ -20,5 +20,6 @@ public record FilaDeImportacion(
         BigDecimal horasSemanales,
         Integer diasVacaciones,
         @Schema(description = "Lo que impide darla de alta. Vacío: se puede") List<String> errores,
-        @Schema(description = "Su número en el ERP o en nóminas (ADR 053), o null") String codigoEmpleado) {
+        @Schema(description = "Su número en el ERP o en nóminas (ADR 053), o null") String codigoEmpleado,
+        @Schema(description = "Su fecha de alta (plan N, N10), o null: entonces, el día que se importa") java.time.LocalDate fechaAlta) {
 }

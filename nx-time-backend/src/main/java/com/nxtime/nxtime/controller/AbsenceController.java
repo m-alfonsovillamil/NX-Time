@@ -2,6 +2,7 @@ package com.nxtime.nxtime.controller;
 
 import com.nxtime.nxtime.dto.AbsenceRequestDTO;
 import com.nxtime.nxtime.dto.AbsenceResponse;
+import com.nxtime.nxtime.dto.CancelAbsenceRequest;
 import com.nxtime.nxtime.dto.UpdateAbsenceStatusRequest;
 import com.nxtime.nxtime.dto.VacationBalanceResponse;
 import com.nxtime.nxtime.exception.BusinessException;
@@ -143,6 +144,37 @@ public class AbsenceController {
             @Valid @RequestBody UpdateAbsenceStatusRequest request,
             Authentication authentication) {
         return ResponseEntity.ok(absenceService.changeRequestStatus(authentication.getName(), id, request));
+    }
+
+    // ADR 058. Un POST con la acción en la ruta, y no un PATCH de estado como
+    // aprobar: lo puede hacer el propio interesado, lleva otras reglas y deja
+    // otros datos (quién, cuándo y por qué se canceló).
+    @Operation(summary = "Cancelar una ausencia",
+            description = "Quien la pidió la retira mientras no haya empezado, esté pendiente o aprobada. "
+                    + "Una aprobada ya empezada la anula quien tiene ausencia:aprobar, y entonces el motivo es "
+                    + "obligatorio. Una pendiente ajena no se cancela: se aprueba o se rechaza. "
+                    + "Cada respuesta de ausencia dice en «puedoCancelar» si se puede.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Cancelada",
+                    content = @Content(schema = @Schema(implementation = AbsenceResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Anular la de otra persona sin motivo",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No autenticado",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Es de otra persona y no se aprueban ausencias, o de otra empresa",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404", description = "Petición no encontrada",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "409", description = "Ya rechazada o cancelada, ya empezada (para su dueño), "
+                    + "o pendiente y ajena", content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PreAuthorize("hasAuthority('ausencia:escribir') or hasAuthority('ausencia:aprobar')")
+    @PostMapping("/{id}/cancelar")
+    public ResponseEntity<AbsenceResponse> cancelar(
+            @PathVariable long id,
+            @Valid @RequestBody(required = false) CancelAbsenceRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(absenceService.cancelar(authentication.getName(), id, request));
     }
 
     @Operation(summary = "Mi saldo de vacaciones",

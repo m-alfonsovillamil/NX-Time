@@ -92,6 +92,19 @@ public class ExcelReportGenerator {
      */
     private static final int VENTANA_DE_FILAS = 100;
 
+    /**
+     * La segunda hoja (plan N, paso N6): una fila por persona con lo que pide
+     * una gestoría. Va DETRÁS de la de las jornadas, que sigue siendo la
+     * primera: quien lea este Excel por posición no nota nada.
+     */
+    private static final String[] CABECERAS_DEL_RESUMEN = {
+            "Empleado", "Código de empleado", "Días trabajados", "Tiempo efectivo", "Horas (decimal)",
+            "Pausas", "Horas extra aceptadas", "Vacaciones (días)", "Otras ausencias (días)",
+            "Detalle de ausencias", "Cerradas por el sistema", "Pendientes de revisar", "Sin conexión"
+    };
+    private static final int[] ANCHOS_DEL_RESUMEN = {28, 18, 14, 15, 14, 12, 18, 16, 20, 36, 20, 20, 13};
+    private static final int ULTIMA_COLUMNA_DEL_RESUMEN = CABECERAS_DEL_RESUMEN.length - 1;
+
     private final CondicionesDelServicio servicio;
 
     public ExcelReportGenerator(CondicionesDelServicio servicio) {
@@ -144,6 +157,10 @@ public class ExcelReportGenerator {
             hoja.setAutoFilter(new CellRangeAddress(
                     FILA_DE_CABECERAS, Math.max(FILA_DE_CABECERAS, numeroFila - 1), 0, ULTIMA_COLUMNA));
             prepararImpresion(hoja, informe);
+
+            if (!informe.resumen().isEmpty()) {
+                escribirResumen(libro, informe, estilos);
+            }
 
             libro.write(salida);
             // Vaciar lo que quede en el búfer antes de dar por escrito el
@@ -246,6 +263,120 @@ public class ExcelReportGenerator {
     }
 
     /**
+     * La hoja «Resumen por persona». Las cifras van como NÚMERO (días, horas
+     * con decimales) para que se puedan sumar y llevar a una nómina; el tiempo
+     * efectivo y las pausas, además, como texto legible. Todo sale de los
+     * segundos exactos de cada persona: el total de la hoja cuadra con el de
+     * la hoja de las jornadas.
+     */
+    private void escribirResumen(SXSSFWorkbook libro, MonthlyReport informe, Estilos estilos) {
+        Sheet hoja = libro.createSheet("Resumen por persona");
+        for (int i = 0; i < ANCHOS_DEL_RESUMEN.length; i++) {
+            hoja.setColumnWidth(i, ANCHOS_DEL_RESUMEN[i] * 256);
+        }
+        hoja.setDisplayGridlines(false);
+
+        Row titulo = hoja.createRow(0);
+        titulo.setHeightInPoints(30);
+        bandaAncha(hoja, titulo, estilos.titulo, "Resumen por persona - " + informe.nombreEmpresa());
+        Row periodo = hoja.createRow(1);
+        periodo.setHeightInPoints(20);
+        bandaAncha(hoja, periodo, estilos.periodo, "Periodo: " + informe.mes()
+                + "   ·   Ausencias en días hábiles del mes; horas extra, solo las aceptadas");
+        hoja.createRow(2);
+
+        Row cabecera = hoja.createRow(FILA_DE_CABECERAS);
+        cabecera.setHeightInPoints(22);
+        for (int i = 0; i < CABECERAS_DEL_RESUMEN.length; i++) {
+            Cell celda = cabecera.createCell(i);
+            celda.setCellValue(CABECERAS_DEL_RESUMEN[i]);
+            celda.setCellStyle(estilos.cabecera);
+        }
+
+        int numeroFila = FILA_DE_CABECERAS + 1;
+        int numero = 0;
+        long dias = 0;
+        long segundos = 0;
+        long pausas = 0;
+        long minutosExtra = 0;
+        long vacaciones = 0;
+        long otras = 0;
+        for (ResumenDePersona persona : informe.resumen()) {
+            EstilosDeFila estilo = numero++ % 2 == 1 ? estilos.alterna : estilos.normal;
+            Row fila = hoja.createRow(numeroFila++);
+            celdaDeTexto(fila, 0, persona.nombre(), estilo.texto);
+            celdaDeTexto(fila, 1, persona.codigoEmpleado() == null ? "" : persona.codigoEmpleado(), estilo.centrado);
+            celdaDeNumero(fila, 2, persona.diasTrabajados(), estilo.minutos);
+            celdaDeTexto(fila, 3, ResumenDePersona.duracion(persona.segundosNetos()), estilo.centrado);
+            celdaDeNumero(fila, 4, persona.horasDecimales(), estilo.horas);
+            celdaDeTexto(fila, 5, ResumenDePersona.duracion(persona.segundosPausa()), estilo.centrado);
+            celdaDeTexto(fila, 6, persona.minutosHorasExtra() == 0 ? ""
+                    : ResumenDePersona.duracion(persona.minutosHorasExtra() * 60), estilo.centrado);
+            celdaDeNumero(fila, 7, persona.diasVacaciones(), estilo.minutos);
+            celdaDeNumero(fila, 8, persona.diasOtrasAusencias(), estilo.minutos);
+            celdaDeTexto(fila, 9, persona.detalleAusencias(), estilo.texto);
+            celdaDeNumero(fila, 10, persona.cerradasPorElSistema(), estilo.minutos);
+            celdaDeNumero(fila, 11, persona.pendientesDeRevisar(), estilo.minutos);
+            celdaDeNumero(fila, 12, persona.sinConexion(), estilo.minutos);
+            dias += persona.diasTrabajados();
+            segundos += persona.segundosNetos();
+            pausas += persona.segundosPausa();
+            minutosExtra += persona.minutosHorasExtra();
+            vacaciones += persona.diasVacaciones();
+            otras += persona.diasOtrasAusencias();
+        }
+
+        hoja.createRow(numeroFila++);
+        Row total = hoja.createRow(numeroFila);
+        total.setHeightInPoints(20);
+        for (int i = 0; i <= ULTIMA_COLUMNA_DEL_RESUMEN; i++) {
+            total.createCell(i).setCellStyle(estilos.total);
+        }
+        total.getCell(0).setCellValue("TOTAL (" + informe.resumen().size() + " personas)");
+        total.getCell(2).setCellValue(dias);
+        total.getCell(3).setCellValue(ResumenDePersona.duracion(segundos));
+        total.getCell(4).setCellValue(Math.round(segundos / 36.0) / 100.0);
+        total.getCell(5).setCellValue(ResumenDePersona.duracion(pausas));
+        total.getCell(6).setCellValue(minutosExtra == 0 ? "" : ResumenDePersona.duracion(minutosExtra * 60));
+        total.getCell(7).setCellValue(vacaciones);
+        total.getCell(8).setCellValue(otras);
+
+        hoja.createFreezePane(1, FILA_DE_CABECERAS + 1);
+        hoja.setAutoFilter(new CellRangeAddress(FILA_DE_CABECERAS,
+                Math.max(FILA_DE_CABECERAS, FILA_DE_CABECERAS + informe.resumen().size()), 0, ULTIMA_COLUMNA_DEL_RESUMEN));
+        PrintSetup impresion = hoja.getPrintSetup();
+        impresion.setLandscape(true);
+        impresion.setPaperSize(PrintSetup.A4_PAPERSIZE);
+        hoja.setFitToPage(true);
+        impresion.setFitWidth((short) 1);
+        impresion.setFitHeight((short) 0);
+        hoja.setRepeatingRows(new CellRangeAddress(FILA_DE_CABECERAS, FILA_DE_CABECERAS, 0, ULTIMA_COLUMNA_DEL_RESUMEN));
+        hoja.getHeader().setLeft(servicio.producto() + " · Resumen por persona");
+        hoja.getHeader().setRight(informe.nombreEmpresa() + " · " + informe.mes());
+        hoja.getFooter().setCenter("Página &P de &N");
+    }
+
+    private static void bandaAncha(Sheet hoja, Row fila, CellStyle estilo, String texto) {
+        for (int i = 0; i <= ULTIMA_COLUMNA_DEL_RESUMEN; i++) {
+            fila.createCell(i).setCellStyle(estilo);
+        }
+        fila.getCell(0).setCellValue(texto);
+        hoja.addMergedRegion(new CellRangeAddress(fila.getRowNum(), fila.getRowNum(), 0, ULTIMA_COLUMNA_DEL_RESUMEN));
+    }
+
+    private static void celdaDeTexto(Row fila, int columna, String valor, CellStyle estilo) {
+        Cell celda = fila.createCell(columna);
+        celda.setCellValue(valor);
+        celda.setCellStyle(estilo);
+    }
+
+    private static void celdaDeNumero(Row fila, int columna, double valor, CellStyle estilo) {
+        Cell celda = fila.createCell(columna);
+        celda.setCellValue(valor);
+        celda.setCellStyle(estilo);
+    }
+
+    /**
      * Apaisado, a lo ancho de una hoja y con la cabecera repetida: un mes de una
      * plantilla entera son varias páginas, y sin esto salía cortado por la
      * derecha y sin saber qué era cada columna a partir de la segunda.
@@ -288,6 +419,8 @@ public class ExcelReportGenerator {
         final CellStyle texto;
         final CellStyle centrado;
         final CellStyle minutos;
+        /** Horas con dos decimales, para el resumen por persona. */
+        final CellStyle horas;
         final CellStyle incidencia;
 
         EstilosDeFila(Workbook libro, String fondo) {
@@ -301,6 +434,9 @@ public class ExcelReportGenerator {
             minutos = celda(libro, fondo, tinta);
             minutos.setAlignment(HorizontalAlignment.CENTER);
             minutos.setDataFormat(libro.createDataFormat().getFormat("0"));
+            horas = celda(libro, fondo, tinta);
+            horas.setAlignment(HorizontalAlignment.CENTER);
+            horas.setDataFormat(libro.createDataFormat().getFormat("0.00"));
             // En el rojo de los avisos, como las jornadas marcadas del PDF.
             Font roja = libro.createFont();
             colorear(roja, Marca.ERROR);

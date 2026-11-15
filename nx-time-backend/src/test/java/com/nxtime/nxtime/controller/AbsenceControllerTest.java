@@ -106,6 +106,40 @@ class AbsenceControllerTest {
         mockMvc.perform(get("/api/v1/ausencias/gestor/pendientes")).andExpect(status().isOk());
     }
 
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "ausencia:escribir")
+    @DisplayName("POST /ausencias/{id}/cancelar, sin cuerpo, lo puede pedir quien solicita ausencias")
+    void cancelar_sinCuerpo_devuelve200() throws Exception {
+        when(absenceService.cancelar(eq("empleado@nxtime.test"), eq(5L), any()))
+                .thenReturn(respuesta(AbsenceStatus.CANCELADA));
+
+        mockMvc.perform(post("/api/v1/ausencias/5/cancelar")).andExpect(status().isOk());
+
+        verify(absenceService).cancelar(eq("empleado@nxtime.test"), eq(5L), any());
+    }
+
+    @Test
+    @WithMockUser(username = "gestor@nxtime.test", authorities = "ausencia:aprobar")
+    @DisplayName("POST /ausencias/{id}/cancelar con motivo, para quien aprueba ausencias")
+    void cancelar_conMotivo_devuelve200() throws Exception {
+        when(absenceService.cancelar(eq("gestor@nxtime.test"), eq(5L), any()))
+                .thenReturn(respuesta(AbsenceStatus.CANCELADA));
+
+        mockMvc.perform(post("/api/v1/ausencias/5/cancelar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Se incorporó antes.\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "empleado@nxtime.test", authorities = "ausencia:leer")
+    @DisplayName("POST /ausencias/{id}/cancelar sin ausencia:escribir ni ausencia:aprobar devuelve 403")
+    void cancelar_sinAuthority_devuelve403() throws Exception {
+        mockMvc.perform(post("/api/v1/ausencias/5/cancelar")).andExpect(status().isForbidden());
+        verify(absenceService, org.mockito.Mockito.never()).cancelar(any(), org.mockito.ArgumentMatchers.anyLong(), any());
+    }
+
+
     // Fase 9: un único PATCH /{id}/estado en lugar de los dos POST
     // (/gestor/aprobar/{id} y /gestor/rechazar/{id}).
     @Test
@@ -174,6 +208,6 @@ class AbsenceControllerTest {
     }
 
     private static AbsenceResponse respuesta(AbsenceStatus estado) {
-        return new AbsenceResponse(5L, null, null, null, null, estado, null, null, null, null, 3);
+        return new AbsenceResponse(5L, null, null, null, null, estado, null, null, null, null, 3, null, null, null, false);
     }
 }

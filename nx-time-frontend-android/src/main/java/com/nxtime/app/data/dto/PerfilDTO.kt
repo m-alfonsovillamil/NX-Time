@@ -28,7 +28,9 @@ data class PerfilDTO(
     val horasSemanales: String = "40.0",
     val diasVacaciones: Int = 22,
     /** Ver [RespuestaAutenticacion.authorities]. */
-    val authorities: List<String> = emptyList()
+    val authorities: List<String> = emptyList(),
+    /** Fecha de alta en la empresa, "AAAA-MM-DD" (plan N, N10), o null. */
+    val fechaAlta: String? = null
 )
 
 /**

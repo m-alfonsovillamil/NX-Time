@@ -31,7 +31,7 @@ const G = gestion.ausencias;
 type Ausencia = components['schemas']['AbsenceResponse'];
 
 const CLAVE = ['ausencias-equipo'] as const;
-const TONO: Record<string, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error' };
+const TONO: Record<string, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error', CANCELADA: 'neutro' };
 
 function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode }) {
   const quien = a.usuario?.nombre ?? '';
@@ -52,6 +52,10 @@ function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode 
         <span className="nx-sutil">{G.resueltaPor(a.aprobadoPor.nombre, fechaCorta(diaEnEmpresa(a.fechaResolucion)))}</span>
       )}
       {a.comentarioResolucion && <span>{G.respuesta(a.comentarioResolucion)}</span>}
+      {a.canceladaPor?.nombre && a.canceladaEn && (
+        <span className="nx-sutil">{G.canceladaPor(a.canceladaPor.nombre, fechaCorta(diaEnEmpresa(a.canceladaEn)))}</span>
+      )}
+      {a.motivoCancelacion && <span>{ausencias.motivoCancelacion(a.motivoCancelacion)}</span>}
       {acciones && (
         <div className="nx-acciones-fila nx-acciones-fila--con-aire" role="group" aria-label={G.accionesDe(quien)}>
           {acciones}
@@ -140,8 +144,19 @@ function Pendientes() {
 }
 
 function Resueltas() {
+  const [anulando, setAnulando] = useState<Ausencia | null>(null);
   const lista = useListaPaginada([...CLAVE, 'resueltas'], (pagina) =>
     pedir(cliente.GET('/api/v1/gestor/ausencias-historial', { params: { query: { pagina, tamano: 30 } } })),
+  );
+  // ADR 058: una aprobada se anula con motivo, que le llega a la persona.
+  const anular = useMutacion(
+    ({ id, motivo }: { id: number; motivo: string }) =>
+      pedir(cliente.POST('/api/v1/ausencias/{id}/cancelar', { params: { path: { id } }, body: { motivo } })),
+    {
+      invalida: [CLAVE, ['ausencias'], ['calendario']],
+      exito: G.anulada,
+      alTerminar: () => setAnulando(null),
+    },
   );
 
   if (lista.isPending) return <Esqueleto lineas={4} />;
@@ -155,7 +170,17 @@ function Resueltas() {
       ) : (
         <ul className="nx-lista-incidencias" aria-label={G.resueltas}>
           {lista.elementos.map((a) => (
-            <TarjetaDeAusencia key={a.id} a={a} />
+            <TarjetaDeAusencia
+              key={a.id}
+              a={a}
+              acciones={
+                a.puedoCancelar ? (
+                  <Boton variante="secundario" onClick={() => setAnulando(a)}>
+                    {G.anular}
+                  </Boton>
+                ) : undefined
+              }
+            />
           ))}
         </ul>
       )}
@@ -164,6 +189,23 @@ function Resueltas() {
         cargando={lista.isFetchingNextPage}
         fallo={lista.isFetchNextPageError}
         alPedirMas={() => void lista.fetchNextPage()}
+      />
+      <DialogoDeTexto
+        abierto={anulando !== null}
+        titulo={G.anularTitulo(anulando?.usuario?.nombre ?? '')}
+        ayuda={G.anularAyuda}
+        etiqueta={G.comentario}
+        vacio={G.anularVacio}
+        boton={G.anular}
+        peligro
+        maxLength={500}
+        ocupado={anular.isPending}
+        error={anular.error?.message ?? null}
+        alEnviar={(motivo) => anulando?.id !== undefined && anular.mutate({ id: anulando.id, motivo })}
+        alCerrar={() => {
+          anular.reset();
+          setAnulando(null);
+        }}
       />
     </>
   );

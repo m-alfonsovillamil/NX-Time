@@ -123,7 +123,16 @@ class RecordatorioWorker(
             return Result.success()
         }
 
-        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now(DateFormats.zona).dayOfWeek)) {
+        // Si hoy es laborable para esta persona (festivos y ausencias). Si no
+        // se puede saber, se avisa como antes: mejor un aviso de más un
+        // festivo que ninguno un lunes.
+        val laborable = if (tipo != TipoDeAviso.ENTRADA || abierta) true else try {
+            aplicacion.authRepository.getEstadoDeHoy().takeIf { it.isSuccessful }?.body()?.laborable ?: true
+        } catch (_: Exception) {
+            true
+        }
+
+        if (!ReglaDelRecordatorio.toca(tipo, abierta, LocalDate.now(DateFormats.zona).dayOfWeek, laborable)) {
             return Result.success()
         }
 

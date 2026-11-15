@@ -17,5 +17,9 @@ data class SaldoVacacionesDTO(
     val diasTotales: Int,
     val diasConsumidos: Int,
     val diasPendientes: Int = 0,
-    val diasDisponibles: Int
+    val diasDisponibles: Int,
+    /** Los que vienen del año anterior, ya dentro de [diasTotales] (ADR 060). */
+    val diasArrastrados: Int = 0,
+    /** "AAAA-MM-DD" hasta cuándo valen, o null. */
+    val arrastreCaducaEl: String? = null
 )
