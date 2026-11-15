@@ -218,7 +218,7 @@ class HorasExtraViewModelTest {
         advanceUntilIdle()
 
         verify(repositorio).revisarHorasExtra(2L, true, null, "DESCANSO")
-        assertEquals(R.string.horas_extra_compensada, vm.uiState.value.aviso?.id)
+        assertEquals(com.nxtime.app.ui.util.MensajeUi.de(R.string.horas_extra_compensada), vm.uiState.value.aviso)
     }
 
     @Test
