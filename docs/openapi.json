@@ -170,6 +170,76 @@
         } ]
       }
     },
+    "/api/v1/perfil/avisos" : {
+      "get" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Cómo me llegan los avisos",
+        "description" : "Por categoría, si llegan por correo y al móvil. La campana de la aplicación los recibe siempre. Las obligatorias (cuenta, firma, denuncias, borrado de datos) no se pueden apagar.",
+        "operationId" : "misPreferenciasDeAvisos",
+        "responses" : {
+          "200" : {
+            "description" : "Todas las categorías",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenciaDeAviso"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Perfil" ],
+        "summary" : "Cambiar cómo me llegan los avisos",
+        "description" : "Solo las categorías que vienen; las demás se quedan como estaban. Devuelve todas.",
+        "operationId" : "guardarPreferenciasDeAvisos",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GuardarPreferenciasRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Todas las categorías, ya guardadas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenciaDeAviso"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Una categoría obligatoria, o el cuerpo mal formado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/ofertas/{id}" : {
       "get" : {
         "tags" : [ "Ofertas internas" ],
@@ -11633,6 +11703,88 @@
           }
         }
       },
+      "CambioDePreferencia" : {
+        "type" : "object",
+        "properties" : {
+          "categoria" : {
+            "type" : "string",
+            "enum" : [ "AUSENCIAS", "CORRECCIONES", "HORAS_EXTRA", "INCIDENCIAS", "OFERTAS", "EQUIPO", "OBLIGATORIOS" ]
+          },
+          "correo" : {
+            "type" : "boolean"
+          },
+          "push" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "categoria" ]
+      },
+      "GuardarPreferenciasRequest" : {
+        "type" : "object",
+        "properties" : {
+          "preferencias" : {
+            "type" : "array",
+            "description" : "Las categorías que se cambian; las que no van, se quedan como estaban",
+            "items" : {
+              "$ref" : "#/components/schemas/CambioDePreferencia"
+            },
+            "maxItems" : 20,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "preferencias" ]
+      },
+      "PreferenciaDeAviso" : {
+        "type" : "object",
+        "properties" : {
+          "categoria" : {
+            "type" : "string",
+            "enum" : [ "AUSENCIAS", "CORRECCIONES", "HORAS_EXTRA", "INCIDENCIAS", "OFERTAS", "EQUIPO", "OBLIGATORIOS" ]
+          },
+          "etiqueta" : {
+            "type" : "string"
+          },
+          "descripcion" : {
+            "type" : "string"
+          },
+          "correo" : {
+            "type" : "boolean"
+          },
+          "push" : {
+            "type" : "boolean"
+          },
+          "configurable" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        }
+      },
       "JobPostingRequest" : {
         "type" : "object",
         "properties" : {
@@ -11708,33 +11860,6 @@
           "candidaturas" : {
             "type" : "integer",
             "format" : "int64"
-          }
-        }
-      },
-      "ProblemDetail" : {
-        "type" : "object",
-        "properties" : {
-          "type" : {
-            "type" : "string",
-            "format" : "uri"
-          },
-          "title" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "detail" : {
-            "type" : "string"
-          },
-          "instance" : {
-            "type" : "string",
-            "format" : "uri"
-          },
-          "properties" : {
-            "type" : "object",
-            "additionalProperties" : { }
           }
         }
       },

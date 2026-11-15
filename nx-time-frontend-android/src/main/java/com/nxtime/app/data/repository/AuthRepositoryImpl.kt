@@ -674,6 +674,10 @@ class AuthRepositoryImpl(
         apiService.solicitarBorrado(PeticionBorrado(motivo?.trim()?.ifBlank { null }))
 
     override suspend fun getMiSolicitudBorrado(): Response<SolicitudBorradoDTO> = apiService.getMiSolicitudBorrado()
+    override suspend fun getPreferenciasDeAvisos(): Response<List<PreferenciaDeAvisoDTO>> =
+        apiService.getPreferenciasDeAvisos()
+    override suspend fun guardarPreferenciaDeAvisos(cambio: CambioDePreferenciaDTO): Response<List<PreferenciaDeAvisoDTO>> =
+        apiService.guardarPreferenciasDeAvisos(GuardarPreferenciasRequest(listOf(cambio)))
 
     override suspend fun cancelarBorrado(): Response<SolicitudBorradoDTO> = apiService.cancelarBorrado()
 

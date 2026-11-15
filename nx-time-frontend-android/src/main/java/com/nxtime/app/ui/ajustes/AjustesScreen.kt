@@ -116,7 +116,10 @@ fun AjustesScreen(
     }
     val contexto = LocalContext.current
 
-    LaunchedEffect(Unit) { viewModel.cargarSolicitudBorrado() }
+    LaunchedEffect(Unit) {
+        viewModel.cargarSolicitudBorrado()
+        viewModel.cargarPreferenciasDeAvisos()
+    }
 
     /*
      * Programar el trabajo periódico necesita un Context, así que lo hace
@@ -250,6 +253,14 @@ fun AjustesScreen(
                     viewModel.cambiarPush(activas)
                 }
             )
+
+            if (estado.preferenciasDeAvisos.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                PreferenciasDeAvisos(
+                    preferencias = estado.preferenciasDeAvisos,
+                    onCambiar = viewModel::cambiarPreferenciaDeAvisos
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
             Privacidad(
@@ -444,6 +455,53 @@ private fun Seguridad(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * Cómo me llegan los avisos (ADR 059): por categoría, por correo y al móvil.
+ * La campana de la app los recibe siempre. Las obligatorias se enseñan sin
+ * interruptores, para que nadie crea que tiene apagado lo que no se apaga.
+ */
+@Composable
+private fun PreferenciasDeAvisos(
+    preferencias: List<com.nxtime.app.data.dto.PreferenciaDeAvisoDTO>,
+    onCambiar: (String, Boolean, Boolean) -> Unit
+) {
+    Tarjeta(stringResource(R.string.ajustes_avisos_seccion)) {
+        Text(
+            text = stringResource(R.string.ajustes_avisos_detalle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        preferencias.forEach { p ->
+            Spacer(Modifier.height(12.dp))
+            Text(text = p.etiqueta, style = MaterialTheme.typography.bodyLarge)
+            if (!p.configurable) {
+                Text(
+                    text = stringResource(R.string.ajustes_avisos_siempre),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.ajustes_avisos_correo),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(checked = p.correo, onCheckedChange = { onCambiar(p.categoria, it, p.push) })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.ajustes_avisos_movil),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(checked = p.push, onCheckedChange = { onCambiar(p.categoria, p.correo, it) })
+                }
+            }
+        }
     }
 }
 

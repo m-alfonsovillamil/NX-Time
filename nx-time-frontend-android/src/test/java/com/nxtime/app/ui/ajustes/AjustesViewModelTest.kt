@@ -390,4 +390,25 @@ class AjustesViewModelTest {
         assertEquals("CANCELADA", vm.uiState.value.solicitudBorrado!!.estado)
         assertFalse(vm.uiState.value.solicitudBorrado!!.pendiente)
     }
+
+    @Test
+    fun `las preferencias de avisos se cargan y al cambiar una se guarda solo esa (ADR 059)`() = runTest {
+        val ausencias = com.nxtime.app.data.dto.PreferenciaDeAvisoDTO("AUSENCIAS", "Ausencias", correo = true, push = true)
+        org.mockito.kotlin.whenever(repositorio.getPreferenciasDeAvisos())
+            .thenReturn(retrofit2.Response.success(listOf(ausencias)))
+        org.mockito.kotlin.whenever(repositorio.guardarPreferenciaDeAvisos(org.mockito.kotlin.any()))
+            .thenReturn(retrofit2.Response.success(listOf(ausencias.copy(correo = false))))
+        val viewModel = viewModel()
+
+        viewModel.cargarPreferenciasDeAvisos()
+        advanceUntilIdle()
+        org.junit.Assert.assertEquals(listOf(ausencias), viewModel.uiState.value.preferenciasDeAvisos)
+
+        viewModel.cambiarPreferenciaDeAvisos("AUSENCIAS", correo = false, push = true)
+        advanceUntilIdle()
+        org.mockito.kotlin.verify(repositorio).guardarPreferenciaDeAvisos(
+            com.nxtime.app.data.dto.CambioDePreferenciaDTO("AUSENCIAS", false, true)
+        )
+        org.junit.Assert.assertEquals(false, viewModel.uiState.value.preferenciasDeAvisos.single().correo)
+    }
 }

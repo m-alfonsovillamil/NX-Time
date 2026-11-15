@@ -730,6 +730,11 @@
          de la etiqueta del interruptor: usar el mismo texto para los dos
          dejaba "Recordarme fichar" repetido dentro de la misma tarjeta. -->
     <!-- Notificaciones push (Fase B5) -->
+    <string name="ajustes_avisos_seccion">Cómo te llegan los avisos</string>
+    <string name="ajustes_avisos_detalle">En la campana de la app los tienes siempre. Aquí eliges cuáles te llegan también por correo y al móvil.</string>
+    <string name="ajustes_avisos_correo">Por correo</string>
+    <string name="ajustes_avisos_movil">Al móvil</string>
+    <string name="ajustes_avisos_siempre">Siempre, por correo y al móvil</string>
     <string name="ajustes_push_seccion">Notificaciones</string>
     <string name="ajustes_push">Avisarme en el móvil</string>
     <string name="ajustes_push_detalle">Te llega una notificación cuando tienes un aviso nuevo: una ausencia resuelta, una corrección, una incidencia. Solo dice de qué va; el detalle lo ves al abrir la app, porque la notificación pasa por los servidores de Google.</string>

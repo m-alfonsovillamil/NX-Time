@@ -28,6 +28,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/perfil/avisos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cómo me llegan los avisos
+         * @description Por categoría, si llegan por correo y al móvil. La campana de la aplicación los recibe siempre. Las obligatorias (cuenta, firma, denuncias, borrado de datos) no se pueden apagar.
+         */
+        get: operations["misPreferenciasDeAvisos"];
+        /**
+         * Cambiar cómo me llegan los avisos
+         * @description Solo las categorías que vienen; las demás se quedan como estaban. Devuelve todas.
+         */
+        put: operations["guardarPreferenciasDeAvisos"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ofertas/{id}": {
         parameters: {
             query?: never;
@@ -3756,6 +3780,38 @@ export interface components {
             /** Format: date-time */
             pinBloqueadoHasta?: string;
         };
+        CambioDePreferencia: {
+            /** @enum {string} */
+            categoria: "AUSENCIAS" | "CORRECCIONES" | "HORAS_EXTRA" | "INCIDENCIAS" | "OFERTAS" | "EQUIPO" | "OBLIGATORIOS";
+            correo?: boolean;
+            push?: boolean;
+        };
+        GuardarPreferenciasRequest: {
+            /** @description Las categorías que se cambian; las que no van, se quedan como estaban */
+            preferencias: components["schemas"]["CambioDePreferencia"][];
+        };
+        PreferenciaDeAviso: {
+            /** @enum {string} */
+            categoria?: "AUSENCIAS" | "CORRECCIONES" | "HORAS_EXTRA" | "INCIDENCIAS" | "OFERTAS" | "EQUIPO" | "OBLIGATORIOS";
+            etiqueta?: string;
+            descripcion?: string;
+            correo?: boolean;
+            push?: boolean;
+            configurable?: boolean;
+        };
+        ProblemDetail: {
+            /** Format: uri */
+            type?: string;
+            title?: string;
+            /** Format: int32 */
+            status?: number;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            properties?: {
+                [key: string]: unknown;
+            };
+        };
         JobPostingRequest: {
             titulo: string;
             descripcion: string;
@@ -3784,19 +3840,6 @@ export interface components {
             yaMePresente?: boolean;
             /** Format: int64 */
             candidaturas?: number;
-        };
-        ProblemDetail: {
-            /** Format: uri */
-            type?: string;
-            title?: string;
-            /** Format: int32 */
-            status?: number;
-            detail?: string;
-            /** Format: uri */
-            instance?: string;
-            properties?: {
-                [key: string]: unknown;
-            };
         };
         Linea: {
             /** Format: int64 */
@@ -6084,6 +6127,59 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MyKioskStatus"];
+                };
+            };
+        };
+    };
+    misPreferenciasDeAvisos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Todas las categorías */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreferenciaDeAviso"][];
+                };
+            };
+        };
+    };
+    guardarPreferenciasDeAvisos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuardarPreferenciasRequest"];
+            };
+        };
+        responses: {
+            /** @description Todas las categorías, ya guardadas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreferenciaDeAviso"][];
+                };
+            };
+            /** @description Una categoría obligatoria, o el cuerpo mal formado */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
         };
