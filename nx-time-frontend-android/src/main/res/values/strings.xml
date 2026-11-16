@@ -1089,11 +1089,18 @@
     <string name="horas_extra_estado_justificado">No computa</string>
     <string name="horas_extra_estado_aceptado">Horas extra</string>
 
-    <string name="horas_extra_aceptar">Son horas extra</string>
+    <string name="horas_extra_aceptar">Se pagan</string>
+    <!-- ADR 061: compensadas con descanso en cuatro meses, no gastan bolsa -->
+    <string name="horas_extra_compensar">Se compensan con descanso</string>
+    <string name="horas_extra_compensada">Se compensarán con descanso.</string>
+    <string name="horas_extra_se_pagan">Se pagan.</string>
+    <string name="horas_extra_se_compensan">Se compensan con descanso antes del %1$s. Mientras, no gastan bolsa.</string>
+    <string name="horas_extra_descansadas">Descansadas el %1$s.</string>
+    <string name="horas_extra_caducadas">No se descansaron antes del %1$s: cuentan en la bolsa como horas extra.</string>
     <string name="horas_extra_justificar">No computan</string>
     <string name="horas_extra_justificar_ayuda">El exceso se archiva y no consume bolsa anual. Hace falta explicar por qué: una jornada intensiva pactada, un turno partido mal fichado, una guardia…</string>
     <string name="horas_extra_justificacion_etiqueta">Motivo</string>
-    <string name="horas_extra_aceptada">Contabilizadas como horas extra.</string>
+    <string name="horas_extra_aceptada">Se pagarán como horas extra.</string>
     <string name="horas_extra_justificada">Archivado sin computar.</string>
 
     <!-- Entrada desde el perfil y desde el panel de gestión -->

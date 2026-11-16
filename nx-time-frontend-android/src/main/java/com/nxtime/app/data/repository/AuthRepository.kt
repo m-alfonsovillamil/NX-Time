@@ -114,7 +114,8 @@ interface AuthRepository {
     suspend fun revisarHorasExtra(
         avisoId: Long,
         aceptar: Boolean,
-        justificacion: String? = null
+        justificacion: String?,
+        compensacion: String?
     ): Response<HorasExtraDTO>
     suspend fun getBolsaHorasExtra(usuarioId: Long? = null, anio: Int? = null): Response<BolsaHorasExtraDTO>
 

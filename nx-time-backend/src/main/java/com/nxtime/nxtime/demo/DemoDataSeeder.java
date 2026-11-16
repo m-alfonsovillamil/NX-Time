@@ -1134,6 +1134,14 @@ public class DemoDataSeeder implements CommandLineRunner {
                                 "Jornada intensiva pactada para el cierre del proyecto."),
                         revisor);
             }
+            // Una compensada con descanso (ADR 061), para que se vea su fecha
+            // límite. Solo si quedan más: alguna tiene que seguir sin revisar.
+            if (abiertos.size() > 3) {
+                overtimeService.revisar(abiertos.get(2).id(),
+                        new ReviewOvertimeRequest(true, null,
+                                com.nxtime.nxtime.domain.CompensacionDeHorasExtra.DESCANSO),
+                        revisor);
+            }
         }
     }
 

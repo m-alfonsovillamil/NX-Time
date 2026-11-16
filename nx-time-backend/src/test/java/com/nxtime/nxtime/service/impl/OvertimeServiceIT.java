@@ -544,6 +544,51 @@ class OvertimeServiceIT {
     }
 
     @Test
+    @DisplayName("ADR 061: compensadas con descanso, cuentan para la bolsa si pasan cuatro meses sin descansarlas")
+    void compensarConDescanso() {
+        fichar(empleado, LUNES, 11);
+        detectarLaSemana();
+        long avisoId = avisosDe(empleado).get(0).id();
+
+        OvertimeAlertResponse aceptado = overtimeService.revisar(avisoId, new ReviewOvertimeRequest(true, null,
+                com.nxtime.nxtime.domain.CompensacionDeHorasExtra.DESCANSO), gestor);
+        assertThat(aceptado.compensacion()).isEqualTo("DESCANSO");
+        assertThat(aceptado.descansoAntesDe()).isEqualTo(LUNES.plusMonths(4));
+        // Marzo de 2025: hace más de cuatro meses y sin descansar, así que cuenta.
+        assertThat(overtimeService.bolsa(empleado, null, LUNES.getYear()).minutosConsumidos()).isEqualTo(120);
+
+        // Fuera de su plazo no se puede apuntar.
+        assertThatThrownBy(() -> overtimeService.marcarDescansoDisfrutado(avisoId, LUNES.plusMonths(5), gestor))
+                .isInstanceOf(BusinessException.class);
+        // Ni las propias.
+        assertThatThrownBy(() -> overtimeService.marcarDescansoDisfrutado(avisoId, LUNES.plusDays(10), empleado))
+                .isInstanceOf(com.nxtime.nxtime.exception.TenantAccessException.class);
+
+        OvertimeAlertResponse descansado = overtimeService.marcarDescansoDisfrutado(avisoId, LUNES.plusDays(10), gestor);
+        assertThat(descansado.descansoDisfrutadoEn()).isEqualTo(LUNES.plusDays(10));
+        // Descansadas: ya no cuentan.
+        assertThat(overtimeService.bolsa(empleado, null, LUNES.getYear()).minutosConsumidos()).isZero();
+        assertThatThrownBy(() -> overtimeService.marcarDescansoDisfrutado(avisoId, LUNES.plusDays(11), gestor))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("ADR 061: sin decir nada al aceptar, se pagan y cuentan como siempre")
+    void aceptarSinDecirNadaEsPagar() {
+        fichar(empleado, LUNES, 11);
+        detectarLaSemana();
+        long avisoId = avisosDe(empleado).get(0).id();
+
+        OvertimeAlertResponse aceptado = overtimeService.revisar(avisoId, new ReviewOvertimeRequest(true, null), gestor);
+
+        assertThat(aceptado.compensacion()).isEqualTo("PAGO");
+        assertThat(aceptado.descansoAntesDe()).isNull();
+        assertThat(overtimeService.bolsa(empleado, null, LUNES.getYear()).minutosConsumidos()).isEqualTo(120);
+        assertThatThrownBy(() -> overtimeService.marcarDescansoDisfrutado(avisoId, LUNES.plusDays(1), gestor))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
     @DisplayName("un aviso ya revisado no se revisa dos veces")
     void noSeRevisaDosVeces() {
         fichar(empleado, LUNES, 11);

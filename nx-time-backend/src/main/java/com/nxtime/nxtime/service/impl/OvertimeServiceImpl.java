@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.Company;
+import com.nxtime.nxtime.domain.CompensacionDeHorasExtra;
 import com.nxtime.nxtime.domain.OvertimeAlert;
 import com.nxtime.nxtime.domain.OvertimeStatus;
 import com.nxtime.nxtime.domain.OvertimeType;
@@ -174,8 +175,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             }
         }
 
-        int consumidos = overtimeRepository
-                .sumarMinutosAceptados(dueno.getId(), primerDia(anio), ultimoDia(anio));
+        int consumidos = minutosConsumidosDelAnio(dueno, anio);
 
         return new OvertimeBalanceResponse(
                 anio,
@@ -226,15 +226,21 @@ public class OvertimeServiceImpl implements OvertimeService {
                     HttpStatus.BAD_REQUEST);
         }
 
-        int consumidosAntes = minutosConsumidosDelAnio(aviso.getUsuario().getId(), aviso.getFecha().getYear());
+        int consumidosAntes = minutosConsumidosDelAnio(aviso.getUsuario(), aviso.getFecha().getYear());
+
+        // ADR 061: al aceptar se elige pagarlas o descansarlas; sin decir nada, pagarlas.
+        CompensacionDeHorasExtra compensacion = !aceptar ? null
+                : request.compensacion() != null ? request.compensacion() : CompensacionDeHorasExtra.PAGO;
 
         aviso.setEstado(aceptar ? OvertimeStatus.ACEPTADO : OvertimeStatus.JUSTIFICADO);
         aviso.setJustificacion(justificacion);
         aviso.setRevisadoPor(actor);
         aviso.setFechaRevision(Instant.now());
+        aviso.setCompensacion(compensacion);
         overtimeRepository.save(aviso);
 
-        avisarSiLaBolsaAcabaDeLlegarAlLimite(aviso, consumidosAntes, aceptar);
+        // Las que se descansan no gastan bolsa: no pueden hacerla llegar al límite.
+        avisarSiLaBolsaAcabaDeLlegarAlLimite(aviso, consumidosAntes, compensacion == CompensacionDeHorasExtra.PAGO);
 
         return toResponse(aviso);
     }
@@ -266,8 +272,16 @@ public class OvertimeServiceImpl implements OvertimeService {
                 quienLoHizoYQuienRevisa(aviso)));
     }
 
-    private int minutosConsumidosDelAnio(long usuarioId, int anio) {
-        return overtimeRepository.sumarMinutosAceptados(usuarioId, primerDia(anio), ultimoDia(anio));
+    /**
+     * Lo gastado de la bolsa de 80 horas. Las compensadas con descanso que aún
+     * están en sus cuatro meses no cuentan (ADR 061): el límite es hoy menos
+     * cuatro meses, en la zona de la empresa.
+     */
+    private int minutosConsumidosDelAnio(User dueno, int anio) {
+        java.time.LocalDate caducadasAntesDe = java.time.LocalDate.now(dueno.zona())
+                .minusMonths(CompensacionDeHorasExtra.MESES_PARA_DESCANSAR);
+        return overtimeRepository.sumarMinutosAceptados(dueno.getId(), primerDia(anio), ultimoDia(anio),
+                caducadasAntesDe);
     }
 
     // ------------------------------------------------------------------
@@ -712,6 +726,49 @@ public class OvertimeServiceImpl implements OvertimeService {
         return fecha.atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
+    /**
+     * Apuntar que unas horas compensadas con descanso ya se descansaron (ADR
+     * 061). Las mismas reglas que revisar: de la empresa, con la authority y
+     * nunca las propias. El día, dentro de sus cuatro meses y no en el futuro.
+     */
+    @Override
+    @Transactional
+    public OvertimeAlertResponse marcarDescansoDisfrutado(long id, java.time.LocalDate dia, User actor) {
+        OvertimeAlert aviso = overtimeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Aviso de horas extra no encontrado."));
+        if (aviso.getEmpresa().getId() != actor.getEmpresa().getId()) {
+            throw new TenantAccessException("Ese aviso es de otra empresa.");
+        }
+        if (!RoleAuthorities.tiene(actor, REVISAR)) {
+            throw new TenantAccessException("No puedes revisar avisos de horas extra.");
+        }
+        if (aviso.getUsuario().getId() == actor.getId()) {
+            throw new TenantAccessException("No puedes revisar tus propias horas extra.");
+        }
+        if (aviso.getEstado() != OvertimeStatus.ACEPTADO
+                || aviso.getCompensacion() != CompensacionDeHorasExtra.DESCANSO) {
+            throw new BusinessException("Esas horas extra no se compensan con descanso.", HttpStatus.CONFLICT);
+        }
+        if (aviso.getDescansoDisfrutadoEn() != null) {
+            throw new BusinessException("Ese descanso ya está apuntado.", HttpStatus.CONFLICT);
+        }
+        java.time.LocalDate hoy = java.time.LocalDate.now(actor.zona());
+        java.time.LocalDate elDia = dia != null ? dia : hoy;
+        java.time.LocalDate limite = descansoAntesDe(aviso);
+        if (elDia.isAfter(hoy) || elDia.isBefore(aviso.getFecha()) || elDia.isAfter(limite)) {
+            throw new BusinessException("El descanso tiene que ser entre el día de las horas extra y el "
+                    + limite.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    + ", y no en el futuro.", HttpStatus.BAD_REQUEST);
+        }
+        aviso.setDescansoDisfrutadoEn(elDia);
+        overtimeRepository.save(aviso);
+        return toResponse(aviso);
+    }
+
+    private static java.time.LocalDate descansoAntesDe(OvertimeAlert aviso) {
+        return aviso.getFecha().plusMonths(CompensacionDeHorasExtra.MESES_PARA_DESCANSAR);
+    }
+
     private OvertimeAlertResponse toResponse(OvertimeAlert aviso) {
         boolean semanal = aviso.getTipo() == OvertimeType.SEMANAL;
         return new OvertimeAlertResponse(
@@ -727,6 +784,9 @@ public class OvertimeServiceImpl implements OvertimeService {
                 aviso.getEstado().name(),
                 aviso.getJustificacion(),
                 aviso.getRevisadoPor() == null ? null : aviso.getRevisadoPor().nombreCompleto(),
-                aviso.getFechaRevision());
+                aviso.getFechaRevision(),
+                aviso.getCompensacion() == null ? null : aviso.getCompensacion().name(),
+                aviso.getCompensacion() == CompensacionDeHorasExtra.DESCANSO ? descansoAntesDe(aviso) : null,
+                aviso.getDescansoDisfrutadoEn());
     }
 }

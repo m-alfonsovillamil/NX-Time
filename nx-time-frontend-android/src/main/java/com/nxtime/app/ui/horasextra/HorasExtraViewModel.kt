@@ -100,12 +100,19 @@ class HorasExtraViewModel(
         }
     }
 
-    /** Sí eran horas extra: descuentan de la bolsa anual. */
-    fun aceptar(avisoId: Long) = revisar(avisoId, aceptar = true, justificacion = null)
+    /** Sí eran horas extra y se pagan: descuentan de la bolsa anual. */
+    fun aceptar(avisoId: Long) = revisar(avisoId, aceptar = true, justificacion = null, compensacion = PAGO)
+
+    /**
+     * Sí eran horas extra, pero se compensan con descanso en los cuatro meses
+     * siguientes: mientras, no gastan bolsa (ADR 061, art. 35.2 ET).
+     */
+    fun compensarConDescanso(avisoId: Long) =
+        revisar(avisoId, aceptar = true, justificacion = null, compensacion = DESCANSO)
 
     /** No lo eran (intensiva pactada, turno mal fichado): se archiva. */
     fun justificar(avisoId: Long, justificacion: String) =
-        revisar(avisoId, aceptar = false, justificacion = justificacion)
+        revisar(avisoId, aceptar = false, justificacion = justificacion, compensacion = null)
 
     fun avisoMostrado() = _uiState.update { it.copy(aviso = null) }
 
@@ -117,16 +124,19 @@ class HorasExtraViewModel(
      * con la cifra vieja es justo el tipo de desfase que hace dudar del
      * número.
      */
-    private fun revisar(avisoId: Long, aceptar: Boolean, justificacion: String?) {
+    private fun revisar(avisoId: Long, aceptar: Boolean, justificacion: String?, compensacion: String?) {
         viewModelScope.launch {
             try {
-                val respuesta = authRepository.revisarHorasExtra(avisoId, aceptar, justificacion)
+                val respuesta = authRepository.revisarHorasExtra(avisoId, aceptar, justificacion, compensacion)
                 if (respuesta.isSuccessful) {
                     _uiState.update {
                         it.copy(
                             aviso = MensajeUi.de(
-                                if (aceptar) R.string.horas_extra_aceptada
-                                else R.string.horas_extra_justificada
+                                when {
+                                    !aceptar -> R.string.horas_extra_justificada
+                                    compensacion == DESCANSO -> R.string.horas_extra_compensada
+                                    else -> R.string.horas_extra_aceptada
+                                }
                             )
                         )
                     }
@@ -138,5 +148,10 @@ class HorasExtraViewModel(
                 _uiState.update { it.copy(error = ApiErrorParser.mensajeDeRed(e)) }
             }
         }
+    }
+
+    private companion object {
+        const val PAGO = "PAGO"
+        const val DESCANSO = "DESCANSO"
     }
 }

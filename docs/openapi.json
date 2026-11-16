@@ -3275,6 +3275,77 @@
         } ]
       }
     },
+    "/api/v1/horas-extra/{id}/descanso" : {
+      "post" : {
+        "tags" : [ "Horas extra" ],
+        "summary" : "Apuntar que unas horas extra ya se descansaron",
+        "description" : "Para las aceptadas con compensación DESCANSO (ADR 061). Con eso dejan de contar para la bolsa de 80 h para siempre; sin apuntarlo, dejan de contar solo mientras estén dentro de sus cuatro meses. El día, entre el de las horas extra y cuatro meses después, y no en el futuro. Nadie apunta las suyas propias.",
+        "operationId" : "descansoDisfrutado",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DescansoDisfrutadoRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Apuntado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OvertimeAlertResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Día fuera de su plazo o en el futuro",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Es de otra empresa, o son tus propias horas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "No se compensan con descanso, o ya estaba apuntado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
     "/api/v1/gestor/plantilla/invitaciones/enviar" : {
       "post" : {
         "tags" : [ "Plantilla" ],
@@ -13163,6 +13234,78 @@
         },
         "required" : [ "texto" ]
       },
+      "DescansoDisfrutadoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
+      "OvertimeAlertResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuarioId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "usuario" : {
+            "type" : "string"
+          },
+          "tipo" : {
+            "type" : "string"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "fechaFin" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "minutosExtra" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "minutosEsperados" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "registroId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "estado" : {
+            "type" : "string"
+          },
+          "justificacion" : {
+            "type" : "string"
+          },
+          "revisadoPor" : {
+            "type" : "string"
+          },
+          "fechaRevision" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "compensacion" : {
+            "type" : "string"
+          },
+          "descansoAntesDe" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "descansoDisfrutadoEn" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }
+      },
       "EstadoInvitacionesResponse" : {
         "type" : "object",
         "description" : "Las invitaciones de alta de la empresa",
@@ -14446,61 +14589,14 @@
             "type" : "string",
             "maxLength" : 500,
             "minLength" : 0
+          },
+          "compensacion" : {
+            "type" : "string",
+            "description" : "Al aceptar: PAGO (por defecto) o DESCANSO (ADR 061)",
+            "enum" : [ "PAGO", "DESCANSO" ]
           }
         },
         "required" : [ "aceptar" ]
-      },
-      "OvertimeAlertResponse" : {
-        "type" : "object",
-        "properties" : {
-          "id" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "usuarioId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "usuario" : {
-            "type" : "string"
-          },
-          "tipo" : {
-            "type" : "string"
-          },
-          "fecha" : {
-            "type" : "string",
-            "format" : "date"
-          },
-          "fechaFin" : {
-            "type" : "string",
-            "format" : "date"
-          },
-          "minutosExtra" : {
-            "type" : "integer",
-            "format" : "int32"
-          },
-          "minutosEsperados" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "registroId" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "estado" : {
-            "type" : "string"
-          },
-          "justificacion" : {
-            "type" : "string"
-          },
-          "revisadoPor" : {
-            "type" : "string"
-          },
-          "fechaRevision" : {
-            "type" : "string",
-            "format" : "date-time"
-          }
-        }
       },
       "CambioDeRolRequest" : {
         "type" : "object",

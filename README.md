@@ -82,7 +82,10 @@ cada puente en una falsa alarma. Lo que detecta es un *aviso*: solo cuenta para
 la bolsa anual de 80 h (art. 35.2 ET) cuando una persona lo acepta, y esa bolsa
 **se calcula al leer, no se guarda**, para que una corrección de un fichaje
 pasado no la deje mintiendo
-([ADR](docs/adr/011-horas-extra-detectadas-no-imputadas.md)).
+([ADR](docs/adr/011-horas-extra-detectadas-no-imputadas.md)). Al aceptarlas se
+elige si se pagan o se compensan con descanso; las que se descansan en los cuatro
+meses siguientes no gastan bolsa
+([ADR](docs/adr/061-compensar-horas-extra-con-descanso.md)).
 
 **Cuadrantes que no reescriben el pasado.** A qué hora debía trabajar cada
 persona cada día: plantillas semanales asignadas **con vigencia**, como los
@@ -695,6 +698,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 58. [Cancelar una ausencia: la retira quien la pidió si no ha empezado, o la anula quien aprueba, con motivo](docs/adr/058-cancelar-una-ausencia.md)
 59. [Cómo le llegan los avisos: cada persona elige por categoría el correo y el push; la campana y las obligatorias, siempre](docs/adr/059-preferencias-de-avisos.md)
 60. [Las vacaciones que sobran pasan al año siguiente, hasta una fecha tope, calculado al leer](docs/adr/060-arrastre-de-vacaciones.md)
+61. [Compensar las horas extra con descanso: no cuentan para las 80 h si se descansan en cuatro meses](docs/adr/061-compensar-horas-extra-con-descanso.md)
 
 ---
 

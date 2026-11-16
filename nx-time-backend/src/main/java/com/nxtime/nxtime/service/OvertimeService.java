@@ -56,6 +56,9 @@ public interface OvertimeService {
      */
     OvertimeAlertResponse revisar(long id, ReviewOvertimeRequest request, User actor);
 
+    /** Apuntar que unas horas compensadas con descanso ya se descansaron (ADR 061). Sin día, hoy. */
+    OvertimeAlertResponse marcarDescansoDisfrutado(long id, java.time.LocalDate dia, User actor);
+
     /**
      * La bolsa anual de una persona. Se calcula al leer, no se guarda:
      * ver {@link com.nxtime.nxtime.dto.OvertimeBalanceResponse}.
