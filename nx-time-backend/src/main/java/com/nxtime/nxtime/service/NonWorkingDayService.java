@@ -20,6 +20,10 @@ import java.util.Optional;
  *   <li>una <b>ausencia APROBADA</b> que cubre el día. Una pendiente no: puede
  *       acabar rechazada, y avisar por ella sería ruido.</li>
  * </ul>
+ * Un <b>medio día</b> aprobado (ADR 063) <b>no</b>: ese día se trabaja la otra
+ * mitad, así que la app no pregunta antes de fichar ni se avisa al gestor.
+ * Quien necesite saber que ese día se espera la mitad lo pregunta aparte, con
+ * {@link #mediosDiasEnRango} o {@link #mediosDiasDelDia}.
  * Los fines de semana <b>no</b>: hay empresas que trabajan sábados y hoy no
  * existe un calendario laboral por persona.
  */
@@ -70,4 +74,14 @@ public interface NonWorkingDayService {
      * pasa por aquí.
      */
     Map<LocalDate, Motivo> festivosEnRango(long empresaId, LocalDate desde, LocalDate hasta);
+
+    /**
+     * Los días del rango (ambos incluidos) en que la persona tiene aprobado un
+     * MEDIO día (ADR 063), con cómo se lee: «Vacaciones (medio día)». Un
+     * festivo manda: si el día lo es, no sale aquí.
+     */
+    Map<LocalDate, Motivo> mediosDiasEnRango(User persona, LocalDate desde, LocalDate hasta);
+
+    /** Lo mismo para muchas personas y un día, por id: quién trabaja ese día solo la mitad. */
+    Map<Long, Motivo> mediosDiasDelDia(Collection<User> personas, LocalDate dia);
 }

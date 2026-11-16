@@ -298,6 +298,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         // ck_peticiones_resolucion_coherente).
         sembrarAusencias(empleadosTech, gestorTech);
         sembrarAusencias(empleadosIberica, gestorIberica);
+        sembrarMedioDia(empleadosIberica.get(0), gestorIberica);
 
         // Noviembre de 2026: la demo enseña también lo que se añadió después
         // de escribir el seeder y salía vacío (revisión del 15/11). Lucía
@@ -1412,6 +1413,28 @@ public class DemoDataSeeder implements CommandLineRunner {
                     "Asuntos propios, pendiente de resolver.",
                     ahora.minus(2L + i, ChronoUnit.HOURS), false);
         }
+    }
+
+    /**
+     * Un medio día de vacaciones (ADR 063), aprobado y de la semana que viene:
+     * en el futuro no se cruza con los fichajes sembrados, y deja en la demo un
+     * saldo con decimales y una banda de «medio día» en el calendario.
+     */
+    private void sembrarMedioDia(User empleado, User gestor) {
+        LocalDate dia = entreSemana(LocalDate.now(MADRID_ZONE).plusDays(7));
+        absenceRequestRepository.save(AbsenceRequest.builder()
+                .usuario(empleado)
+                .empresa(empleado.getEmpresa())
+                .fechaInicio(dia)
+                .fechaFin(dia)
+                .tipo(AbsenceType.VACACIONES)
+                .medioDia(true)
+                .motivo("La tarde libre, para una gestión")
+                .estado(AbsenceStatus.APROBADA)
+                .aprobadoPor(gestor)
+                .fechaResolucion(Instant.now())
+                .comentarioResolucion("Aprobada.")
+                .build());
     }
 
     /** El mismo día si es entre semana; si no, el lunes siguiente. */

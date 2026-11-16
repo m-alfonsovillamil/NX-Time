@@ -45,6 +45,7 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
             return Optional.of(deFestivo(holidayRepository.findByEmpresaYAnio(empresaId, dia.getYear()), dia));
         }
         return absenceRequestRepository.findAprobadasDeUsuarioEnFecha(persona.getId(), dia).stream()
+                .filter(ausencia -> !ausencia.isMedioDia())
                 .findFirst()
                 .map(NonWorkingDayServiceImpl::deAusencia);
     }
@@ -68,6 +69,7 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
             }
             LocalDate fecha = dia;
             ausencias.stream()
+                    .filter(ausencia -> !ausencia.isMedioDia())
                     .filter(ausencia -> !fecha.isBefore(ausencia.getFechaInicio())
                             && !fecha.isAfter(ausencia.getFechaFin()))
                     .findFirst()
@@ -112,9 +114,47 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
         // ausencia, igual que en motivo(): se mira primero y no se pisa.
         List<Long> ids = personas.stream().map(User::getId).toList();
         for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuariosEnFecha(ids, dia)) {
-            motivos.putIfAbsent(ausencia.getUsuario().getId(), deAusencia(ausencia));
+            if (!ausencia.isMedioDia()) {
+                motivos.putIfAbsent(ausencia.getUsuario().getId(), deAusencia(ausencia));
+            }
         }
         return motivos;
+    }
+
+    @Override
+    public Map<LocalDate, Motivo> mediosDiasEnRango(User persona, LocalDate desde, LocalDate hasta) {
+        Map<LocalDate, Motivo> medios = new LinkedHashMap<>();
+        if (desde.isAfter(hasta)) {
+            return medios;
+        }
+        long empresaId = persona.getEmpresa().getId();
+        for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuarioEnRango(persona, desde, hasta)) {
+            // Un medio día es de un solo día (ck_peticiones_medio_dia_de_un_dia).
+            LocalDate dia = ausencia.getFechaInicio();
+            if (ausencia.isMedioDia()
+                    && !holidayCalendar.festivosDelAnio(empresaId, dia.getYear()).contains(dia)) {
+                medios.putIfAbsent(dia, deAusencia(ausencia));
+            }
+        }
+        return medios;
+    }
+
+    @Override
+    public Map<Long, Motivo> mediosDiasDelDia(Collection<User> personas, LocalDate dia) {
+        Map<Long, Motivo> medios = new HashMap<>();
+        if (personas.isEmpty()) {
+            return medios;
+        }
+        Map<Long, Long> empresaDe = new HashMap<>();
+        personas.forEach(persona -> empresaDe.put(persona.getId(), persona.getEmpresa().getId()));
+        for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuariosEnFecha(empresaDe.keySet(), dia)) {
+            long usuarioId = ausencia.getUsuario().getId();
+            if (ausencia.isMedioDia()
+                    && !holidayCalendar.festivosDelAnio(empresaDe.get(usuarioId), dia.getYear()).contains(dia)) {
+                medios.putIfAbsent(usuarioId, deAusencia(ausencia));
+            }
+        }
+        return medios;
     }
 
     /*
@@ -134,7 +174,7 @@ public class NonWorkingDayServiceImpl implements NonWorkingDayService {
 
     private static Motivo deAusencia(AbsenceRequest ausencia) {
         return new Motivo(
-                ausencia.getTipo().getEtiqueta(),
+                ausencia.etiqueta(),
                 ausencia.getTipo() == AbsenceType.VACACIONES);
     }
 }

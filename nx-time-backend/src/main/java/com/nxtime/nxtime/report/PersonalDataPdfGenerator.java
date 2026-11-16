@@ -120,7 +120,8 @@ public class PersonalDataPdfGenerator {
         tabla(documento, "Ausencias", datos.ausencias(),
                 new String[] {"Desde", "Hasta", "Tipo", "Estado", "Motivo"},
                 a -> new String[] {
-                        a.fechaInicio().format(FECHA), a.fechaFin().format(FECHA), etiquetaAusencia(a.tipo()),
+                        a.fechaInicio().format(FECHA), a.fechaFin().format(FECHA),
+                        etiquetaAusencia(a.tipo()) + (a.medioDia() ? " (medio día)" : ""),
                         a.estado(), texto(a.motivo())});
 
         tabla(documento, "Vacaciones por año", datos.saldosVacaciones(),

@@ -156,7 +156,7 @@ public class PersonalDataExportServiceImpl implements PersonalDataExportService 
                         .sorted(Comparator.comparing(a -> a.getFechaInicio()))
                         .map(a -> new PersonalDataExport.Ausencia(
                                 a.getFechaInicio(), a.getFechaFin(), a.getTipo().name(), a.getEstado().name(),
-                                a.getMotivo(), a.getFechaResolucion(), a.getComentarioResolucion()))
+                                a.getMotivo(), a.getFechaResolucion(), a.getComentarioResolucion(), a.isMedioDia()))
                         .toList(),
 
                 vacationRepository.findByUsuarioOrderByAnioAsc(p).stream()

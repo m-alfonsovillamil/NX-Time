@@ -134,20 +134,21 @@ public class ReportServiceImpl implements ReportService {
         LocalDate primero = mes.atDay(1);
         LocalDate ultimo = mes.atEndOfMonth();
 
-        Map<Long, Map<AbsenceType, Integer>> diasPorTipo = new LinkedHashMap<>();
+        Map<Long, Map<AbsenceType, Double>> diasPorTipo = new LinkedHashMap<>();
         for (AbsenceRequest ausencia : ausencias.findSolapadasDeEmpresa(empresa.getId(), primero, ultimo)) {
             if (ausencia.getEstado() != AbsenceStatus.APROBADA) {
                 continue;
             }
             LocalDate desde = ausencia.getFechaInicio().isBefore(primero) ? primero : ausencia.getFechaInicio();
             LocalDate hasta = ausencia.getFechaFin().isAfter(ultimo) ? ultimo : ausencia.getFechaFin();
-            int dias = diasHabiles.contarDiasHabiles(empresa, desde, hasta);
+            // Un medio día cuenta 0,5 (ADR 063), como en el saldo.
+            double dias = ausencia.diasQueCuenta(diasHabiles.contarDiasHabiles(empresa, desde, hasta));
             if (dias == 0) {
                 continue;
             }
             personas.putIfAbsent(ausencia.getUsuario().getId(), ausencia.getUsuario());
             diasPorTipo.computeIfAbsent(ausencia.getUsuario().getId(), id -> new EnumMap<>(AbsenceType.class))
-                    .merge(ausencia.getTipo(), dias, Integer::sum);
+                    .merge(ausencia.getTipo(), dias, Double::sum);
         }
 
         Map<Long, Long> minutosExtra = new LinkedHashMap<>();
@@ -163,13 +164,13 @@ public class ReportServiceImpl implements ReportService {
                 .sorted((a, b) -> orden.compare(a.nombreCompleto(), b.nombreCompleto()))
                 .map(persona -> {
                     List<ReportRow> suyas = filasPorPersona.getOrDefault(persona.getId(), List.of());
-                    Map<AbsenceType, Integer> tipos = diasPorTipo.getOrDefault(persona.getId(), Map.of());
-                    int vacaciones = tipos.getOrDefault(AbsenceType.VACACIONES, 0);
-                    int otras = tipos.entrySet().stream()
+                    Map<AbsenceType, Double> tipos = diasPorTipo.getOrDefault(persona.getId(), Map.of());
+                    double vacaciones = tipos.getOrDefault(AbsenceType.VACACIONES, 0.0);
+                    double otras = tipos.entrySet().stream()
                             .filter(e -> e.getKey() != AbsenceType.VACACIONES)
-                            .mapToInt(Map.Entry::getValue).sum();
+                            .mapToDouble(Map.Entry::getValue).sum();
                     String detalle = new java.util.TreeMap<>(tipos).entrySet().stream()
-                            .map(e -> e.getKey().getEtiqueta() + " " + e.getValue())
+                            .map(e -> e.getKey().getEtiqueta() + " " + com.nxtime.nxtime.service.Dias.texto(e.getValue()))
                             .collect(Collectors.joining(" · "));
                     return new ResumenDePersona(
                             persona.nombreCompleto(),

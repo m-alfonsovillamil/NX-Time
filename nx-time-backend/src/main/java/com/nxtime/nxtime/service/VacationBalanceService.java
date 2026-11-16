@@ -28,5 +28,5 @@ public interface VacationBalanceService {
      * pendiente deja de ser una reserva prudente y la pregunta es la
      * definitiva, cuántos días se han concedido de verdad.
      */
-    int contarDiasAprobados(User usuario, int anio);
+    double contarDiasAprobados(User usuario, int anio);
 }

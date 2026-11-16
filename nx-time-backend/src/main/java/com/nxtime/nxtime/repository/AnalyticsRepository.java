@@ -93,6 +93,10 @@ public interface AnalyticsRepository extends Repository<User, Long> {
      * Si dos ausencias aprobadas se pisan el mismo día (no debería pasar,
      * pero nada lo impide en la base), sale una sola: la más antigua. Contar
      * el día dos veces inflaría el absentismo.
+     *
+     * Sin los medios días (ADR 063): ese día se trabaja la otra mitad, así que
+     * para el absentismo, que se mide en días enteros, es un día laborable más
+     * -- trabajado si se fichó, sin fichaje si no.
      */
     @Query(value = """
             SELECT DISTINCT ON (a.usuario_id, g.dia)
@@ -106,6 +110,7 @@ public interface AnalyticsRepository extends Repository<User, Long> {
                     INTERVAL '1 day') AS g(dia)
             WHERE a.usuario_id IN (:usuarioIds)
               AND a.estado = 'APROBADA'
+              AND NOT a.medio_dia
               AND a.fecha_inicio <= :hasta
               AND a.fecha_fin >= :desde
             ORDER BY a.usuario_id, g.dia, a.id

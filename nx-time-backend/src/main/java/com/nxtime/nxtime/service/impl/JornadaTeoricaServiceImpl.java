@@ -68,6 +68,8 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
 
         Map<LocalDate, NonWorkingDayService.Motivo> noLaborables =
                 nonWorkingDayService.motivosEnRango(persona, desde, hasta);
+        Map<LocalDate, NonWorkingDayService.Motivo> mediosDias =
+                nonWorkingDayService.mediosDiasEnRango(persona, desde, hasta);
         List<ScheduleAssignment> asignaciones =
                 assignmentRepository.findDeUsuarioEnRango(persona.getId(), desde, hasta);
         Map<LocalDate, List<ScheduleException>> excepciones = exceptionRepository
@@ -78,7 +80,8 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
 
         List<DiaTeorico> dias = new ArrayList<>();
         for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
-            dias.add(diaTeorico(fecha, persona.zona(), asignaciones, noLaborables, excepciones, tramosPorPlantilla));
+            dias.add(diaTeorico(fecha, persona.zona(), asignaciones, noLaborables, mediosDias.get(fecha),
+                    excepciones, tramosPorPlantilla));
         }
         return dias;
     }
@@ -96,6 +99,7 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
         List<Long> ids = personas.stream().map(User::getId).toList();
 
         Map<Long, NonWorkingDayService.Motivo> noLaborables = nonWorkingDayService.motivosDelDia(personas, fecha);
+        Map<Long, NonWorkingDayService.Motivo> mediosDias = nonWorkingDayService.mediosDiasDelDia(personas, fecha);
         Map<Long, List<ScheduleAssignment>> asignaciones = assignmentRepository.findDeUsuariosEl(ids, fecha).stream()
                 .collect(Collectors.groupingBy(asignacion -> asignacion.getUsuario().getId()));
         Map<Long, List<ScheduleException>> excepciones = exceptionRepository.findByUsuario_IdInAndFecha(ids, fecha)
@@ -114,6 +118,7 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
                     zonas.get(id),
                     asignaciones.getOrDefault(id, List.of()),
                     motivo != null ? Map.of(fecha, motivo) : Map.of(),
+                    mediosDias.get(id),
                     suyas.isEmpty() ? Map.of() : Map.of(fecha, suyas),
                     tramosPorPlantilla));
         }
@@ -153,7 +158,9 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
             Map<LocalDate, List<ScheduleException>> susExcepciones = excepciones.getOrDefault(id, Map.of());
             List<DiaTeorico> dias = new ArrayList<>();
             for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
-                dias.add(diaTeorico(fecha, zona, suyas, festivos, susExcepciones, tramosPorPlantilla));
+                // Sin medios días, como sin ausencias: aquí se pregunta qué
+                // estaba PLANIFICADO, y eso lo cruza quien pregunta.
+                dias.add(diaTeorico(fecha, zona, suyas, festivos, null, susExcepciones, tramosPorPlantilla));
             }
             porPersona.put(id, dias);
         }
@@ -177,13 +184,17 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
         // viernes y no festivo) menos las ausencias aprobadas; los festivos y
         // las ausencias ya vienen como NO_LABORABLE y no llegan aquí. Así, una
         // semana sin ningún día de cuadrante da el número de siempre.
-        int habilesSinCuadrante = (int) semana.stream()
+        //
+        // En MEDIOS días (ADR 063): uno con medio día aprobado cuenta uno, y
+        // los demás dos. Los del cuadrante ya traen sus minutos a la mitad.
+        long mediosSinCuadrante = semana.stream()
                 .filter(dia -> dia.origen() == Origen.SIN_CUADRANTE)
                 .filter(dia -> esEntreSemana(dia.fecha()))
-                .count();
+                .mapToLong(dia -> dia.medioDia() ? 1 : 2)
+                .sum();
 
         return delCuadrante
-                + OvertimeCalculator.objetivoSemanal(persona.getHorasSemanales(), habilesSinCuadrante);
+                + OvertimeCalculator.objetivoSemanalDeMedios(persona.getHorasSemanales(), mediosSinCuadrante);
     }
 
     // ------------------------------------------------------------------
@@ -197,6 +208,7 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
             ZoneId zona,
             List<ScheduleAssignment> asignaciones,
             Map<LocalDate, NonWorkingDayService.Motivo> noLaborables,
+            NonWorkingDayService.Motivo medioDia,
             Map<LocalDate, List<ScheduleException>> excepciones,
             Map<Long, Map<DayOfWeek, List<Tramo>>> tramosPorPlantilla) {
 
@@ -227,17 +239,32 @@ public class JornadaTeoricaServiceImpl implements JornadaTeoricaService {
                     .map(e -> new Tramo(e.getInicio(), e.getFin()))
                     .sorted(Comparator.comparingInt(Tramo::inicio))
                     .toList();
-            return new DiaTeorico(fecha, Origen.EXCEPCION, suma(fecha, zona, tramos), tramos, explicacion, plantilla);
+            return trabajado(fecha, Origen.EXCEPCION, suma(fecha, zona, tramos), tramos, explicacion, plantilla, medioDia);
         }
 
         if (vigente != null) {
             List<Tramo> tramos = tramosPorPlantilla
                     .getOrDefault(vigente.getPlantilla().getId(), Map.of())
                     .getOrDefault(fecha.getDayOfWeek(), List.of());
-            return new DiaTeorico(fecha, Origen.CUADRANTE, suma(fecha, zona, tramos), tramos, null, plantilla);
+            return trabajado(fecha, Origen.CUADRANTE, suma(fecha, zona, tramos), tramos, null, plantilla, medioDia);
         }
 
-        return new DiaTeorico(fecha, Origen.SIN_CUADRANTE, 0, List.of(), null, null);
+        return trabajado(fecha, Origen.SIN_CUADRANTE, 0, List.of(), null, null, medioDia);
+    }
+
+    /**
+     * Un día que se trabaja. Con un medio día aprobado (ADR 063) se espera la
+     * mitad de sus minutos y se dice por qué; los tramos van enteros, porque
+     * no se sabe qué mitad se libra.
+     */
+    private static DiaTeorico trabajado(
+            LocalDate fecha, Origen origen, int minutos, List<Tramo> tramos, String explicacion, String plantilla,
+            NonWorkingDayService.Motivo medioDia) {
+        if (medioDia == null) {
+            return new DiaTeorico(fecha, origen, minutos, tramos, explicacion, plantilla);
+        }
+        return new DiaTeorico(fecha, origen, (minutos + 1) / 2, tramos,
+                explicacion != null ? explicacion : medioDia.texto(), plantilla, true);
     }
 
     private Map<Long, Map<DayOfWeek, List<Tramo>>> tramosDe(List<ScheduleAssignment> asignaciones) {

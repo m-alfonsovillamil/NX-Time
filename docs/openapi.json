@@ -14629,6 +14629,9 @@
             "type" : "string",
             "maxLength" : 500,
             "minLength" : 0
+          },
+          "medioDia" : {
+            "type" : "boolean"
           }
         },
         "required" : [ "fechaFin", "fechaInicio", "tipo" ]
@@ -14673,8 +14676,11 @@
             "type" : "string"
           },
           "diasHabiles" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
+          },
+          "medioDia" : {
+            "type" : "boolean"
           },
           "canceladaPor" : {
             "$ref" : "#/components/schemas/SimpleUserDTO"
@@ -15681,6 +15687,9 @@
           },
           "comentarioResolucion" : {
             "type" : "string"
+          },
+          "medioDia" : {
+            "type" : "boolean"
           }
         }
       },
@@ -16824,24 +16833,24 @@
             "format" : "int32"
           },
           "diasTotales" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
           },
           "diasConsumidos" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
           },
           "diasPendientes" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
           },
           "diasDisponibles" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
           },
           "diasArrastrados" : {
-            "type" : "integer",
-            "format" : "int32"
+            "type" : "number",
+            "format" : "double"
           },
           "arrastreCaducaEl" : {
             "type" : "string",
@@ -17058,6 +17067,9 @@
             "enum" : [ "PENDIENTE", "APROBADA", "RECHAZADA", "CANCELADA" ]
           },
           "propia" : {
+            "type" : "boolean"
+          },
+          "medioDia" : {
             "type" : "boolean"
           }
         }

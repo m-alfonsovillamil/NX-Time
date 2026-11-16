@@ -91,6 +91,7 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
             abiertas.put(abierta.getUsuario().getId(), abierta);
         }
         Map<Long, NonWorkingDayService.Motivo> noLaborables = nonWorkingDayService.motivosDelDia(plantilla, hoy);
+        Map<Long, NonWorkingDayService.Motivo> mediosDias = nonWorkingDayService.mediosDiasDelDia(plantilla, hoy);
         // Quien tiene cuadrante hoy: su entrada, o null si hoy le toca libre.
         Map<Long, String> conCuadrante = new HashMap<>();
         for (TeamScheduleEntryResponse cuadrante : scheduleService.equipo(hoy, actor)) {
@@ -107,7 +108,11 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
             List<TimeEntry> suyas = deHoy.getOrDefault(persona.getId(), List.of());
             TimeEntry abierta = abiertas.get(persona.getId());
             NonWorkingDayService.Motivo festivoOAusencia = noLaborables.get(persona.getId());
-            String entradaPrevista = festivoOAusencia == null ? conCuadrante.get(persona.getId()) : null;
+            String entradaDelCuadrante = festivoOAusencia == null ? conCuadrante.get(persona.getId()) : null;
+            // Con medio día aprobado (ADR 063) trabaja, pero no se sabe qué
+            // mitad: no se le espera a una hora ni se le cuenta retraso.
+            NonWorkingDayService.Motivo medioDia = mediosDias.get(persona.getId());
+            String entradaPrevista = medioDia == null ? entradaDelCuadrante : null;
             // Por qué hoy no le toca, si no le toca. Los festivos y las ausencias
             // los dice NonWorkingDayService. Además, con cuadrante manda el
             // cuadrante (un día sin tramos es libre, aunque sea martes); sin él,
@@ -115,8 +120,14 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
             // plantilla «sin fichar».
             String motivo = festivoOAusencia != null ? festivoOAusencia.texto()
                     : conCuadrante.containsKey(persona.getId())
-                            ? (entradaPrevista == null ? MOTIVO_LIBRE_EN_CUADRANTE : null)
+                            ? (entradaDelCuadrante == null ? MOTIVO_LIBRE_EN_CUADRANTE : null)
                             : finDeSemana ? MOTIVO_FIN_DE_SEMANA : null;
+            boolean leToca = motivo == null;
+            if (leToca && medioDia != null) {
+                // Se dice, para que quien mira sepa por qué aún no ha fichado
+                // o por qué se va a mediodía; pero hoy sí le toca.
+                motivo = medioDia.texto();
+            }
 
             EstadoAhora estado;
             Instant desde = null;
@@ -126,7 +137,7 @@ public class EquipoAhoraServiceImpl implements EquipoAhoraService {
             } else if (!suyas.isEmpty()) {
                 estado = EstadoAhora.TERMINADA;
                 desde = suyas.stream().map(TimeEntry::getHoraEntrada).min(Comparator.naturalOrder()).orElse(null);
-            } else if (motivo != null) {
+            } else if (!leToca) {
                 estado = EstadoAhora.NO_LABORABLE;
             } else {
                 estado = EstadoAhora.SIN_FICHAR;

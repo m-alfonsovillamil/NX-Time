@@ -77,6 +77,7 @@ import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.CampanaDeAvisos
 import com.nxtime.app.ui.theme.LocalColoresJornada
 import com.nxtime.app.ui.util.DateFormats
+import com.nxtime.app.ui.util.comoDias
 import com.nxtime.app.ui.util.resolver
 import kotlinx.coroutines.delay
 
@@ -707,8 +708,8 @@ private fun ResumenDeTiempos(estado: FicharUiState, onAbrir: (TipoDetalle) -> Un
                 etiqueta = stringResource(R.string.fichar_vacaciones),
                 valor = stringResource(
                     R.string.fichar_vacaciones_detalle,
-                    saldo.diasDisponibles,
-                    saldo.diasTotales
+                    saldo.diasDisponibles.comoDias(),
+                    saldo.diasTotales.comoDias()
                 ),
                 onClick = { onAbrir(TipoDetalle.VACACIONES) },
                 modifier = Modifier.fillMaxWidth()

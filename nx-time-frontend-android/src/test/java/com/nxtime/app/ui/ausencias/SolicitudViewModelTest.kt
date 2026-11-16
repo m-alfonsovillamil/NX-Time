@@ -145,6 +145,54 @@ class SolicitudViewModelTest {
     }
 
     @Test
+    fun `medio dia de un unico dia viaja marcado`() = runTest {
+        whenever(repositorio.solicitarAusencia(any())).thenReturn(Response.success(respuesta))
+
+        viewModel.onFechaInicioCambia(LocalDate.of(2026, 9, 1))
+        viewModel.onFechaFinCambia(LocalDate.of(2026, 9, 1))
+        viewModel.onMedioDiaCambia(true)
+        assertTrue(viewModel.uiState.value.pideMedioDia)
+        viewModel.enviar()
+        advanceUntilIdle()
+
+        verify(repositorio).solicitarAusencia(
+            PeticionAusenciaDTO(
+                fechaInicio = "2026-09-01",
+                fechaFin = "2026-09-01",
+                tipo = TipoAusencia.VACACIONES,
+                motivo = null,
+                medioDia = true
+            )
+        )
+    }
+
+    @Test
+    fun `medio dia marcado y luego un rango no se manda`() = runTest {
+        // La marca se queda como la dejó la persona, pero con dos fechas
+        // distintas no vale: el interruptor se apaga y la petición sale como
+        // la de siempre, sin el campo.
+        whenever(repositorio.solicitarAusencia(any())).thenReturn(Response.success(respuesta))
+
+        viewModel.onFechaInicioCambia(LocalDate.of(2026, 9, 1))
+        viewModel.onFechaFinCambia(LocalDate.of(2026, 9, 1))
+        viewModel.onMedioDiaCambia(true)
+        viewModel.onFechaFinCambia(LocalDate.of(2026, 9, 2))
+        assertFalse(viewModel.uiState.value.unSoloDia)
+        assertFalse(viewModel.uiState.value.pideMedioDia)
+        viewModel.enviar()
+        advanceUntilIdle()
+
+        verify(repositorio).solicitarAusencia(
+            PeticionAusenciaDTO(
+                fechaInicio = "2026-09-01",
+                fechaFin = "2026-09-02",
+                tipo = TipoAusencia.VACACIONES,
+                motivo = null
+            )
+        )
+    }
+
+    @Test
     fun `un rechazo del backend deja el formulario utilizable`() = runTest {
         whenever(repositorio.solicitarAusencia(any())).thenThrow(RuntimeException("sin red"))
 

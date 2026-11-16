@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,16 +81,22 @@ public class DailyHoursServiceImpl implements DailyHoursService {
 
         Set<LocalDate> habiles = workingDayService.diasHabiles(usuario.getEmpresa(), desde, hasta);
         Map<LocalDate, String> festivos = festivos(usuario.getEmpresa().getId(), desde, hasta);
-        Map<LocalDate, String> ausencias = ausencias(usuario, desde, hasta);
+        Set<LocalDate> mediosDias = new HashSet<>();
+        Map<LocalDate, String> ausencias = ausencias(usuario, desde, hasta, mediosDias);
         long esperadoPorDia = OvertimeCalculator.objetivoSemanal(usuario.getHorasSemanales(), 1);
+        // La mitad, con la misma cuenta y no dividiendo lo ya redondeado.
+        long esperadoEnMedioDia = OvertimeCalculator.objetivoSemanalDeMedios(usuario.getHorasSemanales(), 1);
 
         List<DailyHoursResponse> dias = new ArrayList<>();
         for (LocalDate dia = desde; !dia.isAfter(hasta); dia = dia.plusDays(1)) {
-            boolean seEspera = habiles.contains(dia) && !ausencias.containsKey(dia);
+            // Con medio día aprobado (ADR 063) se espera la mitad, y el
+            // gráfico dice igualmente por qué.
+            boolean medioDia = mediosDias.contains(dia);
+            boolean seEspera = habiles.contains(dia) && (medioDia || !ausencias.containsKey(dia));
             dias.add(new DailyHoursResponse(
                     dia,
                     segundos.getOrDefault(dia, 0L) / 60,
-                    seEspera ? esperadoPorDia : 0,
+                    !seEspera ? 0 : medioDia ? esperadoEnMedioDia : esperadoPorDia,
                     festivos.get(dia),
                     ausencias.get(dia)));
         }
@@ -111,13 +118,16 @@ public class DailyHoursServiceImpl implements DailyHoursService {
     }
 
     /** Solo las APROBADAS: una pendiente no cambia lo que se espera de ese día. */
-    private Map<LocalDate, String> ausencias(User usuario, LocalDate desde, LocalDate hasta) {
+    private Map<LocalDate, String> ausencias(
+            User usuario, LocalDate desde, LocalDate hasta, Set<LocalDate> mediosDias) {
         Map<LocalDate, String> porFecha = new HashMap<>();
         for (AbsenceRequest ausencia : absenceRequestRepository.findAprobadasDeUsuarioEnRango(usuario, desde, hasta)) {
             LocalDate inicio = ausencia.getFechaInicio().isBefore(desde) ? desde : ausencia.getFechaInicio();
             LocalDate fin = ausencia.getFechaFin().isAfter(hasta) ? hasta : ausencia.getFechaFin();
             for (LocalDate dia = inicio; !dia.isAfter(fin); dia = dia.plusDays(1)) {
-                porFecha.putIfAbsent(dia, ausencia.getTipo().getEtiqueta());
+                if (porFecha.putIfAbsent(dia, ausencia.etiqueta()) == null && ausencia.isMedioDia()) {
+                    mediosDias.add(dia);
+                }
             }
         }
         return porFecha;

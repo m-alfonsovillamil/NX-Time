@@ -299,8 +299,8 @@ public class ExcelReportGenerator {
         long segundos = 0;
         long pausas = 0;
         long minutosExtra = 0;
-        long vacaciones = 0;
-        long otras = 0;
+        double vacaciones = 0;
+        double otras = 0;
         for (ResumenDePersona persona : informe.resumen()) {
             EstilosDeFila estilo = numero++ % 2 == 1 ? estilos.alterna : estilos.normal;
             Row fila = hoja.createRow(numeroFila++);
@@ -312,8 +312,8 @@ public class ExcelReportGenerator {
             celdaDeTexto(fila, 5, ResumenDePersona.duracion(persona.segundosPausa()), estilo.centrado);
             celdaDeTexto(fila, 6, persona.minutosHorasExtra() == 0 ? ""
                     : ResumenDePersona.duracion(persona.minutosHorasExtra() * 60), estilo.centrado);
-            celdaDeNumero(fila, 7, persona.diasVacaciones(), estilo.minutos);
-            celdaDeNumero(fila, 8, persona.diasOtrasAusencias(), estilo.minutos);
+            celdaDeNumero(fila, 7, persona.diasVacaciones(), estilo.dias);
+            celdaDeNumero(fila, 8, persona.diasOtrasAusencias(), estilo.dias);
             celdaDeTexto(fila, 9, persona.detalleAusencias(), estilo.texto);
             celdaDeNumero(fila, 10, persona.cerradasPorElSistema(), estilo.minutos);
             celdaDeNumero(fila, 11, persona.pendientesDeRevisar(), estilo.minutos);
@@ -421,6 +421,8 @@ public class ExcelReportGenerator {
         final CellStyle minutos;
         /** Horas con dos decimales, para el resumen por persona. */
         final CellStyle horas;
+        /** Días de ausencia: «3» o «2,5» (ADR 063), sin el «,0» de los enteros. */
+        final CellStyle dias;
         final CellStyle incidencia;
 
         EstilosDeFila(Workbook libro, String fondo) {
@@ -437,6 +439,10 @@ public class ExcelReportGenerator {
             horas = celda(libro, fondo, tinta);
             horas.setAlignment(HorizontalAlignment.CENTER);
             horas.setDataFormat(libro.createDataFormat().getFormat("0.00"));
+            // Formato General: con «0» un medio día saldría como 1 (o 0), y
+            // con «0.0» todos los enteros llevarían un decimal que no dice nada.
+            dias = celda(libro, fondo, tinta);
+            dias.setAlignment(HorizontalAlignment.CENTER);
             // En el rojo de los avisos, como las jornadas marcadas del PDF.
             Font roja = libro.createFont();
             colorear(roja, Marca.ERROR);

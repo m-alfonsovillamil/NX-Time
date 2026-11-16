@@ -243,8 +243,11 @@ public class NotificationListener {
         }
     }
 
-    /** "Vacaciones, del 01/03/2027 al 03/03/2027". */
+    /** "Vacaciones, del 01/03/2027 al 03/03/2027", o "Vacaciones (medio día), el 01/03/2027". */
     private String rango(AbsenceRequest peticion) {
+        if (peticion.isMedioDia()) {
+            return peticion.etiqueta() + ", el " + FECHA.format(peticion.getFechaInicio());
+        }
         return peticion.getTipo().getEtiqueta()
                 + ", del " + FECHA.format(peticion.getFechaInicio())
                 + " al " + FECHA.format(peticion.getFechaFin());

@@ -78,7 +78,7 @@ public record PersonalDataExport(
 
     public record Ausencia(
             LocalDate fechaInicio, LocalDate fechaFin, String tipo, String estado, String motivo,
-            Instant fechaResolucion, String comentarioResolucion) {
+            Instant fechaResolucion, String comentarioResolucion, boolean medioDia) {
     }
 
     public record SaldoVacaciones(int anio, int diasTotales) {

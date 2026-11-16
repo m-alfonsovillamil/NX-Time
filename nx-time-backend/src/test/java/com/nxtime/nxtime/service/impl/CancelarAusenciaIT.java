@@ -98,7 +98,7 @@ class CancelarAusenciaIT {
     void retirarUnaPendiente() {
         AbsenceResponse pedida = pedirVacaciones(lunes, lunes.plusDays(4));
         assertThat(pedida.puedoCancelar()).isTrue();
-        int disponiblesAntes = absenceService.getMyVacationBalance(empleada.getEmail(), lunes.getYear()).diasDisponibles();
+        double disponiblesAntes = absenceService.getMyVacationBalance(empleada.getEmail(), lunes.getYear()).diasDisponibles();
 
         AbsenceResponse cancelada = absenceService.cancelar(empleada.getEmail(), pedida.id(), null);
 

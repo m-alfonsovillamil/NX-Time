@@ -71,6 +71,9 @@ public interface JornadaTeoricaService {
      *   excepción; null si no hay nada que explicar.
      * @param plantilla el nombre de la plantilla vigente ese día, si la hay.
      *   Va también en los días de excepción: sigue siendo su cuadrante.
+     * @param medioDia si ese día tiene aprobado un medio día (ADR 063): se
+     *   trabaja, pero {@code minutos} ya es la MITAD de lo que suman los
+     *   tramos, que van enteros porque no se sabe qué mitad se libra.
      */
     record DiaTeorico(
             LocalDate fecha,
@@ -78,7 +81,14 @@ public interface JornadaTeoricaService {
             int minutos,
             List<Tramo> tramos,
             String motivo,
-            String plantilla) {
+            String plantilla,
+            boolean medioDia) {
+
+        /** Un día sin medio día: como era antes del ADR 063. */
+        public DiaTeorico(
+                LocalDate fecha, Origen origen, int minutos, List<Tramo> tramos, String motivo, String plantilla) {
+            this(fecha, origen, minutos, tramos, motivo, plantilla, false);
+        }
 
         /** A qué hora debía entrar: el inicio del primer tramo, si trabaja. */
         public Optional<LocalTime> entrada() {

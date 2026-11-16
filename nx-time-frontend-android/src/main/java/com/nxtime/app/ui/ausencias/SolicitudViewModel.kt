@@ -20,10 +20,18 @@ data class SolicitudUiState(
     val fechaInicio: LocalDate? = null,
     val fechaFin: LocalDate? = null,
     val motivo: String = "",
+    /** Lo que marcó la persona; solo vale si además es [unSoloDia]. */
+    val medioDia: Boolean = false,
     val cargando: Boolean = false,
     val error: MensajeUi? = null,
     val enviada: Boolean = false
-)
+) {
+    /** Medio día es de un único día (ADR 063): de un rango no significa nada. */
+    val unSoloDia: Boolean get() = fechaInicio != null && fechaInicio == fechaFin
+
+    /** Lo que se va a pedir de verdad: la marca, si las fechas la permiten. */
+    val pideMedioDia: Boolean get() = medioDia && unSoloDia
+}
 
 /**
  * Formulario de solicitud de ausencia.
@@ -45,6 +53,7 @@ class SolicitudViewModel(
 
     fun onTipoCambia(tipo: TipoAusencia) = _uiState.update { it.copy(tipo = tipo, error = null) }
     fun onMotivoCambia(valor: String) = _uiState.update { it.copy(motivo = valor, error = null) }
+    fun onMedioDiaCambia(valor: Boolean) = _uiState.update { it.copy(medioDia = valor, error = null) }
 
     fun onFechaInicioCambia(fecha: LocalDate) =
         _uiState.update { it.copy(fechaInicio = fecha, error = null) }
@@ -77,7 +86,10 @@ class SolicitudViewModel(
                         fechaInicio = inicio.toString(),
                         fechaFin = fin.toString(),
                         tipo = e.tipo,
-                        motivo = e.motivo.trim().ifBlank { null }
+                        motivo = e.motivo.trim().ifBlank { null },
+                        // Nulo y no `false`: así la petición de siempre no
+                        // cambia ni en un byte.
+                        medioDia = if (e.pideMedioDia) true else null
                     )
                 )
                 if (respuesta.isSuccessful) {

@@ -63,6 +63,11 @@ public class AbsenceRequest {
 
     private String motivo;
 
+    // Medio día (ADR 063): solo en una ausencia de un único día
+    // (ck_peticiones_medio_dia_de_un_dia). Cuenta la mitad y ese día se
+    // trabaja la otra mitad: no es un día «no laborable».
+    private boolean medioDia;
+
     // Trazabilidad de la resolución (Fase 9): antes no quedaba
     // constancia de quién aprobó/rechazó ni cuándo -- la petición
     // simplemente cambiaba de estado (ver auditoría del plan). Los tres
@@ -90,6 +95,20 @@ public class AbsenceRequest {
 
     @Version
     private long version;
+
+    /**
+     * Lo que esta ausencia cuenta de {@code habiles} días hábiles: todos, o la
+     * mitad si es de medio día. La única definición: saldo, respuesta e
+     * informes pasan por aquí.
+     */
+    public double diasQueCuenta(int habiles) {
+        return medioDia ? habiles * 0.5 : habiles;
+    }
+
+    /** «Vacaciones» o «Vacaciones (medio día)»: cómo se lee en avisos e informes. */
+    public String etiqueta() {
+        return medioDia ? tipo.getEtiqueta() + " (medio día)" : tipo.getEtiqueta();
+    }
 
     @Override
     public boolean equals(Object o) {

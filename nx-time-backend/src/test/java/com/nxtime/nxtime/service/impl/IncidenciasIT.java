@@ -3,6 +3,9 @@ package com.nxtime.nxtime.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.AbsenceStatus;
+import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Holiday;
 import com.nxtime.nxtime.domain.HolidayScope;
@@ -19,6 +22,7 @@ import com.nxtime.nxtime.dto.ScheduleIncidentResponse;
 import com.nxtime.nxtime.exception.BusinessException;
 import com.nxtime.nxtime.exception.TenantAccessException;
 import com.nxtime.nxtime.notification.NotificationEvents;
+import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.CompanyRepository;
 import com.nxtime.nxtime.repository.HolidayRepository;
 import com.nxtime.nxtime.repository.ScheduleAssignmentRepository;
@@ -109,6 +113,7 @@ class IncidenciasIT {
     @Autowired private HolidayRepository holidayRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private CompanyRepository companyRepository;
+    @Autowired private AbsenceRequestRepository absenceRequestRepository;
     @Autowired private CapturaDeAvisos capturas;
 
     private Company empresa;
@@ -271,6 +276,32 @@ class IncidenciasIT {
 
         assertThat(incidenciasDe(ana)).singleElement()
                 .satisfies(incidencia -> assertThat(incidencia.getMinutos()).isEqualTo(25));
+    }
+
+    /** Con medio día aprobado (ADR 063) no se sabe qué mitad del turno se libra. */
+    @Test
+    @DisplayName("Un día con medio día aprobado no genera incidencias, y de su turno se espera la mitad")
+    void medioDiaAprobado() {
+        conCuadranteDeOficina(ana);
+        // Solo la mañana los dos días: el lunes sin nada aprobado, el martes con medio día.
+        fichar(ana, LUNES, "09:00", "13:00");
+        fichar(ana, LUNES.plusDays(1), "09:00", "13:00");
+        absenceRequestRepository.save(AbsenceRequest.builder()
+                .usuario(ana).empresa(empresa).tipo(AbsenceType.VACACIONES).medioDia(true)
+                .fechaInicio(LUNES.plusDays(1)).fechaFin(LUNES.plusDays(1))
+                .estado(AbsenceStatus.APROBADA).aprobadoPor(gestor).fechaResolucion(java.time.Instant.now()).build());
+
+        incidentService.detectar(LUNES, LUNES.plusDays(1));
+
+        assertThat(incidenciasDe(ana))
+                .as("el lunes se fue cuatro horas antes; el martes tenía la tarde libre")
+                .extracting(ScheduleIncident::getFecha).containsOnly(LUNES);
+        JornadaTeoricaService.DiaTeorico martes = jornadaTeoricaService.dia(ana, LUNES.plusDays(1));
+        assertThat(martes.medioDia()).isTrue();
+        assertThat(martes.minutos()).isEqualTo(240);
+        assertThat(martes.tramos()).as("los tramos van enteros: no se sabe qué mitad").hasSize(1);
+        // Cuatro días de ocho horas y uno de cuatro: contra eso se miden las horas extra.
+        assertThat(jornadaTeoricaService.minutosTeoricosSemana(ana, LUNES)).isEqualTo(36 * 60);
     }
 
     /** Sin cuadrante no hay contra qué comparar: nadie recibe incidencias por no tenerlo. */

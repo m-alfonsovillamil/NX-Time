@@ -311,7 +311,7 @@ public class OvertimeServiceImpl implements OvertimeService {
             porUsuario.computeIfAbsent(jornada.getUsuarioId(), k -> new ArrayList<>()).add(jornada);
         }
 
-        Map<Long, Set<LocalDate>> ausencias = ausenciasPorUsuario(desde, hasta);
+        Map<Long, AusenciasDe> ausencias = ausenciasPorUsuario(desde, hasta);
 
         // Quién tiene cuadrante en la ventana (Fase B1), en una consulta. A
         // esas personas la semana se les mide contra su horario teórico; a las
@@ -342,7 +342,7 @@ public class OvertimeServiceImpl implements OvertimeService {
 
             nuevos += revisarDiasDe(usuario, dias, barrido);
             nuevos += revisarSemanasDe(
-                    usuario, dias, ausencias.getOrDefault(usuario.getId(), Set.of()),
+                    usuario, dias, ausencias.getOrDefault(usuario.getId(), AusenciasDe.NINGUNA),
                     conCuadrante.contains(usuario.getId()), desde, hasta, barrido);
         }
 
@@ -392,7 +392,7 @@ public class OvertimeServiceImpl implements OvertimeService {
     private int revisarSemanasDe(
             User usuario,
             List<TimeEntryRepository.DailyWorkProjection> dias,
-            Set<LocalDate> diasDeAusencia,
+            AusenciasDe ausencias,
             boolean tieneCuadrante,
             LocalDate desde,
             LocalDate hasta,
@@ -431,10 +431,10 @@ public class OvertimeServiceImpl implements OvertimeService {
                 esperados = jornadaTeoricaService.minutosTeoricosSemana(usuario, lunes);
                 exceso = OvertimeCalculator.excesoSobreObjetivo(semana.getValue(), esperados);
             } else {
-                int habiles = diasHabilesDeLaSemana(usuario.getEmpresa(), lunes, domingo, diasDeAusencia);
-                exceso = OvertimeCalculator.excesoSemanal(
-                        semana.getValue(), usuario.getHorasSemanales(), habiles);
-                esperados = OvertimeCalculator.objetivoSemanal(usuario.getHorasSemanales(), habiles);
+                long medios = mediosDiasHabilesDeLaSemana(usuario.getEmpresa(), lunes, domingo, ausencias);
+                exceso = OvertimeCalculator.excesoSemanalDeMedios(
+                        semana.getValue(), usuario.getHorasSemanales(), medios);
+                esperados = OvertimeCalculator.objetivoSemanalDeMedios(usuario.getHorasSemanales(), medios);
             }
             if (exceso == 0) {
                 continue;
@@ -461,21 +461,31 @@ public class OvertimeServiceImpl implements OvertimeService {
      * que es la diferencia entre restar bien y restar dos veces: unas
      * vacaciones de viernes a lunes cubren cuatro fechas pero solo dos
      * días de trabajo.
+     *
+     * Se cuenta en MEDIOS días (ADR 063): un hábil con medio día aprobado es
+     * uno, y los demás dos. Así un medio día de vacaciones baja el objetivo de
+     * la semana en media jornada, ni entera ni nada.
      */
-    private int diasHabilesDeLaSemana(
-            Company empresa, LocalDate lunes, LocalDate domingo, Set<LocalDate> diasDeAusencia) {
+    private long mediosDiasHabilesDeLaSemana(
+            Company empresa, LocalDate lunes, LocalDate domingo, AusenciasDe ausencias) {
         Set<LocalDate> habiles = new LinkedHashSet<>(
                 workingDayService.diasHabiles(empresa, lunes, domingo));
-        habiles.removeAll(diasDeAusencia);
-        return habiles.size();
+        habiles.removeAll(ausencias.enteras());
+        return habiles.stream().mapToLong(dia -> ausencias.medias().contains(dia) ? 1 : 2).sum();
+    }
+
+    /** Las fechas que una persona tiene cubiertas por una ausencia aprobada: el día entero, o solo la mitad. */
+    record AusenciasDe(Set<LocalDate> enteras, Set<LocalDate> medias) {
+        static final AusenciasDe NINGUNA = new AusenciasDe(Set.of(), Set.of());
     }
 
     /** Las fechas cubiertas por una ausencia aprobada, por persona. */
-    private Map<Long, Set<LocalDate>> ausenciasPorUsuario(LocalDate desde, LocalDate hasta) {
-        Map<Long, Set<LocalDate>> porUsuario = new HashMap<>();
+    private Map<Long, AusenciasDe> ausenciasPorUsuario(LocalDate desde, LocalDate hasta) {
+        Map<Long, AusenciasDe> porUsuario = new HashMap<>();
         for (AbsenceRequest ausencia : absenceRepository.findAprobadasEnRango(desde, hasta)) {
-            Set<LocalDate> fechas = porUsuario
-                    .computeIfAbsent(ausencia.getUsuario().getId(), k -> new HashSet<>());
+            AusenciasDe suyas = porUsuario.computeIfAbsent(
+                    ausencia.getUsuario().getId(), k -> new AusenciasDe(new HashSet<>(), new HashSet<>()));
+            Set<LocalDate> fechas = ausencia.isMedioDia() ? suyas.medias() : suyas.enteras();
             // Se recorta al rango barrido: una baja de tres meses no
             // tiene por qué materializar noventa fechas para responder
             // sobre una semana.
