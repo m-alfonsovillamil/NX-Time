@@ -166,7 +166,9 @@ public class AbsenceServiceImpl implements AbsenceService {
         // gran cosa a este proyecto (queda anotado como simplificación
         // consciente, no como despiste).
         int anio = requestDTO.fechaInicio().getYear();
-        VacationBalanceResponse saldo = vacationBalanceService.getBalance(user, anio);
+        // Con la fecha de inicio: lo arrastrado del año anterior solo vale
+        // para vacaciones que empiezan antes de su tope (ADR 060).
+        VacationBalanceResponse saldo = vacationBalanceService.getBalance(user, anio, requestDTO.fechaInicio());
 
         if (diasHabiles > saldo.diasDisponibles()) {
             throw new BusinessException(String.format(
@@ -199,7 +201,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         int yaAprobados = vacationBalanceService.contarDiasAprobados(empleado, anio);
         int diasDeEsta = workingDayService.contarDiasHabiles(
                 empleado.getEmpresa(), peticion.getFechaInicio(), peticion.getFechaFin());
-        int derecho = vacationBalanceService.getBalance(empleado, anio).diasTotales();
+        int derecho = vacationBalanceService.getBalance(empleado, anio, peticion.getFechaInicio()).diasTotales();
 
         if (yaAprobados + diasDeEsta > derecho) {
             throw new BusinessException(String.format(

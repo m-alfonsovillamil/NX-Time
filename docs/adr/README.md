@@ -69,3 +69,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [057](057-paleta-arena.md) | Paleta arena |
 | [058](058-cancelar-una-ausencia.md) | Cancelar una ausencia |
 | [059](059-preferencias-de-avisos.md) | Cómo le llegan los avisos a cada persona |
+| [060](060-arrastre-de-vacaciones.md) | Las vacaciones que sobran pasan al año siguiente |

@@ -76,6 +76,9 @@ function Saldo() {
         <Cifra icono="horas-extra" etiqueta={A.saldo.pendientes} valor={A.saldo.dias(s.diasPendientes ?? 0)} />
         <Cifra icono="calendario" etiqueta={A.saldo.totales} valor={A.saldo.dias(s.diasTotales ?? 0)} />
       </Cifras>
+      {(s.diasArrastrados ?? 0) > 0 && (
+        <p className="nx-sutil">{A.saldo.arrastrados(s.diasArrastrados ?? 0, s.arrastreCaducaEl ? fechaCorta(s.arrastreCaducaEl) : null)}</p>
+      )}
     </Tarjeta>
   );
 }

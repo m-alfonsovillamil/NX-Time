@@ -185,6 +185,15 @@ private fun DetalleVacaciones(saldo: SaldoVacacionesDTO?, proximas: List<Respues
             Linea(stringResource(R.string.detalle_vacaciones_pendientes), it.diasPendientes.toString())
         }
         Linea(stringResource(R.string.detalle_vacaciones_totales, it.anio), it.diasTotales.toString())
+        // ADR 060: de esos, los que vienen del año anterior, y hasta cuándo valen.
+        if (it.diasArrastrados > 0) {
+            Linea(
+                it.arrastreCaducaEl?.let { fecha ->
+                    stringResource(R.string.detalle_vacaciones_arrastrados_hasta, DateFormats.fechaCorta(fecha))
+                } ?: stringResource(R.string.detalle_vacaciones_arrastrados),
+                it.diasArrastrados.toString()
+            )
+        }
     }
     Spacer(Modifier.height(12.dp))
     Text(stringResource(R.string.detalle_vacaciones_proximas), style = MaterialTheme.typography.titleSmall)

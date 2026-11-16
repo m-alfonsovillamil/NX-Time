@@ -261,6 +261,72 @@ function PreguntarModalidad({ ajustes }: { ajustes: Ajustes }) {
   );
 }
 
+/** «31/03» ↔ «03-31»: se escribe como en España y viaja como MM-DD. */
+export function aMesDia(texto: string): string | null {
+  const m = /^\s*(\d{1,2})\/(\d{1,2})\s*$/.exec(texto);
+  if (m === null) return null;
+  const dia = Number(m[1]);
+  const mes = Number(m[2]);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+  return `${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
+function deMesDia(mmdd: string | undefined): string {
+  const [mes, dia] = (mmdd ?? '03-31').split('-');
+  return `${dia}/${mes}`;
+}
+
+/** Lo que sobra de vacaciones pasa al año siguiente, hasta una fecha (ADR 060). */
+function ArrastreDeVacaciones({ ajustes }: { ajustes: Ajustes }) {
+  const R = A.arrastre;
+  const [pasar, setPasar] = useState(ajustes.arrastreVacaciones === true);
+  const [hasta, setHasta] = useState(deMesDia(ajustes.arrastreVacacionesHasta));
+  const [error, setError] = useState<string | null>(null);
+  const guardar = useMutacion(
+    ({ valor, mmdd }: { valor: boolean; mmdd: string }) =>
+      pedir(
+        cliente.PUT('/api/v1/empresa/ajustes', {
+          body: {
+            nombre: ajustes.nombre ?? '',
+            zonaHoraria: ajustes.zonaHoraria ?? PENINSULA,
+            contactoPrivacidad: ajustes.contactoPrivacidad ?? '',
+            arrastreVacaciones: valor,
+            arrastreVacacionesHasta: mmdd,
+          },
+        }),
+      ),
+    { invalida: [CLAVE_AJUSTES], exito: R.guardado },
+  );
+
+  function aplicar() {
+    const mmdd = aMesDia(hasta);
+    if (mmdd === null) return setError(R.malHasta);
+    setError(null);
+    guardar.mutate({ valor: pasar, mmdd });
+  }
+
+  const mensaje = error ?? guardar.error?.message ?? null;
+  return (
+    <Tarjeta titulo={R.titulo} icono="vacaciones" descripcion={R.texto}>
+      <div className="nx-columna">
+        <label className="nx-casilla">
+          <input type="checkbox" checked={pasar} onChange={(e) => setPasar(e.target.checked)} />
+          <span>{R.pasar}</span>
+        </label>
+        {pasar && (
+          <Campo id="arrastre-hasta" etiqueta={R.hasta} ayuda={R.ayudaHasta} inputMode="numeric" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+        )}
+        <div>
+          <Boton variante="secundario" ocupado={guardar.isPending} onClick={aplicar}>
+            {R.guardar}
+          </Boton>
+        </div>
+        {mensaje !== null && <Aviso>{mensaje}</Aviso>}
+      </div>
+    </Tarjeta>
+  );
+}
+
 /**
  * Pedir la ubicación al entrar y al salir (ADR 056). Como la modalidad, salvo
  * que encenderla pide confirmación: apagarla no obliga a nada, y encenderla
@@ -357,6 +423,12 @@ export function AjustesEmpresa() {
           )}
           {ajustes.data !== undefined && (
             <PedirUbicacion key={`ubicacion-${ajustes.data.ubicacionAlFichar}`} ajustes={ajustes.data} />
+          )}
+          {ajustes.data !== undefined && (
+            <ArrastreDeVacaciones
+              key={`arrastre-${ajustes.data.arrastreVacaciones}-${ajustes.data.arrastreVacacionesHasta}`}
+              ajustes={ajustes.data}
+            />
           )}
           <CanalDeDenunciasAjustes />
           {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}

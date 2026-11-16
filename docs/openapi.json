@@ -12118,6 +12118,13 @@
           },
           "ubicacionAlFichar" : {
             "type" : "boolean"
+          },
+          "arrastreVacaciones" : {
+            "type" : "boolean"
+          },
+          "arrastreVacacionesHasta" : {
+            "type" : "string",
+            "pattern" : "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
           }
         },
         "required" : [ "nombre", "zonaHoraria" ]
@@ -12146,6 +12153,12 @@
           },
           "ubicacionAlFichar" : {
             "type" : "boolean"
+          },
+          "arrastreVacaciones" : {
+            "type" : "boolean"
+          },
+          "arrastreVacacionesHasta" : {
+            "type" : "string"
           }
         }
       },
@@ -16492,6 +16505,14 @@
           "diasDisponibles" : {
             "type" : "integer",
             "format" : "int32"
+          },
+          "diasArrastrados" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "arrastreCaducaEl" : {
+            "type" : "string",
+            "format" : "date"
           }
         }
       },

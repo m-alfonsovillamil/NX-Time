@@ -399,6 +399,8 @@
     <string name="detalle_festivo">Festivo: %1$s</string>
     <string name="detalle_ausencia">%1$s</string>
     <string name="detalle_vacaciones_disponibles">Días disponibles</string>
+    <string name="detalle_vacaciones_arrastrados">Del año anterior</string>
+    <string name="detalle_vacaciones_arrastrados_hasta">Del año anterior (hasta el %1$s)</string>
     <string name="detalle_vacaciones_consumidos">Días usados</string>
     <string name="detalle_vacaciones_pendientes">Días pedidos sin aprobar</string>
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>

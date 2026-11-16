@@ -110,7 +110,7 @@ class AbsenceServiceImplTest {
     }
 
     private void conSaldoDisponible(int dias) {
-        when(vacationBalanceService.getBalance(eq(empleado), anyInt()))
+        when(vacationBalanceService.getBalance(eq(empleado), anyInt(), any()))
                 .thenReturn(new VacationBalanceResponse(2026, 22, 22 - dias, 0, dias));
     }
 
@@ -188,7 +188,7 @@ class AbsenceServiceImplTest {
         service.createRequest(empleado.getEmail(), new AbsenceRequestDTO(
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5), AbsenceType.MEDICO, "Operación"));
 
-        verify(vacationBalanceService, never()).getBalance(any(), anyInt());
+        verify(vacationBalanceService, never()).getBalance(any(), anyInt(), any());
         verify(absenceRequestRepository).save(any());
     }
 
@@ -465,7 +465,7 @@ class AbsenceServiceImplTest {
         // Ya lleva 20 de 22 concedidos y esta petición son 5 días hábiles.
         when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(20);
         when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
-        when(vacationBalanceService.getBalance(empleado, 2026))
+        when(vacationBalanceService.getBalance(eq(empleado), eq(2026), any()))
                 .thenReturn(new VacationBalanceResponse(2026, 22, 20, 5, -3));
 
         assertThatThrownBy(() -> service.changeRequestStatus(gestor.getEmail(), 5L,
@@ -485,7 +485,7 @@ class AbsenceServiceImplTest {
         // 17 concedidos + 5 de esta = 22, que es justo el derecho.
         when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(17);
         when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
-        when(vacationBalanceService.getBalance(empleado, 2026))
+        when(vacationBalanceService.getBalance(eq(empleado), eq(2026), any()))
                 .thenReturn(new VacationBalanceResponse(2026, 22, 17, 5, 0));
 
         service.changeRequestStatus(gestor.getEmail(), 5L,

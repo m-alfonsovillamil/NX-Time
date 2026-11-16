@@ -694,6 +694,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 57. [Paleta arena: fondo arena, azul noche para las acciones, petróleo en gestión y tarjetas marfil](docs/adr/057-paleta-arena.md)
 58. [Cancelar una ausencia: la retira quien la pidió si no ha empezado, o la anula quien aprueba, con motivo](docs/adr/058-cancelar-una-ausencia.md)
 59. [Cómo le llegan los avisos: cada persona elige por categoría el correo y el push; la campana y las obligatorias, siempre](docs/adr/059-preferencias-de-avisos.md)
+60. [Las vacaciones que sobran pasan al año siguiente, hasta una fecha tope, calculado al leer](docs/adr/060-arrastre-de-vacaciones.md)
 
 ---
 

@@ -34,7 +34,18 @@ public record UpdateCompanySettingsRequest(
         Boolean preguntarModalidad,
 
         /** Pedir la ubicación al entrar y al salir (ADR 056). Null lo deja como está. */
-        Boolean ubicacionAlFichar) {
+        Boolean ubicacionAlFichar,
+        /* ADR 060. Null: no tocar. */
+        Boolean arrastreVacaciones,
+        @jakarta.validation.constraints.Pattern(regexp = "^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
+                message = "La fecha tope del arrastre va como MM-DD, por ejemplo 03-31.")
+        String arrastreVacacionesHasta) {
+
+    public UpdateCompanySettingsRequest(String nombre, String zonaHoraria, String contactoPrivacidad,
+            Boolean exigirSegundoFactor, Boolean preguntarModalidad, Boolean ubicacionAlFichar) {
+        this(nombre, zonaHoraria, contactoPrivacidad, exigirSegundoFactor, preguntarModalidad, ubicacionAlFichar,
+                null, null);
+    }
 
     /** Lo de antes del ADR 056: la ubicación, como esté. */
     public UpdateCompanySettingsRequest(String nombre, String zonaHoraria, String contactoPrivacidad,

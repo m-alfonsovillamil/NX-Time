@@ -3937,6 +3937,8 @@ export interface components {
             exigirSegundoFactor?: boolean;
             preguntarModalidad?: boolean;
             ubicacionAlFichar?: boolean;
+            arrastreVacaciones?: boolean;
+            arrastreVacacionesHasta?: string;
         };
         CompanySettingsResponse: {
             nombre?: string;
@@ -3947,6 +3949,8 @@ export interface components {
             firmasInvalidadas?: number;
             preguntarModalidad?: boolean;
             ubicacionAlFichar?: boolean;
+            arrastreVacaciones?: boolean;
+            arrastreVacacionesHasta?: string;
         };
         ScheduleTemplateRequest: {
             nombre: string;
@@ -5790,6 +5794,10 @@ export interface components {
             diasPendientes?: number;
             /** Format: int32 */
             diasDisponibles?: number;
+            /** Format: int32 */
+            diasArrastrados?: number;
+            /** Format: date */
+            arrastreCaducaEl?: string;
         };
         PendingWorkResponse: {
             /** Format: int32 */
