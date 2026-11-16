@@ -134,7 +134,9 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
                     .rol(fila.rol())
                     .empresa(empresa)
                     .departamento(comprobada.departamento())
-                    .codigoEmpleado(fila.codigoEmpleado());
+                    .codigoEmpleado(fila.codigoEmpleado())
+                    // Null: la de hoy, que pone User al guardarse.
+                    .fechaAlta(fila.fechaAlta());
             if (fila.horasSemanales() != null) {
                 nuevo.horasSemanales(fila.horasSemanales());
             }
@@ -278,12 +280,54 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
                 }
             }
 
+            java.time.LocalDate alta = null;
+            String altaEscrita = fila.valor(LectorDePlantilla.FECHA_ALTA);
+            if (!altaEscrita.isEmpty()) {
+                alta = fecha(altaEscrita);
+                if (!configuraFicha) {
+                    errores.add("No puedes poner la fecha de alta: deja la columna vacía.");
+                    alta = null;
+                } else if (alta == null) {
+                    errores.add("La fecha de alta no se entiende: escríbela como 15/09/2024.");
+                } else if (alta.isAfter(java.time.LocalDate.now(actor.zona()).plusYears(1))) {
+                    errores.add("La fecha de alta no puede ser de dentro de más de un año.");
+                    alta = null;
+                }
+            }
+
             resultado.add(new Comprobada(new FilaDeImportacion(fila.numero(), nombre, apellidos, email, rol,
                     departamento == null ? null : departamento.getNombre(), horas, vacaciones, List.copyOf(errores),
-                    configuraFicha ? codigo : null),
+                    configuraFicha ? codigo : null, alta),
                     departamento));
         }
         return resultado;
+    }
+
+    /**
+     * Una fecha como la escribe una persona o la exporta un Excel en español:
+     * «15/09/2024», «15/9/24», «15-09-2024» o «2024-09-15». Null si no lo es.
+     * Con el año de dos cifras, del 2000 en adelante: nadie importa hoy altas
+     * del siglo pasado escritas así.
+     */
+    static java.time.LocalDate fecha(String texto) {
+        String limpio = texto.strip();
+        for (String patron : new String[] {"d/M/uuuu", "d-M-uuuu", "uuuu-M-d", "d.M.uuuu"}) {
+            try {
+                return java.time.LocalDate.parse(limpio, java.time.format.DateTimeFormatter.ofPattern(patron)
+                        .withResolverStyle(java.time.format.ResolverStyle.STRICT));
+            } catch (java.time.format.DateTimeParseException e) {
+                // El siguiente.
+            }
+        }
+        try {
+            java.time.LocalDate corta = java.time.LocalDate.parse(limpio,
+                    new java.time.format.DateTimeFormatterBuilder().appendPattern("d/M/")
+                            .appendValueReduced(java.time.temporal.ChronoField.YEAR, 2, 2, 2000).toFormatter()
+                            .withResolverStyle(java.time.format.ResolverStyle.STRICT));
+            return corta;
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
     }
 
     /** «37,5» o «37.5»; null si no es un número. */

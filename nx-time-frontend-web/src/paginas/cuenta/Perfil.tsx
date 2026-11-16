@@ -231,6 +231,8 @@ function Laborales({ perfil }: { perfil: Perfil }) {
         <dd>{perfil.horasSemanales !== undefined ? P.jornadaValor(perfil.horasSemanales.toLocaleString('es-ES')) : P.sinDato}</dd>
         <dt>{P.vacaciones}</dt>
         <dd>{perfil.diasVacaciones !== undefined ? P.vacacionesValor(perfil.diasVacaciones) : P.sinDato}</dd>
+        <dt>{P.fechaAlta}</dt>
+        <dd>{perfil.fechaAlta ? fechaCompleta(perfil.fechaAlta) : P.sinDato}</dd>
       </dl>
       <p className="nx-sutil">{P.soloRrhh}</p>
     </Tarjeta>

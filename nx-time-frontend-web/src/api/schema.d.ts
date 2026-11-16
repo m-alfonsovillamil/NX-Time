@@ -4363,6 +4363,11 @@ export interface components {
             errores?: string[];
             /** @description Su número en el ERP o en nóminas (ADR 053), o null */
             codigoEmpleado?: string;
+            /**
+             * Format: date
+             * @description Su fecha de alta (plan N, N10), o null: entonces, el día que se importa
+             */
+            fechaAlta?: string;
         };
         /** @description Lo que ha salido de leer (y, si no es una simulación, importar) un fichero de plantilla */
         ImportacionPlantillaResponse: {
@@ -4833,6 +4838,8 @@ export interface components {
             /** Format: int32 */
             diasVacaciones?: number;
             authorities?: string[];
+            /** Format: date */
+            fechaAlta?: string;
         };
         UpdateJobPostingStatusRequest: {
             /** @enum {string} */
@@ -4879,6 +4886,11 @@ export interface components {
             diasVacaciones?: number;
             /** @description Null: no tocar. Vacío: quitarlo. */
             codigoEmpleado?: string;
+            /**
+             * Format: date
+             * @description Fecha de alta en la empresa (plan N, N10). Null: no tocar.
+             */
+            fechaAlta?: string;
         };
         SimpleEmployeeDTO: {
             /** Format: int64 */
@@ -4897,6 +4909,8 @@ export interface components {
             segundoFactor?: boolean;
             invitacionPendiente?: boolean;
             codigoEmpleado?: string;
+            /** Format: date */
+            fechaAlta?: string;
         };
         UpdateEmployeeStatusRequest: {
             activo: boolean;
@@ -5467,6 +5481,8 @@ export interface components {
             fechaBaja?: string;
             zonaHoraria?: string;
             codigoEmpleado?: string;
+            /** Format: date */
+            fechaAlta?: string;
         };
         PersonalDataExport: {
             /** Format: date-time */

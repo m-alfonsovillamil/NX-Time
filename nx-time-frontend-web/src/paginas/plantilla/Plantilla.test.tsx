@@ -156,6 +156,27 @@ describe('plantilla', () => {
     expect(llamadas.a('PATCH', '/api/v1/departamentos/empleados/5').map((l) => l.cuerpo)).toEqual([{ departamentoId: 2 }]);
   });
 
+  it('la ficha manda la fecha de alta si se pone (plan N, N10)', async () => {
+    const llamadas = simularApi({
+      'GET /api/v1/gestor/plantilla': () => PLANTILLA,
+      'GET /api/v1/departamentos': () => [],
+      'PATCH /api/v1/gestor/empleados/{id}/ficha': () => PLANTILLA[1],
+    });
+    pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
+
+    const fila = (await screen.findByRole('group', { name: P.accionesDe('Marta') })) as HTMLElement;
+    await userEvent.click(within(fila).getByRole('button', { name: P.editarFicha }));
+    const dialogo = await screen.findByRole('dialog', { name: P.fichaTitulo('Marta') });
+    await userEvent.type(within(dialogo).getByLabelText(P.fichaAlta), '2024-09-02');
+    await userEvent.click(within(dialogo).getByRole('button', { name: P.guardar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('PATCH', '/api/v1/gestor/empleados/5/ficha').map((l) => l.cuerpo)).toEqual([
+        { horasSemanales: 40, diasVacaciones: 22, codigoEmpleado: '', fechaAlta: '2024-09-02' },
+      ]),
+    );
+  });
+
   /* ADR 053: el número de la persona en el ERP o en nóminas. */
   it('la ficha pone el código de empleado; uno con espacios no se manda, y el repetido lo dice el servidor', async () => {
     let veces = 0;

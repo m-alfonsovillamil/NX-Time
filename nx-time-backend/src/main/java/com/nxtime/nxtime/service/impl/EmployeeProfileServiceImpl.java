@@ -128,7 +128,16 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
         if (request.horasSemanales() != null) {
             empleado.setHorasSemanales(request.horasSemanales());
         }
-        if (cambiaCodigo || request.horasSemanales() != null) {
+        if (request.fechaAlta() != null) {
+            // Una contratación ya firmada puede empezar más adelante, pero no
+            // dentro de años: eso es una errata en el año.
+            if (request.fechaAlta().isAfter(java.time.LocalDate.now(empleado.zona()).plusYears(1))) {
+                throw new BusinessException("La fecha de alta no puede ser de dentro de más de un año.",
+                        HttpStatus.BAD_REQUEST);
+            }
+            empleado.setFechaAlta(request.fechaAlta());
+        }
+        if (cambiaCodigo || request.horasSemanales() != null || request.fechaAlta() != null) {
             // saveAndFlush: si otra petición ha puesto el mismo código a la
             // vez, salta aquí el índice único de V49 y no al cerrar la
             // transacción, donde ya no se puede explicar.
@@ -278,7 +287,8 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 usuario.isActivo(),
                 usuario.getHorasSemanales(),
                 dias,
-                operadores.authoritiesDe(usuario));
+                operadores.authoritiesDe(usuario),
+                usuario.getFechaAlta());
     }
 
     /**
@@ -335,6 +345,7 @@ public class EmployeeProfileServiceImpl implements EmployeeProfileService {
                 empleado.getRol(),
                 empleado.tieneSegundoFactor(),
                 invitacionPendiente,
-                empleado.getCodigoEmpleado());
+                empleado.getCodigoEmpleado(),
+                empleado.getFechaAlta());
     }
 }

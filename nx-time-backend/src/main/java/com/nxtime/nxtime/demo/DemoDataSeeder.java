@@ -414,6 +414,9 @@ public class DemoDataSeeder implements CommandLineRunner {
                 .contrasena(passwordEncoder.encode(DEMO_PASSWORD))
                 .rol(rol)
                 .empresa(empresa)
+                // Antes de su primera jornada de la demo, y distinta para cada
+                // una (plan N, N10): sin esto, toda la plantilla entraba hoy.
+                .fechaAlta(LocalDate.now(MADRID_ZONE).minusYears(1).minusDays(37L * nombre.length() + 11L * apellidos.length()))
                 .build());
     }
 
