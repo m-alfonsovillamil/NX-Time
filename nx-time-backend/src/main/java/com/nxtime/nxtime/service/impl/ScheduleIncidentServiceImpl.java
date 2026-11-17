@@ -144,6 +144,13 @@ public class ScheduleIncidentServiceImpl implements ScheduleIncidentService {
                 if (teorico == null || !teorico.tieneCuadrante()) {
                     continue;
                 }
+                if (teorico.medioDia()) {
+                    // Con medio día aprobado (ADR 063) no se sabe qué mitad del
+                    // turno se libra: medirlo contra el horario entero daría un
+                    // retraso o una salida anticipada cada vez. Ese día no
+                    // genera incidencias, y las pendientes que hubiera se retiran.
+                    continue;
+                }
                 List<IncidenciaDetectada> delDia = ReglasDeCuadrante.incidencias(
                         dia, persona.zona(), teorico.tramos(), teorico.minutos(),
                         fichajes.getOrDefault(persona.getId(), List.of()));

@@ -167,4 +167,41 @@ class OvertimeCalculatorTest {
             assertThat(OvertimeCalculator.bolsaCercaDelLimite(64 * 60)).isTrue();
         }
     }
+
+    @Nested
+    @DisplayName("Semanas con medios días (ADR 063)")
+    class ConMediosDias {
+
+        @Test
+        @DisplayName("contada en medios días, una semana entera da lo mismo que contada en días")
+        void equivaleALosDiasEnteros() {
+            for (int dias = 0; dias <= 5; dias++) {
+                assertThat(OvertimeCalculator.objetivoSemanalDeMedios(JORNADA_REDUCIDA, dias * 2L))
+                        .isEqualTo(OvertimeCalculator.objetivoSemanal(JORNADA_REDUCIDA, dias));
+            }
+        }
+
+        @Test
+        @DisplayName("un medio día de vacaciones baja el objetivo media jornada, ni una entera ni nada")
+        void medioDiaBajaMediaJornada() {
+            // Cinco hábiles con un medio día: nueve medios. 40 h -> 36 h.
+            assertThat(OvertimeCalculator.objetivoSemanalDeMedios(JORNADA_COMPLETA, 9)).isEqualTo(36 * 60);
+            assertThat(OvertimeCalculator.excesoSemanalDeMedios(36 * 60, JORNADA_COMPLETA, 9)).isZero();
+            // Quien esa semana trabaja sus 40 h de siempre ha hecho 4 de más.
+            assertThat(OvertimeCalculator.excesoSemanalDeMedios(40 * 60, JORNADA_COMPLETA, 9)).isEqualTo(4 * 60);
+        }
+
+        @Test
+        @DisplayName("medio día de una jornada de 37,5 h son 3 h 45 min exactos")
+        void medioDiaDeUnaJornadaConDecimales() {
+            assertThat(OvertimeCalculator.objetivoSemanalDeMedios(JORNADA_REDUCIDA, 1)).isEqualTo(225);
+        }
+
+        @Test
+        @DisplayName("una semana sin nada que trabajar no genera horas extra ni divide entre cero")
+        void sinMedios() {
+            assertThat(OvertimeCalculator.objetivoSemanalDeMedios(JORNADA_COMPLETA, 0)).isZero();
+            assertThat(OvertimeCalculator.excesoSemanalDeMedios(600, JORNADA_COMPLETA, 0)).isZero();
+        }
+    }
 }

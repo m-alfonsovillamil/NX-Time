@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { Cifra, Cifras } from '../../componentes/Cifra';
 import { Pestanas } from '../../componentes/Pestanas';
 import { Esqueleto } from '../../componentes/Estados';
+import { cifraDeDias } from '../../i18n/es/ausencias';
 import { fichar } from '../../i18n/es/fichar';
 import {
   diasDelRango,
@@ -132,7 +133,7 @@ export function Resumen({ minutosEnCurso }: { minutosEnCurso: number }) {
               <Cifra
                 icono="vacaciones"
                 etiqueta={R.vacaciones}
-                valor={String(resumen.data.saldoVacaciones.diasDisponibles ?? 0)}
+                valor={cifraDeDias(resumen.data.saldoVacaciones.diasDisponibles ?? 0)}
                 detalle={R.vacacionesDetalle(
                   resumen.data.saldoVacaciones.diasDisponibles ?? 0,
                   resumen.data.saldoVacaciones.diasTotales ?? 0,

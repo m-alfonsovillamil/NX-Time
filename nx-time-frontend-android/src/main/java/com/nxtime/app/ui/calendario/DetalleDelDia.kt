@@ -219,8 +219,11 @@ private fun FilaDeAusencia(ausencia: AusenciaCalendarioDTO) {
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = stringResource(ausencia.tipo.etiqueta) +
-                        " · " + stringResource(ausencia.estado.etiqueta),
+                text = (if (ausencia.medioDia) {
+                    stringResource(R.string.calendario_ausencia_medio_dia, stringResource(ausencia.tipo.etiqueta))
+                } else {
+                    stringResource(ausencia.tipo.etiqueta)
+                }) + " · " + stringResource(ausencia.estado.etiqueta),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

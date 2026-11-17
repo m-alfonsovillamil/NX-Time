@@ -4911,6 +4911,7 @@ export interface components {
             /** @enum {string} */
             tipo: "VACACIONES" | "ASUNTOS_PROPIOS" | "MATRIMONIO" | "FALLECIMIENTO_FAMILIAR" | "HOSPITALIZACION_FAMILIAR" | "LACTANCIA" | "MATERNIDAD_PATERNIDAD" | "MEDICO" | "TRASLADO_DOMICILIO" | "VIAJE_TRABAJO" | "OTROS";
             motivo?: string;
+            medioDia?: boolean;
         };
         AbsenceResponse: {
             /** Format: int64 */
@@ -4929,8 +4930,9 @@ export interface components {
             /** Format: date-time */
             fechaResolucion?: string;
             comentarioResolucion?: string;
-            /** Format: int32 */
+            /** Format: double */
             diasHabiles?: number;
+            medioDia?: boolean;
             canceladaPor?: components["schemas"]["SimpleUserDTO"];
             /** Format: date-time */
             canceladaEn?: string;
@@ -5431,6 +5433,7 @@ export interface components {
             /** Format: date-time */
             fechaResolucion?: string;
             comentarioResolucion?: string;
+            medioDia?: boolean;
         };
         Aviso: {
             tipo?: string;
@@ -5902,15 +5905,15 @@ export interface components {
         VacationBalanceResponse: {
             /** Format: int32 */
             anio?: number;
-            /** Format: int32 */
+            /** Format: double */
             diasTotales?: number;
-            /** Format: int32 */
+            /** Format: double */
             diasConsumidos?: number;
-            /** Format: int32 */
+            /** Format: double */
             diasPendientes?: number;
-            /** Format: int32 */
+            /** Format: double */
             diasDisponibles?: number;
-            /** Format: int32 */
+            /** Format: double */
             diasArrastrados?: number;
             /** Format: date */
             arrastreCaducaEl?: string;
@@ -6008,6 +6011,7 @@ export interface components {
             /** @enum {string} */
             estado?: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "CANCELADA";
             propia?: boolean;
+            medioDia?: boolean;
         };
         CalendarResponse: {
             /** Format: int32 */

@@ -20,6 +20,18 @@ public record AbsenceRequestDTO(
         AbsenceType tipo,
 
         @Size(max = 500, message = "El motivo no puede superar los 500 caracteres.")
-        String motivo
+        String motivo,
+
+        // ADR 063: solo con fechaInicio = fechaFin. Opcional (null es «no»),
+        // para que una app anterior a la 1.24 siga pidiendo como siempre.
+        Boolean medioDia
 ) {
+    /** Como era antes de los medios días. */
+    public AbsenceRequestDTO(LocalDate fechaInicio, LocalDate fechaFin, AbsenceType tipo, String motivo) {
+        this(fechaInicio, fechaFin, tipo, motivo, null);
+    }
+
+    public boolean esMedioDia() {
+        return Boolean.TRUE.equals(medioDia);
+    }
 }

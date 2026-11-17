@@ -63,10 +63,10 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
     @Override
     public VacationBalanceResponse getBalance(User usuario, int anio, LocalDate referencia) {
         int derecho = derecho(usuario, anio);
-        int diasConsumidos = contarDiasAprobados(usuario, anio);
-        int diasPendientes = contarDiasPendientes(usuario, anio);
+        double diasConsumidos = contarDiasAprobados(usuario, anio);
+        double diasPendientes = contarDiasPendientes(usuario, anio);
         Arrastre arrastre = arrastre(usuario, anio, referencia);
-        int diasTotales = derecho + arrastre.dias();
+        double diasTotales = derecho + arrastre.dias();
         return new VacationBalanceResponse(anio, diasTotales, diasConsumidos, diasPendientes,
                 diasTotales - diasConsumidos - diasPendientes, arrastre.dias(), arrastre.caducaEl());
     }
@@ -81,7 +81,7 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
     }
 
     /** Lo arrastrado del año anterior que cuenta, y hasta cuándo (null si no hay o ya caducó). */
-    record Arrastre(int dias, LocalDate caducaEl) {
+    record Arrastre(double dias, LocalDate caducaEl) {
         static final Arrastre NINGUNO = new Arrastre(0, null);
     }
 
@@ -105,7 +105,7 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
         if (empresa == null || !empresa.isArrastreVacaciones() || anio < ANIO_MINIMO || anio > ANIO_MAXIMO) {
             return Arrastre.NINGUNO;
         }
-        int sobrante = Math.max(0, derecho(usuario, anio - 1) - contarDiasAprobados(usuario, anio - 1));
+        double sobrante = Math.max(0, derecho(usuario, anio - 1) - contarDiasAprobados(usuario, anio - 1));
         if (sobrante == 0) {
             return Arrastre.NINGUNO;
         }
@@ -120,12 +120,12 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
                 .filter(p -> !p.getFechaInicio().isAfter(tope)).forEach(antesDelTope::add);
         absenceRequestRepository.findVacacionesPendientesDelAnio(usuario, inicioDeAnio, finDeAnio).stream()
                 .filter(p -> !p.getFechaInicio().isAfter(tope)).forEach(antesDelTope::add);
-        int usado = contarDiasHabilesDe(antesDelTope, usuario, inicioDeAnio, finDeAnio);
+        double usado = contarDiasHabilesDe(antesDelTope, usuario, inicioDeAnio, finDeAnio);
         return new Arrastre(Math.min(sobrante, usado), null);
     }
 
     @Override
-    public int contarDiasAprobados(User usuario, int anio) {
+    public double contarDiasAprobados(User usuario, int anio) {
         LocalDate inicioDeAnio = LocalDate.of(anio, 1, 1);
         LocalDate finDeAnio = LocalDate.of(anio, 12, 31);
         return contarDiasHabilesDe(
@@ -133,7 +133,7 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
                 usuario, inicioDeAnio, finDeAnio);
     }
 
-    private int contarDiasPendientes(User usuario, int anio) {
+    private double contarDiasPendientes(User usuario, int anio) {
         LocalDate inicioDeAnio = LocalDate.of(anio, 1, 1);
         LocalDate finDeAnio = LocalDate.of(anio, 12, 31);
         return contarDiasHabilesDe(
@@ -141,16 +141,17 @@ public class VacationBalanceServiceImpl implements VacationBalanceService {
                 usuario, inicioDeAnio, finDeAnio);
     }
 
-    private int contarDiasHabilesDe(
+    private double contarDiasHabilesDe(
             List<AbsenceRequest> peticiones, User usuario, LocalDate inicioDeAnio, LocalDate finDeAnio) {
-        int total = 0;
+        // En double: son múltiplos de 0,5 (ADR 063), que se suman sin error.
+        double total = 0;
         for (AbsenceRequest peticion : peticiones) {
             // Una petición a caballo entre dos años (del 28/12 al 3/1)
             // solo consume del año que se está calculando los días que
             // caen dentro de él -- de ahí el recorte del rango.
             LocalDate desde = peticion.getFechaInicio().isBefore(inicioDeAnio) ? inicioDeAnio : peticion.getFechaInicio();
             LocalDate hasta = peticion.getFechaFin().isAfter(finDeAnio) ? finDeAnio : peticion.getFechaFin();
-            total += workingDayService.contarDiasHabiles(usuario.getEmpresa(), desde, hasta);
+            total += peticion.diasQueCuenta(workingDayService.contarDiasHabiles(usuario.getEmpresa(), desde, hasta));
         }
         return total;
     }

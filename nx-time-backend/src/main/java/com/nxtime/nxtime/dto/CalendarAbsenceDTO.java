@@ -35,6 +35,8 @@ public record CalendarAbsenceDTO(
         LocalDate fechaFin,
         AbsenceType tipo,
         AbsenceStatus estado,
-        boolean propia
+        boolean propia,
+        // ADR 063: ese día solo se falta la mitad. El calendario lo dice.
+        boolean medioDia
 ) {
 }

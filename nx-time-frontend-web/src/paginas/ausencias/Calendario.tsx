@@ -207,6 +207,7 @@ export function Calendario() {
                 <li key={a.id}>
                   <span>
                     <strong>{a.propia === true ? C.propia : a.usuario}</strong> · {a.tipo ? A.tipos[a.tipo] : ''}
+                    {a.medioDia === true ? ` (${A.medioDia})` : ''}
                     <span className="nx-sutil"> · {A.rango(fechaCorta(a.fechaInicio), fechaCorta(a.fechaFin))}</span>
                   </span>
                   {a.estado && (

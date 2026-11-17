@@ -225,6 +225,42 @@ describe('solicitar una ausencia', () => {
     await waitFor(() => expect(llamadas.a('GET', '/api/v1/ausencias/mis-peticiones').length).toBeGreaterThanOrEqual(2));
   });
 
+  it('medio día: la casilla solo vale para un único día, y entonces se manda', async () => {
+    const llamadas = api({
+      'POST /api/v1/ausencias': () => ausencia(9, '2026-10-05', '2026-10-05', { estado: 'PENDIENTE', diasHabiles: 0.5, medioDia: true }),
+    });
+    pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
+
+    await userEvent.click(await screen.findByRole('button', { name: A.solicitar }));
+    const dialogo = await screen.findByRole('dialog', { name: A.solicitud.titulo });
+    const casilla = within(dialogo).getByLabelText(A.solicitud.medioDia) as HTMLInputElement;
+    // Sin fechas no hay «un único día» del que pedir la mitad.
+    expect(casilla.disabled).toBe(true);
+
+    await userEvent.type(within(dialogo).getByLabelText(A.solicitud.desde), '2026-10-05');
+    expect(casilla.disabled).toBe(false);
+    await userEvent.click(casilla);
+    expect(casilla.checked).toBe(true);
+
+    // Al alargarla a dos días la casilla se apaga sola: no se manda la marca.
+    await userEvent.clear(within(dialogo).getByLabelText(A.solicitud.hasta));
+    await userEvent.type(within(dialogo).getByLabelText(A.solicitud.hasta), '2026-10-06');
+    expect(casilla.disabled).toBe(true);
+    expect(casilla.checked).toBe(false);
+
+    // Y de vuelta a un día, sigue marcada como se dejó.
+    await userEvent.clear(within(dialogo).getByLabelText(A.solicitud.hasta));
+    await userEvent.type(within(dialogo).getByLabelText(A.solicitud.hasta), '2026-10-05');
+    expect(casilla.checked).toBe(true);
+    await userEvent.click(within(dialogo).getByRole('button', { name: A.solicitud.enviar }));
+
+    await waitFor(() =>
+      expect(llamadas.a('POST', '/api/v1/ausencias').map((l) => l.cuerpo)).toEqual([
+        { tipo: 'VACACIONES', fechaInicio: '2026-10-05', fechaFin: '2026-10-05', medioDia: true },
+      ]),
+    );
+  });
+
   it('sin fechas, o con el fin antes del inicio, no se manda nada', async () => {
     const llamadas = api();
     pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });

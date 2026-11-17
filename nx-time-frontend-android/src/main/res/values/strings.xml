@@ -189,7 +189,8 @@
     <string name="fichar_tiempo_semana">Esta semana</string>
     <string name="fichar_tiempo_mes">Este mes</string>
     <string name="fichar_vacaciones">Vacaciones</string>
-    <string name="fichar_vacaciones_detalle">%1$d de %2$d días disponibles</string>
+    <!-- Con %s: los días llevan medios desde el ADR 063 («2,5 de 22»). -->
+    <string name="fichar_vacaciones_detalle">%1$s de %2$s días disponibles</string>
     <string name="fichar_cronometro_descripcion">Llevas %1$s de jornada</string>
 
     <!-- Composicion de la jornada abierta y progreso de la semana -->
@@ -475,6 +476,7 @@
         dar nunca, pero sin declararla lint avisa y la app se quedaría
         sin texto si alguna vez cayera en ese caso.
     -->
+    <string name="ausencias_medio_dia">Medio día</string>
     <plurals name="ausencias_dias_habiles">
         <item quantity="one">%d día hábil</item>
         <item quantity="many">%d días hábiles</item>
@@ -507,6 +509,8 @@
     <string name="solicitud_desde">Fecha de inicio</string>
     <string name="solicitud_hasta">Fecha de fin</string>
     <string name="solicitud_motivo">Motivo</string>
+    <string name="solicitud_medio_dia">Solo medio día</string>
+    <string name="solicitud_medio_dia_ayuda">Cuenta medio día, y la otra mitad de la jornada se trabaja. Solo para un único día.</string>
     <string name="solicitud_enviar">Enviar solicitud</string>
     <string name="solicitud_fechas_incompletas">Elige las dos fechas.</string>
     <string name="solicitud_fecha_invertida">La fecha de fin no puede ser anterior a la de inicio.</string>
@@ -830,6 +834,7 @@
     <string name="calendario_dia_sin_ausencias">Nadie está ausente este día.</string>
     <string name="calendario_ausencia_propia">Tú</string>
     <string name="calendario_ausencia_rango">Del %1$s al %2$s</string>
+    <string name="calendario_ausencia_medio_dia">%1$s (medio día)</string>
     <string name="calendario_marcar_festivo">Marcar como festivo</string>
     <string name="calendario_quitar_festivo">Quitar el festivo</string>
     <string name="calendario_quitar">Quitar</string>

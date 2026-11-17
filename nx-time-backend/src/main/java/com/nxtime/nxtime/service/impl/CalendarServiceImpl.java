@@ -250,6 +250,7 @@ public class CalendarServiceImpl implements CalendarService {
                 ausencia.getFechaFin(),
                 ausencia.getTipo(),
                 ausencia.getEstado(),
-                persona.getId() == actor.getId());
+                persona.getId() == actor.getId(),
+                ausencia.isMedioDia());
     }
 }

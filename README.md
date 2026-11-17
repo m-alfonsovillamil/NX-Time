@@ -700,6 +700,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 60. [Las vacaciones que sobran pasan al año siguiente, hasta una fecha tope, calculado al leer](docs/adr/060-arrastre-de-vacaciones.md)
 61. [Compensar las horas extra con descanso: no cuentan para las 80 h si se descansan en cuatro meses](docs/adr/061-compensar-horas-extra-con-descanso.md)
 62. [El justificante en las ausencias: apagado por defecto, solo la persona y RRHH, y anotado](docs/adr/062-justificante-en-las-ausencias.md)
+63. [Medios días en las ausencias: cuentan 0,5, ese día se trabaja la otra mitad y los días del contrato llevan decimales](docs/adr/063-medios-dias.md)
 
 ---
 

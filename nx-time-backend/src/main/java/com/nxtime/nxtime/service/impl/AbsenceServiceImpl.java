@@ -21,6 +21,7 @@ import com.nxtime.nxtime.mapper.AbsenceMapper;
 import com.nxtime.nxtime.repository.AbsenceRequestRepository;
 import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.service.AbsenceService;
+import com.nxtime.nxtime.service.Dias;
 import com.nxtime.nxtime.service.VacationBalanceService;
 import com.nxtime.nxtime.service.WorkingDayService;
 import java.time.Instant;
@@ -100,10 +101,25 @@ public class AbsenceServiceImpl implements AbsenceService {
             throw new BusinessException("La fecha de inicio no puede ser posterior a la fecha de fin.", HttpStatus.BAD_REQUEST);
         }
 
+        // Medio día (ADR 063): solo de un día suelto. De un rango no
+        // significa nada, y dos medios días el mismo día son un día entero.
+        boolean medioDia = requestDTO.esMedioDia();
+        if (medioDia && !requestDTO.fechaInicio().equals(requestDTO.fechaFin())) {
+            throw new BusinessException(
+                    "Medio día solo se puede pedir para un único día.", HttpStatus.BAD_REQUEST);
+        }
+
         // Fase 9: antes no se comprobaba nada de esto (ver auditoría).
         comprobarSolapamiento(user, requestDTO);
-        int diasHabiles = workingDayService.contarDiasHabiles(
+        int habiles = workingDayService.contarDiasHabiles(
                 user.getEmpresa(), requestDTO.fechaInicio(), requestDTO.fechaFin());
+        if (medioDia && habiles == 0) {
+            // Sin esto, un medio día de un sábado o de un festivo se guardaba
+            // contando cero: una petición que no pide nada.
+            throw new BusinessException(
+                    "Ese día no es hábil: no hay medio día que pedir.", HttpStatus.BAD_REQUEST);
+        }
+        double diasHabiles = medioDia ? habiles * 0.5 : habiles;
         comprobarSaldoDeVacaciones(user, requestDTO, diasHabiles);
 
         AbsenceRequest newRequest = AbsenceRequest.builder()
@@ -113,6 +129,7 @@ public class AbsenceServiceImpl implements AbsenceService {
                 .fechaFin(requestDTO.fechaFin())
                 .tipo(requestDTO.tipo())
                 .motivo(requestDTO.motivo())
+                .medioDia(medioDia)
                 .build();
 
         AbsenceRequest saved = absenceRequestRepository.save(newRequest);
@@ -132,7 +149,7 @@ public class AbsenceServiceImpl implements AbsenceService {
                         new NotificationEvents.AbsenceRequested(saved, aprobador)));
 
         log.info("Nueva petición de ausencia de {} ({} - {}, {} días hábiles)",
-                email, saved.getFechaInicio(), saved.getFechaFin(), diasHabiles);
+                email, saved.getFechaInicio(), saved.getFechaFin(), Dias.texto(diasHabiles));
         return toResponse(saved, user);
     }
 
@@ -147,7 +164,7 @@ public class AbsenceServiceImpl implements AbsenceService {
         }
     }
 
-    private void comprobarSaldoDeVacaciones(User user, AbsenceRequestDTO requestDTO, int diasHabiles) {
+    private void comprobarSaldoDeVacaciones(User user, AbsenceRequestDTO requestDTO, double diasHabiles) {
         // El saldo solo aplica a VACACIONES: una baja médica o un
         // permiso por fallecimiento no consumen días de vacaciones, y
         // rechazarlos por "saldo insuficiente" sería absurdo.
@@ -172,8 +189,8 @@ public class AbsenceServiceImpl implements AbsenceService {
 
         if (diasHabiles > saldo.diasDisponibles()) {
             throw new BusinessException(String.format(
-                    "Saldo de vacaciones insuficiente para %d: pides %d días hábiles y te quedan %d.",
-                    anio, diasHabiles, saldo.diasDisponibles()));
+                    "Saldo de vacaciones insuficiente para %d: pides %s días hábiles y te quedan %s.",
+                    anio, Dias.texto(diasHabiles), Dias.texto(saldo.diasDisponibles())));
         }
     }
 
@@ -198,16 +215,17 @@ public class AbsenceServiceImpl implements AbsenceService {
 
         User empleado = peticion.getUsuario();
         int anio = peticion.getFechaInicio().getYear();
-        int yaAprobados = vacationBalanceService.contarDiasAprobados(empleado, anio);
-        int diasDeEsta = workingDayService.contarDiasHabiles(
-                empleado.getEmpresa(), peticion.getFechaInicio(), peticion.getFechaFin());
-        int derecho = vacationBalanceService.getBalance(empleado, anio, peticion.getFechaInicio()).diasTotales();
+        double yaAprobados = vacationBalanceService.contarDiasAprobados(empleado, anio);
+        double diasDeEsta = peticion.diasQueCuenta(workingDayService.contarDiasHabiles(
+                empleado.getEmpresa(), peticion.getFechaInicio(), peticion.getFechaFin()));
+        double derecho = vacationBalanceService.getBalance(empleado, anio, peticion.getFechaInicio()).diasTotales();
 
         if (yaAprobados + diasDeEsta > derecho) {
             throw new BusinessException(String.format(
-                    "No puedes aprobarla: %s tiene %d días de vacaciones en %d, ya lleva %d aprobados "
-                            + "y esta petición son %d más.",
-                    empleado.nombreCompleto(), derecho, anio, yaAprobados, diasDeEsta),
+                    "No puedes aprobarla: %s tiene %s días de vacaciones en %d, ya lleva %s aprobados "
+                            + "y esta petición son %s más.",
+                    empleado.nombreCompleto(), Dias.texto(derecho), anio, Dias.texto(yaAprobados),
+                    Dias.texto(diasDeEsta)),
                     HttpStatus.CONFLICT);
         }
     }
@@ -416,8 +434,8 @@ public class AbsenceServiceImpl implements AbsenceService {
     // molesta, es cachear los festivos por empresa y año con @Cacheable
     // (Fase 10 ya introduce Caffeine) en vez de complicar este método.
     private AbsenceResponse toResponse(AbsenceRequest request, User actor) {
-        int diasHabiles = workingDayService.contarDiasHabiles(
-                request.getEmpresa(), request.getFechaInicio(), request.getFechaFin());
+        double diasHabiles = request.diasQueCuenta(workingDayService.contarDiasHabiles(
+                request.getEmpresa(), request.getFechaInicio(), request.getFechaFin()));
         return absenceMapper.toResponse(request, diasHabiles, puedeCancelar(request, actor));
     }
 }

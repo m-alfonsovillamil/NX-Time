@@ -14,12 +14,13 @@ package com.nxtime.app.data.dto
  */
 data class SaldoVacacionesDTO(
     val anio: Int,
-    val diasTotales: Int,
-    val diasConsumidos: Int,
-    val diasPendientes: Int = 0,
-    val diasDisponibles: Int,
+    // Con decimales desde el ADR 063: un medio día de vacaciones gasta 0,5.
+    val diasTotales: Double,
+    val diasConsumidos: Double,
+    val diasPendientes: Double = 0.0,
+    val diasDisponibles: Double,
     /** Los que vienen del año anterior, ya dentro de [diasTotales] (ADR 060). */
-    val diasArrastrados: Int = 0,
+    val diasArrastrados: Double = 0.0,
     /** "AAAA-MM-DD" hasta cuándo valen, o null. */
     val arrastreCaducaEl: String? = null
 )

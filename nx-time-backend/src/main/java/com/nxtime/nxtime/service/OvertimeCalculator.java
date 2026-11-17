@@ -78,6 +78,18 @@ public final class OvertimeCalculator {
      * festivos, días libres— no genera horas extra semanales. Las diarias
      * siguen su propia regla.
      */
+    /**
+     * Lo mismo que {@link #excesoSemanal}, con la semana contada en MEDIOS
+     * días (ADR 063): una de cinco hábiles con un medio día de vacaciones
+     * son nueve medios, no cuatro días ni cinco.
+     */
+    public static int excesoSemanalDeMedios(long minutosTrabajados, BigDecimal horasSemanales, long mediosDias) {
+        if (mediosDias <= 0) {
+            return 0;
+        }
+        return exceso(minutosTrabajados, objetivoSemanalDeMedios(horasSemanales, mediosDias));
+    }
+
     public static int excesoSobreObjetivo(long minutosTrabajados, long objetivo) {
         if (objetivo <= 0) {
             return 0;
@@ -94,7 +106,16 @@ public final class OvertimeCalculator {
      * son 30 h en una de cuatro días.
      */
     public static long objetivoSemanal(BigDecimal horasSemanales, int diasHabiles) {
-        if (horasSemanales == null || diasHabiles <= 0) {
+        return objetivoSemanalDeMedios(horasSemanales, diasHabiles * 2L);
+    }
+
+    /**
+     * El objetivo de una semana contada en MEDIOS días (ADR 063). Es la misma
+     * cuenta que la de días enteros --y da exactamente lo mismo para un número
+     * par--: la semana contratada son diez medios días.
+     */
+    public static long objetivoSemanalDeMedios(BigDecimal horasSemanales, long mediosDias) {
+        if (horasSemanales == null || mediosDias <= 0) {
             return 0;
         }
         // Con BigDecimal y no con double: 37,5 / 5 * 4 en coma flotante
@@ -102,8 +123,8 @@ public final class OvertimeCalculator {
         // 1800 -- un minuto de exceso inventado cada semana.
         return horasSemanales
                 .multiply(BigDecimal.valueOf(60))
-                .multiply(BigDecimal.valueOf(diasHabiles))
-                .divide(BigDecimal.valueOf(5), 0, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(mediosDias))
+                .divide(BigDecimal.valueOf(10), 0, RoundingMode.HALF_UP)
                 .longValue();
     }
 

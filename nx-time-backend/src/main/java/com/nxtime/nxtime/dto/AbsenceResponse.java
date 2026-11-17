@@ -25,7 +25,9 @@ public record AbsenceResponse(
         SimpleUserDTO aprobadoPor,
         Instant fechaResolucion,
         String comentarioResolucion,
-        int diasHabiles,
+        // Con decimales desde el ADR 063: un medio día son 0,5.
+        double diasHabiles,
+        boolean medioDia,
         // ADR 058: quién la canceló, cuándo y por qué (nulos si no está
         // CANCELADA), y si quien pregunta puede cancelarla ahora. La regla
         // viaja resuelta, como «puedoResolver» en las correcciones: los

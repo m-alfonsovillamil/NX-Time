@@ -92,11 +92,17 @@ fun TarjetaAusencia(
 
             if (peticion.diasHabiles > 0) {
                 Text(
-                    text = pluralStringResource(
-                        R.plurals.ausencias_dias_habiles,
-                        peticion.diasHabiles,
-                        peticion.diasHabiles
-                    ),
+                    // Solo un medio día tiene decimales (ADR 063): el resto
+                    // son días enteros y se leen con su plural de siempre.
+                    text = if (peticion.medioDia) {
+                        stringResource(R.string.ausencias_medio_dia)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.ausencias_dias_habiles,
+                            peticion.diasHabiles.toInt(),
+                            peticion.diasHabiles.toInt()
+                        )
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

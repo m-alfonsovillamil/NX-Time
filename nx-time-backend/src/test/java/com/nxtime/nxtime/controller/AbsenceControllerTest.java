@@ -208,6 +208,6 @@ class AbsenceControllerTest {
     }
 
     private static AbsenceResponse respuesta(AbsenceStatus estado) {
-        return new AbsenceResponse(5L, null, null, null, null, estado, null, null, null, null, 3, null, null, null, false);
+        return new AbsenceResponse(5L, null, null, null, null, estado, null, null, null, null, 3, false, null, null, null, false);
     }
 }

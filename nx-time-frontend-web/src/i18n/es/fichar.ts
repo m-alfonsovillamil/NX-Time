@@ -78,7 +78,8 @@ export const fichar = {
     semana: 'Esta semana',
     mes: 'Este mes',
     vacaciones: 'Vacaciones',
-    vacacionesDetalle: (disponibles: number, totales: number) => `${disponibles} de ${totales} días disponibles`,
+    vacacionesDetalle: (disponibles: number, totales: number) =>
+      `${String(disponibles).replace('.', ',')} de ${String(totales).replace('.', ',')} días disponibles`,
     deJornada: (texto: string) => `de ${texto} a la semana`,
     ausenciasPendientes: (n: number) =>
       n === 1 ? 'Tienes 1 solicitud de ausencia sin responder' : `Tienes ${n} solicitudes de ausencia sin responder`,

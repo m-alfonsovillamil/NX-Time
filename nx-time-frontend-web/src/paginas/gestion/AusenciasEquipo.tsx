@@ -62,7 +62,7 @@ function TarjetaDeAusencia({
       </div>
       <span>
         {ausencias.rango(fechaCorta(a.fechaInicio), fechaCorta(a.fechaFin))}
-        {a.diasHabiles !== undefined ? ` · ${ausencias.diasHabiles(a.diasHabiles)}` : ''}
+        {a.diasHabiles !== undefined ? ` · ${ausencias.diasHabiles(a.diasHabiles, a.medioDia === true)}` : ''}
       </span>
       {a.motivo && <span className="nx-sutil">{G.motivo(a.motivo)}</span>}
       {a.aprobadoPor?.nombre && a.fechaResolucion && (

@@ -37,7 +37,8 @@ import java.time.DayOfWeek;
  *
  * <b>Se mide en días, no en horas</b>, porque las ausencias de este sistema
  * son de días enteros y un día de baja de alguien a media jornada es un día
- * perdido, no cuatro horas. Ver ADR 026.
+ * perdido, no cuatro horas. Ver ADR 026. Los medios días (ADR 063) no llegan
+ * aquí como ausencia: ese día se trabaja, y cuenta como cualquier otro.
  */
 public final class ReglasDeAbsentismo {
 

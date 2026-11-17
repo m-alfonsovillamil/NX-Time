@@ -27,6 +27,7 @@ import com.nxtime.app.data.dto.SaldoVacacionesDTO
 import com.nxtime.app.ui.components.BarraDeHoras
 import com.nxtime.app.ui.components.GraficoDeBarras
 import com.nxtime.app.ui.util.DateFormats
+import com.nxtime.app.ui.util.comoDias
 import com.nxtime.app.ui.util.etiqueta
 import com.nxtime.app.ui.util.resolver
 import java.time.LocalDate
@@ -177,21 +178,21 @@ private fun DetalleDeDias(dias: List<HorasDelDiaDTO>, porSemana: Boolean) {
 @Composable
 private fun DetalleVacaciones(saldo: SaldoVacacionesDTO?, proximas: List<RespuestaAusencia>) {
     saldo?.let {
-        Linea(stringResource(R.string.detalle_vacaciones_disponibles), it.diasDisponibles.toString())
-        Linea(stringResource(R.string.detalle_vacaciones_consumidos), it.diasConsumidos.toString())
+        Linea(stringResource(R.string.detalle_vacaciones_disponibles), it.diasDisponibles.comoDias())
+        Linea(stringResource(R.string.detalle_vacaciones_consumidos), it.diasConsumidos.comoDias())
         // Solo si hay algo pendiente: una línea con un cero es ruido, y aquí
         // sirve para explicar por qué quedan menos días de los esperados.
         if (it.diasPendientes > 0) {
-            Linea(stringResource(R.string.detalle_vacaciones_pendientes), it.diasPendientes.toString())
+            Linea(stringResource(R.string.detalle_vacaciones_pendientes), it.diasPendientes.comoDias())
         }
-        Linea(stringResource(R.string.detalle_vacaciones_totales, it.anio), it.diasTotales.toString())
+        Linea(stringResource(R.string.detalle_vacaciones_totales, it.anio), it.diasTotales.comoDias())
         // ADR 060: de esos, los que vienen del año anterior, y hasta cuándo valen.
         if (it.diasArrastrados > 0) {
             Linea(
                 it.arrastreCaducaEl?.let { fecha ->
                     stringResource(R.string.detalle_vacaciones_arrastrados_hasta, DateFormats.fechaCorta(fecha))
                 } ?: stringResource(R.string.detalle_vacaciones_arrastrados),
-                it.diasArrastrados.toString()
+                it.diasArrastrados.comoDias()
             )
         }
     }

@@ -36,6 +36,10 @@ const estados: Record<EstadoAusencia, string> = {
   CANCELADA: 'Cancelada',
 };
 
+/** Los días llevan medios desde el ADR 063: «2,5», con coma. */
+export const cifraDeDias = (n: number) => String(n).replace('.', ',');
+const dias = (n: number) => (n === 1 ? '1 día' : `${cifraDeDias(n)} días`);
+
 export const ausencias = {
   tipos,
   estados,
@@ -53,9 +57,9 @@ export const ausencias = {
     consumidos: 'Usados',
     pendientes: 'Pedidos sin aprobar',
     totales: 'Del año',
-    dias: (n: number) => (n === 1 ? '1 día' : `${n} días`),
+    dias,
     arrastrados: (n: number, hasta: string | null) =>
-      `Incluye ${n === 1 ? '1 día' : `${n} días`} del año anterior${hasta ? `, que caducan el ${hasta} si no empiezas antes unas vacaciones` : ''}.`,
+      `Incluye ${dias(n)} del año anterior${hasta ? `, que caducan el ${hasta} si no empiezas antes unas vacaciones` : ''}.`,
   },
 
   filtros: {
@@ -80,7 +84,9 @@ export const ausencias = {
     acciones: 'Acciones',
   },
   rango: (desde: string, hasta: string) => (desde === hasta ? desde : `Del ${desde} al ${hasta}`),
-  diasHabiles: (n: number) => (n === 1 ? '1 día hábil' : `${n} días hábiles`),
+  diasHabiles: (n: number, medioDia = false) =>
+    medioDia ? 'Medio día' : n === 1 ? '1 día hábil' : `${cifraDeDias(n)} días hábiles`,
+  medioDia: 'medio día',
   resueltaPor: (nombre: string) => `Resuelta por ${nombre}`,
   respuesta: (texto: string) => `Respuesta: ${texto}`,
   motivo: (texto: string) => `Motivo: ${texto}`,
@@ -119,6 +125,8 @@ export const ausencias = {
     desde: 'Fecha de inicio',
     hasta: 'Fecha de fin',
     motivo: 'Motivo (opcional)',
+    medioDia: 'Solo medio día',
+    medioDiaAyuda: 'Cuenta medio día, y la otra mitad de la jornada se trabaja. Solo para un único día.',
     enviar: 'Enviar solicitud',
     fechasIncompletas: 'Elige las dos fechas.',
     fechaInvertida: 'La fecha de fin no puede ser anterior a la de inicio.',

@@ -22,7 +22,7 @@ public interface AbsenceMapper {
 
     @Mapping(target = "diasHabiles", source = "diasHabiles")
     @Mapping(target = "puedoCancelar", source = "puedoCancelar")
-    AbsenceResponse toResponse(AbsenceRequest request, int diasHabiles, boolean puedoCancelar);
+    AbsenceResponse toResponse(AbsenceRequest request, double diasHabiles, boolean puedoCancelar);
 
     default SimpleUserDTO toSimpleUserDTO(User user) {
         return SimpleUserDTO.de(user);

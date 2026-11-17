@@ -89,10 +89,14 @@ function FormularioDeSolicitud({ alTerminar }: { alTerminar: () => void }) {
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [medioDia, setMedioDia] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Medio día es de un único día (ADR 063): con un rango, la casilla se apaga
+  // y no se manda, en vez de dejar que el servidor rechace la petición.
+  const unSoloDia = desde !== '' && desde === hasta;
 
   const solicitar = useMutacion(
-    (cuerpo: { tipo: TipoAusencia; fechaInicio: string; fechaFin: string; motivo?: string }) =>
+    (cuerpo: { tipo: TipoAusencia; fechaInicio: string; fechaFin: string; motivo?: string; medioDia?: boolean }) =>
       pedir(cliente.POST('/api/v1/ausencias', { body: cuerpo })),
     { invalida: TRAS_SOLICITAR, exito: A.solicitud.enviada, alTerminar },
   );
@@ -107,6 +111,7 @@ function FormularioDeSolicitud({ alTerminar }: { alTerminar: () => void }) {
       fechaInicio: desde,
       fechaFin: hasta,
       ...(motivo.trim() !== '' ? { motivo: motivo.trim() } : {}),
+      ...(medioDia && unSoloDia ? { medioDia: true } : {}),
     });
   }
 
@@ -141,6 +146,21 @@ function FormularioDeSolicitud({ alTerminar }: { alTerminar: () => void }) {
           min={desde || undefined}
           onChange={(e) => setHasta(e.target.value)}
         />
+      </div>
+      <div>
+        <label className="nx-casilla">
+          <input
+            type="checkbox"
+            checked={medioDia && unSoloDia}
+            disabled={!unSoloDia}
+            onChange={(e) => setMedioDia(e.target.checked)}
+            aria-describedby="solicitud-medio-dia-que"
+          />
+          {A.solicitud.medioDia}
+        </label>
+        <p id="solicitud-medio-dia-que" className="nx-sutil">
+          {A.solicitud.medioDiaAyuda}
+        </p>
       </div>
       <p className="nx-sutil">{A.solicitud.explicacion}</p>
       <AreaDeTexto id="solicitud-motivo" etiqueta={A.solicitud.motivo} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
@@ -295,7 +315,7 @@ function Lista({ lista }: { lista: readonly Ausencia[] }) {
             {
               clave: 'dias',
               cabecera: A.tabla.dias,
-              celda: (a) => (a.diasHabiles !== undefined ? A.diasHabiles(a.diasHabiles) : ''),
+              celda: (a) => (a.diasHabiles !== undefined ? A.diasHabiles(a.diasHabiles, a.medioDia === true) : ''),
               numerica: true,
             },
             {

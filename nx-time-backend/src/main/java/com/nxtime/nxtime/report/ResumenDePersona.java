@@ -13,7 +13,8 @@ package com.nxtime.nxtime.report;
  * @param diasTrabajados      días distintos con alguna jornada cerrada.
  * @param minutosHorasExtra   de los avisos ACEPTADOS del mes: los que cuentan
  *                            (ADR 011), no los detectados sin revisar.
- * @param diasVacaciones      días hábiles de vacaciones aprobadas que caen en el mes.
+ * @param diasVacaciones      días hábiles de vacaciones aprobadas que caen en el mes;
+ *                            con decimales, porque un medio día son 0,5 (ADR 063).
  * @param diasOtrasAusencias  lo mismo, de cualquier otro tipo de ausencia.
  * @param detalleAusencias    «Vacaciones 3 · Consulta médica 1», o vacío.
  */
@@ -27,8 +28,8 @@ public record ResumenDePersona(
         long pendientesDeRevisar,
         long sinConexion,
         long minutosHorasExtra,
-        int diasVacaciones,
-        int diasOtrasAusencias,
+        double diasVacaciones,
+        double diasOtrasAusencias,
         String detalleAusencias
 ) {
 

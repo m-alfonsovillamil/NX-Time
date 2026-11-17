@@ -61,7 +61,9 @@ data class AusenciaCalendarioDTO(
     val fechaFin: String,
     val tipo: TipoAusencia,
     val estado: EstadoAusencia,
-    val propia: Boolean = false
+    val propia: Boolean = false,
+    /** ADR 063: ese día solo se falta la mitad. */
+    val medioDia: Boolean = false
 )
 
 /**

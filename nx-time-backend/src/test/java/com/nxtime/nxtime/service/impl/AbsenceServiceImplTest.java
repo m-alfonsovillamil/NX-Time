@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -80,7 +81,7 @@ class AbsenceServiceImplTest {
     private User gestor;
 
     private static final AbsenceResponse RESPUESTA_CUALQUIERA =
-            new AbsenceResponse(1L, null, null, null, null, AbsenceStatus.PENDIENTE, null, null, null, null, 0, null, null, null, false);
+            new AbsenceResponse(1L, null, null, null, null, AbsenceStatus.PENDIENTE, null, null, null, null, 0, false, null, null, null, false);
 
     @BeforeEach
     void setUp() {
@@ -100,7 +101,7 @@ class AbsenceServiceImplTest {
 
         // lenient: varios tests cortan con una excepción antes de llegar
         // a mapear la respuesta o a contar días.
-        lenient().when(absenceMapper.toResponse(any(AbsenceRequest.class), anyInt(), anyBoolean()))
+        lenient().when(absenceMapper.toResponse(any(AbsenceRequest.class), anyDouble(), anyBoolean()))
                 .thenReturn(RESPUESTA_CUALQUIERA);
         lenient().when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(3);
     }
@@ -463,7 +464,7 @@ class AbsenceServiceImplTest {
         when(userRepository.findByEmail(gestor.getEmail())).thenReturn(Optional.of(gestor));
         when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(vacacionesPendientes()));
         // Ya lleva 20 de 22 concedidos y esta petición son 5 días hábiles.
-        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(20);
+        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(20.0);
         when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
         when(vacationBalanceService.getBalance(eq(empleado), eq(2026), any()))
                 .thenReturn(new VacationBalanceResponse(2026, 22, 20, 5, -3));
@@ -483,7 +484,7 @@ class AbsenceServiceImplTest {
         when(absenceRequestRepository.findById(5L)).thenReturn(Optional.of(peticion));
         when(absenceRequestRepository.save(any(AbsenceRequest.class))).thenAnswer(inv -> inv.getArgument(0));
         // 17 concedidos + 5 de esta = 22, que es justo el derecho.
-        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(17);
+        when(vacationBalanceService.contarDiasAprobados(empleado, 2026)).thenReturn(17.0);
         when(workingDayService.contarDiasHabiles(any(), any(), any())).thenReturn(5);
         when(vacationBalanceService.getBalance(eq(empleado), eq(2026), any()))
                 .thenReturn(new VacationBalanceResponse(2026, 22, 17, 5, 0));
