@@ -71,3 +71,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [059](059-preferencias-de-avisos.md) | Cómo le llegan los avisos a cada persona |
 | [060](060-arrastre-de-vacaciones.md) | Las vacaciones que sobran pasan al año siguiente |
 | [061](061-compensar-horas-extra-con-descanso.md) | Compensar las horas extra con descanso |
+| [062](062-justificante-en-las-ausencias.md) | El justificante en las ausencias |

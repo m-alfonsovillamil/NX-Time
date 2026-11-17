@@ -21,6 +21,7 @@ import { T } from '../../i18n/es';
 import { ausencias as A, type EstadoAusencia, type TipoAusencia } from '../../i18n/es/ausencias';
 import { fechaCorta, hoyEnEmpresa } from '../../util/fechas';
 import { TRAS_SOLICITAR, useMisAusencias, useSaldoDeVacaciones, type Ausencia } from './consultas';
+import { JustificanteDeAusencia, useJustificantes } from './Justificantes';
 
 const TONO: Record<EstadoAusencia, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error', CANCELADA: 'neutro' };
 
@@ -241,6 +242,8 @@ function Lista({ lista }: { lista: readonly Ausencia[] }) {
   const [filtro, setFiltro] = useState<FiltroDeAusencias>(SIN_FILTRO);
   const [cancelando, setCancelando] = useState<Ausencia | null>(null);
   const visibles = filtrar(lista, filtro);
+  const justificantes = useJustificantes(visibles.map((a) => a.id));
+  const conJustificantes = justificantes.activo || justificantes.porId.size > 0;
   const hayFiltro = filtro.anio !== '' || filtro.tipo !== '' || filtro.estado !== '';
 
   if (lista.length === 0) return <Vacio titulo={A.vacioTitulo} detalle={A.vacioTexto} />;
@@ -301,6 +304,23 @@ function Lista({ lista }: { lista: readonly Ausencia[] }) {
               celda: (a) => (a.estado ? <Insignia tono={TONO[a.estado]}>{A.estados[a.estado]}</Insignia> : null),
             },
             { clave: 'detalle', cabecera: A.tabla.detalle, celda: (a) => <Detalle a={a} /> },
+            ...(conJustificantes
+              ? [
+                  {
+                    clave: 'justificante',
+                    cabecera: A.justificante.columna,
+                    celda: (a: Ausencia) =>
+                      a.id === undefined ? null : (
+                        <JustificanteDeAusencia
+                          peticionId={a.id}
+                          justificante={justificantes.porId.get(a.id)}
+                          propia
+                          activo={justificantes.activo}
+                        />
+                      ),
+                  },
+                ]
+              : []),
             {
               clave: 'acciones',
               cabecera: A.tabla.acciones,

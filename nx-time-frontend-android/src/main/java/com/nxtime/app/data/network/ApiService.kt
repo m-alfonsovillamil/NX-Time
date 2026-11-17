@@ -4,6 +4,8 @@ import com.nxtime.app.data.dto.*
 import com.nxtime.app.data.dto.CambiarContrasenaRequest
 import com.nxtime.app.data.dto.EmpleadoSimpleDTO
 import com.nxtime.app.data.dto.CrearGestorRequest
+import com.nxtime.app.data.dto.JustificanteDTO
+import com.nxtime.app.data.dto.JustificantesDTO
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
@@ -742,6 +744,18 @@ interface ApiService {
         @Body peticion: AsignarDepartamentoRequest
     ): Response<PerfilDTO>
 
+
+    /*  Justificantes de ausencia (ADR 062) */
+
+    @GET("api/v1/ausencias/justificantes")
+    suspend fun getJustificantes(@Query("peticiones") peticiones: List<Long>): Response<JustificantesDTO>
+
+    @Multipart
+    @POST("api/v1/ausencias/{id}/justificante")
+    suspend fun subirJustificante(
+        @Path("id") peticionId: Long,
+        @Part fichero: MultipartBody.Part
+    ): Response<JustificanteDTO>
 
     /*  Endpoints de ADJUNTOS: CV y foto (Fase B2) */
 

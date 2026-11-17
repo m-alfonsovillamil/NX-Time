@@ -76,6 +76,7 @@ object AppViewModelProvider {
         initializer { HistorialViewModel(app().authRepository) }
         initializer { com.nxtime.app.ui.fichar.DetalleDeTiempoViewModel(app().authRepository) }
         initializer { AusenciasViewModel(app().authRepository) }
+        initializer { com.nxtime.app.ui.ausencias.JustificantesViewModel(app().authRepository) }
         initializer { SolicitudViewModel(app().authRepository) }
         initializer { CambiarContrasenaViewModel(app().authRepository) }
         initializer { AjustesViewModel(app().authRepository, app().ajustes, app().registroDePush) }

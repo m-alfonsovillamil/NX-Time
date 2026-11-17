@@ -24,6 +24,8 @@ import { Pestanas } from '../../componentes/Pestanas';
 import { ausencias } from '../../i18n/es/ausencias';
 import { gestion } from '../../i18n/es/gestion';
 import { diaEnEmpresa, fechaCorta } from '../../util/fechas';
+import { useSesion } from '../../api/useSesion';
+import { JustificanteDeAusencia, useJustificantes } from '../ausencias/Justificantes';
 import { CLAVE_PENDIENTES } from './claves';
 
 const G = gestion.ausencias;
@@ -33,8 +35,23 @@ type Ausencia = components['schemas']['AbsenceResponse'];
 const CLAVE = ['ausencias-equipo'] as const;
 const TONO: Record<string, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error', CANCELADA: 'neutro' };
 
-function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode }) {
+/** Los justificantes de una lista, solo si quien mira puede verlos (RRHH y ADMIN, ADR 062). */
+function useJustificantesDelEquipo(lista: readonly Ausencia[] | undefined) {
+  const { puede } = useSesion();
+  return useJustificantes(puede('ausencia:justificante:leer') ? (lista ?? []).map((a) => a.id) : []);
+}
+
+function TarjetaDeAusencia({
+  a,
+  acciones,
+  justificantes,
+}: {
+  a: Ausencia;
+  acciones?: ReactNode;
+  justificantes?: ReturnType<typeof useJustificantes>;
+}) {
   const quien = a.usuario?.nombre ?? '';
+  const justificante = a.id !== undefined ? justificantes?.porId.get(a.id) : undefined;
   return (
     <li className="nx-incidencia">
       <div className="nx-incidencia__cabecera">
@@ -52,6 +69,9 @@ function TarjetaDeAusencia({ a, acciones }: { a: Ausencia; acciones?: ReactNode 
         <span className="nx-sutil">{G.resueltaPor(a.aprobadoPor.nombre, fechaCorta(diaEnEmpresa(a.fechaResolucion)))}</span>
       )}
       {a.comentarioResolucion && <span>{G.respuesta(a.comentarioResolucion)}</span>}
+      {justificante !== undefined && a.id !== undefined && (
+        <JustificanteDeAusencia peticionId={a.id} justificante={justificante} propia={false} activo={false} />
+      )}
       {a.canceladaPor?.nombre && a.canceladaEn && (
         <span className="nx-sutil">{G.canceladaPor(a.canceladaPor.nombre, fechaCorta(diaEnEmpresa(a.canceladaEn)))}</span>
       )}
@@ -71,6 +91,7 @@ function Pendientes() {
     queryKey: [...CLAVE, 'pendientes'],
     queryFn: () => pedir(cliente.GET('/api/v1/ausencias/gestor/pendientes', {})),
   });
+  const justificantes = useJustificantesDelEquipo(lista.data);
 
   const resolver = useMutacion(
     ({ id, aprobar, comentario }: { id: number; aprobar: boolean; comentario?: string }) =>
@@ -101,6 +122,7 @@ function Pendientes() {
                 <TarjetaDeAusencia
                   key={a.id}
                   a={a}
+                  justificantes={justificantes}
                   acciones={
                     <>
                       {/* Botones y no enlaces: es lo que viene a hacer quien entra aquí (revisión de pantallas, 11/2026). */}
@@ -148,6 +170,7 @@ function Resueltas() {
   const lista = useListaPaginada([...CLAVE, 'resueltas'], (pagina) =>
     pedir(cliente.GET('/api/v1/gestor/ausencias-historial', { params: { query: { pagina, tamano: 30 } } })),
   );
+  const justificantes = useJustificantesDelEquipo(lista.elementos);
   // ADR 058: una aprobada se anula con motivo, que le llega a la persona.
   const anular = useMutacion(
     ({ id, motivo }: { id: number; motivo: string }) =>
@@ -173,6 +196,7 @@ function Resueltas() {
             <TarjetaDeAusencia
               key={a.id}
               a={a}
+              justificantes={justificantes}
               acciones={
                 a.puedoCancelar ? (
                   <Boton variante="secundario" onClick={() => setAnulando(a)}>

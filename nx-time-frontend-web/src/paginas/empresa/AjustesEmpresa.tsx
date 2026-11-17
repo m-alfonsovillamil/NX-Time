@@ -29,6 +29,7 @@ import { T } from '../../i18n/es';
 import { empresa } from '../../i18n/es/empresa';
 import { BajaDeEmpresa } from './BajaDeEmpresa';
 import { CanalDeDenunciasAjustes } from './CanalDeDenunciasAjustes';
+import { JustificantesAjustes } from './JustificantesAjustes';
 import { Kioscos } from './Kioscos';
 
 const A = empresa.ajustes;
@@ -431,6 +432,7 @@ export function AjustesEmpresa() {
             />
           )}
           <CanalDeDenunciasAjustes />
+          <JustificantesAjustes />
           {ajustes.data?.nombre && <BajaDeEmpresa nombreEmpresa={ajustes.data.nombre} />}
           <Tarjeta titulo={A.accesosTitulo} icono="candado" descripcion={A.accesosTexto}>
             <Link className="nx-boton nx-boton--secundario nx-boton--enlace" to="/accesos-a-datos">

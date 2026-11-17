@@ -154,6 +154,36 @@ describe('mis ausencias', () => {
   });
 });
 
+/* ADR 062: el justificante, un dato de salud; la empresa tiene que activarlo. */
+describe('el justificante', () => {
+  it('con la empresa sin activarlo y sin ninguno, no sale la columna', async () => {
+    api({ 'GET /api/v1/ausencias/justificantes': () => ({ activo: false, justificantes: [] }) });
+    pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
+
+    const tabla = await screen.findByRole('table', { name: A.tabla.titulo });
+    await waitFor(() => expect(within(tabla).queryByText(A.justificante.columna)).toBeNull());
+    expect(screen.queryByRole('button', { name: A.justificante.adjuntar })).toBeNull();
+  });
+
+  it('activado, se pide el de cada ausencia; la que lo tiene deja verlo y cambiarlo', async () => {
+    const llamadas = api({
+      'GET /api/v1/ausencias/justificantes': () => ({
+        activo: true,
+        justificantes: [{ peticionId: 3, nombre: 'parte.pdf', mime: 'application/pdf', tamanoBytes: 900, subidoEn: '2026-09-22T08:00:00Z' }],
+      }),
+    });
+    pintar(<Ausencias />, { sesion: sesionDe('EMPLEADO') });
+
+    const fila = (await screen.findByRole('button', { name: A.justificante.ver('parte.pdf') })).closest('tr') as HTMLElement;
+    expect(within(fila).getByText(A.tipos.MEDICO)).toBeTruthy();
+    expect(within(fila).getByRole('button', { name: A.justificante.cambiar })).toBeTruthy();
+    expect(within(fila).getByRole('button', { name: A.justificante.quitar })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: A.justificante.adjuntar })).toHaveLength(2);
+    const pedidas = llamadas.a('GET', '/api/v1/ausencias/justificantes')[0]?.query.getAll('peticiones');
+    expect(pedidas?.join(',').split(',').sort()).toEqual(['1', '2', '3']);
+  });
+});
+
 describe('el filtro por año', () => {
   /* La que cruza el año nuevo es de los dos años: si no, desaparecería de uno de ellos. */
   it('una ausencia de fin de año sale en los dos años', () => {

@@ -194,6 +194,15 @@ interface AuthRepository {
     /* Funciones de Ausencias (Empleado) */
     suspend fun solicitarAusencia(peticion: PeticionAusenciaDTO): Response<RespuestaAusencia>
     /** Una página de las propias; con las dos fechas, solo las que tocan ese periodo. */
+    /** Si la empresa los deja adjuntar y los de estas ausencias (ADR 062). */
+    suspend fun getJustificantes(peticiones: List<Long>): Response<com.nxtime.app.data.dto.JustificantesDTO>
+    suspend fun subirJustificante(
+        peticionId: Long,
+        contenido: ByteArray,
+        nombre: String,
+        mime: String
+    ): Response<com.nxtime.app.data.dto.JustificanteDTO>
+
     suspend fun getMisPeticiones(
         desde: java.time.LocalDate? = null,
         hasta: java.time.LocalDate? = null,

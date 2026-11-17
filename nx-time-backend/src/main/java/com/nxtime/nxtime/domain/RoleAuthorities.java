@@ -171,7 +171,10 @@ public final class RoleAuthorities {
             "fichaje:corregir",
             "fichaje:auditoria",
             "informe:exportar",
-            "firma:visar"
+            "firma:visar",
+            // ADR 062: el justificante de una ausencia es un dato de salud; el
+            // gestor aprueba la ausencia sin verlo.
+            "ausencia:justificante:leer"
     ));
 
     private static final Set<String> ADMIN = union(RRHH, Set.of(

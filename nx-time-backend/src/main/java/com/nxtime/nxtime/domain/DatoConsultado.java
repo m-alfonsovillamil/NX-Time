@@ -16,5 +16,7 @@ public enum DatoConsultado {
     /** Un expediente del canal de denuncias. */
     DENUNCIA,
     /** Cualquier otra descarga con datos de varias personas. */
-    EXPORTACION
+    EXPORTACION,
+    /** El justificante de la ausencia de otra persona (ADR 062): un dato de salud. */
+    JUSTIFICANTE
 }

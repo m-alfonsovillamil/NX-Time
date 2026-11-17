@@ -135,6 +135,7 @@ const GESTOR = [
 const RRHH = [
   ...GESTOR, 'correccion:disputa:resolver', 'departamento:gestionar', 'empleado:configurar',
   'empleado:gestionar', 'fichaje:auditoria', 'fichaje:corregir', 'firma:visar', 'informe:exportar',
+  'ausencia:justificante:leer',
 ];
 const ADMIN = [...RRHH, 'denuncia:instruir', 'empresa:configurar', 'gestor:crear'];
 

@@ -28,7 +28,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,9 +66,32 @@ fun AusenciasScreen(
     onIrAvisos: () -> Unit,
     iniciales: String,
     onIrPerfil: () -> Unit,
-    viewModel: AusenciasViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: AusenciasViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    justificantesViewModel: JustificantesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
+    val justificantes by justificantesViewModel.uiState.collectAsStateWithLifecycle()
+    val contexto = LocalContext.current
+
+    // Los justificantes (ADR 062), cuando cambia la lista: si la empresa no
+    // los tiene activados, no sale nada.
+    LaunchedEffect(estado.peticiones) {
+        if (estado.peticiones.isNotEmpty()) justificantesViewModel.cargar(estado.peticiones.map { it.id })
+    }
+    justificantes.aviso?.let { aviso ->
+        val texto = aviso.resolver()
+        LaunchedEffect(aviso) {
+            Toast.makeText(contexto, texto, Toast.LENGTH_SHORT).show()
+            justificantesViewModel.avisoMostrado()
+        }
+    }
+    justificantes.error?.let { error ->
+        val texto = error.resolver()
+        LaunchedEffect(error) {
+            Toast.makeText(contexto, texto, Toast.LENGTH_LONG).show()
+            justificantesViewModel.errorMostrado()
+        }
+    }
     var aCancelar by remember { mutableStateOf<RespuestaAusencia?>(null) }
 
     // Sin flecha de volver: es un destino de la barra de navegación.
@@ -132,6 +158,14 @@ fun AusenciasScreen(
                     } else {
                         items(visibles, key = { it.id }) { peticion ->
                             TarjetaAusencia(peticion = peticion) {
+                                FilaJustificante(
+                                    justificante = justificantes.porId[peticion.id],
+                                    activo = justificantes.activo,
+                                    subiendo = justificantes.subiendo == peticion.id,
+                                    alElegir = { bytes, nombre, mime ->
+                                        justificantesViewModel.subir(peticion.id, bytes, nombre, mime)
+                                    }
+                                )
                                 if (peticion.puedoCancelar) {
                                     Spacer(Modifier.height(12.dp))
                                     OutlinedButton(
