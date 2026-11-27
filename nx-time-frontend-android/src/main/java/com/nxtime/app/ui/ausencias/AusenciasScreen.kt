@@ -30,8 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +76,22 @@ fun AusenciasScreen(
     val estado by viewModel.uiState.collectAsStateWithLifecycle()
     val justificantes by justificantesViewModel.uiState.collectAsStateWithLifecycle()
     val contexto = LocalContext.current
+
+    /*
+     * Recarga al volver a la pantalla, como el historial: tras enviar una
+     * solicitud se vuelve aquí con `navigateUp`, y el ViewModel, que solo
+     * cargaba al crearse, seguía enseñando la lista sin ella hasta tirar para
+     * refrescar (visto en el emulador el 28/11/2026). Lo mismo si la resuelve
+     * el gestor mientras la app estaba en segundo plano.
+     */
+    val propietario = LocalLifecycleOwner.current
+    DisposableEffect(propietario) {
+        val observador = LifecycleEventObserver { _, evento ->
+            if (evento == Lifecycle.Event.ON_RESUME) viewModel.cargar()
+        }
+        propietario.lifecycle.addObserver(observador)
+        onDispose { propietario.lifecycle.removeObserver(observador) }
+    }
 
     // Los justificantes (ADR 062), cuando cambia la lista: si la empresa no
     // los tiene activados, no sale nada.
