@@ -1,6 +1,13 @@
 package com.nxtime.app.ui.gestion
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,9 +39,9 @@ import androidx.compose.ui.res.pluralStringResource
 import com.nxtime.app.data.dto.EquipoAhoraDTO
 import com.nxtime.app.data.dto.PersonaAhoraDTO
 import com.nxtime.app.ui.util.DateFormats
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -43,6 +50,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -299,12 +307,19 @@ private fun TarjetaAhora(foto: EquipoAhoraDTO) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = stringResource(
-                    R.string.ahora_resumen, foto.trabajando, foto.enPausa, foto.sinFichar, foto.noLaborable
-                ),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            // Cuatro cifras en recuadros y no una frase: "Trabajando: 2 · En
+            // pausa: 0 · Sin fichar: 0 · Hoy no les toca: 5" se partía por la
+            // mitad y había que leerla entera para encontrar un número.
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CifraAhora(foto.trabajando, stringResource(R.string.ahora_cifra_trabajando))
+                CifraAhora(foto.enPausa, stringResource(R.string.ahora_cifra_en_pausa))
+                CifraAhora(foto.sinFichar, stringResource(R.string.ahora_cifra_sin_fichar), aviso = foto.sinFichar > 0)
+                CifraAhora(foto.noLaborable, stringResource(R.string.ahora_cifra_no_les_toca))
+            }
+            Spacer(Modifier.size(4.dp))
             if (foto.conRetraso > 0) {
                 Text(
                     text = pluralStringResource(R.plurals.ahora_con_retraso, foto.conRetraso, foto.conRetraso),
@@ -331,6 +346,32 @@ private fun TarjetaAhora(foto: EquipoAhoraDTO) {
 }
 
 private const val MAXIMO_A_LA_VISTA = 12
+
+/** Un recuadro del resumen: la cifra grande y, debajo, qué cuenta. */
+@Composable
+private fun RowScope.CifraAhora(cifra: Int, etiqueta: String, aviso: Boolean = false) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(12.dp))
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) {},
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = cifra.toString(),
+            style = MaterialTheme.typography.headlineSmall,
+            color = if (aviso) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = etiqueta,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
 @Composable
 private fun FilaAhora(persona: PersonaAhoraDTO) {
