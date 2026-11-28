@@ -170,5 +170,7 @@ Orden:
 
 Mientras tanto, el APK de GitHub sigue valiendo. Ojo: el APK y la versión de
 Play tienen que ir firmados con la misma clave (punto 2). Cuando la app esté en
-Play, `APP_DOWNLOAD_URL` pasa a apuntar a su ficha, y con eso el correo de alta,
-la web y la pantalla de «Actualiza la app» llevan allí.
+Play, el enlace de descarga pasa a ser el de su ficha: el valor por defecto de
+`application.app.download-url` en `application.yml` (la web lo toma de ahí al
+compilarse, con `npm run titular`) y, si se usa, `APP_DOWNLOAD_URL` en Render
+(el correo de alta y la pantalla de «Actualiza la app»).
