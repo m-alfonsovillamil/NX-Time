@@ -63,7 +63,11 @@ interface ColaDeFichajes {
  * borra, y se manda cuando esa misma persona vuelve a entrar. `allowBackup` está
  * apagado, así que no sale del móvil por la copia de seguridad.
  */
-class ColaEnPreferencias(context: Context) : ColaDeFichajes {
+class ColaEnPreferencias(
+    context: Context,
+    /** Tras guardar la jornada: la app lo usa para repintar el widget. */
+    private val alCambiarLaJornada: () -> Unit = {}
+) : ColaDeFichajes {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(NOMBRE_PREFS, Context.MODE_PRIVATE)
     private val gson = Gson()
@@ -100,6 +104,7 @@ class ColaEnPreferencias(context: Context) : ColaDeFichajes {
 
     override fun guardarUltimaJornada(dueno: String, jornada: Registro?) {
         prefs.edit().putString(KEY_JORNADA + dueno, jornada?.let(gson::toJson)).apply()
+        alCambiarLaJornada()
     }
 
     override fun avisos(dueno: String) = synchronized(cerrojo) { todosLosAvisos().filter { it.dueno == dueno } }

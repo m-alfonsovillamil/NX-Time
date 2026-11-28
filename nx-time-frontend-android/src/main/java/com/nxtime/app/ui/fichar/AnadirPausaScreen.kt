@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.fichar
 
+import com.nxtime.app.ui.components.FilaConInterruptor
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -123,18 +124,16 @@ fun AnadirPausaScreen(
                 onPulsa = { eligiendo = CampoDePausa.FIN }
             )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            FilaConInterruptor(
+                estado.finEsOtroDia,
+                viewModel::cambiarFinEsOtroDia,
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Text(
                     text = stringResource(R.string.pausa_fin_otro_dia),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                Switch(checked = estado.finEsOtroDia, onCheckedChange = viewModel::cambiarFinEsOtroDia)
             }
 
             OutlinedTextField(

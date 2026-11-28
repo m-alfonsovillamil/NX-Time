@@ -290,6 +290,23 @@
         <item quantity="other">Tienes %1$d fichajes sin enviar. Se quedan guardados en este móvil y se enviarán cuando vuelvas a entrar con tu cuenta. Hasta entonces, tu empresa no los verá.</item>
     </plurals>
     <string name="sin_conexion_salir_titulo">¿Cerrar sesión con fichajes sin enviar?</string>
+    <string name="empresa_interruptor_activo">Cuenta activa de %1$s</string>
+    <!-- Accesos directos del icono (plan P12). Cortos: caben debajo del icono. -->
+    <string name="atajo_fichar">Fichar</string>
+    <string name="atajo_fichar_largo">Fichar la entrada o la salida</string>
+    <string name="atajo_ausencia">Ausencias</string>
+    <string name="atajo_ausencia_largo">Mis ausencias y vacaciones</string>
+    <string name="atajo_historial">Historial</string>
+    <string name="atajo_historial_largo">Ver mis jornadas</string>
+    <!-- El widget de la jornada (plan P12). -->
+    <string name="widget_nombre">Mi jornada</string>
+    <string name="widget_descripcion">Si estás trabajando o en pausa, de un vistazo. Tócalo para fichar.</string>
+    <string name="widget_sin_sesion">Entra para fichar</string>
+    <string name="widget_sin_jornada">Sin jornada abierta</string>
+    <string name="widget_tocar_para_fichar">Toca para fichar</string>
+    <string name="widget_trabajando">Trabajando</string>
+    <string name="widget_en_pausa">En pausa</string>
+    <string name="widget_desde">Desde las %1$s</string>
     <string name="sin_conexion_cola_llena">No se ha podido guardar el fichaje en el móvil: hay demasiados sin enviar. Conéctate para mandarlos.</string>
     <string name="sin_conexion_envio_rechazado">No se pueden enviar: %1$s Se seguirá intentando.</string>
     <string name="sin_conexion_rechazado">No se ha aceptado tu fichaje del %1$s</string>

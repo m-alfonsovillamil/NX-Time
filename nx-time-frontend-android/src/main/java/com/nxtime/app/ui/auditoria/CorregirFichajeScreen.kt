@@ -34,6 +34,7 @@ import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.BotonPrincipal
 import com.nxtime.app.ui.components.ColumnaFormulario
 import com.nxtime.app.ui.components.DialogoDeHora
+import com.nxtime.app.ui.components.FilaConInterruptor
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SelectorDeHora
 import com.nxtime.app.ui.util.DateFormats
@@ -133,11 +134,10 @@ fun CorregirFichajeScreen(
              * negaba a enviarla. Llega ya puesto si la jornada original
              * cruzaba la medianoche.
              */
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            FilaConInterruptor(
+                estado.salidaEsOtroDia,
+                viewModel::cambiarSalidaEsOtroDia,
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -152,10 +152,6 @@ fun CorregirFichajeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(
-                    checked = estado.salidaEsOtroDia,
-                    onCheckedChange = viewModel::cambiarSalidaEsOtroDia
-                )
             }
 
             // Solo en jornadas que ya la tienen: es la señal de que la empresa la pregunta (ADR 055).

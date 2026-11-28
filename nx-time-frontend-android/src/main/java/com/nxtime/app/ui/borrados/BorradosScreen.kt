@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -328,9 +329,9 @@ private fun DialogoRegistrar(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(selected = elegido == persona.id, onClick = { elegido = persona.id })
+                                    .selectable(selected = elegido == persona.id, role = Role.RadioButton, onClick = { elegido = persona.id })
                             ) {
-                                RadioButton(selected = elegido == persona.id, onClick = { elegido = persona.id })
+                                RadioButton(selected = elegido == persona.id, onClick = null)
                                 Column {
                                     Text(persona.nombre, style = MaterialTheme.typography.bodyMedium)
                                     Text(

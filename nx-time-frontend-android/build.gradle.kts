@@ -361,6 +361,13 @@ dependencies {
      */
     implementation("androidx.work:work-runtime-ktx:2.12.0")
 
+    /*
+     * El widget de la jornada (plan P12) con Glance: se escribe en Compose y
+     * Glance lo traduce a las RemoteViews que pide la pantalla de inicio. Sin
+     * código nativo (comprobar-16kb.py lo vigila en cada release).
+     */
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+
     // Push (Fase B5): solo mensajería. Ni Analytics ni nada más de Firebase:
     // la consola lo ofrece, y medir a la plantilla pediría su consentimiento.
     implementation(platform("com.google.firebase:firebase-bom:35.1.0"))

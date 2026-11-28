@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.denuncias
 
+import com.nxtime.app.ui.components.FilaConInterruptor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -317,7 +318,7 @@ private fun FormularioDenuncia(
             )
 
             Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            FilaConInterruptor(anonima, { anonima = it }) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.denuncia_anonima),
@@ -336,7 +337,6 @@ private fun FormularioDenuncia(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Switch(checked = anonima, onCheckedChange = { anonima = it })
             }
 
             Spacer(Modifier.height(12.dp))

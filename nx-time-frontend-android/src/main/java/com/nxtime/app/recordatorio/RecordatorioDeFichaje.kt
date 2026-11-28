@@ -158,7 +158,7 @@ class RecordatorioWorker(
         )
 
         val aviso = NotificationCompat.Builder(contexto, RecordatorioDeFichaje.CANAL)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.nxtime.app.R.drawable.ic_notificacion)
             .setContentTitle(contexto.getString(titulo))
             .setContentText(contexto.getString(texto))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

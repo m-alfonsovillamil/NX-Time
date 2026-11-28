@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    El widget de la jornada (plan P12). Dos celdas de ancho por una de alto, y
+    se puede ensanchar. Se repinta cuando la app sabe algo nuevo de la jornada
+    (ActualizarWidget); la media hora de updatePeriodMillis es solo para que al
+    cambiar de día deje de decir «Trabajando» por una jornada de ayer.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_descripcion"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />
