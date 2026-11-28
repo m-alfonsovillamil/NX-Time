@@ -701,6 +701,7 @@ Las decisiones no obvias están justificadas en [`docs/adr/`](docs/adr/):
 61. [Compensar las horas extra con descanso: no cuentan para las 80 h si se descansan en cuatro meses](docs/adr/061-compensar-horas-extra-con-descanso.md)
 62. [El justificante en las ausencias: apagado por defecto, solo la persona y RRHH, y anotado](docs/adr/062-justificante-en-las-ausencias.md)
 63. [Medios días en las ausencias: cuentan 0,5, ese día se trabaja la otra mitad y los días del contrato llevan decimales](docs/adr/063-medios-dias.md)
+64. [Versiones de la app que ya no se pueden usar: la app dice su versión y su paquete, y la API responde 426 a las retiradas, salvo para entrar y mandar los fichajes pendientes](docs/adr/064-versiones-retiradas-de-la-app.md)
 
 ---
 
