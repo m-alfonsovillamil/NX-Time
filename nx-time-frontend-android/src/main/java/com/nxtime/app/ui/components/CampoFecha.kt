@@ -1,5 +1,7 @@
 package com.nxtime.app.ui.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,15 +53,26 @@ fun CampoFecha(
 ) {
     var abierto by remember { mutableStateOf(false) }
 
+    // Tocar el campo también abre el calendario, no solo el icono: en el
+    // emulador (28/11/2026) tocar el texto solo lo enfocaba y no pasaba
+    // nada, que es lo primero que hace cualquiera. Un campo de solo lectura
+    // no recibe `clickable` de forma fiable, pero sí avisa de que lo pulsan
+    // por su `interactionSource`. Se escucha el soltar, y no un estado
+    // "pulsado": en un toque rápido ese estado va y vuelve antes de que la
+    // pantalla llegue a leerlo.
+    val interaccion = remember { MutableInteractionSource() }
+    LaunchedEffect(interaccion) {
+        interaccion.interactions.collect { if (it is PressInteraction.Release) abierto = true }
+    }
+
     OutlinedTextField(
         value = fecha?.let { DateFormats.fechaCorta(it) } ?: "",
         onValueChange = {},
         readOnly = true,
         label = { Text(etiqueta) },
+        interactionSource = interaccion,
         trailingIcon = {
-            // El icono, y no el campo, es lo que abre el calendario:
-            // un OutlinedTextField de solo lectura no recibe clics de
-            // forma fiable en todas las versiones de Compose.
+            // El icono sigue siendo un botón: es lo que encuentra TalkBack.
             TextButton(onClick = { abierto = true }) {
                 Icon(Icons.Default.CalendarMonth, contentDescription = etiqueta)
             }

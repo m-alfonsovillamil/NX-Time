@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -130,7 +131,7 @@ fun FirmaMensualScreen(
             onDismissRequest = { aFirmar = null },
             title = { Text(stringResource(R.string.firma_confirmar_titulo, nombre)) },
             text = {
-                Text(stringResource(R.string.firma_confirmar_texto, nombre, mes.jornadas, horasDelMes(mes)))
+                Text(pluralStringResource(R.plurals.firma_confirmar_texto, mes.jornadas, nombre, mes.jornadas, horasDelMes(mes)))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -190,7 +191,7 @@ private fun TarjetaMes(
             }
 
             Text(
-                text = stringResource(R.string.firma_jornadas, mes.jornadas, horasDelMes(mes)),
+                text = pluralStringResource(R.plurals.firma_jornadas, mes.jornadas, mes.jornadas, horasDelMes(mes)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -258,6 +258,7 @@ fun AjustesScreen(
                 Spacer(Modifier.height(16.dp))
                 PreferenciasDeAvisos(
                     preferencias = estado.preferenciasDeAvisos,
+                    pushActivo = estado.push,
                     onCambiar = viewModel::cambiarPreferenciaDeAvisos
                 )
             }
@@ -466,6 +467,7 @@ private fun Seguridad(
 @Composable
 private fun PreferenciasDeAvisos(
     preferencias: List<com.nxtime.app.data.dto.PreferenciaDeAvisoDTO>,
+    pushActivo: Boolean,
     onCambiar: (String, Boolean, Boolean) -> Unit
 ) {
     Tarjeta(stringResource(R.string.ajustes_avisos_seccion)) {
@@ -474,6 +476,17 @@ private fun PreferenciasDeAvisos(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        // Con «Avisarme en el móvil» apagado no llega nada al móvil, así que
+        // los «Al móvil» encendidos engañaban (revisión del 28/11/2026). Se
+        // quedan como están, pero apagados a la vista y con el porqué.
+        if (!pushActivo) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.ajustes_avisos_sin_push),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         preferencias.forEach { p ->
             Spacer(Modifier.height(12.dp))
             Text(text = p.etiqueta, style = MaterialTheme.typography.bodyLarge)
@@ -498,7 +511,11 @@ private fun PreferenciasDeAvisos(
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(checked = p.push, onCheckedChange = { onCambiar(p.categoria, p.correo, it) })
+                    Switch(
+                        checked = p.push,
+                        enabled = pushActivo,
+                        onCheckedChange = { onCambiar(p.categoria, p.correo, it) }
+                    )
                 }
             }
         }
