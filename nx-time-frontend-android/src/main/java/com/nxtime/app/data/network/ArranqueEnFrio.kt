@@ -93,13 +93,15 @@ class ArranqueEnFrio(
      * El cliente con los tiempos cortos y este interceptor ya puesto. Lo
      * usan los dos clientes de [RetrofitClient], también el del refresco
      * del token: por la mañana puede ser él quien se encuentre el servidor
-     * dormido.
+     * dormido. Lleva también las cabeceras con la versión de la app
+     * ([VersionDeLaApp], ADR 064), por lo mismo: en todas las peticiones.
      */
     fun clienteBase(): OkHttpClient.Builder = OkHttpClient.Builder()
         .connectTimeout(CONEXION_CORTA_S, TimeUnit.SECONDS)
         .readTimeout(LECTURA_CORTA_S, TimeUnit.SECONDS)
         .writeTimeout(LECTURA_CORTA_S, TimeUnit.SECONDS)
         .addInterceptor(interceptor)
+        .addInterceptor(VersionDeLaApp.interceptor())
 
     fun puedeEstarDormido(): Boolean {
         val ultima = ultimaRespuesta.get()
