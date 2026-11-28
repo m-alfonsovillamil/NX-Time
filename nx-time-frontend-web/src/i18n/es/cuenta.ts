@@ -1,3 +1,5 @@
+import { TITULAR } from '../../legal/titular';
+
 /** Avisos, mi perfil y ajustes. Los textos siguen a los de la app. */
 export const cuenta = {
   avisos: {
@@ -108,7 +110,7 @@ export const cuenta = {
       /** Por qué no se ha vinculado. La clave es lo que manda el servidor en `?sso=…`. */
       motivos: {
         cancelado: 'No has terminado de vincular la cuenta.',
-        'ya-vinculada': 'Esa cuenta ya está vinculada a otra persona de NX Time.',
+        'ya-vinculada': `Esa cuenta ya está vinculada a otra persona de ${TITULAR.producto}.`,
         'ya-tiene-otra': 'Ya tienes vinculada otra cuenta de ese proveedor. Desvincúlala antes.',
         'sin-sesion': 'Tu sesión había caducado. Vuelve a intentarlo.',
         'no-disponible': 'Ese proveedor no está disponible ahora mismo.',
@@ -149,7 +151,7 @@ export const cuenta = {
       activacion: {
         titulo: 'Activar el segundo factor',
         paso1: 'Abre tu aplicación de autenticación, añade una cuenta y escanea este código.',
-        qr: 'Código QR para añadir NX Time a la aplicación de autenticación',
+        qr: `Código QR para añadir ${TITULAR.producto} a la aplicación de autenticación`,
         sinCamara: '¿No puedes escanearlo? Escribe esta clave en la aplicación:',
         copiarClave: 'Copiar la clave',
         claveCopiada: 'Clave copiada.',
@@ -172,7 +174,7 @@ export const cuenta = {
         guardados: 'Los he guardado',
         listo: 'Listo',
         fichero: (codigos: readonly string[]) =>
-          `Códigos de recuperación de NX Time\nCada uno sirve una vez.\n\n${codigos.join('\n')}\n`,
+          `Códigos de recuperación de ${TITULAR.producto}\nCada uno sirve una vez.\n\n${codigos.join('\n')}\n`,
       },
 
       desactivacion: {
@@ -195,7 +197,7 @@ export const cuenta = {
       obligado: {
         titulo: 'Activa el segundo factor',
         explicacion: (motivo: string) =>
-          `${motivo}, así que para entrar en NX Time necesitas, además de la contraseña, un código de una aplicación de autenticación. Actívalo ahora: son dos minutos.`,
+          `${motivo}, así que para entrar en ${TITULAR.producto} necesitas, además de la contraseña, un código de una aplicación de autenticación. Actívalo ahora: son dos minutos.`,
         sinMotivo: 'Para seguir, necesitas activar el segundo factor.',
         salir: 'Salir',
       },
@@ -214,7 +216,7 @@ export const cuenta = {
     misDatos: {
       titulo: 'Descargar mis datos',
       detalle:
-        'Todo lo que NX Time guarda sobre ti: perfil, fichajes, ausencias, correcciones, horas extra y avisos. El PDF es para leerlo; el JSON, para llevártelo a otro servicio.',
+        `Todo lo que ${TITULAR.producto} guarda sobre ti: perfil, fichajes, ausencias, correcciones, horas extra y avisos. El PDF es para leerlo; el JSON, para llevártelo a otro servicio.`,
       pdf: 'PDF',
       json: 'JSON',
     },
@@ -243,14 +245,14 @@ export const cuenta = {
       encender: 'Recibir notificaciones aquí',
       apagar: 'Dejar de recibirlas aquí',
       detalle: {
-        'sin-configurar': 'Esta instalación de NX Time no tiene configuradas las notificaciones push.',
+        'sin-configurar': `Esta instalación de ${TITULAR.producto} no tiene configuradas las notificaciones push.`,
         'instalar-primero':
-          'En el iPhone, Safari solo avisa a las webs añadidas a la pantalla de inicio. Pulsa Compartir y «Añadir a pantalla de inicio», abre NX Time desde ese icono y vuelve aquí.',
+          `En el iPhone, Safari solo avisa a las webs añadidas a la pantalla de inicio. Pulsa Compartir y «Añadir a pantalla de inicio», abre ${TITULAR.producto} desde ese icono y vuelve aquí.`,
         'no-soportado': 'Este navegador no admite notificaciones push. Los avisos te siguen llegando a la campana y por correo.',
         bloqueado:
-          'Las notificaciones de NX Time están bloqueadas en este navegador. Para recibirlas, permítelas en la configuración del sitio (el candado de la barra de direcciones).',
+          `Las notificaciones de ${TITULAR.producto} están bloqueadas en este navegador. Para recibirlas, permítelas en la configuración del sitio (el candado de la barra de direcciones).`,
         apagado:
-          'Recibe un aviso en este navegador cuando haya novedades, aunque no tengas NX Time abierto. Solo dice de qué va («Hay novedades en tus ausencias»); el detalle lo ves al abrirlo.',
+          `Recibe un aviso en este navegador cuando haya novedades, aunque no tengas ${TITULAR.producto} abierto. Solo dice de qué va («Hay novedades en tus ausencias»); el detalle lo ves al abrirlo.`,
         encendido:
           'Este navegador te avisa cuando hay novedades. Se deja de avisar al cerrar la sesión, y vuelve al entrar.',
       },
@@ -278,7 +280,7 @@ export const cuenta = {
         'service-worker': 'El navegador no ha podido preparar los avisos. Recarga la página y vuelve a intentarlo.',
         token:
           'El servicio de avisos no ha respondido. Si usas Brave u otro navegador que bloquea los servicios de Google, permítelos para las notificaciones o prueba con Chrome, Edge o Firefox.',
-        servidor: 'NX Time no ha podido guardar este navegador. Vuelve a intentarlo en un rato.',
+        servidor: `${TITULAR.producto} no ha podido guardar este navegador. Vuelve a intentarlo en un rato.`,
       },
       detalleTecnico: (texto: string) => `Detalle: ${texto}`,
     },

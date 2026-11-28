@@ -67,7 +67,7 @@ self.addEventListener('push', (evento) => {
       // Siempre se enseña, también con la web abierta: Safari retira el
       // permiso a una web que recibe push sin enseñar nada, y en Chrome sale
       // un «Este sitio se ha actualizado en segundo plano» que confunde más.
-      await self.registration.showNotification(datos.titulo || 'NX Time', {
+      await self.registration.showNotification(datos.titulo || "NX Time", {
         body: datos.cuerpo || '',
         // Una notificación por tipo: tres avisos de ausencias seguidos no son
         // tres notificaciones, es una que se renueva.

@@ -28,6 +28,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { TITULAR } from '../src/legal/titular';
 import { entrarComoOperadora } from './ayudas';
 
 const JAVIER = 'javier.lopez@techcorp.demo';
@@ -87,12 +88,12 @@ test('entrar con Google: del botón a «Mi jornada», y la sesión aguanta una r
   await desvincular(page, 'Google');
 });
 
-test('quien no tiene cuenta en NX Time vuelve al acceso sabiendo por qué, y sin sesión', async ({ page }) => {
+test('quien no tiene cuenta vuelve al acceso sabiendo por qué, y sin sesión', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'Entrar con Google' }).click();
   await elegir(page, /sin cuenta/);
 
-  await expect(page.getByRole('alert')).toContainText('No hay ninguna cuenta de NX Time');
+  await expect(page.getByRole('alert')).toContainText(`No hay ninguna cuenta de ${TITULAR.producto}`);
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
   // El motivo no se queda en la dirección.
   await expect(page).toHaveURL(/\/$/);

@@ -1,7 +1,9 @@
+import { TITULAR } from '../../legal/titular';
+
 /** Lo que no es de ninguna pantalla: errores, estados de carga y páginas de error. */
 export const comun = {
   app: {
-    nombre: 'NX Time',
+    nombre: TITULAR.producto,
     cargando: 'Cargando…',
     reintentar: 'Reintentar',
     cerrar: 'Cerrar',

@@ -6,6 +6,8 @@
 
 export const TITULAR = {
   producto: "NX Time",
+  /** El dominio de la web, sin protocolo: el que se le dice a la gente que teclee. */
+  dominio: "nxtime-web.com",
   nombre: "Miguel Alfonso Villamil",
   nif: "35478413Q",
   domicilio: "El Campo, 8, 36620 Vilanova de Arousa (Pontevedra), España",

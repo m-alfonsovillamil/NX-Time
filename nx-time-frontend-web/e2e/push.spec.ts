@@ -12,6 +12,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 
+import { TITULAR } from '../src/legal/titular';
 import { entrar } from './ayudas';
 
 // El Chromium completo y no el «headless shell» que Playwright usa por
@@ -204,7 +205,7 @@ test('la web es instalable: manifest con sus iconos', async ({ page, request }) 
     start_url: string;
     icons: { src: string; sizes: string; purpose: string }[];
   };
-  expect(manifest).toMatchObject({ name: 'NX Time', display: 'standalone', start_url: '/' });
+  expect(manifest).toMatchObject({ name: TITULAR.producto, display: 'standalone', start_url: '/' });
   // Chrome pide al menos uno de 192 y otro de 512; el «maskable» es el que
   // Android recorta con su forma.
   expect(manifest.icons.map((i) => `${i.sizes} ${i.purpose}`)).toEqual(

@@ -3,9 +3,12 @@
  *
  * Fuente: `nx-time-backend/src/main/resources/application.yml`, bloques
  * `application.titular` y `application.legal` (plan J, ADR 046).
- * Salida, las dos versionadas:
- *   - `src/legal/titular.ts`: lo que enseñan las páginas legales.
+ * Salida, toda versionada:
+ *   - `src/legal/titular.ts`: lo que enseñan las páginas legales, y el nombre
+ *     y el dominio que usan los textos (`i18n/es`).
  *   - `public/.well-known/security.txt`: a quién avisar de un fallo (RFC 9116).
+ *   - el nombre en `index.html` (título), `public/manifest.webmanifest` y
+ *     `public/sw.js`, que se escriben a mano: solo se cambia ese sitio.
  *
  * ## Por qué se copia y no se pide al servidor
  *
@@ -82,6 +85,8 @@ export function generarTs({ titular, version }) {
 
 export const TITULAR = {
   producto: ${campo('producto')},
+  /** El dominio de la web, sin protocolo: el que se le dice a la gente que teclee. */
+  dominio: ${JSON.stringify(new URL(titular.web).host)},
   nombre: ${campo('nombre')},
   nif: ${campo('nif')},
   domicilio: ${campo('domicilio')},
@@ -108,11 +113,52 @@ export function generarSecurityTxt({ titular, version }) {
   ].join('\n');
 }
 
+/**
+ * Cambia lo que casa con `patron` (una sola vez en el fichero, o falla) por
+ * `nuevo`. Para los ficheros escritos a mano que llevan el nombre en un sitio
+ * fijo: el título de la página, el manifest y el service worker.
+ */
+function sustituirUnaVez(texto, patron, nuevo, fichero) {
+  const veces = texto.match(new RegExp(patron.source, 'g'))?.length ?? 0;
+  if (veces !== 1) throw new Error(`${fichero}: se esperaba una vez «${patron.source}» y sale ${veces}.`);
+  return texto.replace(patron, nuevo);
+}
+
+const escaparHtml = (texto) => texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** `index.html`: el título de la pestaña. */
+export function marcarIndex(html, { titular }) {
+  return sustituirUnaVez(html, /<title>[^<]*<\/title>/, `<title>${escaparHtml(titular.producto)}</title>`, 'index.html');
+}
+
+/** `manifest.webmanifest`: el nombre con el que se instala la web. */
+export function marcarManifest(json, { titular }) {
+  const nombre = JSON.stringify(titular.producto);
+  let salida = sustituirUnaVez(json, /"name": "[^"]*"/, `"name": ${nombre}`, 'manifest.webmanifest');
+  salida = sustituirUnaVez(salida, /"short_name": "[^"]*"/, `"short_name": ${nombre}`, 'manifest.webmanifest');
+  return salida;
+}
+
+/** `sw.js`: el título de un push que llegue sin él (el backend siempre lo manda). */
+export function marcarSw(js, { titular }) {
+  return sustituirUnaVez(js, /datos\.titulo \|\| (?:'[^']*'|"[^"]*")/, `datos.titulo || ${JSON.stringify(titular.producto)}`, 'sw.js');
+}
+
+/** Los ficheros públicos que llevan el nombre, con la función que lo pone. */
+export const MARCADOS = [
+  { ruta: resolve(AQUI, '..', 'index.html'), marcar: marcarIndex },
+  { ruta: resolve(AQUI, '..', 'public', 'manifest.webmanifest'), marcar: marcarManifest },
+  { ruta: resolve(AQUI, '..', 'public', 'sw.js'), marcar: marcarSw },
+];
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const datos = leerTitular(readFileSync(CONFIGURACION, 'utf8'));
   mkdirSync(dirname(SALIDA_TS), { recursive: true });
   mkdirSync(dirname(SALIDA_SECURITY), { recursive: true });
   writeFileSync(SALIDA_TS, generarTs(datos));
   writeFileSync(SALIDA_SECURITY, generarSecurityTxt(datos));
-  console.log(`titular.ts y security.txt generados (condiciones ${datos.version}).`);
+  for (const { ruta, marcar } of MARCADOS) {
+    writeFileSync(ruta, marcar(readFileSync(ruta, 'utf8'), datos));
+  }
+  console.log(`titular.ts, security.txt, index.html, manifest y sw.js al día (condiciones ${datos.version}).`);
 }

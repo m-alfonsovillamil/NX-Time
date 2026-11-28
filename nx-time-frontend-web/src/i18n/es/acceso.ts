@@ -1,8 +1,10 @@
+import { TITULAR } from '../../legal/titular';
+
 /** Entrar, recuperar el acceso y registrar una empresa. Los textos siguen a los de la app. */
 export const acceso = {
   /** El panel de marca de las pantallas de acceso, en escritorio. */
   marca: {
-    etiqueta: 'Qué es NX Time',
+    etiqueta: `Qué es ${TITULAR.producto}`,
     lema: 'El registro de jornada que se lleva solo.',
     puntos: [
       { icono: 'reloj', titulo: 'Fichar en un toque', texto: 'Desde el navegador, el móvil o una tablet en la entrada.' },
@@ -54,14 +56,14 @@ export const acceso = {
     motivos: {
       cancelado: 'No has terminado de entrar. Puedes volver a intentarlo.',
       'sin-cuenta':
-        'No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.',
+        `No hay ninguna cuenta de ${TITULAR.producto} con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.`,
       'correo-sin-verificar':
         'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.',
-      'cuenta-inactiva': 'Tu cuenta de NX Time está dada de baja. Habla con tu empresa.',
+      'cuenta-inactiva': `Tu cuenta de ${TITULAR.producto} está dada de baja. Habla con tu empresa.`,
       'empresa-pendiente': 'Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.',
       'empresa-suspendida': 'El acceso de tu empresa está suspendido. Mira el correo que te enviamos para saber más.',
       'ya-tiene-otra':
-        'Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
+        `Tu cuenta de ${TITULAR.producto} ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.`,
       'no-disponible': 'Ese acceso no está disponible ahora mismo. Entra con tu contraseña.',
       fallo: 'No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.',
     },
@@ -123,7 +125,7 @@ export const acceso = {
       registrarCon: (proveedor: string) => `Registrar con ${proveedor}`,
       comprobando: 'Comprobando tu cuenta…',
       explicacion: (proveedor: string, correo: string) =>
-        `Has entrado con tu cuenta de ${proveedor} (${correo}). Ese será tu correo en NX Time, y entrarás con esa cuenta: no hace falta contraseña. Solo falta esto:`,
+        `Has entrado con tu cuenta de ${proveedor} (${correo}). Ese será tu correo en ${TITULAR.producto}, y entrarás con esa cuenta: no hace falta contraseña. Solo falta esto:`,
       otraForma: 'Registrarla con mi correo y una contraseña',
       /**
        * Por qué no se ha podido seguir. La clave es lo que el servidor manda en
@@ -133,12 +135,12 @@ export const acceso = {
         cancelado: 'No has terminado de entrar con esa cuenta. Puedes volver a intentarlo.',
         'correo-sin-verificar':
           'No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.',
-        'cuenta-inactiva': 'Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.',
+        'cuenta-inactiva': `Ya tienes una cuenta de ${TITULAR.producto} con ese correo, y está dada de baja. Habla con tu empresa.`,
         'empresa-pendiente':
           'Ya registraste una empresa con ese correo y está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.',
         'empresa-suspendida': 'Ya tienes una cuenta con ese correo, y el acceso de su empresa está suspendido.',
         'ya-tiene-otra':
-          'Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.',
+          `Ya tienes una cuenta de ${TITULAR.producto} con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.`,
         'no-disponible': 'Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.',
         caducado: 'El registro ha caducado. Vuelve a empezar con tu cuenta, o hazlo con tu correo y una contraseña.',
         fallo: 'No se ha podido completar. Vuelve a intentarlo, o registra la empresa con tu correo y una contraseña.',
