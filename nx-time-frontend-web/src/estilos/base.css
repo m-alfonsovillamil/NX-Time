@@ -2102,17 +2102,40 @@ h2 {
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
-/* Nunca tres y una sola debajo (Cifra.tsx): con 2 y 4, de dos en dos… */
+/*
+ * Nunca tres y una sola debajo (Cifra.tsx): con 2 y 4, de dos en dos; y en el
+ * móvil también con 5 y 6. De una en una, como salían con 5 y 6 en 320 px, el
+ * panel de empresa y «Ahora mismo» ocupaban dos pantallas (revisión del
+ * 28/11/2026). Con 5, la última a lo ancho: dos, dos y una que cierra.
+ */
 .nx-cifras[data-cuantas='2'],
-.nx-cifras[data-cuantas='4'] {
+.nx-cifras[data-cuantas='4'],
+.nx-cifras[data-cuantas='5'],
+.nx-cifras[data-cuantas='6'] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* …con 3 y 6, de tres en tres cuando ya no caben de dos. */
+.nx-cifras[data-cuantas='5'] > :last-child {
+  grid-column: 1 / -1;
+}
+
+/* …con 3, 5 y 6, de tres en tres cuando ya no caben de dos (5: tres y dos). */
 @container cifras (min-width: 520px) {
   .nx-cifras[data-cuantas='3'],
+  .nx-cifras[data-cuantas='5'],
   .nx-cifras[data-cuantas='6'] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nx-cifras[data-cuantas='5'] > :last-child {
+    grid-column: auto;
+  }
+}
+
+/* Cinco en fila con sitio: «Ahora mismo» dejaba «Hoy no les toca» sola debajo de cuatro. */
+@container cifras (min-width: 860px) {
+  .nx-cifras[data-cuantas='5'] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
