@@ -75,6 +75,9 @@ class SegundoFactorIT {
 
     @Autowired
     private TestRestTemplate rest;
+    /** El nombre del producto, que es el emisor del QR: el de la configuración, no uno escrito aquí. */
+    @Autowired
+    private com.nxtime.nxtime.config.CondicionesDelServicio servicio;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -158,7 +161,8 @@ class SegundoFactorIT {
         ResponseEntity<String> inicio = post("/api/v1/perfil/segundo-factor/activacion", token, "");
         assertThat(inicio.getStatusCode().value()).as(inicio.getBody()).isEqualTo(200);
         byte[] secreto = deBase32(cuerpo(inicio).get("secreto").asText());
-        assertThat(cuerpo(inicio).get("uri").asText()).startsWith("otpauth://totp/NX%20Time:");
+        assertThat(java.net.URLDecoder.decode(cuerpo(inicio).get("uri").asText(), java.nio.charset.StandardCharsets.UTF_8))
+                .startsWith("otpauth://totp/" + servicio.producto() + ":");
 
         ResponseEntity<String> confirmado = post("/api/v1/perfil/segundo-factor/activacion/confirmar", token,
                 "{\"contrasena\":\"%s\",\"codigo\":\"%s\"}".formatted(CONTRASENA, codigo(secreto, 0)));

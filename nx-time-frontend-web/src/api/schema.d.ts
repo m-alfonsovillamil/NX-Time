@@ -381,7 +381,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar una empresa nueva
-         * @description Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en ese caso no crea ni manda nada): si no, serviría para averiguar quién usa NX Time. Registrarse otra vez con un correo a medio confirmar rehace el registro y manda otro código.
+         * @description Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en ese caso no crea ni manda nada): si no, serviría para averiguar quién tiene cuenta. Registrarse otra vez con un correo a medio confirmar rehace el registro y manda otro código.
          */
         post: operations["registerManager"];
         delete?: never;
