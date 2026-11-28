@@ -336,6 +336,7 @@ function Lista({ lista }: { lista: readonly Ausencia[] }) {
                           justificante={justificantes.porId.get(a.id)}
                           propia
                           activo={justificantes.activo}
+                          admite={a.estado !== 'CANCELADA' && a.estado !== 'RECHAZADA'}
                         />
                       ),
                   },

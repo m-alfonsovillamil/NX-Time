@@ -49,17 +49,23 @@ export function problemaDelJustificante(fichero: File): string | null {
 /**
  * El justificante de una ausencia: descargarlo si lo hay y, en las propias con
  * la empresa activada, subirlo, cambiarlo o quitarlo.
+ *
+ * `admite`: si la ausencia sigue en pie. En una cancelada o rechazada ya no se
+ * adjunta ni se cambia (el servidor da 409), pero el que tuviera se puede
+ * quitar: es un documento de la persona, a menudo médico.
  */
 export function JustificanteDeAusencia({
   peticionId,
   justificante,
   propia,
   activo,
+  admite = true,
 }: {
   peticionId: number;
   justificante: Justificante | undefined;
   propia: boolean;
   activo: boolean;
+  admite?: boolean;
 }) {
   const entrada = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +85,8 @@ export function JustificanteDeAusencia({
     { invalida: [CLAVE_JUSTIFICANTES], exito: J.quitado },
   );
 
-  const puedeCambiar = propia && activo;
+  const puedeCambiar = propia && activo && admite;
+  const puedeQuitar = propia && activo && justificante !== undefined;
   if (justificante === undefined && !puedeCambiar) return null;
 
   async function abrir() {
@@ -125,12 +132,12 @@ export function JustificanteDeAusencia({
           <Boton variante="texto" ocupado={subir.isPending} onClick={() => entrada.current?.click()}>
             {justificante === undefined ? J.adjuntar : J.cambiar}
           </Boton>
-          {justificante !== undefined && (
-            <Boton variante="texto" ocupado={quitar.isPending} onClick={() => quitar.mutate()}>
-              {J.quitar}
-            </Boton>
-          )}
         </>
+      )}
+      {puedeQuitar && (
+        <Boton variante="texto" ocupado={quitar.isPending} onClick={() => quitar.mutate()}>
+          {J.quitar}
+        </Boton>
       )}
       {mensaje !== null && <Aviso>{mensaje}</Aviso>}
     </span>

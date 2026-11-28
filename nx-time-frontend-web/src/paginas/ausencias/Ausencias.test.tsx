@@ -165,7 +165,7 @@ describe('el justificante', () => {
     expect(screen.queryByRole('button', { name: A.justificante.adjuntar })).toBeNull();
   });
 
-  it('activado, se pide el de cada ausencia; la que lo tiene deja verlo y cambiarlo', async () => {
+  it('activado, se pide el de cada ausencia; el de una rechazada se ve y se quita, pero no se cambia', async () => {
     const llamadas = api({
       'GET /api/v1/ausencias/justificantes': () => ({
         activo: true,
@@ -176,8 +176,10 @@ describe('el justificante', () => {
 
     const fila = (await screen.findByRole('button', { name: A.justificante.ver('parte.pdf') })).closest('tr') as HTMLElement;
     expect(within(fila).getByText(A.tipos.MEDICO)).toBeTruthy();
-    expect(within(fila).getByRole('button', { name: A.justificante.cambiar })).toBeTruthy();
+    // Es la rechazada: ya no se cambia (el servidor daría 409), pero se puede quitar.
+    expect(within(fila).queryByRole('button', { name: A.justificante.cambiar })).toBeNull();
     expect(within(fila).getByRole('button', { name: A.justificante.quitar })).toBeTruthy();
+    // Las otras dos, aprobada y pendiente, sí lo admiten.
     expect(screen.getAllByRole('button', { name: A.justificante.adjuntar })).toHaveLength(2);
     const pedidas = llamadas.a('GET', '/api/v1/ausencias/justificantes')[0]?.query.getAll('peticiones');
     expect(pedidas?.join(',').split(',').sort()).toEqual(['1', '2', '3']);

@@ -10964,7 +10964,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description La empresa no tiene activados los justificantes */
+            /** @description La empresa no tiene activados los justificantes, o la ausencia está cancelada o rechazada */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -68,7 +68,9 @@ public class JustificanteController {
     @ApiResponses({
             @ApiResponse(responseCode = "403", description = "La ausencia es de otra persona o de otra empresa",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "409", description = "La empresa no tiene activados los justificantes",
+            @ApiResponse(responseCode = "409",
+                    description = "La empresa no tiene activados los justificantes, o la ausencia está cancelada o "
+                            + "rechazada",
                     content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping(value = "/ausencias/{id}/justificante", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
