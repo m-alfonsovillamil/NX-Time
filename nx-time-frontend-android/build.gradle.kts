@@ -92,8 +92,8 @@ android {
          * (ADR 046); información legal en Ajustes; sin tráfico en claro fuera
          * del sabor dev y la tarjeta del kiosco sin capturas (plan J).
          */
-        versionCode = 27
-        versionName = "1.26"
+        versionCode = 28
+        versionName = "1.27"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // El dominio de la web: App Links (el `intent-filter` de MainActivity
