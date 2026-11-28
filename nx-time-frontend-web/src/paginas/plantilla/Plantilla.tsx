@@ -334,7 +334,8 @@ export function Plantilla() {
     {
       clave: 'jornada',
       cabecera: P.jornadaYVacaciones,
-      numerica: true,
+      // Sin `numerica`: es texto en dos líneas, y la columna numérica no se
+      // parte nunca; en el iPhone, «22 días de vacaciones» se salía 5 px.
       celda: (p) => (
         <span className="nx-dos-lineas">
           <span>{P.horasSemana(String(p.horasSemanales ?? '').replace('.', ','))}</span>{' '}
