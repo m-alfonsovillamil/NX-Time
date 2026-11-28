@@ -132,7 +132,7 @@ function Pendientes() {
                       >
                         {G.aprobar}
                       </Boton>
-                      <Boton variante="secundario" onClick={() => setRechazando(a)}>
+                      <Boton variante="negativo" onClick={() => setRechazando(a)}>
                         {G.rechazar}
                       </Boton>
                     </>

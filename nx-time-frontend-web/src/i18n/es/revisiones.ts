@@ -15,8 +15,9 @@ export const revisiones = {
     alLimite: 'La bolsa anual está casi agotada: el Estatuto de los Trabajadores fija un máximo de 80 horas extra al año.',
     periodoDia: (dia: string) => `El ${dia}`,
     periodoSemana: (desde: string, hasta: string) => `Semana del ${desde} al ${hasta}`,
-    exceso: (extra: string, esperado: string) => `${extra} por encima de ${esperado}`,
-    justificacion: (texto: string) => `Justificación: ${texto}`,
+    // La cifra va aparte y en grande («+1h 35m»); esto es el listón, al lado.
+    sobre: (esperado: string) => `por encima de ${esperado}`,
+    notaJustificacion: 'Justificación',
     revisadoPor: (nombre: string) => `Revisado por ${nombre}`,
     tipos: { DIARIA: 'Jornada', SEMANAL: 'Semana' } as Record<string, string>,
     estados: { ABIERTO: 'Sin revisar', JUSTIFICADO: 'No computa', ACEPTADO: 'Horas extra' } as Record<string, string>,
@@ -24,6 +25,16 @@ export const revisiones = {
     // ADR 061: compensadas con descanso en los cuatro meses siguientes, no
     // gastan bolsa (art. 35.2 ET).
     compensar: 'Se compensan con descanso',
+    // El mismo, corto: va en una fila de tres botones con «No computan» y «Se pagan».
+    botonDescanso: 'Con descanso',
+    // Pagar o compensar no se puede deshacer: se confirma diciendo qué pasa con la bolsa.
+    confirmarPagoTitulo: '¿Se pagan estas horas?',
+    confirmarPagoTexto: (horas: string, persona: string, cuando: string) =>
+      `Las ${horas} de ${persona} (${cuando}) se pagan como horas extra y cuentan en la bolsa anual de 80 h. No se puede deshacer.`,
+    confirmarDescansoTitulo: '¿Se compensan con descanso?',
+    confirmarDescansoTexto: (horas: string, persona: string, cuando: string) =>
+      `${persona} descansará las ${horas} (${cuando}) en los cuatro meses siguientes. Mientras, no cuentan en la bolsa anual. No se puede deshacer.`,
+    cancelar: 'Cancelar',
     seCompensan: (antesDe: string) => `Se compensan con descanso antes del ${antesDe}. Mientras, no gastan bolsa.`,
     sePagan: 'Se pagan.',
     descansadas: (dia: string) => `Descansadas el ${dia}.`,
@@ -50,17 +61,13 @@ export const revisiones = {
     pedidasPorMi: 'Las que he pedido',
     vacioEsperan: 'No hay correcciones esperando por ti.',
     vacioPedidas: 'No has pedido ninguna corrección.',
-    quienPide: (quien: string, de: string) => `${quien} propone corregir un fichaje de ${de}`,
-    pideElSuyo: (quien: string) => `${quien} pide corregir un fichaje suyo`,
-    deA: (antes: string, despues: string) => `De ${antes} a ${despues}`,
-    // Las dos palabras de `deA`, para pintarlo con lo que cambia en negrita.
-    de: 'De',
-    a: 'a',
-    soloPausa: (inicio: string, fin: string) => `Añadir una pausa de ${inicio} a ${fin}`,
-    reparto: (texto: string) => `Reparto por proyecto: ${texto}`,
-    modalidad: (antes: string, despues: string) => `${antes} → ${despues}`,
-    motivo: (texto: string) => `Motivo: ${texto}`,
-    noAcepta: (texto: string) => `No lo acepta: ${texto}`,
+    // La tarjeta: el nombre arriba y, debajo, de qué día es el fichaje.
+    fichajeDel: (dia: string) => `Fichaje del ${dia}`,
+    fichajeDelPropone: (dia: string, quien: string) => `Fichaje del ${dia} · lo propone ${quien}`,
+    filas: { entrada: 'Entrada', salida: 'Salida', pausa: 'Pausa', modalidad: 'Modalidad', proyectos: 'Proyectos' },
+    pausaValor: (inicio: string, fin: string) => `Añadir de ${inicio} a ${fin}`,
+    notaMotivo: 'Motivo',
+    notaNoAcepta: 'No lo acepta',
     comentario: (texto: string) => `Respuesta: ${texto}`,
     estados: {
       PENDIENTE: 'Pendiente',

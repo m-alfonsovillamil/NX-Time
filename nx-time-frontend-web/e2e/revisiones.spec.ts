@@ -23,7 +23,7 @@ test('horas extra y correcciones de una gestora', async ({ page }) => {
   // La bandeja del equipo: avisos de otras personas, con sus botones.
   await page.getByRole('tab', { name: 'Pendientes de revisar' }).click();
   await expect(page.getByRole('button', { name: 'Se pagan' }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Se compensan con descanso' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Con descanso' }).first()).toBeVisible();
 
   await irASeccion(page, 'Correcciones');
   await expect(page.getByRole('heading', { name: 'Correcciones' })).toBeVisible();

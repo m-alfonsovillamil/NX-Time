@@ -24,6 +24,7 @@ import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
+import { FilasDeCambio, NotaDeRevision, TarjetaDeRevision } from '../../componentes/Revision';
 import { cuadrante } from '../../i18n/es/cuadrante';
 import { fechaCorta, hora, hoyEnEmpresa, minutos } from '../../util/fechas';
 
@@ -55,24 +56,40 @@ function decidida(i: Incidencia): boolean {
 }
 
 function TarjetaDeIncidencia({ i, delEquipo, acciones }: { i: Incidencia; delEquipo: boolean; acciones: ReactNode }) {
+  const queYCuando = `${I.tipos[i.tipo ?? ''] ?? i.tipo} · ${fechaCorta(i.fecha)}`;
+  const deOtro = delEquipo && i.usuario !== undefined && i.usuario !== null && i.usuario !== '';
+  // Un retraso o una salida antes de hora se miden en minutos: esa es la
+  // cifra, y debajo la hora prevista junto a la fichada («25 min tarde» sin
+  // «respecto a las 9:00» no se puede explicar ni juzgar). Un día sin fichar
+  // no tiene cifra: va en una frase.
+  const conCifra = i.tipo === 'RETRASO' || i.tipo === 'SALIDA_ANTICIPADA';
+  const n = i.minutos ?? 0;
   return (
-    <li className="nx-incidencia">
-      <div className="nx-incidencia__cabecera">
-        <strong>
-          {delEquipo && i.usuario ? `${i.usuario} · ` : ''}
-          {I.tipos[i.tipo ?? ''] ?? i.tipo} · {fechaCorta(i.fecha)}
-        </strong>
-        {i.estado && <Insignia tono={TONO[i.estado] ?? 'neutro'}>{I.estados[i.estado] ?? i.estado}</Insignia>}
-      </div>
-      <span>{detalleDe(i)}</span>
-      {i.justificacion && <span className="nx-sutil">{I.justificacion(i.justificacion)}</span>}
+    <TarjetaDeRevision
+      titulo={deOtro ? i.usuario : queYCuando}
+      subtitulo={deOtro ? queYCuando : undefined}
+      estado={i.estado && <Insignia tono={TONO[i.estado] ?? 'neutro'}>{I.estados[i.estado] ?? i.estado}</Insignia>}
+      cifra={conCifra ? (n < 60 ? I.cifraMinutos(n) : minutos(n)) : undefined}
+      cifraDetalle={i.tipo === 'RETRASO' ? I.cifraTarde : i.tipo === 'SALIDA_ANTICIPADA' ? I.cifraAntes : undefined}
+      acciones={acciones !== null ? acciones : undefined}
+    >
+      {conCifra ? (
+        <FilasDeCambio
+          filas={[
+            { etiqueta: I.filaPrevista, despues: `${i.horaPrevista ?? ''} h` },
+            { etiqueta: I.filaFichada, despues: hora(i.horaReal) },
+          ]}
+        />
+      ) : (
+        <span>{detalleDe(i)}</span>
+      )}
+      {i.justificacion && <NotaDeRevision etiqueta={I.notaExplicacion}>{i.justificacion}</NotaDeRevision>}
       {i.resueltaPor && (
         <span className="nx-sutil">
           {i.comentarioResolucion ? I.resueltaConComentario(i.resueltaPor, i.comentarioResolucion) : I.resueltaPor(i.resueltaPor)}
         </span>
       )}
-      {acciones !== null && <div className="nx-acciones-fila nx-acciones-fila--con-aire">{acciones}</div>}
-    </li>
+    </TarjetaDeRevision>
   );
 }
 
@@ -194,7 +211,7 @@ function DelEquipo() {
                   >
                     {I.aceptar}
                   </Boton>
-                  <Boton variante="secundario" onClick={() => setRechazando(i)}>
+                  <Boton variante="negativo" onClick={() => setRechazando(i)}>
                     {I.rechazar}
                   </Boton>
                 </>
