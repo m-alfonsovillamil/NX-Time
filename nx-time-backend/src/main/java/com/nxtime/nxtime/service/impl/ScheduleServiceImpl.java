@@ -352,25 +352,30 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     /**
-     * Una consulta por persona con cuadrante ese día, a través de
-     * JornadaTeoricaService.
+     * El día de todo el equipo con las mismas consultas se tenga a tres
+     * personas o a trescientas: {@link JornadaTeoricaService#diaDeVarios} carga
+     * las cuatro fuentes de todos a la vez y aplica la misma precedencia (no
+     * laborable, excepción, plantilla) persona a persona.
      *
-     * Es deliberado y tiene precio: así la precedencia (no laborable,
-     * excepción, plantilla) vive en un solo sitio. Para un equipo de decenas
-     * de personas es asumible; el barrido nocturno de incidencias (Fase B2),
-     * que recorre a toda la plantilla de todas las empresas, necesitará una
-     * versión por lotes, y ese es su sitio.
+     * <p>Antes era una tanda de consultas por persona ({@code dia} de cada una).
+     * Medido el 28/11/2026 con 87 personas: 216 consultas por llamada, y la
+     * semana de la web pide siete días (unas 1.500 consultas por vista) y
+     * "Ahora mismo", que se refresca cada minuto, otras 221. Con lotes, unas
+     * diez, crezca lo que crezca la plantilla ({@code ConsultasDelCuadranteIT}).
      */
     @Override
     public List<TeamScheduleEntryResponse> equipo(LocalDate fecha, User actor) {
-        return assignmentRepository.findVigentesDeEmpresaEl(actor.getEmpresa().getId(), fecha).stream()
+        List<User> personas = assignmentRepository.findVigentesDeEmpresaEl(actor.getEmpresa().getId(), fecha).stream()
                 .map(ScheduleAssignment::getUsuario)
                 .filter(User::isActivo)
                 .sorted(Comparator.comparing(User::getNombre, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        Map<Long, JornadaTeoricaService.DiaTeorico> dias = jornadaTeoricaService.diaDeVarios(personas, fecha);
+        return personas.stream()
                 .map(persona -> new TeamScheduleEntryResponse(
                         persona.getId(),
                         persona.nombreCompleto(),
-                        toResponse(jornadaTeoricaService.dia(persona, fecha))))
+                        toResponse(dias.get(persona.getId()))))
                 .toList();
     }
 
