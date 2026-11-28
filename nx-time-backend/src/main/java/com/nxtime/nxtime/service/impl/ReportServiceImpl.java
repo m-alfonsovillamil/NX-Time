@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.DatoConsultado;
+import com.nxtime.nxtime.domain.MonthlySignature;
 import com.nxtime.nxtime.domain.MonthlySignatureStatus;
 import com.nxtime.nxtime.domain.TimeEntry;
 import com.nxtime.nxtime.domain.User;
@@ -33,6 +34,7 @@ import java.time.ZonedDateTime;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -213,16 +215,38 @@ public class ReportServiceImpl implements ReportService {
      * los pide ({@code ExportacionParaLaInspeccion}), que es el acceso de
      * verdad. Si no, una exportación de un año dejaría cientos de filas.
      */
+    /*
+     * Por lotes (revisión del 28/11/2026): los fichajes del mes de toda la
+     * empresa, que ya hacían falta para saber quién fichó, se reparten por
+     * persona; las firmas, de una consulta; y los fichajes sin conexión, de
+     * todos a la vez. Antes eran tres consultas por persona y mes: el ZIP de
+     * tres meses con 87 personas hacía 806 (unos 2 s en local, varias veces
+     * más contra Neon). Lo fija ConsultasDeLaInspeccionIT.
+     */
     @Override
     public List<MonthlyReport> informesDeLaPlantilla(String solicitanteEmail, YearMonth mes) {
         User solicitante = getUsuario(solicitanteEmail);
         ZoneId zona = solicitante.zona();
+        List<TimeEntry> delMes = timeEntryRepository.findParaInforme(
+                solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona));
+        // El orden de la consulta (nombre y hora de entrada) se conserva: el de
+        // las personas, por su primera aparición, y el de cada una, el de la hora.
         Map<Long, User> personas = new LinkedHashMap<>();
-        for (TimeEntry fichaje : timeEntryRepository.findParaInforme(
-                solicitante.getEmpresa(), inicioDelMes(mes, zona), inicioDelMes(mes.plusMonths(1), zona))) {
+        Map<Long, List<TimeEntry>> fichajesDe = new HashMap<>();
+        for (TimeEntry fichaje : delMes) {
             personas.putIfAbsent(fichaje.getUsuario().getId(), fichaje.getUsuario());
+            fichajesDe.computeIfAbsent(fichaje.getUsuario().getId(), id -> new ArrayList<>()).add(fichaje);
         }
-        return personas.values().stream().map(persona -> construir(solicitante, persona, mes)).toList();
+        Map<Long, MonthlySignature> vigentes = signatureRepository
+                .findByEmpresa_IdAndAnioAndMes(solicitante.getEmpresa().getId(), mes.getYear(), mes.getMonthValue())
+                .stream()
+                .filter(firma -> firma.getEstado() == MonthlySignatureStatus.VIGENTE)
+                .collect(Collectors.toMap(firma -> firma.getUsuario().getId(), firma -> firma, (una, otra) -> una));
+        Set<Long> sinConexion = conFichajeSinConexion(delMes);
+        return personas.values().stream()
+                .map(persona -> informe(solicitante, persona, mes, fichajesDe.get(persona.getId()),
+                        vigentes.get(persona.getId()), sinConexion))
+                .toList();
     }
 
     private MonthlyReport construir(User solicitante, User empleado, YearMonth mes) {
@@ -232,18 +256,23 @@ public class ReportServiceImpl implements ReportService {
 
         // La firma vigente del mes, si la hay (Fase B3). Solo la vigente: una
         // invalidada ya no dice nada del registro de hoy.
-        MonthlyReport.FirmaDelInforme firma = signatureRepository
+        MonthlySignature vigente = signatureRepository
                 .findByUsuario_IdAndAnioAndMesAndEstado(
                         empleado.getId(), mes.getYear(), mes.getMonthValue(), MonthlySignatureStatus.VIGENTE)
-                .map(vigente -> new MonthlyReport.FirmaDelInforme(
-                        empleado.nombreCompleto(),
-                        vigente.getFirmadaEn(),
-                        vigente.getHash(),
-                        vigente.getVisadaPor() == null ? null : vigente.getVisadaPor().nombreCompleto(),
-                        vigente.getVisadaEn()))
                 .orElse(null);
+        return informe(solicitante, empleado, mes, fichajes, vigente, conFichajeSinConexion(fichajes));
+    }
 
-        Set<Long> sinConexion = conFichajeSinConexion(fichajes);
+    /** El informe de una persona con todo ya cargado: lo comparten el de uno y el de la plantilla. */
+    private MonthlyReport informe(User solicitante, User empleado, YearMonth mes, List<TimeEntry> fichajes,
+                                  MonthlySignature vigente, Set<Long> sinConexion) {
+        ZoneId zona = solicitante.zona();
+        MonthlyReport.FirmaDelInforme firma = vigente == null ? null : new MonthlyReport.FirmaDelInforme(
+                empleado.nombreCompleto(),
+                vigente.getFirmadaEn(),
+                vigente.getHash(),
+                vigente.getVisadaPor() == null ? null : vigente.getVisadaPor().nombreCompleto(),
+                vigente.getVisadaEn());
         return new MonthlyReport(
                 solicitante.getEmpresa().getNombre(),
                 empleado.nombreCompleto(),
