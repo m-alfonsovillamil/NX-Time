@@ -695,23 +695,29 @@ alta). Ese enlace **solo sigue valiendo si cada versión se publica igual**:
 1. Sube `versionCode` (y `versionName`) en `nx-time-frontend-android/build.gradle.kts`,
    en una PR, y mergéala. Con el mismo `versionCode` el APK no se instala encima
    del anterior, y Sentry mezcla los fallos de las dos versiones.
-2. Compila `assembleProdRelease` desde ese `main`.
-3. Publica la release **con el APK renombrado a `NX-Time.apk`**, siempre ese nombre:
+2. Prepárala con el script, que compila ese `main` en un worktree fuera de
+   OneDrive (`~/nxwt-apk`) y comprueba que el `versionCode` sube, que el APK y el
+   AAB van firmados con la clave de `assetlinks.json` y que las librerías
+   nativas valen para páginas de 16 KB:
 
 ```bash
-cp nx-time-frontend-android/build/outputs/apk/prod/release/nx-time-frontend-android-prod-release.apk NX-Time.apk
-gh release create app-vX.Y NX-Time.apk --target "$(git rev-parse main)" --title "NX Time X.Y (Android)"
+scripts/dev/publicar-app.sh          # --probar para ensayarlo con una versión ya publicada
 ```
+
+   Deja en `~/nxtime-releases/<versión>/` el APK con el nombre de la descarga
+   (`NX-Time.apk`, el de `APP_DOWNLOAD_URL`), el AAB para Google Play
+   ([GOOGLE-PLAY.md](GOOGLE-PLAY.md)) y `mapping.txt`, y escribe el comando de la
+   release. **No publica nada.**
+3. Publica la release con ese comando, **con permiso**. El APK lleva siempre el
+   mismo nombre: así `releases/latest/download/NX-Time.apk` sigue valiendo.
 
 `--target` exige el SHA **completo**; con el abreviado GitHub responde
 `target_commitish is invalid`. Y el enlace `latest` tarda unos segundos en
 apuntar a la release nueva: un 404 justo después de publicar no es un fallo.
 
 > ⚠️ Si al compilar falla con `AccessDeniedException` o `Unable to delete
-> directory` dentro de `build/`, algo tiene ficheros abiertos (visto el 17/09/2026:
-> los servidores de Java de VS Code). Compila en un worktree fuera del proyecto:
-> `git worktree add --detach ../nxtime-apk main`, copia `local.properties` y
-> compila allí.
+> directory` dentro de `build/`: `./gradlew --stop` en `~/nxwt-apk`, borrar la
+> carpeta que diga el error y repetir.
 
 ## 4. El arranque en frío
 
