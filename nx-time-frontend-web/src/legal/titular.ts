@@ -18,3 +18,6 @@ export const TITULAR = {
 
 /** La versión de las condiciones del servicio y del contrato de encargo que se acepta al registrarse. */
 export const VERSION_CONDICIONES = "2026-11-01";
+
+/** Dónde se descarga la app Android (`application.app.download-url`). Vacío: no se enseña el enlace. */
+export const URL_APP = "https://github.com/m-alfonsovillamil/NX-Time/releases/latest/download/NX-Time.apk";

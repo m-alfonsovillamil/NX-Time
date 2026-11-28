@@ -65,7 +65,24 @@ export function leerTitular(yaml) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(version ?? '')) {
     throw new Error('application.legal.version tiene que ser una fecha AAAA-MM-DD.');
   }
-  return { titular, version };
+  return { titular, version, urlApp: leerUrlApp(yaml) };
+}
+
+/**
+ * Dónde se descarga la app (`application.app.download-url`): el valor por
+ * defecto de `${APP_DOWNLOAD_URL:...}`, o el valor a secas. La web se compila
+ * aparte del backend y no ve sus variables de entorno, así que el enlace que
+ * enseña es este: con la app en Play, se cambia aquí y no solo en Render.
+ * Vacío = no hay enlace.
+ */
+export function leerUrlApp(yaml) {
+  const linea = yaml.split(/\r?\n/).find((l) => /^ {4}download-url: /.test(l));
+  if (!linea) return '';
+  const valor = linea.match(/^ {4}download-url: "(?:\$\{[A-Z_]+:)?([^"}]*)\}?"\s*$/);
+  if (!valor) throw new Error(`Línea que no se entiende en application.app: «${linea.trim()}».`);
+  const url = valor[1];
+  if (url && !/^https:\/\//.test(url)) throw new Error('application.app.download-url tiene que ser https://.');
+  return url;
 }
 
 /** Un año después de la versión: lo que pide la RFC 9116 como mucho. Fijo, para que regenerar no cambie nada. */
@@ -75,7 +92,7 @@ export function caducidad(version) {
   return fecha.toISOString().replace('.000', '');
 }
 
-export function generarTs({ titular, version }) {
+export function generarTs({ titular, version, urlApp = '' }) {
   const campo = (clave) => JSON.stringify(titular[clave]);
   return `/**
  * GENERADO por \`npm run titular\` desde application.yml del backend: no se edita
@@ -97,6 +114,9 @@ export const TITULAR = {
 
 /** La versión de las condiciones del servicio y del contrato de encargo que se acepta al registrarse. */
 export const VERSION_CONDICIONES = ${JSON.stringify(version)};
+
+/** Dónde se descarga la app Android (\`application.app.download-url\`). Vacío: no se enseña el enlace. */
+export const URL_APP = ${JSON.stringify(urlApp)};
 `;
 }
 
