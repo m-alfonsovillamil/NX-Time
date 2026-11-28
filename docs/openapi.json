@@ -5938,7 +5938,7 @@
             }
           },
           "409" : {
-            "description" : "La empresa no tiene activados los justificantes",
+            "description" : "La empresa no tiene activados los justificantes, o la ausencia está cancelada o rechazada",
             "content" : {
               "*/*" : {
                 "schema" : {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
 import com.nxtime.nxtime.domain.Company;
 import com.nxtime.nxtime.domain.Role;
@@ -20,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,6 +162,32 @@ class JustificanteIT {
         justificantes.subir(baja.getId(), fichero("dos.pdf", PDF), ana);
         assertThat(justificantes.de(List.of(baja.getId()), ana).justificantes())
                 .extracting(JustificanteResponse::nombre).containsExactly("dos.pdf");
+    }
+
+    @Test
+    @DisplayName("Una ausencia cancelada o rechazada no admite justificante, pero el que tenía se puede quitar")
+    void canceladaORechazada() {
+        activar();
+        AbsenceRequest rechazada = absenceRequestRepository.save(AbsenceRequest.builder()
+                .usuario(ana).empresa(empresa).tipo(AbsenceType.MEDICO)
+                .fechaInicio(LocalDate.of(2026, 11, 9)).fechaFin(LocalDate.of(2026, 11, 9))
+                .estado(AbsenceStatus.RECHAZADA).aprobadoPor(gestor).fechaResolucion(Instant.now()).build());
+        assertThatThrownBy(() -> justificantes.subir(rechazada.getId(), fichero("parte.pdf", PDF), ana))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+
+        // La pendiente lo admite; cancelada después, ya no se cambia, pero se puede quitar.
+        justificantes.subir(baja.getId(), fichero("parte.pdf", PDF), ana);
+        AbsenceRequest cancelada = absenceRequestRepository.findById(baja.getId()).orElseThrow();
+        cancelada.setEstado(AbsenceStatus.CANCELADA);
+        cancelada.setCanceladaPor(ana);
+        cancelada.setCanceladaEn(Instant.now());
+        absenceRequestRepository.save(cancelada);
+        assertThatThrownBy(() -> justificantes.subir(baja.getId(), fichero("otro.pdf", PDF), ana))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        justificantes.borrar(baja.getId(), ana);
+        assertThat(justificantes.de(List.of(baja.getId()), ana).justificantes()).isEmpty();
     }
 
     @Test

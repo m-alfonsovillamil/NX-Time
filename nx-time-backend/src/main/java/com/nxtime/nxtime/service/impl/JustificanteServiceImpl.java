@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.service.impl;
 
 import com.nxtime.nxtime.domain.AbsenceRequest;
+import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.DatoConsultado;
 import com.nxtime.nxtime.domain.RoleAuthorities;
 import com.nxtime.nxtime.domain.User;
@@ -97,6 +98,14 @@ public class JustificanteServiceImpl implements JustificanteService {
         if (!activo(actor)) {
             throw new BusinessException("Tu empresa no tiene activados los justificantes en las ausencias.",
                     HttpStatus.CONFLICT);
+        }
+        // Una ausencia cancelada o rechazada no se va a disfrutar: no hay nada
+        // que justificar. La app y la web ofrecían adjuntarlo igual, y se
+        // guardaba (revisión del 28/11/2026). Quitar el que ya hubiera sí se
+        // puede: es lo propio, y no deja nada a medias.
+        if (peticion.getEstado() == AbsenceStatus.CANCELADA || peticion.getEstado() == AbsenceStatus.RECHAZADA) {
+            throw new BusinessException("Esa ausencia está " + (peticion.getEstado() == AbsenceStatus.CANCELADA
+                    ? "cancelada" : "rechazada") + ": ya no lleva justificante.", HttpStatus.CONFLICT);
         }
         if (fichero == null || fichero.isEmpty()) {
             throw new BusinessException("No has adjuntado ningún fichero.", HttpStatus.BAD_REQUEST);

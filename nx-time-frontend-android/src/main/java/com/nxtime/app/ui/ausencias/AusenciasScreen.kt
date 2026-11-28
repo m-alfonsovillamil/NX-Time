@@ -160,7 +160,9 @@ fun AusenciasScreen(
                             TarjetaAusencia(peticion = peticion) {
                                 FilaJustificante(
                                     justificante = justificantes.porId[peticion.id],
-                                    activo = justificantes.activo,
+                                    // Ni adjuntar ni cambiar en una cancelada o rechazada;
+                                    // el que ya tuviera se sigue viendo.
+                                    activo = justificantes.activo && peticion.estado.admiteJustificante,
                                     subiendo = justificantes.subiendo == peticion.id,
                                     alElegir = { bytes, nombre, mime ->
                                         justificantesViewModel.subir(peticion.id, bytes, nombre, mime)
