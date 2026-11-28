@@ -25,7 +25,7 @@
  *
  * La primera llamada a cada ruta no se cuenta: llena cachés.
  */
-import { readFileSync, statSync, openSync, readSync, closeSync } from 'node:fs';
+import { readFileSync, statSync, fstatSync, openSync, readSync, closeSync } from 'node:fs';
 
 const [, , rutaOpenApi, rutaLog] = process.argv;
 const API = 'http://localhost:8080';
@@ -65,13 +65,18 @@ const rutas = Object.entries(openapi.paths)
   });
 
 function consultasDesde(posicion) {
-  const tamano = statSync(rutaLog).size;
-  if (tamano <= posicion) return { n: 0, fin: tamano };
+  // El tamaño se mira en el fichero ya abierto, no por su ruta: entre mirar la
+  // ruta y abrirla, el backend sigue escribiendo (y podría rotar el log).
   const fd = openSync(rutaLog, 'r');
-  const trozo = Buffer.alloc(tamano - posicion);
-  readSync(fd, trozo, 0, trozo.length, posicion);
-  closeSync(fd);
-  return { n: (trozo.toString('utf8').match(/^Hibernate: /gm) ?? []).length, fin: tamano };
+  try {
+    const tamano = fstatSync(fd).size;
+    if (tamano <= posicion) return { n: 0, fin: tamano };
+    const trozo = Buffer.alloc(tamano - posicion);
+    readSync(fd, trozo, 0, trozo.length, posicion);
+    return { n: (trozo.toString('utf8').match(/^Hibernate: /gm) ?? []).length, fin: tamano };
+  } finally {
+    closeSync(fd);
+  }
 }
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
