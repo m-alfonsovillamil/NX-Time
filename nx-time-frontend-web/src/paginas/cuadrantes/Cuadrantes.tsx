@@ -122,7 +122,15 @@ function SemanaDelEquipo({ alVerPersona }: { alVerPersona: (id: number) => void 
                     const { texto, marca } = textoDelDia(fila.dias.get(d));
                     return (
                       <td key={d} data-etiqueta={fechaCorta(d)} className={marca !== null ? `nx-celda-dia nx-celda-dia--${marca}` : 'nx-celda-dia'}>
-                        {marca === 'excepcion' ? <Insignia tono="aviso">{texto}</Insignia> : texto}
+                        {marca === 'excepcion' ? (
+                          <Insignia tono="aviso">{texto}</Insignia>
+                        ) : (
+                          texto.split(' · ').map((tramo) => (
+                            <span key={tramo} className="nx-celda-dia__tramo">
+                              {tramo}
+                            </span>
+                          ))
+                        )}
                       </td>
                     );
                   })}

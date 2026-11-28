@@ -53,6 +53,11 @@ export interface Columna<F> {
    * (sin etiqueta delante), y «ancha» ocupa toda la fila (las acciones).
    */
   enMovil?: 'cabecera' | 'ancha';
+  /**
+   * Sin partir en dos líneas: fechas, horas y nombres. «17:27 / h» o «Lucía
+   * Moreno / Vega» en una tabla estrecha se leen mal (revisión del 28/11/2026).
+   */
+  sinCortes?: boolean;
 }
 
 function claseDe<F>(c: Columna<F>): string | undefined {
@@ -60,6 +65,7 @@ function claseDe<F>(c: Columna<F>): string | undefined {
     c.numerica === true ? 'nx-tabla__numerica' : '',
     c.enMovil === 'cabecera' ? 'nx-tabla__cabecera-movil' : '',
     c.enMovil === 'ancha' ? 'nx-tabla__ancha-movil' : '',
+    c.sinCortes === true ? 'nx-tabla__sin-cortes' : '',
   ].filter((x) => x !== '');
   return clases.length > 0 ? clases.join(' ') : undefined;
 }

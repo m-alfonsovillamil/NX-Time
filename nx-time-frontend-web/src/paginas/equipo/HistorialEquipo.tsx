@@ -52,12 +52,13 @@ interface Acciones {
 
 function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }: Acciones): Columna<Fila>[] {
   const todas: (Columna<Fila> | null)[] = [
-    { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha), enMovil: 'cabecera' },
+    { clave: 'dia', cabecera: E.dia, celda: (f) => fechaCorta(f.fecha), enMovil: 'cabecera', sinCortes: true },
     conPersona
       ? {
           clave: 'persona',
           cabecera: E.persona,
           enMovil: 'ancha' as const,
+          sinCortes: true,
           celda: (f) => (
             <span className="nx-con-iniciales">
               <Iniciales nombre={f.usuario?.nombre ?? ''} tamano="s" />
@@ -69,6 +70,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
     {
       clave: 'entrada',
       cabecera: E.entrada,
+      sinCortes: true,
       celda: (f) => (
         <>
           <ConKiosco hora={hora(f.horaEntrada)} kiosco={f.kiosco} origen={f.origen} modalidad={f.modalidad} />
@@ -79,6 +81,7 @@ function columnas(conPersona: boolean, { alCorregir, alAuditar, alDarPorBueno }:
     {
       clave: 'salida',
       cabecera: E.salida,
+      sinCortes: true,
       celda: (f) =>
         f.horaSalida === undefined ? (
           E.enCurso

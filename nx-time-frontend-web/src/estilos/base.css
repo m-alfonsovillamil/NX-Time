@@ -1695,6 +1695,10 @@ h2 {
   font-weight: 600;
 }
 
+.nx-tabla .nx-tabla__sin-cortes {
+  white-space: nowrap;
+}
+
 .nx-tabla .nx-tabla__numerica {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1762,7 +1766,7 @@ h2 {
 @media (max-width: 639px) {
   .nx-tabla--compacta tr {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     column-gap: 12px;
     row-gap: 6px;
     padding: 12px 0;
@@ -2302,6 +2306,30 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Dos datos en una celda, el segundo debajo (Plantilla: nombre y correo, rol y
+   departamento, jornada y vacaciones). Sin partir en el escritorio; en el móvil,
+   donde cada dato tiene su recuadro estrecho, sí. */
+.nx-dos-lineas {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .nx-dos-lineas {
+    white-space: nowrap;
+  }
+}
+
+/* La plantilla en el móvil, en dos columnas y no en tres: sus datos llevan dos
+   líneas («Empleado / Producto», «40 h/semana / 22 días de vacaciones») y en un
+   tercio no cabían. */
+@media (max-width: 639px) {
+  .nx-plantilla .nx-tabla--compacta tr {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---- Gráfico de horas ---- */
@@ -3283,6 +3311,15 @@ h2 {
 .nx-celda-dia {
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+.nx-celda-dia__tramo {
+  display: block;
+}
+
+.nx-tabla--semana th,
+.nx-tabla--semana td {
+  padding-inline: 8px;
 }
 
 .nx-celda-dia--libre,
