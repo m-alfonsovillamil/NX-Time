@@ -22,7 +22,8 @@ export type TonoDeCifra = 'normal' | 'destacada' | 'alerta';
 
 /**
  * La rejilla. **Nunca tres y una sola debajo**: con cuatro van de dos en dos
- * o las cuatro en fila; con seis, de tres en tres o las seis. Cuántas caben
+ * o las cuatro en fila; con cinco, dos, dos y una a lo ancho, tres y dos, o
+ * las cinco; con seis, de dos en dos, de tres en tres o las seis. Cuántas caben
  * lo decide el ancho de la tarjeta (una consulta de contenedor), no el de la
  * pantalla: la misma rejilla va en media columna de Mi jornada y a lo ancho
  * de la analítica.

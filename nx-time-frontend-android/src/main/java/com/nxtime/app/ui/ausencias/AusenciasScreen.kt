@@ -23,12 +23,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,10 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -51,6 +50,7 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.EstadoAusencia
 import com.nxtime.app.data.dto.RespuestaAusencia
 import com.nxtime.app.ui.AppViewModelProvider
+import com.nxtime.app.ui.components.BotonFlotante
 import com.nxtime.app.ui.components.Avatar
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.CampanaDeAvisos
@@ -128,10 +128,10 @@ fun AusenciasScreen(
         },
         accionFlotante = {
             // Con el texto, como en la web y en Borrados: un «+» suelto no dice qué crea.
-            ExtendedFloatingActionButton(
-                onClick = onIrSolicitud,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text(stringResource(R.string.nav_solicitar)) }
+            BotonFlotante(
+                texto = stringResource(R.string.nav_solicitar),
+                icono = Icons.Default.Add,
+                onClick = onIrSolicitud
             )
         }
     ) { modifier ->
@@ -229,11 +229,15 @@ private fun DialogoCancelar(
         text = {
             Column {
                 Text(
-                    stringResource(
-                        R.string.ausencias_rango,
-                        DateFormats.fechaCorta(peticion.fechaInicio),
-                        DateFormats.fechaCorta(peticion.fechaFin)
-                    ),
+                    if (peticion.fechaInicio == peticion.fechaFin) {
+                        stringResource(R.string.ausencias_un_dia, DateFormats.fechaCorta(peticion.fechaInicio))
+                    } else {
+                        stringResource(
+                            R.string.ausencias_rango,
+                            DateFormats.fechaCorta(peticion.fechaInicio),
+                            DateFormats.fechaCorta(peticion.fechaFin)
+                        )
+                    },
                     style = MaterialTheme.typography.titleSmall
                 )
                 Spacer(Modifier.height(8.dp))

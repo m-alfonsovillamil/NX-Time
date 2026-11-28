@@ -29,9 +29,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
@@ -956,16 +956,18 @@ class ApiContractTest {
         //     los zip escritos en streaming (los que dejan el tamanio de cada
         //     entrada para el final, como hace POI en modo SXSSF), aunque
         //     sean perfectamente validos.
-        File descargado = File.createTempFile("informe-contrato", ".xlsx");
+        // Files.createTempFile y no File.createTempFile: crea el fichero solo
+        // legible por quien ejecuta el test, no por cualquiera en la maquina.
+        Path descargado = Files.createTempFile("informe-contrato", ".xlsx");
         try {
-            Files.write(descargado.toPath(), contenido);
-            try (ZipFile zip = new ZipFile(descargado)) {
+            Files.write(descargado, contenido);
+            try (ZipFile zip = new ZipFile(descargado.toFile())) {
                 assertThat(zip.size())
                         .as("el .xlsx llega entero y se puede abrir")
                         .isGreaterThan(0);
             }
         } finally {
-            Files.deleteIfExists(descargado.toPath());
+            Files.deleteIfExists(descargado);
         }
     }
 

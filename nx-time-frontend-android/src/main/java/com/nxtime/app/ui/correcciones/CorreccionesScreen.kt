@@ -3,7 +3,6 @@ package com.nxtime.app.ui.correcciones
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,23 +11,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,12 +32,17 @@ import com.nxtime.app.data.dto.CorreccionDTO
 import com.nxtime.app.data.dto.Modalidad
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.BotonDeRevision
 import com.nxtime.app.ui.components.EstadoVacio
+import com.nxtime.app.ui.components.FilaDeCambio
+import com.nxtime.app.ui.components.FilaDeDato
 import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.NotaDeRevision
+import com.nxtime.app.ui.components.PesoDeBoton
+import com.nxtime.app.ui.components.TarjetaDeRevision
 import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
-import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 
@@ -173,149 +173,127 @@ private fun TarjetaCorreccion(
     onRechazar: (() -> Unit)? = null,
     onDisputar: (() -> Unit)? = null
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = elevacionDeTarjeta(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (correccion.solicitante.nombre == correccion.empleado.nombre) {
-                        stringResource(
-                            R.string.correcciones_pide_el_suyo, correccion.solicitante.nombre)
-                    } else {
-                        stringResource(
-                            R.string.correcciones_quien_pide,
-                            correccion.solicitante.nombre,
-                            correccion.empleado.nombre
-                        )
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
+    // El día del fichaje: el de la entrada actual, o la propuesta si el
+    // fichaje no tenía (una jornada que se pide añadir entera).
+    val dia = DateFormats.fechaLarga(correccion.horaEntradaActual ?: correccion.horaEntradaPropuesta)
+    val estado = EstadoCorreccion.de(correccion.estado)
+    // Los botones dependen SOLO de lo que diga el servidor.
+    val disputa = correccion.puedoDisputar && onDisputar != null
+    val resuelve = correccion.puedoResolver && onRechazar != null && onAprobar != null
+
+    TarjetaDeRevision(
+        titulo = correccion.empleado.nombre,
+        subtitulo = if (correccion.solicitante.nombre == correccion.empleado.nombre) {
+            stringResource(R.string.correcciones_fichaje_del, dia)
+        } else {
+            stringResource(R.string.correcciones_fichaje_del_propone, dia, correccion.solicitante.nombre)
+        },
+        estado = estado?.let {
+            {
+                Insignia(
+                    texto = stringResource(it.etiqueta),
+                    tono = when (it) {
+                        EstadoCorreccion.APROBADA -> TonoDeInsignia.EXITO
+                        EstadoCorreccion.RECHAZADA -> TonoDeInsignia.ERROR
+                        EstadoCorreccion.PENDIENTE, EstadoCorreccion.EN_DISPUTA -> TonoDeInsignia.AVISO
+                    }
                 )
-                EstadoCorreccion.de(correccion.estado)?.let { estado ->
-                    Insignia(
-                        texto = stringResource(estado.etiqueta),
-                        tono = when (estado) {
-                            EstadoCorreccion.APROBADA -> TonoDeInsignia.EXITO
-                            EstadoCorreccion.RECHAZADA -> TonoDeInsignia.ERROR
-                            EstadoCorreccion.PENDIENTE, EstadoCorreccion.EN_DISPUTA -> TonoDeInsignia.AVISO
-                        }
-                    )
-                }
             }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Las horas de antes y las propuestas, juntas: quien decide
-            // necesita comparar, y mandarle al historial a buscarlo
+        },
+        contenido = {
+            Spacer(Modifier.height(6.dp))
+            // Las horas de antes y las propuestas, juntas y en columna: quien
+            // decide necesita comparar, y mandarle al historial a buscarlo
             // convierte una decisión de dos segundos en una navegación.
             /*
              * Una solicitud que SOLO añade una pausa (ADR 015) lleva las mismas
              * horas propuestas que actuales, así que pintarla como las demás
-             * diría "De 09:00 - 18:00 a 09:00 - 18:00": una corrección que no
-             * cambia nada, que es justo lo que parece al aprobarla a ciegas.
-             * La línea de horas solo sale si las horas cambian, y la pausa, si
-             * la hay.
+             * diría "08:00 → 08:00": una corrección que no cambia nada, que es
+             * justo lo que parece al aprobarla a ciegas. Las filas de horas
+             * solo salen si las horas cambian, y la pausa, si la hay.
              */
             val cambiaHoras = correccion.horaEntradaActual != correccion.horaEntradaPropuesta ||
                     correccion.horaSalidaActual != correccion.horaSalidaPropuesta
             if (cambiaHoras) {
-                Text(
-                    text = stringResource(
-                        R.string.correcciones_de_a,
-                        DateFormats.hora(correccion.horaEntradaActual) + " - " +
-                                DateFormats.hora(correccion.horaSalidaActual),
-                        DateFormats.hora(correccion.horaEntradaPropuesta) + " - " +
-                                DateFormats.hora(correccion.horaSalidaPropuesta)
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
+                FilaDeCambio(
+                    etiqueta = stringResource(R.string.correcciones_fila_entrada),
+                    antes = DateFormats.hora(correccion.horaEntradaActual),
+                    despues = DateFormats.hora(correccion.horaEntradaPropuesta)
                 )
-            }
-            if (correccion.repartoPropuesto.isNotEmpty()) {
-                Text(
-                    text = stringResource(
-                        R.string.correcciones_reparto,
-                        correccion.repartoPropuesto.joinToString(", ") { "${it.codigo} ${it.minutos} min" }
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            if (correccion.modalidadPropuesta != null && correccion.modalidadPropuesta != correccion.modalidadActual) {
-                Text(
-                    text = stringResource(
-                        R.string.correcciones_modalidad,
-                        textoDe(correccion.modalidadActual),
-                        textoDe(correccion.modalidadPropuesta)
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
+                FilaDeCambio(
+                    etiqueta = stringResource(R.string.correcciones_fila_salida),
+                    antes = DateFormats.hora(correccion.horaSalidaActual),
+                    despues = DateFormats.hora(correccion.horaSalidaPropuesta)
                 )
             }
             if (correccion.pausaInicioPropuesta != null && correccion.pausaFinPropuesta != null) {
-                Text(
-                    text = stringResource(
-                        R.string.correcciones_solo_pausa,
+                FilaDeDato(
+                    etiqueta = stringResource(R.string.correcciones_fila_pausa),
+                    valor = stringResource(
+                        R.string.correcciones_pausa_valor,
                         DateFormats.hora(correccion.pausaInicioPropuesta),
                         DateFormats.hora(correccion.pausaFinPropuesta)
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
+                    )
+                )
+            }
+            if (correccion.modalidadPropuesta != null && correccion.modalidadPropuesta != correccion.modalidadActual) {
+                FilaDeCambio(
+                    etiqueta = stringResource(R.string.correcciones_fila_modalidad),
+                    antes = textoDe(correccion.modalidadActual),
+                    despues = textoDe(correccion.modalidadPropuesta)
+                )
+            }
+            if (correccion.repartoPropuesto.isNotEmpty()) {
+                FilaDeDato(
+                    etiqueta = stringResource(R.string.correcciones_fila_proyectos),
+                    valor = correccion.repartoPropuesto.joinToString(", ") {
+                        "${it.codigo} " + DateFormats.minutos(it.minutos)
+                    }
                 )
             }
 
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = correccion.motivo,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            NotaDeRevision(texto = correccion.motivo, etiqueta = stringResource(R.string.correcciones_motivo))
 
             correccion.motivoDisputa?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.correcciones_no_acepta, it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
+                NotaDeRevision(texto = it, etiqueta = stringResource(R.string.correcciones_no_acepta_etiqueta))
             }
 
             correccion.comentarioResolucion?.let {
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.correcciones_comentario, it),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
-
-            // Los botones dependen SOLO de lo que diga el servidor.
-            if (correccion.puedoResolver || correccion.puedoDisputar) {
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    if (correccion.puedoDisputar && onDisputar != null) {
-                        TextButton(onClick = onDisputar) {
-                            Text(stringResource(R.string.correcciones_disputar))
-                        }
-                    }
-                    if (correccion.puedoResolver && onRechazar != null) {
-                        TextButton(onClick = onRechazar) {
-                            Text(stringResource(R.string.correcciones_rechazar))
-                        }
-                    }
-                    if (correccion.puedoResolver && onAprobar != null) {
-                        TextButton(onClick = onAprobar) {
-                            Text(
-                                stringResource(R.string.correcciones_aprobar),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+        },
+        acciones = if (disputa || resuelve) {
+            {
+                if (disputa) {
+                    BotonDeRevision(
+                        texto = stringResource(R.string.correcciones_disputar),
+                        onClick = onDisputar!!,
+                        peso = PesoDeBoton.CONTORNO,
+                        negativo = true
+                    )
+                }
+                if (resuelve) {
+                    BotonDeRevision(
+                        texto = stringResource(R.string.correcciones_rechazar),
+                        onClick = onRechazar!!,
+                        peso = PesoDeBoton.CONTORNO,
+                        negativo = true
+                    )
+                    BotonDeRevision(
+                        texto = stringResource(R.string.correcciones_aprobar),
+                        onClick = onAprobar!!
+                    )
                 }
             }
+        } else {
+            null
         }
-    }
+    )
 }
 
 /**

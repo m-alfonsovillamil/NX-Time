@@ -280,7 +280,6 @@
     <string name="correccion_salida">Hora de salida</string>
     <string name="correccion_motivo">Motivo de la corrección</string>
     <string name="correccion_modalidad">Presencial o a distancia</string>
-    <string name="correcciones_modalidad">%1$s → %2$s</string>
     <string name="sin_conexion_titulo">Sin conexión</string>
     <plurals name="sin_conexion_pendientes">
         <item quantity="one">%1$d fichaje guardado en el móvil. Se enviará solo al volver la red.</item>
@@ -407,7 +406,6 @@
     <string name="detalle_vacaciones_totales">Días del año %1$d</string>
     <string name="detalle_vacaciones_proximas">Próximas ausencias aprobadas</string>
     <string name="detalle_vacaciones_ninguna">No tienes ninguna.</string>
-    <string name="correcciones_reparto">Reparto por proyecto: %1$s</string>
     <string name="reparto_boton">Proyectos</string>
     <string name="reparto_titulo">Repartir por proyecto</string>
     <string name="reparto_neto">Trabajado ese día: %1$s</string>
@@ -467,6 +465,7 @@
     <string name="ausencias_cancelar_motivo">Por qué (opcional)</string>
     <string name="ausencias_volver">Volver</string>
     <string name="ausencias_rango">Del %1$s al %2$s</string>
+    <string name="ausencias_un_dia">El %1$s</string>
     <string name="ausencias_resuelta_por">Resuelta por %1$s</string>
     <string name="ausencias_comentario">Respuesta: %1$s</string>
     <string name="ausencias_motivo">Motivo: %1$s</string>
@@ -534,7 +533,11 @@
     -->
     <string name="gestion_seccion_pendiente">Pendiente de resolver</string>
     <string name="ahora_titulo">Ahora mismo</string>
-    <string name="ahora_resumen">Trabajando: %1$d · En pausa: %2$d · Sin fichar: %3$d · Hoy no les toca: %4$d</string>
+    <!-- Los cuatro recuadros del resumen de «Ahora mismo» (cifra grande, esto debajo). -->
+    <string name="ahora_cifra_trabajando">Trabajando</string>
+    <string name="ahora_cifra_en_pausa">En pausa</string>
+    <string name="ahora_cifra_sin_fichar">Sin fichar</string>
+    <string name="ahora_cifra_no_les_toca">Hoy no les toca</string>
     <plurals name="ahora_con_retraso">
         <item quantity="one">%d persona debía haber entrado ya</item>
         <item quantity="other">%d personas debían haber entrado ya</item>
@@ -935,16 +938,22 @@
     <string name="correcciones_pedidas_por_mi">Las que he pedido</string>
     <string name="correcciones_vacio_titulo">No hay correcciones</string>
     <string name="correcciones_vacio_texto">Aquí verás las correcciones de fichaje que tengas que resolver y las que hayas pedido tú.</string>
-    <string name="correcciones_quien_pide">%1$s propone corregir un fichaje de %2$s</string>
     <!--
         Cuando quien pide es el dueño del fichaje, repetir su nombre dos
         veces ("Javier propone corregir un fichaje de Javier") queda
         raro y no añade nada.
     -->
-    <string name="correcciones_pide_el_suyo">%1$s pide corregir un fichaje suyo</string>
-    <string name="correcciones_de_a">De %1$s a %2$s</string>
+    <!-- La tarjeta: el nombre arriba, y debajo de qué día es el fichaje. -->
+    <string name="correcciones_fichaje_del">Fichaje del %1$s</string>
+    <string name="correcciones_fichaje_del_propone">Fichaje del %1$s · lo propone %2$s</string>
+    <string name="correcciones_fila_entrada">Entrada</string>
+    <string name="correcciones_fila_salida">Salida</string>
+    <string name="correcciones_fila_pausa">Pausa</string>
+    <string name="correcciones_fila_modalidad">Modalidad</string>
+    <string name="correcciones_fila_proyectos">Proyectos</string>
+    <string name="correcciones_pausa_valor">Añadir de %1$s a %2$s</string>
+    <string name="correcciones_no_acepta_etiqueta">No lo acepta</string>
     <string name="correcciones_motivo">Motivo</string>
-    <string name="correcciones_no_acepta">No lo acepta: %1$s</string>
     <string name="correcciones_comentario">Respuesta: %1$s</string>
     <string name="correcciones_aprobar">Aprobar</string>
     <string name="correcciones_rechazar">Rechazar</string>
@@ -996,7 +1005,6 @@
     <string name="pausa_ya_anadidas">Pausas que ya añadiste a esta jornada</string>
     <string name="pausa_rango">%1$s – %2$s · %3$s</string>
     <string name="pausa_deshacer">Deshacer</string>
-    <string name="correcciones_solo_pausa">Añadir una pausa de %1$s a %2$s</string>
     <!-- Auditoría: las tres acciones nuevas -->
     <string name="auditoria_accion_solicitud_correccion">Corrección solicitada</string>
     <string name="auditoria_accion_rechazo_correccion">Corrección rechazada</string>
@@ -1031,7 +1039,13 @@
     <string name="incidencias_detalle_salida">Salida a las %1$s; prevista a las %2$s (%3$s antes)</string>
     <string name="incidencias_detalle_ausencia">Sin fichar. Jornada prevista de %1$s desde las %2$s</string>
     <string name="incidencias_detalle_otro">Prevista a las %1$s (%2$s)</string>
-    <string name="incidencias_justificacion">Explicación: %1$s</string>
+    <!-- La tarjeta: los minutos en grande, y debajo la hora prevista y la fichada. -->
+    <string name="incidencias_cifra_minutos">%1$d min</string>
+    <string name="incidencias_cifra_tarde">tarde</string>
+    <string name="incidencias_cifra_antes">antes de hora</string>
+    <string name="incidencias_fila_prevista">Prevista</string>
+    <string name="incidencias_fila_fichada">Fichada</string>
+    <string name="incidencias_nota_explicacion">Explicación</string>
     <string name="incidencias_resuelta_por">Decidida por %1$s</string>
     <string name="incidencias_resuelta_con_comentario">Decidida por %1$s: %2$s</string>
     <string name="incidencias_justificar">Explicar</string>
@@ -1095,13 +1109,9 @@
         sola se leería como si el exceso fuera de ese día.
     -->
     <string name="horas_extra_periodo_semana">Semana del %1$s al %2$s</string>
-    <!--
-        El exceso NUNCA va solo: sin el listón al lado, "3 h de más" no se
-        puede juzgar. En una semana con un puente el listón son 30 h y no
-        37,5, y esa es justo la parte que no se ve.
-    -->
-    <string name="horas_extra_exceso">%1$s por encima de %2$s</string>
-    <string name="horas_extra_justificacion">Justificación: %1$s</string>
+    <!-- La cifra va aparte y en grande ("+3h 15m"); esto es el listón, al lado. -->
+    <string name="horas_extra_sobre">por encima de %1$s</string>
+    <string name="horas_extra_nota_justificacion">Justificación</string>
     <string name="horas_extra_revisado_por">Revisado por %1$s</string>
 
     <string name="horas_extra_tipo_diaria">Jornada</string>
@@ -1111,8 +1121,14 @@
     <string name="horas_extra_estado_aceptado">Horas extra</string>
 
     <string name="horas_extra_aceptar">Se pagan</string>
-    <!-- ADR 061: compensadas con descanso en cuatro meses, no gastan bolsa -->
-    <string name="horas_extra_compensar">Se compensan con descanso</string>
+    <!-- ADR 061: compensadas con descanso en cuatro meses, no gastan bolsa. Corto: va en una
+         fila de tres botones iguales con «No computan» y «Se pagan». -->
+    <string name="horas_extra_boton_descanso">Con descanso</string>
+    <!-- Pagar o compensar no se puede deshacer: se confirma diciendo qué pasa con la bolsa. -->
+    <string name="horas_extra_confirmar_pagan_titulo">¿Se pagan estas horas?</string>
+    <string name="horas_extra_confirmar_pagan_texto">Las %1$s de %2$s (%3$s) se pagan como horas extra y cuentan en la bolsa anual de 80 h. No se puede deshacer.</string>
+    <string name="horas_extra_confirmar_descanso_titulo">¿Se compensan con descanso?</string>
+    <string name="horas_extra_confirmar_descanso_texto">%2$s descansará las %1$s (%3$s) en los cuatro meses siguientes. Mientras, no cuentan en la bolsa anual. No se puede deshacer.</string>
     <string name="horas_extra_compensada">Se compensarán con descanso.</string>
     <string name="horas_extra_se_pagan">Se pagan.</string>
     <string name="horas_extra_se_compensan">Se compensan con descanso antes del %1$s. Mientras, no gastan bolsa.</string>

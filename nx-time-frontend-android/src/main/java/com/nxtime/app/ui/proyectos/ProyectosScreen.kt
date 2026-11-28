@@ -16,16 +16,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -37,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nxtime.app.R
 import com.nxtime.app.data.dto.ProyectoDTO
 import com.nxtime.app.ui.AppViewModelProvider
+import com.nxtime.app.ui.components.BotonFlotante
 import com.nxtime.app.ui.components.BannerError
 import com.nxtime.app.ui.components.EstadoVacio
 import com.nxtime.app.ui.components.ListaConRecarga
@@ -97,10 +96,10 @@ fun ProyectosScreen(
         onVolver = onVolver,
         accionFlotante = {
             if (puedeGestionar) {
-                ExtendedFloatingActionButton(
-                    onClick = { creando = true },
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.proyectos_nuevo)) }
+                BotonFlotante(
+                    texto = stringResource(R.string.proyectos_nuevo),
+                    icono = Icons.Default.Add,
+                    onClick = { creando = true }
                 )
             }
         }
