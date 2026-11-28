@@ -141,7 +141,7 @@ describe('cambiar el rol', () => {
     });
     pintar(<Plantilla />, { sesion: sesionDe('ADMIN') });
 
-    const javier = (await screen.findByRole('cell', { name: 'Javier' })).closest('tr') as HTMLElement;
+    const javier = (await screen.findByRole('cell', { name: /^Javier\b/ })).closest('tr') as HTMLElement;
     await userEvent.click(within(javier).getByText(P.mas));
     await userEvent.click(within(javier).getByRole('button', { name: P.cambioDeRol.boton }));
     const dialogo = await screen.findByRole('dialog', { name: P.cambioDeRol.titulo('Javier') });

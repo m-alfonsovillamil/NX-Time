@@ -101,7 +101,9 @@ function PaginaDeError({ titulo, detalle, volver }: { titulo: string; detalle?: 
       <div className="nx-tarjeta nx-formulario">
         <h1>{titulo}</h1>
         {detalle !== undefined && <p>{detalle}</p>}
-        <Link to="/fichar">{volver}</Link>
+        <Link className="nx-enlace" to="/fichar">
+          {volver}
+        </Link>
       </div>
     </div>
   );

@@ -80,11 +80,12 @@ describe('plantilla', () => {
     const llamadas = simularApi({ 'GET /api/v1/gestor/plantilla': () => PLANTILLA });
     pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
 
-    expect(await screen.findByRole('cell', { name: 'Marta' })).toBeTruthy();
-    expect(screen.getAllByRole('cell', { name: P.roles.GESTOR as string })).toHaveLength(1);
-    expect(screen.queryByRole('cell', { name: 'Pedro' })).toBeNull();
+    expect(await screen.findByRole('cell', { name: /^Marta\b/ })).toBeTruthy();
+    // El rol, con el departamento debajo en la misma celda.
+    expect(screen.getAllByRole('cell', { name: /^Gestor\b/ })).toHaveLength(1);
+    expect(screen.queryByRole('cell', { name: /^Pedro\b/ })).toBeNull();
     await userEvent.click(screen.getByLabelText(P.verDeBaja));
-    expect(screen.getByRole('cell', { name: 'Pedro' })).toBeTruthy();
+    expect(screen.getByRole('cell', { name: /^Pedro\b/ })).toBeTruthy();
     expect(llamadas.a('GET', '/api/v1/gestor/mis-empleados')).toEqual([]);
   });
 
@@ -92,7 +93,7 @@ describe('plantilla', () => {
     const llamadas = simularApi({ 'GET /api/v1/gestor/mis-empleados': () => [PLANTILLA[0]] });
     pintar(<Plantilla />, { sesion: sesionDe('GESTOR') });
 
-    expect(await screen.findByRole('cell', { name: 'Javier' })).toBeTruthy();
+    expect(await screen.findByRole('cell', { name: /^Javier\b/ })).toBeTruthy();
     expect(screen.queryByRole('columnheader', { name: P.rol })).toBeNull();
     expect(screen.queryByRole('button', { name: P.editarFicha })).toBeNull();
     expect(screen.getByRole('button', { name: P.nuevoEmpleado })).toBeTruthy();
@@ -217,15 +218,15 @@ describe('plantilla', () => {
     expect(await screen.findByRole('cell', { name: 'EMP-0042' })).toBeTruthy();
     expect(screen.getByRole('columnheader', { name: P.codigo })).toBeTruthy();
     await userEvent.type(screen.getByLabelText(P.buscar), 'emp-00');
-    await waitFor(() => expect(screen.queryByRole('cell', { name: 'Javier' })).toBeNull());
-    expect(screen.getByRole('cell', { name: 'Marta' })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole('cell', { name: /^Javier\b/ })).toBeNull());
+    expect(screen.getByRole('cell', { name: /^Marta\b/ })).toBeTruthy();
   });
 
   it('sin códigos en la empresa no hay columna vacía', async () => {
     simularApi({ 'GET /api/v1/gestor/plantilla': () => PLANTILLA });
     pintar(<Plantilla />, { sesion: sesionDe('RRHH') });
 
-    expect(await screen.findByRole('cell', { name: 'Marta' })).toBeTruthy();
+    expect(await screen.findByRole('cell', { name: /^Marta\b/ })).toBeTruthy();
     expect(screen.queryByRole('columnheader', { name: P.codigo })).toBeNull();
   });
 

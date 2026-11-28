@@ -58,7 +58,7 @@ export function PreferenciasDeAvisos() {
                     </th>
                     {p.configurable ? (
                       <>
-                        <td>
+                        <td data-etiqueta={A.correo}>
                           <input
                             type="checkbox"
                             aria-label={A.correoDe(p.etiqueta ?? '')}
@@ -69,7 +69,7 @@ export function PreferenciasDeAvisos() {
                             }
                           />
                         </td>
-                        <td>
+                        <td data-etiqueta={A.push}>
                           <input
                             type="checkbox"
                             aria-label={A.pushDe(p.etiqueta ?? '')}

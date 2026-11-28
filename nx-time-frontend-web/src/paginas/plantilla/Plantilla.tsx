@@ -303,18 +303,46 @@ export function Plantilla() {
     {
       clave: 'nombre',
       cabecera: P.nombre,
+      enMovil: 'cabecera',
+      // Dos datos por celda (aquí, el correo debajo del nombre): con una columna
+      // para cada uno, la tabla medía 1320 px en un portátil de 1280 y las
+      // acciones se quedaban fuera, a la derecha (revisión del 28/11/2026).
       celda: (p) => (
         <span className="nx-con-iniciales">
           <Iniciales nombre={p.nombre ?? ''} tamano="s" />
-          <strong>{p.nombre}</strong>
+          <span className="nx-dos-lineas">
+            <strong>{p.nombre}</strong>{' '}
+            {/* El espacio no se ve (van en columna), pero un lector de pantalla
+                lee «Marta marta@…» y no «Martamarta@…». */}
+            <span className="nx-sutil">{p.email}</span>
+          </span>
         </span>
       ),
     },
-    { clave: 'email', cabecera: P.email, celda: (p) => p.email },
-    ...(entera ? [{ clave: 'rol', cabecera: P.rol, celda: (p: Persona) => P.roles[p.rol ?? ''] ?? p.rol }] : []),
-    { clave: 'departamento', cabecera: P.departamento, celda: (p) => p.departamentoNombre ?? <span className="nx-sutil">{P.sinDepartamento}</span> },
-    { clave: 'jornada', cabecera: P.jornada, celda: (p) => P.horasSemana(String(p.horasSemanales ?? '').replace('.', ',')), numerica: true },
-    { clave: 'vacaciones', cabecera: P.vacaciones, celda: (p) => P.dias(p.diasVacaciones ?? 0), numerica: true },
+    entera
+      ? {
+          clave: 'puesto',
+          cabecera: P.rolYDepartamento,
+          celda: (p) => (
+            <span className="nx-dos-lineas">
+              <span>{P.roles[p.rol ?? ''] ?? p.rol}</span>{' '}
+              <span className="nx-sutil">{p.departamentoNombre ?? P.sinDepartamento}</span>
+            </span>
+          ),
+        }
+      : { clave: 'departamento', cabecera: P.departamento, celda: (p) => p.departamentoNombre ?? <span className="nx-sutil">{P.sinDepartamento}</span> },
+    {
+      clave: 'jornada',
+      cabecera: P.jornadaYVacaciones,
+      // Sin `numerica`: es texto en dos líneas, y la columna numérica no se
+      // parte nunca; en el iPhone, «22 días de vacaciones» se salía 5 px.
+      celda: (p) => (
+        <span className="nx-dos-lineas">
+          <span>{P.horasSemana(String(p.horasSemanales ?? '').replace('.', ','))}</span>{' '}
+          <span className="nx-sutil">{P.diasDeVacaciones(p.diasVacaciones ?? 0)}</span>
+        </span>
+      ),
+    },
     {
       clave: 'estado',
       cabecera: P.estado,
@@ -331,6 +359,7 @@ export function Plantilla() {
           {
             clave: 'acciones',
             cabecera: P.acciones,
+            enMovil: 'ancha' as const,
             celda: (p: Persona) => (
               <div className="nx-acciones-fila" role="group" aria-label={P.accionesDe(p.nombre ?? '')}>
                 {puedeConfigurar && (
@@ -402,7 +431,7 @@ export function Plantilla() {
 
       {puede('empleado:crear') && <AvisoDeInvitaciones />}
 
-      <section className="nx-tarjeta">
+      <section className="nx-tarjeta nx-plantilla">
         <div className="nx-filtros">
           <Campo id="plantilla-buscar" etiqueta={P.buscar} type="search" value={texto} onChange={(e) => setTexto(e.target.value)} />
           <label className="nx-casilla">
@@ -425,7 +454,7 @@ export function Plantilla() {
                   ...columnas.slice(1),
                 ]
               : columnas;
-            return <Tabla titulo={P.tablaTitulo} columnas={columnasVistas} filas={vistas} claveDeFila={(p) => p.id ?? 0} />;
+            return <Tabla titulo={P.tablaTitulo} compacta columnas={columnasVistas} filas={vistas} claveDeFila={(p) => p.id ?? 0} />;
           }}
         </EstadoDeConsulta>
       </section>

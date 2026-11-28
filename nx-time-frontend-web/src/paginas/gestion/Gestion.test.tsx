@@ -73,12 +73,18 @@ describe('panel de gestión', () => {
 
     const tabla = await screen.findByRole('table', { name: gestion.ahora.tabla });
     const filas = within(tabla).getAllByRole('row').slice(1);
+    // Por defecto, solo quien está o falta por fichar: quien hoy no viene, solo en las cifras.
+    expect(filas).toHaveLength(2);
     expect(filas[0]?.textContent).toContain('Dani Prueba');
     expect(filas[0]?.textContent).toContain(gestion.ahora.retraso('09:00'));
     expect(filas[1]?.textContent).toContain('1h 30m');
     expect(filas[1]?.textContent).toContain(gestion.ahora.aDistancia);
-    expect(filas[2]?.textContent).toContain('Vacaciones');
     expect(screen.getByText(gestion.ahora.deEllosConRetraso(1))).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: gestion.ahora.verTodos(3) }));
+    const todas = within(screen.getByRole('table', { name: gestion.ahora.tabla })).getAllByRole('row').slice(1);
+    expect(todas).toHaveLength(3);
+    expect(todas[2]?.textContent).toContain('Vacaciones');
   });
 
   it('un EMPLEADO no ve «Ahora mismo» (no tiene fichaje:leer:equipo)', () => {
