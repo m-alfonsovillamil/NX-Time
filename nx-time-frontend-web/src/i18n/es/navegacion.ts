@@ -1,3 +1,5 @@
+import { TITULAR } from '../../legal/titular';
+
 /** El armazón: menú, cabecera, campana y menú de usuario. */
 export const navegacion = {
   saltarAlContenido: 'Saltar al contenido',
@@ -9,11 +11,11 @@ export const navegacion = {
   privacidad: {
     titulo: 'Tus datos',
     texto: (empresa: string) =>
-      `${empresa} es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. NX Time es la herramienta que usa, y los trata solo por encargo suyo.`,
+      `${empresa} es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. ${TITULAR.producto} es la herramienta que usa, y los trata solo por encargo suyo.`,
     contactoCorreo: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, escribe a',
     contactoEnlace: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, sigue su política de privacidad:',
     sinContacto: 'Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, dirígete a tu empresa.',
-    masInformacion: 'Cómo trata NX Time los datos',
+    masInformacion: `Cómo trata ${TITULAR.producto} los datos`,
     entendido: 'Entendido',
   },
 

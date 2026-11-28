@@ -1,9 +1,11 @@
 package com.nxtime.app.ui.navegacion
 
+import com.nxtime.app.BuildConfig
+
 /**
  * El destino de un enlace de la web que ha abierto la app (App Links, 1.19).
  *
- * Los botones de los correos llevan a `https://nxtime-web.com/<destino>`, con
+ * Los botones de los correos llevan a `https://<web>/<destino>`, con
  * el mismo destino lógico que el aviso que va con ese correo (`BotonDelCorreo`
  * en el backend). Si Android verifica el dominio, el enlace abre la app en vez
  * del navegador, y aquí se convierte en ese destino para que la app navegue
@@ -20,8 +22,8 @@ fun destinoDeEnlaceWeb(host: String?, ruta: String?): String? {
     return destino.takeIf { rutaDeAviso(it) != null }
 }
 
-/** Solo el dominio de la web: el del `assetlinks.json` que publica. */
-val HOSTS_DE_LA_WEB = setOf("nxtime-web.com")
+/** Solo el dominio de la web: el del `assetlinks.json` que publica (`marcaHostWeb` en Gradle). */
+val HOSTS_DE_LA_WEB = setOf(BuildConfig.HOST_WEB)
 
 /**
  * Los destinos que abren la app desde un enlace. Tienen que ir también en el

@@ -390,7 +390,7 @@ public final class NotificationEvents {
 
         /** El de "He olvidado mi contraseña", que fue el primero. */
         public AccessCodeRequested(String email, java.util.Map<String, Object> variables) {
-            this(email, variables, "access-code-recovery", "Tu código para entrar en NX Time");
+            this(email, variables, "access-code-recovery", "Tu código para entrar en {producto}");
         }
     }
 

@@ -199,7 +199,7 @@ export async function registrarServiceWorker(): Promise<void> {
   try {
     await navigator.serviceWorker.register('/sw.js');
   } catch (e) {
-    console.warn('[NX Time] No se ha podido registrar el service worker de las notificaciones.', e);
+    console.warn('[push] No se ha podido registrar el service worker de las notificaciones.', e);
   }
 }
 

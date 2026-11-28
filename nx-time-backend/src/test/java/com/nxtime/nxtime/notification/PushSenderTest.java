@@ -35,9 +35,12 @@ class PushSenderTest {
     private final NotificationEvents.NoticePublished evento =
             new NotificationEvents.NoticePublished(10L, NoticeType.CORRECCION_RESUELTA, "historial");
 
+    /** El nombre del producto, que sale de la configuración del titular. */
+    private static final String TITULO = "Jornada Clara";
+
     private PushSender sender(boolean conPasarela) {
         when(proveedor.getIfAvailable()).thenReturn(conPasarela ? gateway : null);
-        return new PushSender(deviceRepository, proveedor);
+        return new PushSender(deviceRepository, proveedor, TITULO);
     }
 
     @Test
@@ -64,7 +67,7 @@ class PushSenderTest {
         when(deviceRepository.findTokensDeUsuarioActivo(10L)).thenReturn(List.of("a", "b"));
         when(gateway.enviar(List.of("a", "b"), Map.of(
                 "tipo", "CORRECCION_RESUELTA",
-                "titulo", TextoDePush.TITULO,
+                "titulo", TITULO,
                 "cuerpo", TextoDePush.de(NoticeType.CORRECCION_RESUELTA),
                 "ruta", "historial"))).thenReturn(List.of("b"));
 
@@ -99,7 +102,7 @@ class PushSenderTest {
                 org.mockito.Mockito.mock(com.nxtime.nxtime.service.PreferenciasDeAvisosService.class);
         when(preferencias.quierePush(10L, NoticeType.CORRECCION_RESUELTA)).thenReturn(false);
 
-        new PushSender(deviceRepository, proveedor, preferencias).enviar(evento);
+        new PushSender(deviceRepository, proveedor, preferencias, TITULO).enviar(evento);
 
         verify(deviceRepository, never()).findTokensDeUsuarioActivo(anyLong());
         verify(gateway, never()).enviar(any(), any());

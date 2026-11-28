@@ -276,7 +276,7 @@ public class AuthServiceImpl implements AuthService {
         // A quien está de baja no se le puede decir «entra»: no puede.
         variables.put("activa", usuario.isActivo());
         eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
-                usuario.getEmail(), variables, "account-already-exists", "Ya tienes una cuenta en NX Time"));
+                usuario.getEmail(), variables, "account-already-exists", "Ya tienes una cuenta en {producto}"));
         log.info("Registro con un correo que ya tiene cuenta (usuario {}): no se crea nada y se le avisa.",
                 usuario.getId());
     }

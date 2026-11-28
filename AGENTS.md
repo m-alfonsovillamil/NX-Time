@@ -36,6 +36,7 @@ Están para usarlos, no para reescribirlos en cada sesión:
 - `backend-desechable.sh <base> [puerto] [--sin-compilar]`: crea la base si no existe, compila (resolviendo los bloqueos de `build/`), arranca con `dev,demo` y sin `show-sql`, y espera a los datos de demo. Comprueba antes que el puerto esté libre. También acepta `--parar <puerto>` y `--borrar <base>`. El log va a `nx-time-backend/build/backend-<base>.log`.
 - `sustituir.py cambios.py [--probar]`: aplica una lista `CAMBIOS = [(fichero, viejo, nuevo)]`; cada texto viejo debe aparecer exactamente una vez, y si alguno falla no se escribe nada. Para cambios con barras invertidas, comillas o varias líneas, que en un heredoc se rompen: el `cambios.py` se escribe con Write en el scratchpad.
 - `ui.ps1` (PowerShell: `. .\scripts\dev\ui.ps1`): manejar el emulador por el árbol de accesibilidad (`Textos`, `Tocar`, `Escribir`, `Tecla`, `Captura`).
+- `comprobar-marca.py` (en el CI) y `cambiar-nombre.py --nombre … --dominio … --paquete … [--probar]`: el nombre, el dominio y el paquete están cada uno en un solo sitio; el primero falla si aparecen escritos en otro, el segundo los cambia todos (ver `docs/CAMBIO-DE-NOMBRE.md`).
 - Además: `scripts/e2e.py` (recorrido por HTTP), `scripts/probar-restauracion.sh` y `npm run capturas` en la web.
 
 ## Gastar poco contexto
@@ -49,6 +50,7 @@ Están para usarlos, no para reescribirlos en cada sesión:
 ## Convenciones
 
 - Textos de la interfaz, mensajes de error, commits, PR y documentación, en español.
+- El nombre del producto y el dominio no se escriben en ningún texto visible: backend `CondicionesDelServicio` (o `{producto}` en un asunto de correo), web `TITULAR`, app `&marca;` o `BuildConfig.HOST_WEB`. Va a cambiar.
 - Ramas `feat/…`, `fix/…`, `docs/…` y `chore/…`, siempre con PR. El CI en verde antes de pedir el merge.
 - **Nunca mergear, desplegar ni publicar la app sin permiso explícito en cada caso.** Desplegar es lanzar «Desplegar» o tocar variables en Render, que despliega `main`.
 - Migraciones: el siguiente `Vn` libre se mira en la carpeta; nunca se edita una migración ya aplicada. Los CHECK de tipos (`ck_avisos_tipo`, `ck_ejecuciones_tarea_tarea`) se reemplazan enteros, volviendo a listar todos los valores. `VARCHAR`, nunca `CHAR(n)`.

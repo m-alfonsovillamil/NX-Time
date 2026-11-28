@@ -2,6 +2,7 @@ package com.nxtime.nxtime.service.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import com.nxtime.nxtime.domain.AbsenceRequest;
 import com.nxtime.nxtime.domain.AbsenceStatus;
 import com.nxtime.nxtime.domain.AbsenceType;
@@ -75,6 +76,8 @@ class PersonalDataExportIT {
     private PersonalDataExportService exportService;
     @Autowired
     private PersonalDataPdfGenerator pdfGenerator;
+    @Autowired
+    private CondicionesDelServicio servicio;
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
@@ -272,7 +275,7 @@ class PersonalDataExportIT {
         for (int pagina = 1; pagina <= lector.getNumberOfPages(); pagina++) {
             texto.append(extractor.getTextFromPage(pagina));
         }
-        assertThat(texto.toString()).contains("Tus datos en NX Time", ana.getEmail(), "Comida de Ana");
+        assertThat(texto.toString()).contains("Tus datos en " + servicio.producto(), ana.getEmail(), "Comida de Ana");
         assertThat(texto.toString()).doesNotContain(javi.getEmail(), "Comida de Javi");
         // Las horas del PDF van en hora de España: la nota del JSON diciendo
         // que van en UTC sería falsa aquí.

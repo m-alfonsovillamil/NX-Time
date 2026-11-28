@@ -1,5 +1,6 @@
 package com.nxtime.nxtime.service.impl;
 
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import com.nxtime.nxtime.domain.SegundoFactor;
 import com.nxtime.nxtime.domain.User;
 import com.nxtime.nxtime.dto.ActivacionSegundoFactorResponse;
@@ -54,9 +55,6 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
 
     private static final Logger log = LoggerFactory.getLogger(SegundoFactorServiceImpl.class);
 
-    /** El nombre con el que sale la cuenta en la aplicación de autenticación. */
-    static final String EMISOR = "NX Time";
-
     /**
      * El límite de intentos de los códigos va con su propia clave, separado
      * del de la contraseña. Con la misma, acertar la contraseña ponía la cuenta
@@ -80,6 +78,13 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
     private final TransactionTemplate escritura;
     private final Clock reloj;
 
+    /**
+     * El nombre con el que sale la cuenta en la aplicación de autenticación: el
+     * del producto. Con otro nombre, las cuentas ya añadidas siguen con el viejo
+     * (es solo una etiqueta: los códigos valen igual).
+     */
+    private final String emisor;
+
     @Autowired
     public SegundoFactorServiceImpl(
             SegundoFactorRepository segundosFactores,
@@ -92,9 +97,10 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
             PasswordEncoder passwordEncoder,
             TurnoDeContrasena turnoDeContrasena,
             ApplicationEventPublisher eventos,
-            PlatformTransactionManager transacciones) {
+            PlatformTransactionManager transacciones,
+            CondicionesDelServicio servicio) {
         this(segundosFactores, codigos, usuarios, sesiones, secretos, obligatorio, limitador, passwordEncoder,
-                turnoDeContrasena, eventos, transacciones, Clock.systemUTC());
+                turnoDeContrasena, eventos, transacciones, Clock.systemUTC(), servicio.producto());
     }
 
     SegundoFactorServiceImpl(
@@ -109,7 +115,9 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
             TurnoDeContrasena turnoDeContrasena,
             ApplicationEventPublisher eventos,
             PlatformTransactionManager transacciones,
-            Clock reloj) {
+            Clock reloj,
+            String emisor) {
+        this.emisor = emisor;
         this.segundosFactores = segundosFactores;
         this.codigos = codigos;
         this.usuarios = usuarios;
@@ -147,7 +155,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
             throw new BusinessException("Ya tienes el segundo factor activado. Para cambiar de móvil, desactívalo "
                     + "y vuelve a activarlo.", HttpStatus.CONFLICT);
         }
-        String uri = Totp.uri(EMISOR, usuario.getEmail(), secreto);
+        String uri = Totp.uri(emisor, usuario.getEmail(), secreto);
         return new ActivacionSegundoFactorResponse(Totp.base32(secreto), uri,
                 QrEnSvg.de(uri, "Código QR para la aplicación de autenticación"));
     }
@@ -176,7 +184,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
             sesion.ifPresent(familia -> sesiones.marcarConSegundoFactor(familia, usuario));
             // Dentro de la transacción: el correo sale al confirmarse, y sin
             // una no saldría (el evento es AFTER_COMMIT).
-            avisar(usuario, "ACTIVADO", "Has activado el segundo factor en NX Time", Map.of());
+            avisar(usuario, "ACTIVADO", "Has activado el segundo factor en {producto}", Map.of());
             return codigosNuevos(usuario.getId());
         });
         log.info("Segundo factor activado: {}", usuario.getId());
@@ -199,7 +207,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
                 throw new BusinessException(CODIGO_INCORRECTO, HttpStatus.BAD_REQUEST);
             }
             borrar(usuario.getId());
-            avisar(usuario, "DESACTIVADO", "Has desactivado el segundo factor en NX Time", Map.of());
+            avisar(usuario, "DESACTIVADO", "Has desactivado el segundo factor en {producto}", Map.of());
         });
         log.info("Segundo factor desactivado: {}", usuario.getId());
     }
@@ -213,7 +221,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
             throw new BusinessException(CODIGO_INCORRECTO, HttpStatus.BAD_REQUEST);
         }
         List<String> nuevos = codigosNuevos(usuario.getId());
-        avisar(usuario, "CODIGOS", "Tienes códigos de recuperación nuevos en NX Time", Map.of());
+        avisar(usuario, "CODIGOS", "Tienes códigos de recuperación nuevos en {producto}", Map.of());
         return nuevos;
     }
 
@@ -238,7 +246,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
         }
         borrar(usuarioId);
         log.warn("{} ha quitado el segundo factor de {}", quien.getId(), usuarioId);
-        avisar(persona, "QUITADO", "Te han quitado el segundo factor en NX Time",
+        avisar(persona, "QUITADO", "Te han quitado el segundo factor en {producto}",
                 Map.of("quien", (quien.getNombre() + " " + (quien.getApellidos() == null ? "" : quien.getApellidos())).strip()));
     }
 
@@ -277,7 +285,7 @@ public class SegundoFactorServiceImpl implements SegundoFactorService {
         limitador.acierto(LIMITE + usuario.getEmail());
         int quedan = codigos.quedan(usuario.getId());
         log.warn("{} ha usado un código de recuperación; le quedan {}", usuario.getId(), quedan);
-        avisar(usuario, "RECUPERACION", "Se ha usado un código de recuperación en tu cuenta de NX Time",
+        avisar(usuario, "RECUPERACION", "Se ha usado un código de recuperación en tu cuenta de {producto}",
                 Map.of("quedan", quedan));
         return true;
     }

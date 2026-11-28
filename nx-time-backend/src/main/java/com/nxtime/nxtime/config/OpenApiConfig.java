@@ -25,12 +25,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(
-                title = "NX Time API",
+                title = "${application.titular.producto} API",
                 version = "v1",
-                description = "API REST del backend de NX Time: registro horario (fichaje), "
+                description = "API REST del backend de ${application.titular.producto}: registro horario (fichaje), "
                         + "gestión de ausencias y administración de empleados, multi-tenant "
                         + "por empresa.",
-                contact = @Contact(name = "NX Time")),
+                contact = @Contact(name = "${application.titular.producto}")),
         /*
          * Los servidores, declarados (Fase C1).
          *

@@ -203,7 +203,7 @@ public class ImportacionDePlantillaServiceImpl implements ImportacionDePlantilla
             } else if (email.length() > 255 || !CORREO.matcher(email).matches()) {
                 errores.add("El correo no tiene un formato válido.");
             } else if (yaExisten.contains(email)) {
-                errores.add("Ese correo ya tiene cuenta en NX Time.");
+                errores.add("Ese correo ya tiene cuenta.");
             } else if (primeraVez.containsKey(email)) {
                 errores.add("El correo está repetido: ya sale en la fila " + primeraVez.get(email) + ".");
             } else {

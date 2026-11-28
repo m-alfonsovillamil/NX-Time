@@ -1,6 +1,7 @@
 package com.nxtime.nxtime.notification;
 
 import com.nxtime.nxtime.config.AsyncConfig;
+import com.nxtime.nxtime.config.CondicionesDelServicio;
 import com.nxtime.nxtime.repository.PushDeviceRepository;
 import java.util.List;
 import java.util.Map;
@@ -43,16 +44,26 @@ public class PushSender {
     /** Lo que ha elegido cada persona (ADR 059). Null en los tests que no lo usan: todo llega. */
     private final com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias;
 
-    public PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway) {
-        this(deviceRepository, gateway, null);
-    }
+    /** El título de todos los push: el nombre del producto. */
+    private final String titulo;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway,
-            com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias) {
+            com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias, CondicionesDelServicio servicio) {
+        this(deviceRepository, gateway, preferencias, servicio.producto());
+    }
+
+    /** Para los tests que no miran las preferencias: todo llega. */
+    PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway, String titulo) {
+        this(deviceRepository, gateway, null, titulo);
+    }
+
+    PushSender(PushDeviceRepository deviceRepository, ObjectProvider<PushGateway> gateway,
+            com.nxtime.nxtime.service.PreferenciasDeAvisosService preferencias, String titulo) {
         this.deviceRepository = deviceRepository;
         this.gateway = gateway;
         this.preferencias = preferencias;
+        this.titulo = titulo;
     }
 
     /**
@@ -84,7 +95,7 @@ public class PushSender {
             }
             List<String> muertos = salida.enviar(tokens, Map.of(
                     "tipo", evento.tipo().name(),
-                    "titulo", TextoDePush.TITULO,
+                    "titulo", titulo,
                     "cuerpo", TextoDePush.de(evento.tipo()),
                     "ruta", evento.rutaDestino() == null ? "" : evento.rutaDestino()));
             if (!muertos.isEmpty()) {

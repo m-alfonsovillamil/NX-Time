@@ -158,7 +158,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         variables.put("urlDescargaApp", urlDescargaApp);
         try {
             emailSender.enviarObligatorio(
-                    usuario.getEmail(), "Tu cuenta de NX Time", "access-code-welcome", variables);
+                    usuario.getEmail(), "Tu cuenta de {producto}", "access-code-welcome", variables);
         } catch (EmailNotSentException e) {
             log.error("No se pudo enviar el código de alta a {}: {}", usuario.getId(), e.getCause().getMessage());
             // Al lanzar, la transacción del alta se deshace: ni cuenta ni código.
@@ -261,7 +261,7 @@ public class AccessCodeServiceImpl implements AccessCodeService {
         Map<String, Object> variables = variables(usuario, codigo, AccessCodeType.CONFIRMACION);
         variables.put("nombreEmpresa", usuario.getEmpresa().getNombre());
         eventPublisher.publishEvent(new NotificationEvents.AccessCodeRequested(
-                usuario.getEmail(), variables, "access-code-confirm", "Confirma tu correo en NX Time"));
+                usuario.getEmail(), variables, "access-code-confirm", "Confirma tu correo en {producto}"));
         log.info("Código de confirmación emitido para el usuario {}", usuario.getId());
     }
 

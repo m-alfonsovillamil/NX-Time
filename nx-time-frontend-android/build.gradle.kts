@@ -32,6 +32,18 @@ kotlin {
 }
 
 /*
+ * La marca (plan P): el paquete y el dominio de la web, una sola vez. El nombre
+ * que se ve está en `res/values/strings.xml` (la entidad `&marca;`). Los tres
+ * los cambia `scripts/dev/cambiar-nombre.py`, y `scripts/dev/comprobar-marca.py`
+ * avisa en el CI si el nombre o el dominio aparecen escritos en otro sitio.
+ *
+ * 🚨 El paquete es para siempre en cuanto la app esté en Google Play: con otro,
+ * es otra app (ver docs/CAMBIO-DE-NOMBRE.md).
+ */
+val marcaPaquete = "com.nxtime.app"
+val marcaHostWeb = "nxtime-web.com"
+
+/*
  * El bloque 'android' es la configuración principal de la app.
  */
 
@@ -40,7 +52,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.nxtime.app"
+        applicationId = marcaPaquete
         minSdk = 24
         targetSdk = 36
         /*
@@ -83,6 +95,11 @@ android {
         versionCode = 27
         versionName = "1.26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // El dominio de la web: App Links (el `intent-filter` de MainActivity
+        // con `${hostWeb}`) y los enlaces que la app reconoce como suyos.
+        manifestPlaceholders["hostWeb"] = marcaHostWeb
+        buildConfigField("String", "HOST_WEB", "\"$marcaHostWeb\"")
 
         /*
          * DSN de Sentry (paso 5 del piloto). Se lee igual que la URL de
@@ -163,7 +180,7 @@ android {
             buildConfigField("String", "BASE_URL", "\"$urlProduccion\"")
             // La web es pública (no es un secreto como la URL del backend):
             // a ella enlazan las pantallas que en el móvil no caben (ADR 026).
-            buildConfigField("String", "WEB_URL", "\"https://nxtime-web.com/\"")
+            buildConfigField("String", "WEB_URL", "\"https://$marcaHostWeb/\"")
         }
     }
 

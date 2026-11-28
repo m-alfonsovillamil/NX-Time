@@ -1,3 +1,5 @@
+import { TITULAR } from '../../legal/titular';
+
 /** El kiosco de fichaje (ADR 033): la tablet, su gestión y lo de cada persona. */
 export const kiosco = {
   tablet: {
@@ -48,7 +50,7 @@ export const kiosco = {
   gestion: {
     titulo: 'Kioscos',
     explicacion:
-      'Una tablet en la entrada donde la plantilla ficha sin abrir su sesión: con su tarjeta o con su nombre y su PIN. Abre nxtime-web.com/kiosco en la tablet y teclea aquí el código que enseña.',
+      `Una tablet en la entrada donde la plantilla ficha sin abrir su sesión: con su tarjeta o con su nombre y su PIN. Abre ${TITULAR.dominio}/kiosco en la tablet y teclea aquí el código que enseña.`,
     codigo: 'Código de la tablet',
     nombre: 'Nombre del kiosco',
     nombreAyuda: 'Para reconocerlo: «Entrada almacén», «Obra calle Mayor».',
