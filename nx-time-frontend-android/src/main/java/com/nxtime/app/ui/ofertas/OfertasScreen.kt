@@ -157,7 +157,9 @@ private fun TarjetaOferta(oferta: OfertaDTO, onAbrir: () -> Unit) {
                         onClick = onAbrir,
                         label = { Text(stringResource(R.string.oferta_ya_presentado)) },
                         colors = AssistChipDefaults.assistChipColors(
-                            labelColor = MaterialTheme.colorScheme.tertiary
+                            // En azul noche y no en petróleo: el petróleo es solo
+                            // de la zona de gestión (ADR 057), y esto es del empleado.
+                            labelColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }

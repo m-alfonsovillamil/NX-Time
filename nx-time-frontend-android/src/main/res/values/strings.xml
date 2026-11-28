@@ -372,7 +372,8 @@
     <string name="historial_salida">Salida</string>
     <string name="historial_total">Total</string>
     <string name="historial_pausa">Pausa: %1$s</string>
-    <string name="historial_en_curso">Jornada sin cerrar</string>
+    <!-- Va en la columna «Salida»: «Jornada sin cerrar» se partía en dos líneas. -->
+    <string name="historial_en_curso">Sin cerrar</string>
 
     <!-- Ausencias -->
     <string name="historial_periodo_recientes">Recientes</string>
@@ -612,7 +613,7 @@
     <string name="avisos_titulo">Avisos</string>
     <string name="avisos_vacio_titulo">No tienes avisos</string>
     <string name="avisos_vacio_texto">Aquí aparecerán las novedades sobre tus ausencias y tu cuenta.</string>
-    <string name="avisos_marcar_todos">Marcar todo</string>
+    <string name="avisos_marcar_todos">Marcar todos como leídos</string>
     <!-- El número que cabe en el círculo del badge; a partir de ahí, "9+". -->
     <string name="avisos_muchos">%1$d+</string>
     <!-- "many" (múltiplos de un millón) es obligatoria en castellano desde CLDR 42. -->

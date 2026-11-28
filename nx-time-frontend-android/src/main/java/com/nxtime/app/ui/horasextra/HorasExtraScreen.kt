@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -99,33 +100,34 @@ fun HorasExtraScreen(
                     }
                 }
 
-                estado.bolsa?.let { bolsa ->
-                    item { TarjetaBolsa(bolsa) }
+                val lasMias: LazyListScope.() -> Unit = {
+                    estado.bolsa?.let { bolsa ->
+                        item { TarjetaBolsa(bolsa) }
+                    }
+
+                    item {
+                        Text(
+                            text = stringResource(R.string.horas_extra_mios),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    if (estado.mios.isEmpty() && !estado.cargando) {
+                        // SeccionVacia y no EstadoVacio: el segundo ocupa la
+                        // pantalla entera y hace scroll propio, y dentro de
+                        // un item{} de LazyColumn revienta la app con
+                        // "measured with an infinity maximum height".
+                        item { SeccionVacia(stringResource(R.string.horas_extra_vacio_texto)) }
+                    }
+                    items(estado.mios, key = { "mio-" + it.id }) { aviso ->
+                        // Sin botones: nadie revisa sus propias horas extra,
+                        // ni siquiera quien tiene el permiso. El servidor lo
+                        // rechaza con 403, así que ofrecerlos sería ofrecer
+                        // algo que va a fallar.
+                        TarjetaHorasExtra(aviso = aviso, conNombre = false)
+                    }
                 }
 
-                item {
-                    Text(
-                        text = stringResource(R.string.horas_extra_mios),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                if (estado.mios.isEmpty() && !estado.cargando) {
-                    // SeccionVacia y no EstadoVacio: el segundo ocupa la
-                    // pantalla entera y hace scroll propio, y dentro de
-                    // un item{} de LazyColumn revienta la app con
-                    // "measured with an infinity maximum height".
-                    item { SeccionVacia(stringResource(R.string.horas_extra_vacio_texto)) }
-                }
-                items(estado.mios, key = { "mio-" + it.id }) { aviso ->
-                    // Sin botones: nadie revisa sus propias horas extra,
-                    // ni siquiera quien tiene el permiso. El servidor lo
-                    // rechaza con 403, así que ofrecerlos sería ofrecer
-                    // algo que va a fallar.
-                    TarjetaHorasExtra(aviso = aviso, conNombre = false)
-                }
-
-                if (estado.puedeRevisar) {
-                    item { HorizontalDivider() }
+                val lasDelEquipo: LazyListScope.() -> Unit = {
                     item {
                         Text(
                             text = stringResource(R.string.horas_extra_del_equipo),
@@ -148,6 +150,21 @@ fun HorasExtraScreen(
                             onCompensar = { aConfirmar = aviso to Decision.DESCANSO },
                             onJustificar = { aJustificar = aviso }
                         )
+                    }
+                }
+
+                // A quien revisa y tiene pendientes, lo del equipo primero: es
+                // a lo que viene desde Gestión, y antes tenía que bajar más allá
+                // de su bolsa y de sus propios excesos (revisión del 28/11/2026).
+                if (estado.puedeRevisar && estado.delEquipo.isNotEmpty()) {
+                    lasDelEquipo()
+                    item { HorizontalDivider() }
+                    lasMias()
+                } else {
+                    lasMias()
+                    if (estado.puedeRevisar) {
+                        item { HorizontalDivider() }
+                        lasDelEquipo()
                     }
                 }
             }
