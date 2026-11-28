@@ -62,8 +62,11 @@ fun TarjetaAusencia(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // En la lista del gestor manda la persona, como en las demás
+                // tarjetas de revisión: es lo que se busca primero. El tipo
+                // pasa a la línea de debajo.
                 Text(
-                    text = stringResource(peticion.tipo.etiqueta),
+                    text = if (mostrarEmpleado) peticion.usuario.nombre else stringResource(peticion.tipo.etiqueta),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -72,9 +75,9 @@ fun TarjetaAusencia(
 
             if (mostrarEmpleado) {
                 Text(
-                    text = peticion.usuario.nombre,
+                    text = stringResource(peticion.tipo.etiqueta),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -82,11 +85,17 @@ fun TarjetaAusencia(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = stringResource(
-                    R.string.ausencias_rango,
-                    DateFormats.fechaCorta(peticion.fechaInicio),
-                    DateFormats.fechaCorta(peticion.fechaFin)
-                ),
+                // Un solo día se dice una vez: "Del 02/12 al 02/12" parecía
+                // un rango mal escrito (todos los medios días lo son).
+                text = if (peticion.fechaInicio == peticion.fechaFin) {
+                    stringResource(R.string.ausencias_un_dia, DateFormats.fechaCorta(peticion.fechaInicio))
+                } else {
+                    stringResource(
+                        R.string.ausencias_rango,
+                        DateFormats.fechaCorta(peticion.fechaInicio),
+                        DateFormats.fechaCorta(peticion.fechaFin)
+                    )
+                },
                 style = MaterialTheme.typography.bodyLarge
             )
 

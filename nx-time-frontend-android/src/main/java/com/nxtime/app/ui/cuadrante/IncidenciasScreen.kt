@@ -3,7 +3,6 @@ package com.nxtime.app.ui.cuadrante
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,23 +11,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import com.nxtime.app.ui.components.finDeLista
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,12 +31,16 @@ import com.nxtime.app.R
 import com.nxtime.app.data.dto.IncidenciaDTO
 import com.nxtime.app.ui.AppViewModelProvider
 import com.nxtime.app.ui.components.BannerError
+import com.nxtime.app.ui.components.BotonDeRevision
+import com.nxtime.app.ui.components.FilaDeDato
 import com.nxtime.app.ui.components.Insignia
+import com.nxtime.app.ui.components.NotaDeRevision
+import com.nxtime.app.ui.components.PesoDeBoton
+import com.nxtime.app.ui.components.TarjetaDeRevision
 import com.nxtime.app.ui.components.TonoDeInsignia
 import com.nxtime.app.ui.components.ListaConRecarga
 import com.nxtime.app.ui.components.PantallaConBarra
 import com.nxtime.app.ui.components.SeccionVacia
-import com.nxtime.app.ui.theme.elevacionDeTarjeta
 import com.nxtime.app.ui.util.DateFormats
 import com.nxtime.app.ui.util.resolver
 
@@ -176,93 +175,118 @@ private fun TarjetaIncidencia(
 ) {
     val tipo = TipoIncidencia.de(incidencia.tipo)
     val estado = EstadoIncidencia.de(incidencia.estado)
+    val cuando = cabecera(incidencia, tipo)
+    val explica = estado?.esperaDecision == true && onJustificar != null
+    val decide = estado?.esperaDecision == true && onAceptar != null && onRechazar != null
+    // Un retraso o una salida antes de hora se miden en minutos: esa es la
+    // cifra. Un día sin fichar no tiene cifra que comparar, va en una frase.
+    val conCifra = tipo == TipoIncidencia.RETRASO || tipo == TipoIncidencia.SALIDA_ANTICIPADA
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = elevacionDeTarjeta(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = cabecera(incidencia, tipo, conNombre),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
+    TarjetaDeRevision(
+        titulo = if (conNombre) incidencia.usuario else cuando,
+        subtitulo = if (conNombre) cuando else null,
+        estado = estado?.let {
+            {
+                Insignia(
+                    texto = stringResource(it.etiqueta),
+                    tono = when (it) {
+                        EstadoIncidencia.ACEPTADA -> TonoDeInsignia.EXITO
+                        EstadoIncidencia.RECHAZADA -> TonoDeInsignia.ERROR
+                        EstadoIncidencia.PENDIENTE, EstadoIncidencia.JUSTIFICADA -> TonoDeInsignia.AVISO
+                    }
                 )
-                estado?.let {
-                    Insignia(
-                        texto = stringResource(it.etiqueta),
-                        tono = when (it) {
-                            EstadoIncidencia.ACEPTADA -> TonoDeInsignia.EXITO
-                            EstadoIncidencia.RECHAZADA -> TonoDeInsignia.ERROR
-                            EstadoIncidencia.PENDIENTE, EstadoIncidencia.JUSTIFICADA -> TonoDeInsignia.AVISO
-                        }
-                    )
-                }
             }
-
-            Spacer(Modifier.height(8.dp))
-            Text(text = detalle(incidencia, tipo), style = MaterialTheme.typography.bodyMedium)
+        },
+        // "34 min" y no "0h 34m": casi todas son de minutos, y así se leen.
+        cifra = if (conCifra) {
+            if (incidencia.minutos < 60) {
+                stringResource(R.string.incidencias_cifra_minutos, incidencia.minutos)
+            } else {
+                DateFormats.minutos(incidencia.minutos.toLong())
+            }
+        } else {
+            null
+        },
+        cifraDetalle = when (tipo) {
+            TipoIncidencia.RETRASO -> stringResource(R.string.incidencias_cifra_tarde)
+            TipoIncidencia.SALIDA_ANTICIPADA -> stringResource(R.string.incidencias_cifra_antes)
+            else -> null
+        },
+        contenido = {
+            if (conCifra) {
+                // La hora prevista junto a la real: "25 min tarde" sin
+                // "respecto a las 9:00" no se puede explicar ni juzgar.
+                Spacer(Modifier.height(4.dp))
+                FilaDeDato(
+                    etiqueta = stringResource(R.string.incidencias_fila_prevista),
+                    valor = incidencia.horaPrevista + " h"
+                )
+                FilaDeDato(
+                    etiqueta = stringResource(R.string.incidencias_fila_fichada),
+                    valor = DateFormats.hora(incidencia.horaReal)
+                )
+            } else {
+                Text(
+                    text = detalle(incidencia, tipo),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
 
             incidencia.justificacion?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.incidencias_justificacion, it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                NotaDeRevision(texto = it, etiqueta = stringResource(R.string.incidencias_nota_explicacion))
             }
             incidencia.resueltaPor?.let { quien ->
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = incidencia.comentarioResolucion
                         ?.let { stringResource(R.string.incidencias_resuelta_con_comentario, quien, it) }
                         ?: stringResource(R.string.incidencias_resuelta_por, quien),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
-
-            if (estado?.esperaDecision == true) {
-                val botones = onJustificar != null || (onAceptar != null && onRechazar != null)
-                if (botones) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                        onJustificar?.let {
-                            TextButton(onClick = it) {
-                                Text(
-                                    stringResource(
-                                        if (estado == EstadoIncidencia.JUSTIFICADA) R.string.incidencias_cambiar_justificacion
-                                        else R.string.incidencias_justificar
-                                    ),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                        if (onAceptar != null && onRechazar != null) {
-                            TextButton(onClick = onRechazar) { Text(stringResource(R.string.incidencias_rechazar)) }
-                            TextButton(onClick = onAceptar) {
-                                Text(stringResource(R.string.incidencias_aceptar), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
+        },
+        acciones = if (explica || decide) {
+            {
+                if (explica) {
+                    BotonDeRevision(
+                        texto = stringResource(
+                            if (estado == EstadoIncidencia.JUSTIFICADA) R.string.incidencias_cambiar_justificacion
+                            else R.string.incidencias_justificar
+                        ),
+                        onClick = onJustificar!!
+                    )
+                }
+                if (decide) {
+                    BotonDeRevision(
+                        texto = stringResource(R.string.incidencias_rechazar),
+                        onClick = onRechazar!!,
+                        peso = PesoDeBoton.CONTORNO,
+                        negativo = true
+                    )
+                    BotonDeRevision(
+                        texto = stringResource(R.string.incidencias_aceptar),
+                        onClick = onAceptar!!
+                    )
                 }
             }
+        } else {
+            null
         }
-    }
+    )
 }
 
-/** "Lun 05/10 · Retraso", con el nombre delante si la incidencia es de otra persona. */
+/** "Lunes 23/11/2026 · Retraso". */
 @Composable
-private fun cabecera(incidencia: IncidenciaDTO, tipo: TipoIncidencia?, conNombre: Boolean): String {
+private fun cabecera(incidencia: IncidenciaDTO, tipo: TipoIncidencia?): String {
     val fecha = DateFormats.fechaIso(incidencia.fecha)
     val dia = if (fecha != null) {
         DateFormats.nombreDelDia(fecha.dayOfWeek) + " " + DateFormats.fechaCorta(fecha)
     } else {
         incidencia.fecha
     }
-    val texto = tipo?.let { "$dia · " + stringResource(it.etiqueta) } ?: dia
-    return if (conNombre) "${incidencia.usuario} · $texto" else texto
+    return tipo?.let { "$dia · " + stringResource(it.etiqueta) } ?: dia
 }
 
 /** Lo real contra lo previsto, siempre juntos. */
