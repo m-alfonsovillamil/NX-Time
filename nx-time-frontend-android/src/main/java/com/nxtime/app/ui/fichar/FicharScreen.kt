@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -947,6 +948,7 @@ private fun DialogoDeProyecto(
                             .selectable(
                                 selected = elegido == proyecto.id,
                                 enabled = !esElActual,
+                                role = Role.RadioButton,
                                 onClick = { elegido = proyecto.id }
                             )
                             .padding(vertical = 4.dp)
@@ -954,7 +956,8 @@ private fun DialogoDeProyecto(
                         RadioButton(
                             selected = elegido == proyecto.id || esElActual,
                             enabled = !esElActual,
-                            onClick = { elegido = proyecto.id }
+                            // Sin onClick: lo recoge la fila (plan P9).
+                            onClick = null
                         )
                         Column {
                             Text(proyecto.codigo, style = MaterialTheme.typography.bodyLarge)

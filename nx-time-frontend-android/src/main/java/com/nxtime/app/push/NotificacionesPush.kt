@@ -45,7 +45,7 @@ object NotificacionesPush {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notificacion = NotificationCompat.Builder(contexto, CANAL)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(com.nxtime.app.R.drawable.ic_notificacion)
             .setContentTitle(titulo)
             .setContentText(cuerpo)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

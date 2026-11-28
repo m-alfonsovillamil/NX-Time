@@ -47,6 +47,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -688,7 +690,14 @@ private fun FilaEmpleado(
                 }
             }
             if (puedeGestionar) {
-                Switch(checked = empleado.activo, onCheckedChange = onCambiaEstado)
+                // Va solo, entre botones: sin esto el lector de pantalla
+                // decía «interruptor» sin decir de qué ni de quién.
+                val etiqueta = stringResource(R.string.empresa_interruptor_activo, empleado.nombre)
+                Switch(
+                    checked = empleado.activo,
+                    onCheckedChange = onCambiaEstado,
+                    modifier = Modifier.semantics { contentDescription = etiqueta }
+                )
             }
         }
         HorizontalDivider()

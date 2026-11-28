@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.components
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Badge
@@ -8,8 +9,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.nxtime.app.R
 
 /** A partir de aquí el número deja de caber en el círculo del badge. */
@@ -45,7 +48,10 @@ fun CampanaDeAvisos(contador: Int, onClick: () -> Unit) {
             }
         }
     ) {
-        IconButton(onClick = onClick) {
+        // 48 dp fijos: dentro del BadgedBox se quedaba en 42 de ancho, por
+        // debajo de lo que Android pide para algo que se toca (visto con el
+        // árbol de accesibilidad en el emulador, plan P9).
+        IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
             // La descripción la lleva el icono y no el BadgedBox para
             // que el lector de pantalla anuncie el número al enfocar el
             // botón, que es lo que se puede pulsar.

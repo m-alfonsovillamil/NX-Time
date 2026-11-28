@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -43,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.layout.size
 import com.nxtime.app.ui.components.FilaDeTarjeta
+import com.nxtime.app.ui.components.FilaConInterruptor
 import com.nxtime.app.ui.components.TarjetaDeFilas
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -57,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -388,11 +391,12 @@ private fun OpcionDeTema(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .selectable(selected = tema == temaActual, onClick = { onElegir(tema) })
-            .padding(vertical = 8.dp),
+            .selectable(selected = tema == temaActual, role = Role.RadioButton, onClick = { onElegir(tema) })
+            .heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = tema == temaActual, onClick = { onElegir(tema) })
+        // Sin onClick: lo recoge la fila, y así se anuncia con su texto (plan P9).
+        RadioButton(selected = tema == temaActual, onClick = null)
         Spacer(Modifier.width(8.dp))
         Text(stringResource(etiqueta), style = MaterialTheme.typography.bodyLarge)
     }
@@ -432,19 +436,14 @@ private fun Seguridad(
     onCambiar: (Boolean) -> Unit
 ) {
     Tarjeta(stringResource(R.string.ajustes_seguridad)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Sin sensor o sin huellas dadas de alta, el interruptor se
+        // apaga y se dice POR QUÉ: uno gris sin explicación se lee
+        // como una aplicación rota.
+        FilaConInterruptor(activa, onCambiar, enabled = estadoHuella == EstadoDeLaHuella.DISPONIBLE) {
             Text(
                 text = stringResource(R.string.ajustes_huella),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
-            )
-            // Sin sensor o sin huellas dadas de alta, el interruptor se
-            // apaga y se dice POR QUÉ: uno gris sin explicación se lee
-            // como una aplicación rota.
-            Switch(
-                checked = activa,
-                onCheckedChange = onCambiar,
-                enabled = estadoHuella == EstadoDeLaHuella.DISPONIBLE
             )
         }
         Text(
@@ -497,24 +496,18 @@ private fun PreferenciasDeAvisos(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                FilaConInterruptor(p.correo, { onCambiar(p.categoria, it, p.push) }) {
                     Text(
                         text = stringResource(R.string.ajustes_avisos_correo),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(checked = p.correo, onCheckedChange = { onCambiar(p.categoria, it, p.push) })
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                FilaConInterruptor(p.push, { onCambiar(p.categoria, p.correo, it) }, enabled = pushActivo) {
                     Text(
                         text = stringResource(R.string.ajustes_avisos_movil),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
-                    )
-                    Switch(
-                        checked = p.push,
-                        enabled = pushActivo,
-                        onCheckedChange = { onCambiar(p.categoria, p.correo, it) }
                     )
                 }
             }
@@ -532,13 +525,12 @@ private fun PreferenciasDeAvisos(
 @Composable
 private fun Notificaciones(activas: Boolean, permitidasPorAndroid: Boolean, onCambiar: (Boolean) -> Unit) {
     Tarjeta(stringResource(R.string.ajustes_push_seccion)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FilaConInterruptor(activas, onCambiar) {
             Text(
                 text = stringResource(R.string.ajustes_push),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(checked = activas, onCheckedChange = onCambiar)
         }
         Text(
             text = stringResource(R.string.ajustes_push_detalle),
@@ -565,13 +557,12 @@ private fun Recordatorio(
     onCambiarHoras: (String, String) -> Unit
 ) {
     Tarjeta(stringResource(R.string.ajustes_recordatorio_seccion)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FilaConInterruptor(activo, onCambiarActivo) {
             Text(
                 text = stringResource(R.string.ajustes_recordatorio),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(checked = activo, onCheckedChange = onCambiarActivo)
         }
         Text(
             text = stringResource(R.string.ajustes_recordatorio_detalle),
@@ -637,13 +628,12 @@ private fun Privacidad(
     onRetirarBorrado: () -> Unit
 ) {
     Tarjeta(stringResource(R.string.ajustes_privacidad)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        FilaConInterruptor(activos, onCambiar) {
             Text(
                 text = stringResource(R.string.ajustes_informes_errores),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
-            Switch(checked = activos, onCheckedChange = onCambiar)
         }
         Text(
             text = stringResource(R.string.ajustes_informes_errores_detalle),

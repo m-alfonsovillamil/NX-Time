@@ -169,6 +169,22 @@
         </service>
 
         <!--
+            El widget de la jornada (plan P12): si estás trabajando, en pausa o
+            sin jornada, y tocarlo abre Fichar. Lo pinta Glance.
+        -->
+        <receiver
+                android:name=".widget.WidgetDeJornadaReceiver"
+                android:exported="true"
+                android:label="@string/widget_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                    android:name="android.appwidget.provider"
+                    android:resource="@xml/widget_de_jornada" />
+        </receiver>
+
+        <!--
             Sin esto, Firebase pide un token a Google en el primer arranque,
             lo quiera o no quien usa la app. Los push van apagados por
             defecto: el token se pide al encenderlos en Ajustes.

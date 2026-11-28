@@ -79,6 +79,8 @@ class NxTimeApplication : Application() {
             // Y el token de push, por lo mismo: si no, este móvil seguiría
             // recibiendo los avisos de quien se fue.
             registroDePush.alCerrarSesion()
+            // El widget deja de enseñar la jornada de quien se fue.
+            com.nxtime.app.widget.ActualizarWidget.ahora(this)
         }
 
         // 2. Creamos RetrofitClient y le pasamos el sessionManager, y el
@@ -95,7 +97,10 @@ class NxTimeApplication : Application() {
         }
 
         // 4.1. Fichar sin conexión (ADR 054).
-        colaDeFichajes = com.nxtime.app.data.sinconexion.ColaEnPreferencias(this)
+        // Cada vez que la app sabe algo nuevo de la jornada, el widget lo enseña.
+        colaDeFichajes = com.nxtime.app.data.sinconexion.ColaEnPreferencias(this) {
+            com.nxtime.app.widget.ActualizarWidget.ahora(this)
+        }
         entornoDelMovil = com.nxtime.app.data.sinconexion.EntornoAndroid(this)
         envioDeFichajes = com.nxtime.app.data.sinconexion.EnvioDeFichajes(
             authRepository, colaDeFichajes, entornoDelMovil, sessionManager::correoDeLaSesion
@@ -112,6 +117,8 @@ class NxTimeApplication : Application() {
         )
         registroDePush.registrarSiToca()
 
+        // Los accesos directos del icono (plan P12): Fichar, Pedir ausencia, Historial.
+        com.nxtime.app.ui.atajos.Atajos.publicar(this)
     }
 
     /**

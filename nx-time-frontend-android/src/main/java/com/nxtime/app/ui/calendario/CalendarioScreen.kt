@@ -1,5 +1,6 @@
 package com.nxtime.app.ui.calendario
 
+import com.nxtime.app.ui.components.FilaConInterruptor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -453,16 +454,12 @@ private fun Leyenda() {
 
 @Composable
 private fun InterruptorDeEquipo(marcado: Boolean, onCambia: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    FilaConInterruptor(marcado, onCambia) {
         Text(
             text = stringResource(R.string.calendario_ver_equipo),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        Switch(checked = marcado, onCheckedChange = onCambia)
     }
 }
 
