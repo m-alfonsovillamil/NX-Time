@@ -68,6 +68,7 @@ import com.nxtime.nxtime.repository.UserRepository;
 import com.nxtime.nxtime.security.totp.SecretosTotp;
 import com.nxtime.nxtime.repository.VacationBalanceRepository;
 import java.awt.Color;
+import java.awt.RenderingHints;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -97,6 +98,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -168,6 +170,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private final ScheduleIncidentService scheduleIncidentService;
     private final MonthlySignatureService monthlySignatureService;
     private final CorrectionService correctionService;
+    private final JdbcTemplate jdbc;
 
     public DemoDataSeeder(
             CompanyRepository companyRepository,
@@ -198,7 +201,8 @@ public class DemoDataSeeder implements CommandLineRunner {
             ScheduleAssignmentRepository scheduleAssignmentRepository,
             ScheduleIncidentService scheduleIncidentService,
             MonthlySignatureService monthlySignatureService,
-            CorrectionService correctionService
+            CorrectionService correctionService,
+            JdbcTemplate jdbc
     ) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
@@ -229,6 +233,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         this.scheduleIncidentService = scheduleIncidentService;
         this.monthlySignatureService = monthlySignatureService;
         this.correctionService = correctionService;
+        this.jdbc = jdbc;
     }
 
     /** Le deja el segundo factor ya activado, con un secreto conocido (ver {@link #SECRETO_TOTP_DE_LUCIA}). */
@@ -382,6 +387,12 @@ public class DemoDataSeeder implements CommandLineRunner {
 
         sembrarAvisos(empleadosTech, gestorTech);
         sembrarAvisos(empleadosIberica, gestorIberica);
+
+        // Revisión del 28/11/2026: la 1.24 trajo justificantes y arrastre de
+        // vacaciones, los dos apagados por defecto, y en la demo no se veían.
+        // Al final a propósito: se encienden con SQL y nada guarda TechCorp
+        // después.
+        sembrarJustificantesYArrastre(techCorp, empleadosTech.get(1), empleadosTech.get(3), gestorTech);
 
         log.info(
                 "Datos de demo listos: 2 empresas, {} usuarios (contraseña '{}'). "
@@ -1018,14 +1029,26 @@ public class DemoDataSeeder implements CommandLineRunner {
         return pdf.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** Un JPEG de 256x256 de un color liso, distinto por persona. */
+    /**
+     * Un JPEG de 256x256: una silueta clara sobre un fondo de un color,
+     * distinto por persona.
+     *
+     * <p>Hasta el 28/11/2026 era solo el color liso, y en el perfil de la app
+     * se veía un círculo verde vacío que parecía una foto que no había cargado.
+     */
     private byte[] avatarDeEjemplo(User empleado) {
         BufferedImage imagen = new BufferedImage(256, 256, BufferedImage.TYPE_INT_RGB);
         Graphics2D lienzo = imagen.createGraphics();
         try {
+            lienzo.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             // Un tono por persona, para que no salgan todos iguales.
-            lienzo.setColor(Color.getHSBColor((empleado.getId() % 10) / 10f, 0.45f, 0.75f));
+            float tono = (empleado.getId() % 10) / 10f;
+            lienzo.setColor(Color.getHSBColor(tono, 0.40f, 0.70f));
             lienzo.fillRect(0, 0, 256, 256);
+            // La silueta, del mismo tono pero casi blanca: cabeza y hombros.
+            lienzo.setColor(Color.getHSBColor(tono, 0.12f, 0.97f));
+            lienzo.fillOval(80, 48, 96, 96);
+            lienzo.fillOval(36, 156, 184, 180);
         } finally {
             lienzo.dispose();
         }
@@ -1438,6 +1461,67 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     /** El mismo día si es entre semana; si no, el lunes siguiente. */
+    /**
+     * Enciende en TechCorp los justificantes (ADR 062) y el arrastre de
+     * vacaciones (ADR 060), y les da algo que enseñar.
+     *
+     * <ul>
+     *   <li>Ana pide una consulta médica para la semana que viene con su
+     *       justificante adjunto: RRHH lo ve al revisarla. Ana y no Javier:
+     *       el e2e de la web adjunta y quita uno en las ausencias de Javier,
+     *       y con otro ya puesto tendría dos botones «Quitar».</li>
+     *   <li>Lucía gastó en febrero tres días que le sobraron del año
+     *       anterior. Solo desde junio: antes, los fichajes sembrados llegan
+     *       hasta esas fechas y se pisarían. De enero a marzo el arrastre se
+     *       ve igual, como días que valen hasta el 31 de marzo.</li>
+     * </ul>
+     */
+    private void sembrarJustificantesYArrastre(Company empresa, User conJustificante, User conArrastre, User gestor) {
+        jdbc.update("UPDATE empresas SET justificantes_en_ausencias = TRUE, arrastre_vacaciones = TRUE WHERE id = ?",
+                empresa.getId());
+
+        LocalDate hoy = LocalDate.now(MADRID_ZONE);
+        LocalDate diaDeLaConsulta = entreSemana(hoy.plusDays(9));
+        AbsenceRequest consulta = absenceRequestRepository.save(AbsenceRequest.builder()
+                .usuario(conJustificante)
+                .empresa(conJustificante.getEmpresa())
+                .fechaInicio(diaDeLaConsulta)
+                .fechaFin(diaDeLaConsulta)
+                .tipo(AbsenceType.MEDICO)
+                .motivo("Revisión en el especialista")
+                .estado(AbsenceStatus.PENDIENTE)
+                .build());
+        byte[] cita = """
+                %PDF-1.4
+                1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+                2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+                3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj
+                trailer<</Root 1 0 R>>
+                % Cita médica de ejemplo
+                %%EOF
+                """.getBytes(StandardCharsets.UTF_8);
+        jdbc.update("""
+                INSERT INTO justificantes_ausencia (peticion_id, nombre_original, mime, tamano_bytes, contenido)
+                VALUES (?, ?, ?, ?, ?)
+                """, consulta.getId(), "cita-medica.pdf", "application/pdf", (long) cita.length, cita);
+
+        if (hoy.getMonthValue() >= 6) {
+            LocalDate inicio = entreSemana(LocalDate.of(hoy.getYear(), 2, 16));
+            absenceRequestRepository.save(AbsenceRequest.builder()
+                    .usuario(conArrastre)
+                    .empresa(conArrastre.getEmpresa())
+                    .fechaInicio(inicio)
+                    .fechaFin(inicio.plusDays(2))
+                    .tipo(AbsenceType.VACACIONES)
+                    .motivo("Los días que me sobraron del año pasado")
+                    .estado(AbsenceStatus.APROBADA)
+                    .aprobadoPor(gestor)
+                    .fechaResolucion(Instant.now())
+                    .comentarioResolucion("Aprobadas.")
+                    .build());
+        }
+    }
+
     private static LocalDate entreSemana(LocalDate dia) {
         LocalDate d = dia;
         while (d.getDayOfWeek().getValue() >= 6) {

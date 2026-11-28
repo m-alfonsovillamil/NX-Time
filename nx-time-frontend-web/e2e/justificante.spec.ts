@@ -3,7 +3,8 @@
  * multipart solo se puede comprobar aquí (ver `paginas/cuenta/adjuntos.ts`).
  *
  * Escribe en la base de demo, pero lo deja como estaba: el ADMIN activa los
- * justificantes, Javier adjunta uno y lo quita, y el ADMIN los vuelve a apagar.
+ * justificantes, Javier adjunta uno y lo quita, y el ADMIN los deja como los
+ * encontró (desde el 28/11/2026 la demo de TechCorp los trae encendidos).
  */
 
 import { expect, test, type Browser, type Page } from '@playwright/test';
@@ -12,14 +13,16 @@ import { entrar, irASeccion } from './ayudas';
 
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF', 'ascii');
 
-async function activarJustificantes(browser: Browser, activar: boolean): Promise<void> {
+/** Los deja como se pide y dice cómo estaban, para volver a dejarlos igual. */
+async function activarJustificantes(browser: Browser, activar: boolean): Promise<boolean> {
   const page: Page = await browser.newPage();
   await entrar(page, 'raul.ortega@techcorp.demo');
   await irASeccion(page, 'Ajustes de la empresa');
   const tarjeta = page.getByRole('region', { name: 'Justificantes en las ausencias' });
   const casilla = tarjeta.getByLabel('Dejar adjuntar justificantes');
   await expect(casilla).toBeVisible();
-  if ((await casilla.isChecked()) !== activar) {
+  const antes = await casilla.isChecked();
+  if (antes !== activar) {
     await casilla.setChecked(activar);
     await tarjeta.getByRole('button', { name: 'Aplicar' }).click();
     if (activar) {
@@ -31,10 +34,11 @@ async function activarJustificantes(browser: Browser, activar: boolean): Promise
     }
   }
   await page.close();
+  return antes;
 }
 
 test('una persona adjunta el justificante de su ausencia y lo quita', async ({ browser, page }) => {
-  await activarJustificantes(browser, true);
+  const antes = await activarJustificantes(browser, true);
   try {
     await entrar(page, 'javier.lopez@techcorp.demo');
     await irASeccion(page, 'Ausencias');
@@ -56,6 +60,6 @@ test('una persona adjunta el justificante de su ausencia y lo quita', async ({ b
     await expect(page.getByRole('status').getByText('Justificante quitado.')).toBeVisible();
     await expect(ver).toBeHidden();
   } finally {
-    await activarJustificantes(browser, false);
+    await activarJustificantes(browser, antes);
   }
 });
