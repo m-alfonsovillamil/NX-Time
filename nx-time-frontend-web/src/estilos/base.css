@@ -3911,6 +3911,64 @@ h2 {
   margin: 6px 0 0;
 }
 
+/* «Qué es…» en el móvil (plan P13): plegado bajo el formulario. En escritorio
+   lo cuenta el panel de al lado, y esto no se ve. */
+.nx-acceso-marca-movil {
+  /* Del ancho del formulario y con su misma tarjeta. */
+  width: min(100% - 32px, 448px);
+  margin: 16px auto 0;
+  padding: 4px 24px 12px;
+  box-sizing: border-box;
+  background: var(--nx-surface);
+  color: var(--nx-on-surface);
+  border-radius: var(--nx-radio-tarjeta);
+  box-shadow: var(--nx-sombra-tarjeta);
+}
+
+/* Con su triángulo de desplegar (un `display: flex` lo quitaba) y 48 px de alto. */
+.nx-acceso-marca-movil summary {
+  padding: 12px 0;
+  line-height: 24px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--nx-primary);
+}
+
+.nx-acceso-marca-movil__lema {
+  margin: 4px 0 12px;
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-medium);
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+@media (min-width: 960px) {
+  .nx-acceso-marca-movil {
+    display: none;
+  }
+}
+
+/* El enlace a la app: una fila con icono, en el panel y en el plegable. */
+.nx-acceso-app {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nx-acceso-app > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.nx-acceso-app strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* La columna del formulario en las pantallas de acceso, con el pie debajo. */
 .nx-acceso-lado {
   flex: 1;

@@ -2,7 +2,7 @@ import { TITULAR } from '../../legal/titular';
 
 /** Entrar, recuperar el acceso y registrar una empresa. Los textos siguen a los de la app. */
 export const acceso = {
-  /** El panel de marca de las pantallas de acceso, en escritorio. */
+  /** El panel de marca de las pantallas de acceso: al lado en escritorio, plegado bajo el formulario en el móvil. */
   marca: {
     etiqueta: `Qué es ${TITULAR.producto}`,
     lema: 'El registro de jornada que se lleva solo.',
@@ -15,6 +15,8 @@ export const acceso = {
         texto: 'Te ayuda a llevar el registro que exige el RD-ley 8/2019: guardado cuatro años y con rastro de cada cambio.',
       },
     ],
+    app: 'Descarga la app para Android',
+    appDetalle: 'Para fichar desde el móvil, también sin cobertura.',
   },
 
   login: {
