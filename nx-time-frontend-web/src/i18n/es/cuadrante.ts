@@ -40,7 +40,13 @@ export const cuadrante = {
     detalleSalida: (real: string, prevista: string, cuanto: string) =>
       `Salida a las ${real}; prevista a las ${prevista} (${cuanto} antes)`,
     detalleAusencia: (cuanto: string, prevista: string) => `Sin fichar. Jornada prevista de ${cuanto} desde las ${prevista}`,
-    justificacion: (texto: string) => `Explicación: ${texto}`,
+    // La tarjeta: los minutos en grande, y debajo la hora prevista y la fichada.
+    cifraMinutos: (n: number) => `${n} min`,
+    cifraTarde: 'tarde',
+    cifraAntes: 'antes de hora',
+    filaPrevista: 'Prevista',
+    filaFichada: 'Fichada',
+    notaExplicacion: 'Explicación',
     resueltaPor: (nombre: string) => `Decidida por ${nombre}`,
     resueltaConComentario: (nombre: string, comentario: string) => `Decidida por ${nombre}: ${comentario}`,
     justificar: 'Explicar',

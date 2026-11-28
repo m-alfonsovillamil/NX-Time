@@ -22,9 +22,11 @@ import type { components } from '../../api/schema';
 import { useSesion } from '../../api/useSesion';
 import { Aviso, Boton, Campo, Insignia, Selector, type Tono } from '../../componentes/Basicos';
 import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
+import { Dialogo } from '../../componentes/Dialogo';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, Esqueleto, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
+import { NotaDeRevision, TarjetaDeRevision } from '../../componentes/Revision';
 import { revisiones } from '../../i18n/es/revisiones';
 import { fechaCorta, hoyEnEmpresa, minutos } from '../../util/fechas';
 
@@ -82,6 +84,11 @@ function ApuntarDescanso({ a, hoy }: { a: AvisoDeHorasExtra; hoy: string }) {
  * semanal lleva el lunes en `fecha`: enseñarla sola se leería como si el
  * exceso fuera de ese día.
  */
+/** «Semana del…» dentro de una frase: con la inicial en minúscula. */
+function minuscula(texto: string): string {
+  return texto.charAt(0).toLowerCase() + texto.slice(1);
+}
+
 export function periodoDe(a: AvisoDeHorasExtra): string {
   if (a.tipo === 'SEMANAL') return H.periodoSemana(fechaCorta(a.fecha), fechaCorta(a.fechaFin ?? a.fecha));
   return H.periodoDia(fechaCorta(a.fecha));
@@ -139,34 +146,40 @@ function TarjetaDeAviso({
   const compensacion = textoDeCompensacion(a, hoy);
   const descansoPendiente =
     a.estado === 'ACEPTADO' && a.compensacion === 'DESCANSO' && !a.descansoDisfrutadoEn && (a.fecha ?? hoy) <= hoy;
+  const cuando = periodoDe(a);
+  const deOtro = delEquipo && a.usuario !== undefined && a.usuario !== null && a.usuario !== '';
   return (
-    <li className="nx-incidencia">
-      <div className="nx-incidencia__cabecera">
-        <strong>
-          {delEquipo && a.usuario ? `${a.usuario} · ` : ''}
-          {periodoDe(a)}
-        </strong>
-        {a.estado && <Insignia tono={TONO[a.estado] ?? 'neutro'}>{H.estados[a.estado] ?? a.estado}</Insignia>}
-      </div>
-      <span>{H.exceso(minutos(a.minutosExtra ?? 0), minutos(a.minutosEsperados ?? 0))}</span>
-      {a.justificacion && <span className="nx-sutil">{H.justificacion(a.justificacion)}</span>}
+    <TarjetaDeRevision
+      // La de otra persona empieza por su nombre: con veinte pendientes es lo
+      // que se busca primero. La propia, por el día o la semana.
+      titulo={deOtro ? a.usuario : cuando}
+      subtitulo={deOtro ? cuando : undefined}
+      estado={a.estado && <Insignia tono={TONO[a.estado] ?? 'neutro'}>{H.estados[a.estado] ?? a.estado}</Insignia>}
+      // El exceso Y el listón, siempre juntos: «3 h de más» a secas no se
+      // puede juzgar, en una semana con un puente el listón son 30 h.
+      cifra={`+${minutos(a.minutosExtra ?? 0)}`}
+      cifraDetalle={H.sobre(minutos(a.minutosEsperados ?? 0))}
+      acciones={
+        delEquipo && esperaDecision && alAceptar && alJustificar ? (
+          <>
+            <Boton variante="contorno" onClick={alJustificar}>
+              {H.justificar}
+            </Boton>
+            <Boton variante="secundario" ocupado={ocupado === 'PAGO'} onClick={() => alAceptar('PAGO')}>
+              {H.aceptar}
+            </Boton>
+            <Boton variante="secundario" ocupado={ocupado === 'DESCANSO'} onClick={() => alAceptar('DESCANSO')}>
+              {H.botonDescanso}
+            </Boton>
+          </>
+        ) : undefined
+      }
+    >
+      {a.justificacion && <NotaDeRevision etiqueta={H.notaJustificacion}>{a.justificacion}</NotaDeRevision>}
       {compensacion !== null && <span className="nx-sutil">{compensacion}</span>}
       {a.revisadoPor && <span className="nx-sutil">{H.revisadoPor(a.revisadoPor)}</span>}
       {delEquipo && descansoPendiente && <ApuntarDescanso a={a} hoy={hoy} />}
-      {delEquipo && esperaDecision && alAceptar && alJustificar && (
-        <div className="nx-acciones-fila nx-acciones-fila--con-aire">
-          <Boton ocupado={ocupado === 'PAGO'} onClick={() => alAceptar('PAGO')}>
-            {H.aceptar}
-          </Boton>
-          <Boton variante="secundario" ocupado={ocupado === 'DESCANSO'} onClick={() => alAceptar('DESCANSO')}>
-            {H.compensar}
-          </Boton>
-          <Boton variante="secundario" onClick={alJustificar}>
-            {H.justificar}
-          </Boton>
-        </div>
-      )}
-    </li>
+    </TarjetaDeRevision>
   );
 }
 
@@ -202,6 +215,10 @@ function Mios({ anio }: { anio: number }) {
 
 function DelEquipo({ anio }: { anio: number }) {
   const [justificando, setJustificando] = useState<AvisoDeHorasExtra | null>(null);
+  // Pagar o compensar no tiene vuelta atrás (el servidor da 409 a la segunda
+  // decisión), y los tres botones van juntos: un toque en el de al lado
+  // decidiría otra cosa. Se confirma diciendo qué pasa con la bolsa.
+  const [confirmando, setConfirmando] = useState<{ a: AvisoDeHorasExtra; compensacion: Compensacion } | null>(null);
   const lista = useQuery({
     queryKey: [...CLAVE, 'equipo', anio],
     queryFn: () => pedir(cliente.GET('/api/v1/horas-extra/equipo', { params: { query: { anio } } })),
@@ -232,7 +249,10 @@ function DelEquipo({ anio }: { anio: number }) {
     {
       invalida: [CLAVE, ['dashboard']],
       exito: (_r, v) => (!v.aceptar ? H.justificada : v.compensacion === 'DESCANSO' ? H.compensada : H.aceptada),
-      alTerminar: () => setJustificando(null),
+      alTerminar: () => {
+        setJustificando(null);
+        setConfirmando(null);
+      },
     },
   );
 
@@ -255,9 +275,7 @@ function DelEquipo({ anio }: { anio: number }) {
                       ? (revisar.variables.compensacion ?? 'PAGO')
                       : null
                   }
-                  alAceptar={(compensacion) =>
-                    a.id !== undefined && revisar.mutate({ id: a.id, aceptar: true, compensacion })
-                  }
+                  alAceptar={(compensacion) => setConfirmando({ a, compensacion })}
                   alJustificar={() => setJustificando(a)}
                 />
               ))}
@@ -265,6 +283,38 @@ function DelEquipo({ anio }: { anio: number }) {
           )
         }
       </EstadoDeConsulta>
+
+      <Dialogo
+        abierto={confirmando !== null}
+        titulo={confirmando?.compensacion === 'DESCANSO' ? H.confirmarDescansoTitulo : H.confirmarPagoTitulo}
+        alCerrar={() => setConfirmando(null)}
+        acciones={
+          <>
+            <Boton variante="texto" onClick={() => setConfirmando(null)}>
+              {H.cancelar}
+            </Boton>
+            <Boton
+              ocupado={revisar.isPending}
+              onClick={() =>
+                confirmando?.a.id !== undefined &&
+                revisar.mutate({ id: confirmando.a.id, aceptar: true, compensacion: confirmando.compensacion })
+              }
+            >
+              {confirmando?.compensacion === 'DESCANSO' ? H.botonDescanso : H.aceptar}
+            </Boton>
+          </>
+        }
+      >
+        {confirmando !== null && (
+          <p>
+            {(confirmando.compensacion === 'DESCANSO' ? H.confirmarDescansoTexto : H.confirmarPagoTexto)(
+              minutos(confirmando.a.minutosExtra ?? 0),
+              confirmando.a.usuario ?? '',
+              minuscula(periodoDe(confirmando.a)),
+            )}
+          </p>
+        )}
+      </Dialogo>
 
       <DialogoDeTexto
         abierto={justificando !== null}

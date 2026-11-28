@@ -23,7 +23,12 @@ import {
 import { Icono, type NombreIcono } from './Icono';
 
 interface BotonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variante?: 'primario' | 'secundario' | 'texto' | 'peligro';
+  /**
+   * `contorno`: con borde, sin relleno (decisiones al mismo nivel que otras).
+   * `negativo`: igual, en rojo (rechazar, no estar de acuerdo); `peligro`, en
+   * relleno rojo, queda para lo que borra o no tiene vuelta atrás.
+   */
+  variante?: 'primario' | 'secundario' | 'texto' | 'peligro' | 'contorno' | 'negativo';
   ocupado?: boolean;
   /** Un icono delante del texto (descargar, imprimir). Decorativo: el texto dice lo que hace. */
   icono?: NombreIcono;

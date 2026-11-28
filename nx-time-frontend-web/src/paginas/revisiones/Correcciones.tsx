@@ -25,6 +25,7 @@ import { CabeceraDePagina } from '../../componentes/CabeceraDePagina';
 import { DialogoDeTexto } from '../../componentes/DialogoDeTexto';
 import { EstadoDeConsulta, ErrorConReintento, Esqueleto, FinDeLista, Vacio } from '../../componentes/Estados';
 import { Pestanas } from '../../componentes/Pestanas';
+import { FilasDeCambio, NotaDeRevision, TarjetaDeRevision, type FilaDeCambio } from '../../componentes/Revision';
 import { historial } from '../../i18n/es/historial';
 import { revisiones } from '../../i18n/es/revisiones';
 import { diaEnEmpresa, fechaCorta, hora, horaDeSalida, horaEnEmpresa, minutos } from '../../util/fechas';
@@ -36,77 +37,71 @@ type Correccion = components['schemas']['CorrectionResponse'];
 const TONO: Record<string, Tono> = { PENDIENTE: 'aviso', APROBADA: 'exito', RECHAZADA: 'error', EN_DISPUTA: 'info' };
 const CLAVE = ['correcciones'] as const;
 
-function tramo(entrada: string | undefined, salida: string | undefined): string {
-  return `${horaEnEmpresa(entrada)}–${horaDeSalida(entrada, salida)}`;
-}
-
 function cambianLasHoras(c: Correccion): boolean {
   return c.horaEntradaActual !== c.horaEntradaPropuesta || c.horaSalidaActual !== c.horaSalidaPropuesta;
 }
 
 /**
- * «De 08:54–17:00 h a **08:39**–17:00 h»: lo que cambia, en negrita. Sin ella
- * había que comparar las dos horas a ojo, y una corrección de quince minutos
- * se aprobaba sin ver cuál de las dos cambiaba (revisión de pantallas, 11/2026).
- * Dice lo mismo que `C.deA`.
+ * Lo que cambia, en filas: «Entrada 09:00 h → 08:30 h». Lo de antes tachado y
+ * lo propuesto en negrita; lo que no cambia, una vez.
+ *
+ * Una que solo añade una pausa no lleva filas de horas: «09:00 → 09:00»
+ * parecería una corrección que no cambia nada.
  */
-export function HorasQueCambian({ c }: { c: Correccion }) {
-  const entrada = horaEnEmpresa(c.horaEntradaPropuesta);
-  const salida = horaDeSalida(c.horaEntradaPropuesta, c.horaSalidaPropuesta);
-  const resaltar = (texto: string, cambia: boolean) => (cambia ? <strong>{texto}</strong> : texto);
-  return (
-    <>
-      {C.de} {tramo(c.horaEntradaActual, c.horaSalidaActual)} {C.a}{' '}
-      {resaltar(entrada, entrada !== horaEnEmpresa(c.horaEntradaActual))}–
-      {resaltar(salida, salida !== horaDeSalida(c.horaEntradaActual, c.horaSalidaActual))}
-    </>
-  );
-}
-
-/** Lo que cambia, línea a línea: las horas (si cambian), la pausa y el reparto. */
-export function cambiosDe(c: Correccion): string[] {
-  const lineas: string[] = [];
+export function filasDe(c: Correccion): FilaDeCambio[] {
+  const filas: FilaDeCambio[] = [];
   if (cambianLasHoras(c)) {
-    lineas.push(C.deA(tramo(c.horaEntradaActual, c.horaSalidaActual), tramo(c.horaEntradaPropuesta, c.horaSalidaPropuesta)));
+    filas.push(
+      {
+        etiqueta: C.filas.entrada,
+        antes: `${horaEnEmpresa(c.horaEntradaActual)} h`,
+        despues: `${horaEnEmpresa(c.horaEntradaPropuesta)} h`,
+      },
+      {
+        etiqueta: C.filas.salida,
+        antes: horaDeSalida(c.horaEntradaActual, c.horaSalidaActual),
+        despues: horaDeSalida(c.horaEntradaPropuesta, c.horaSalidaPropuesta),
+      },
+    );
   }
   if (c.pausaInicioPropuesta && c.pausaFinPropuesta) {
-    lineas.push(C.soloPausa(hora(c.pausaInicioPropuesta), hora(c.pausaFinPropuesta)));
+    filas.push({ etiqueta: C.filas.pausa, despues: C.pausaValor(hora(c.pausaInicioPropuesta), hora(c.pausaFinPropuesta)) });
   }
   if (c.modalidadPropuesta !== undefined && c.modalidadPropuesta !== c.modalidadActual) {
     const nombre = (m: string | undefined) => (m === undefined ? '—' : (historial.correccion.modalidades[m] ?? m));
-    lineas.push(C.modalidad(nombre(c.modalidadActual), nombre(c.modalidadPropuesta)));
+    filas.push({ etiqueta: C.filas.modalidad, antes: nombre(c.modalidadActual), despues: nombre(c.modalidadPropuesta) });
   }
   const reparto = c.repartoPropuesto ?? [];
   if (reparto.length > 0) {
-    lineas.push(C.reparto(reparto.map((r) => `${r.codigo ?? ''} ${minutos(r.minutos ?? 0)}`).join(', ')));
+    filas.push({
+      etiqueta: C.filas.proyectos,
+      despues: reparto.map((r) => `${r.codigo ?? ''} ${minutos(r.minutos ?? 0)}`).join(', '),
+    });
   }
-  return lineas;
+  return filas;
 }
 
-/** Quién pide qué: «Marta propone corregir un fichaje de Javier» o «Javier pide corregir un fichaje suyo». */
-function quien(c: Correccion): string {
+/** «Fichaje del jue, 26 nov», y quién lo propone si no es la propia persona. */
+function deQueDia(c: Correccion): string {
+  const instante = c.horaEntradaActual ?? c.horaEntradaPropuesta;
+  const dia = fechaCorta(instante ? diaEnEmpresa(instante) : undefined);
   const solicitante = c.solicitante?.nombre ?? '';
-  const empleado = c.empleado?.nombre ?? '';
-  return solicitante === empleado ? C.pideElSuyo(solicitante) : C.quienPide(solicitante, empleado);
+  return solicitante === (c.empleado?.nombre ?? '') ? C.fichajeDel(dia) : C.fichajeDelPropone(dia, solicitante);
 }
 
 function TarjetaDeCorreccion({ c, acciones }: { c: Correccion; acciones?: ReactNode }) {
   return (
-    <li className="nx-incidencia">
-      <div className="nx-incidencia__cabecera">
-        <strong>{fechaCorta(c.horaEntradaActual ? diaEnEmpresa(c.horaEntradaActual) : undefined)}</strong>
-        {c.estado && <Insignia tono={TONO[c.estado] ?? 'neutro'}>{C.estados[c.estado] ?? c.estado}</Insignia>}
-      </div>
-      <span className="nx-sutil">{quien(c)}</span>
-      {cambiosDe(c).map((linea, i) => (
-        // Las horas, si cambian, son siempre la primera línea.
-        <span key={linea}>{i === 0 && cambianLasHoras(c) ? <HorasQueCambian c={c} /> : linea}</span>
-      ))}
-      {c.motivo && <span className="nx-sutil">{C.motivo(c.motivo)}</span>}
-      {c.motivoDisputa && <span>{C.noAcepta(c.motivoDisputa)}</span>}
+    <TarjetaDeRevision
+      titulo={c.empleado?.nombre ?? ''}
+      subtitulo={deQueDia(c)}
+      estado={c.estado && <Insignia tono={TONO[c.estado] ?? 'neutro'}>{C.estados[c.estado] ?? c.estado}</Insignia>}
+      acciones={acciones ?? undefined}
+    >
+      <FilasDeCambio filas={filasDe(c)} />
+      {c.motivo && <NotaDeRevision etiqueta={C.notaMotivo}>{c.motivo}</NotaDeRevision>}
+      {c.motivoDisputa && <NotaDeRevision etiqueta={C.notaNoAcepta}>{c.motivoDisputa}</NotaDeRevision>}
       {c.comentarioResolucion && <span className="nx-sutil">{C.comentario(c.comentarioResolucion)}</span>}
-      {acciones && <div className="nx-acciones-fila nx-acciones-fila--con-aire">{acciones}</div>}
-    </li>
+    </TarjetaDeRevision>
   );
 }
 
@@ -170,13 +165,13 @@ function EsperanPorTi() {
                             >
                               {C.aprobar}
                             </Boton>
-                            <Boton variante="secundario" onClick={() => setPidiendoTexto({ c, que: 'rechazar' })}>
+                            <Boton variante="negativo" onClick={() => setPidiendoTexto({ c, que: 'rechazar' })}>
                               {C.rechazar}
                             </Boton>
                           </>
                         )}
                         {c.puedoDisputar === true && (
-                          <Boton variante="secundario" onClick={() => setPidiendoTexto({ c, que: 'disputar' })}>
+                          <Boton variante="negativo" onClick={() => setPidiendoTexto({ c, que: 'disputar' })}>
                             {C.disputar}
                           </Boton>
                         )}

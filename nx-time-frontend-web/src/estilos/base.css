@@ -3916,3 +3916,91 @@ h2 {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/*
+ * Tarjetas de revisión (Revision.tsx, revisión del 28/11/2026): el nombre
+ * arriba, la cifra que se juzga en grande y lo que cambia en filas, como en
+ * la app. Van dentro de las listas de siempre (`nx-lista-incidencias`).
+ */
+.nx-revision {
+  gap: 6px;
+}
+
+.nx-revision__titulo {
+  font-family: var(--nx-font-titular);
+  font-size: var(--nx-fs-title-medium);
+}
+
+.nx-revision__cifra {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.nx-revision__numero {
+  font-family: var(--nx-font-titular);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.nx-revision__filas {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 16px;
+  margin: 4px 0 0;
+}
+
+.nx-revision__fila {
+  display: contents;
+}
+
+.nx-revision__fila dd {
+  margin: 0;
+}
+
+.nx-revision__nota {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: var(--nx-radio-s);
+  background: var(--nx-surface-container-highest);
+}
+
+.nx-revision__nota-etiqueta {
+  font-size: var(--nx-fs-label-medium, 0.75rem);
+  color: var(--nx-on-surface-variant);
+}
+
+.nx-revision__acciones {
+  margin-top: 8px;
+}
+
+/* Una decisión al mismo nivel que otras, sin competir con ellas: con borde, sin relleno. */
+.nx-boton--contorno {
+  background: transparent;
+  color: var(--nx-on-surface);
+  box-shadow: inset 0 0 0 1px var(--nx-outline);
+}
+
+.nx-boton--contorno:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nx-on-surface) 6%, transparent);
+}
+
+/*
+ * Rechazar, disputar: con borde y en rojo, como en la app.
+ * `peligro` (relleno rojo) queda para lo que borra o no tiene vuelta atrás.
+ */
+.nx-boton--negativo {
+  background: transparent;
+  color: var(--nx-error);
+  box-shadow: inset 0 0 0 1px var(--nx-error);
+}
+
+.nx-boton--negativo:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--nx-error) 8%, transparent);
+}

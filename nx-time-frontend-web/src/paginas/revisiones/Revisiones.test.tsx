@@ -11,7 +11,8 @@ import { cerrarSesion } from '../../api/sesion';
 import { revisiones } from '../../i18n/es/revisiones';
 import { pintar, problema, sesionDe, simularApi } from '../../pruebas/api';
 import { fechaCorta } from '../../util/fechas';
-import { Correcciones, HorasQueCambian, cambiosDe } from './Correcciones';
+import { FilasDeCambio } from '../../componentes/Revision';
+import { Correcciones, filasDe } from './Correcciones';
 import { HorasExtra, periodoDe, textoDeCompensacion } from './HorasExtra';
 
 const H = revisiones.horasExtra;
@@ -60,7 +61,9 @@ describe('horas extra', () => {
     });
     pintar(<HorasExtra />, { sesion: sesionDe('EMPLEADO') });
 
-    expect(await screen.findByText(H.exceso('1h 35m', '8h 00m'))).toBeTruthy();
+    // La cifra en grande y el listón al lado, siempre juntos.
+    expect(await screen.findByText('+1h 35m')).toBeTruthy();
+    expect(screen.getByText(H.sobre('8h 00m'))).toBeTruthy();
     expect(await screen.findByText(H.bolsaDetalle('32h 00m', 2))).toBeTruthy();
     expect(screen.getByRole('meter').getAttribute('aria-valuenow')).toBe('2880');
     expect(screen.queryByRole('button', { name: H.aceptar })).toBeNull();
@@ -94,6 +97,11 @@ describe('horas extra', () => {
     expect(within(revisado as HTMLElement).getByText(H.revisadoPor('Marta'))).toBeTruthy();
 
     await userEvent.click(within(primero as HTMLElement).getByRole('button', { name: H.aceptar }));
+    // Pagar se confirma antes: no tiene vuelta atrás.
+    expect(llamadas.llamadas.filter((l) => l.metodo === 'PATCH')).toEqual([]);
+    const confirmar = await screen.findByRole('dialog', { name: H.confirmarPagoTitulo });
+    await userEvent.click(within(confirmar).getByRole('button', { name: H.aceptar }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: H.confirmarPagoTitulo })).toBeNull());
     await userEvent.click(within(segundo as HTMLElement).getByRole('button', { name: H.justificar }));
     const dialogo = await screen.findByRole('dialog', { name: H.justificarTitulo });
     await userEvent.click(within(dialogo).getByRole('button', { name: H.justificar }));
@@ -145,7 +153,9 @@ describe('horas extra', () => {
 
     await userEvent.click(await screen.findByRole('tab', { name: H.delEquipo }));
     const [abierto, aDescansar] = await screen.findAllByRole('listitem');
-    await userEvent.click(within(abierto as HTMLElement).getByRole('button', { name: H.compensar }));
+    await userEvent.click(within(abierto as HTMLElement).getByRole('button', { name: H.botonDescanso }));
+    const confirmar = await screen.findByRole('dialog', { name: H.confirmarDescansoTitulo });
+    await userEvent.click(within(confirmar).getByRole('button', { name: H.botonDescanso }));
     // El último día que vale ya pasó: se propone ese, no hoy.
     expect((within(aDescansar as HTMLElement).getByLabelText(H.diaDelDescanso) as HTMLInputElement).value).toBe('2026-05-10');
     await userEvent.click(within(aDescansar as HTMLElement).getByRole('button', { name: H.apuntarDescanso }));
@@ -180,40 +190,41 @@ const CORRECCION = {
 };
 
 describe('correcciones', () => {
-  /* Una que solo añade pausa no dice «De 09:00 a 09:00»: parecería que no cambia nada. */
+  // Lo que llega a la página ya sin los null (los quita `sinNulos`).
+  const HORAS = {
+    horaEntradaActual: CORRECCION.horaEntradaActual,
+    horaSalidaActual: CORRECCION.horaSalidaActual,
+    horaEntradaPropuesta: CORRECCION.horaEntradaPropuesta,
+    horaSalidaPropuesta: CORRECCION.horaSalidaPropuesta,
+  };
+
+  /* Una que solo añade pausa no lleva filas de horas: «09:00 → 09:00» parecería que no cambia nada. */
   it('solo enseña las horas si cambian, y la pausa si la hay', () => {
-    // Lo que llega a la página ya sin los null (los quita `sinNulos`).
-    const horas = {
-      horaEntradaActual: CORRECCION.horaEntradaActual,
-      horaSalidaActual: CORRECCION.horaSalidaActual,
-      horaEntradaPropuesta: CORRECCION.horaEntradaPropuesta,
-      horaSalidaPropuesta: CORRECCION.horaSalidaPropuesta,
-    };
-    expect(cambiosDe(horas)).toEqual([C.deA('09:00–17:00 h', '08:30–17:00 h')]);
+    expect(filasDe(HORAS)).toEqual([
+      { etiqueta: C.filas.entrada, antes: '09:00 h', despues: '08:30 h' },
+      { etiqueta: C.filas.salida, antes: '17:00 h', despues: '17:00 h' },
+    ]);
     expect(
-      cambiosDe({
-        ...horas,
+      filasDe({
+        ...HORAS,
         horaEntradaPropuesta: CORRECCION.horaEntradaActual,
         pausaInicioPropuesta: '2026-09-21T10:00:00Z',
         pausaFinPropuesta: '2026-09-21T10:30:00Z',
       }),
-    ).toEqual([C.soloPausa('12:00 h', '12:30 h')]);
-    expect(cambiosDe({ ...horas, repartoPropuesto: [{ codigo: 'WEB', minutos: 90 }] })).toContain(C.reparto('WEB 1h 30m'));
+    ).toEqual([{ etiqueta: C.filas.pausa, despues: C.pausaValor('12:00 h', '12:30 h') }]);
+    expect(filasDe({ ...HORAS, repartoPropuesto: [{ codigo: 'WEB', minutos: 90 }] })).toContainEqual({
+      etiqueta: C.filas.proyectos,
+      despues: 'WEB 1h 30m',
+    });
   });
 
-  it('pone en negrita solo la hora que cambia, y dice lo mismo que el texto', () => {
-    const horas = {
-      horaEntradaActual: CORRECCION.horaEntradaActual,
-      horaSalidaActual: CORRECCION.horaSalidaActual,
-      horaEntradaPropuesta: CORRECCION.horaEntradaPropuesta,
-      horaSalidaPropuesta: CORRECCION.horaSalidaPropuesta,
-    };
-    const { container } = pintar(<HorasQueCambian c={horas} />);
-    expect(container.textContent).toBe(C.deA('09:00–17:00 h', '08:30–17:00 h'));
-    expect([...container.querySelectorAll('strong')].map((s) => s.textContent)).toEqual(['08:30']);
+  it('tacha la hora de antes y pone en negrita la nueva, solo en la que cambia', () => {
+    const { container } = pintar(<FilasDeCambio filas={filasDe(HORAS)} />);
+    expect([...container.querySelectorAll('del')].map((d) => d.textContent)).toEqual(['09:00 h']);
+    expect([...container.querySelectorAll('strong')].map((s) => s.textContent)).toEqual(['08:30 h']);
   });
 
-  it('dice quién pide qué', async () => {
+  it('empieza por la persona, y dice de qué día es y quién lo propone', async () => {
     simularApi({
       'GET /api/v1/correcciones/pendientes': () => [
         CORRECCION,
@@ -222,8 +233,10 @@ describe('correcciones', () => {
     });
     pintar(<Correcciones />, { sesion: sesionDe('GESTOR') });
 
-    expect(await screen.findByText(C.pideElSuyo('Javier'))).toBeTruthy();
-    expect(screen.getByText(C.quienPide('Marta', 'Javier'))).toBeTruthy();
+    const dia = fechaCorta('2026-09-21');
+    expect(await screen.findByText(C.fichajeDel(dia))).toBeTruthy();
+    expect(screen.getByText(C.fichajeDelPropone(dia, 'Marta'))).toBeTruthy();
+    expect(screen.getAllByText('Javier')).toHaveLength(2);
   });
 
   it('aprobar va directo; rechazar y «no estoy de acuerdo» piden motivo', async () => {
