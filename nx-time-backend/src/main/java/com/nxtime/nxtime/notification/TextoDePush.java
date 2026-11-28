@@ -14,10 +14,11 @@ import com.nxtime.nxtime.domain.NoticeType;
  *
  * Un {@code switch} sin {@code default}: el día que se añada un tipo de aviso,
  * esto deja de compilar hasta que alguien decida qué dice su push.
+ *
+ * <p>El título es el nombre del producto, de la configuración del titular
+ * ({@link PushSender}).
  */
 public final class TextoDePush {
-
-    public static final String TITULO = "NX Time";
 
     private TextoDePush() {
     }

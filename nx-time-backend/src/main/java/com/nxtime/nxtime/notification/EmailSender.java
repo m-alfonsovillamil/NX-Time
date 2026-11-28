@@ -66,6 +66,13 @@ public class EmailSender {
     }
 
     /**
+     * Lo que en un asunto se cambia por el nombre del producto (el del titular,
+     * {@link CondicionesDelServicio#producto()}). Así ningún asunto escribe el
+     * nombre: «Tu cuenta de {producto}». El cuerpo ya lo pinta {@link #completar}.
+     */
+    public static final String PRODUCTO = "{producto}";
+
+    /**
      * Un correo de aviso, que no sale si su destinatario ha apagado el correo
      * de esa categoría (ADR 059). La categoría sale del aviso al que lleva su
      * botón ({@link BotonDelCorreo}): un correo sin botón (códigos de acceso,
@@ -106,7 +113,7 @@ public class EmailSender {
                     new MimeMessageHelper(mensaje, false, StandardCharsets.UTF_8.name());
             helper.setFrom(remitente);
             helper.setTo(destinatario);
-            helper.setSubject(asunto);
+            helper.setSubject(asunto(asunto));
             helper.setText(cuerpo, true); // true = HTML
 
             mailSender.send(mensaje);
@@ -114,6 +121,11 @@ public class EmailSender {
         } catch (MailException | jakarta.mail.MessagingException e) {
             throw new EmailNotSentException("No se pudo enviar el correo '" + plantilla + "'", e);
         }
+    }
+
+    /** El asunto con el nombre del producto en lugar de {@link #PRODUCTO}. */
+    String asunto(String asunto) {
+        return asunto.replace(PRODUCTO, servicio.producto());
     }
 
     /** Dónde está el icono de la marca en la web (public/iconos de la web). */

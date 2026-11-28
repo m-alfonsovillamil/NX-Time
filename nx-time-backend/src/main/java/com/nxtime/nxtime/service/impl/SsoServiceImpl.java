@@ -102,7 +102,7 @@ public class SsoServiceImpl implements SsoService {
         variables.put("correoExterno", identidad.correo() == null || identidad.correo().isBlank()
                 ? "sin correo" : identidad.correo());
         eventos.publishEvent(new NotificationEvents.CorreoDirecto(usuario.getEmail(), "sso-linked",
-                "Has vinculado una cuenta de " + identidad.proveedor().nombre() + " a NX Time", variables));
+                "Has vinculado una cuenta de " + identidad.proveedor().nombre() + " a {producto}", variables));
     }
 
     @Override
@@ -118,7 +118,7 @@ public class SsoServiceImpl implements SsoService {
         if (usuarios.findByEmail(correo).isPresent()
                 || identidades.findByProveedorAndSujeto(proveedor, sujeto).isPresent()) {
             throw new BusinessException(
-                    "Ya hay una cuenta de NX Time con esa cuenta de " + proveedor.nombre() + ". Entra con ella.",
+                    "Esa cuenta de " + proveedor.nombre() + " ya tiene acceso. Entra con ella.",
                     HttpStatus.CONFLICT);
         }
         if (empresas.findByNombre(nombreEmpresa.strip()).isPresent()) {
@@ -186,7 +186,7 @@ public class SsoServiceImpl implements SsoService {
             }
             usuario = usuarios.findByEmail(identidad.correo())
                     .orElseThrow(() -> {
-                        log.info("SSO {}: correo verificado sin cuenta en NX Time.", identidad.proveedor().id());
+                        log.info("SSO {}: correo verificado sin cuenta.", identidad.proveedor().id());
                         return new SsoException(Motivo.SIN_CUENTA);
                     });
             if (usuario.correoPendienteDeConfirmar()) {

@@ -74,7 +74,7 @@ public class AuthController {
             description = "Crea la empresa y a quien la registra como su ADMIN, que es quien luego da de alta al "
                     + "resto. Desde la V37 (ADR 034) NO abre sesión: manda un código de 6 dígitos al correo, que se "
                     + "canjea en /auth/registro/confirmar. Responde 202 igual aunque el correo ya tenga cuenta (en "
-                    + "ese caso no crea ni manda nada): si no, serviría para averiguar quién usa NX Time. Registrarse "
+                    + "ese caso no crea ni manda nada): si no, serviría para averiguar quién tiene cuenta. Registrarse "
                     + "otra vez con un correo a medio confirmar rehace el registro y manda otro código.")
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "Registro pendiente de confirmar el correo",

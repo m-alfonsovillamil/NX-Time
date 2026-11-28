@@ -996,7 +996,7 @@ public class NotificationListener {
     public void onDeletionExecuted(NotificationEvents.DeletionExecuted evento) {
         emailSender.enviar(
                 evento.email(),
-                "Tus datos en NX Time se han borrado",
+                "Tus datos en {producto} se han borrado",
                 "deletion-executed",
                 variables(
                         "nombreDestinatario", evento.nombre(),

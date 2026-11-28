@@ -143,6 +143,10 @@ class EmailTemplateRenderingTest {
                 assertThat(html).as(plantilla).doesNotContain("NX Time").contains("Jornada Clara");
             }
         }
+        // Y el asunto: ninguno escribe el nombre, llevan {producto}.
+        assertThat(otro.asunto("Tu cuenta de " + EmailSender.PRODUCTO)).isEqualTo("Tu cuenta de Jornada Clara");
+        assertThat(otro.asunto("La baja de Ácme {producto}")).isEqualTo("La baja de Ácme Jornada Clara");
+        assertThat(otro.asunto("Sin nombre")).isEqualTo("Sin nombre");
     }
 
     @Test

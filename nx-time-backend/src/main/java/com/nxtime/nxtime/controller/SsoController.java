@@ -432,7 +432,7 @@ public class SsoController {
         } catch (SsoException e) {
             // Aquí sí se responde con un JSON: lo pide la app, no un navegador.
             throw new BusinessException(switch (e.motivo()) {
-                case YA_VINCULADA -> "Esa cuenta ya está vinculada a otra persona de NX Time.";
+                case YA_VINCULADA -> "Esa cuenta ya está vinculada a otra persona.";
                 case YA_TIENE_OTRA -> "Ya tienes vinculada otra cuenta de " + identidad.proveedor().nombre()
                         + ". Desvincúlala antes.";
                 default -> "No se ha podido vincular la cuenta. Vuelve a intentarlo.";
