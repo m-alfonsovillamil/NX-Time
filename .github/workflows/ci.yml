@@ -137,6 +137,19 @@ jobs:
           docker run --rm hello-world > /dev/null && \
             echo "Docker OK en CI: merece la pena reintentar Testcontainers aquí (ver Fase 3)."
 
+  # El nombre del producto y el dominio, solo en su sitio (plan P): así
+  # cambiar de nombre es scripts/dev/cambiar-nombre.py y nada más. Segundos.
+  marca:
+    name: Marca en un solo sitio
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Buscar el nombre y el dominio fuera de su sitio
+        run: python3 scripts/dev/comprobar-marca.py
+
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
