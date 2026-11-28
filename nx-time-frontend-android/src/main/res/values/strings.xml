@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+    El nombre de la app, una sola vez (plan P): los textos que lo dicen
+    llevan &marca;. Cambiarlo es cambiar esta entidad, y lo hace
+    scripts/dev/cambiar-nombre.py.
+-->
+<!DOCTYPE resources [
+    <!ENTITY marca "NX Time">
+]>
+<!--
     Todos los textos visibles de la app.
 
     Antes habia 51 textos escritos dentro de los layouts y unos 158
@@ -13,7 +21,7 @@
     errata de "memento".
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:locale="es">
-    <string name="app_name">NX Time</string>
+    <string name="app_name">&marca;</string>
 
     <!-- Comunes -->
     <string name="volver">Volver</string>
@@ -25,7 +33,7 @@
     <string name="mas_opciones">Más opciones</string>
 
     <!-- Acceso -->
-    <string name="login_titulo">NX Time</string>
+    <string name="login_titulo">&marca;</string>
     <string name="login_subtitulo">Control horario para tu equipo</string>
     <string name="login_email">Correo electrónico</string>
     <string name="login_contrasena">Contraseña</string>
@@ -45,12 +53,12 @@
     <string name="sso_entrar_con">Entrar con %1$s</string>
     <string name="sso_sin_navegador">No hay ningún navegador en este dispositivo para seguir. Entra con tu contraseña.</string>
     <string name="sso_error_cancelado">No has terminado de entrar. Puedes volver a intentarlo.</string>
-    <string name="sso_error_sin_cuenta">No hay ninguna cuenta de NX Time con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.</string>
+    <string name="sso_error_sin_cuenta">No hay ninguna cuenta de &marca; con el correo de esa cuenta. Pide a tu empresa que te dé de alta con ese correo, o entra con el que te dieron.</string>
     <string name="sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Entra con tu contraseña y vincula la cuenta desde Ajustes.</string>
-    <string name="sso_error_cuenta_inactiva">Tu cuenta de NX Time está dada de baja. Habla con tu empresa.</string>
+    <string name="sso_error_cuenta_inactiva">Tu cuenta de &marca; está dada de baja. Habla con tu empresa.</string>
     <string name="sso_error_empresa_pendiente">Tu empresa está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
     <string name="sso_error_empresa_suspendida">El acceso de tu empresa está suspendido. Mira el correo que te enviamos para saber más.</string>
-    <string name="sso_error_ya_tiene_otra">Tu cuenta de NX Time ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
+    <string name="sso_error_ya_tiene_otra">Tu cuenta de &marca; ya está vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="sso_error_no_disponible">Ese acceso no está disponible ahora mismo. Entra con tu contraseña.</string>
     <string name="sso_error_fallo">No se ha podido completar el acceso. Vuelve a intentarlo, o entra con tu contraseña.</string>
     <!-- Cuentas vinculadas, en Ajustes (ADR 036 y 038) -->
@@ -114,15 +122,15 @@
     <string name="registro_crear">Crear empresa</string>
     <!-- Registrar la empresa con una cuenta de Google o de Microsoft (ADR 044) -->
     <string name="registro_sso_registrar_con">Registrar con %1$s</string>
-    <string name="registro_sso_explicacion">Has entrado con tu cuenta de %1$s (%2$s). Ese será tu correo en NX Time, y entrarás con esa cuenta: no hace falta contraseña. Solo falta esto:</string>
+    <string name="registro_sso_explicacion">Has entrado con tu cuenta de %1$s (%2$s). Ese será tu correo en &marca;, y entrarás con esa cuenta: no hace falta contraseña. Solo falta esto:</string>
     <string name="registro_sso_otra_forma">Registrarla con mi correo y una contraseña</string>
     <string name="registro_sso_sin_navegador">No hay ningún navegador en este dispositivo para seguir. Registra la empresa con tu correo y una contraseña.</string>
     <string name="registro_sso_error_cancelado">No has terminado de entrar con esa cuenta. Puedes volver a intentarlo.</string>
     <string name="registro_sso_error_correo_sin_verificar">No hemos podido comprobar que el correo de esa cuenta sea tuyo. Registra la empresa con tu correo y una contraseña.</string>
-    <string name="registro_sso_error_cuenta_inactiva">Ya tienes una cuenta de NX Time con ese correo, y está dada de baja. Habla con tu empresa.</string>
+    <string name="registro_sso_error_cuenta_inactiva">Ya tienes una cuenta de &marca; con ese correo, y está dada de baja. Habla con tu empresa.</string>
     <string name="registro_sso_error_empresa_pendiente">Ya registraste una empresa con ese correo y está pendiente de aprobación. Te avisaremos por correo en cuanto puedas entrar.</string>
     <string name="registro_sso_error_empresa_suspendida">Ya tienes una cuenta con ese correo, y el acceso de su empresa está suspendido.</string>
-    <string name="registro_sso_error_ya_tiene_otra">Ya tienes una cuenta de NX Time con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
+    <string name="registro_sso_error_ya_tiene_otra">Ya tienes una cuenta de &marca; con ese correo, vinculada a otra cuenta de ese proveedor. Entra con esa, o con tu contraseña.</string>
     <string name="registro_sso_error_no_disponible">Ese registro no está disponible ahora mismo. Hazlo con tu correo y una contraseña.</string>
     <string name="registro_sso_error_caducado">El registro ha caducado. Vuelve a empezar con tu cuenta, o hazlo con tu correo y una contraseña.</string>
     <string name="registro_sso_error_fallo">No se ha podido completar. Vuelve a intentarlo, o registra la empresa con tu correo y una contraseña.</string>
@@ -718,7 +726,7 @@
     <string name="ajustes_privacidad">Privacidad</string>
     <string name="ajustes_informes_errores">Enviar informes de errores</string>
     <string name="ajustes_mis_datos">Descargar mis datos</string>
-    <string name="ajustes_mis_datos_detalle">Todo lo que NX Time guarda sobre ti: perfil, fichajes, ausencias, correcciones, horas extra y avisos. El PDF es para leerlo; el JSON, para llevártelo a otro servicio.</string>
+    <string name="ajustes_mis_datos_detalle">Todo lo que &marca; guarda sobre ti: perfil, fichajes, ausencias, correcciones, horas extra y avisos. El PDF es para leerlo; el JSON, para llevártelo a otro servicio.</string>
     <string name="ajustes_mis_datos_pdf">PDF</string>
     <string name="ajustes_mis_datos_json">JSON</string>
     <string name="ajustes_informes_errores_detalle">Si la aplicación se cierra sola, se envía el fallo (pantalla, versión y traza) para poder arreglarlo. No incluye tus datos ni lo que escribes.</string>
@@ -758,7 +766,7 @@
     <string name="ajustes_push_seccion">Notificaciones</string>
     <string name="ajustes_push">Avisarme en el móvil</string>
     <string name="ajustes_push_detalle">Te llega una notificación cuando tienes un aviso nuevo: una ausencia resuelta, una corrección, una incidencia. Solo dice de qué va; el detalle lo ves al abrir la app, porque la notificación pasa por los servidores de Google.</string>
-    <string name="ajustes_push_sin_permiso">Android tiene bloqueadas las notificaciones de NX Time. Actívalas en los ajustes del sistema para recibirlas.</string>
+    <string name="ajustes_push_sin_permiso">Android tiene bloqueadas las notificaciones de &marca;. Actívalas en los ajustes del sistema para recibirlas.</string>
     <string name="push_canal">Avisos</string>
     <string name="push_canal_detalle">Novedades de tus ausencias, correcciones, incidencias y demás avisos de la app.</string>
 
@@ -777,10 +785,10 @@
     <string name="recordatorio_salida_titulo">Tienes la jornada abierta</string>
     <string name="recordatorio_salida_texto">Sigue contando desde que entraste. Toca para cerrarla.</string>
 
-    <string name="huella_bloqueada">Desbloquea NX Time con tu huella para continuar.</string>
+    <string name="huella_bloqueada">Desbloquea &marca; con tu huella para continuar.</string>
     <string name="huella_reintentar">Usar la huella</string>
     <string name="huella_usar_contrasena">Entrar con mi contraseña</string>
-    <string name="huella_titulo">Desbloquear NX Time</string>
+    <string name="huella_titulo">Desbloquear &marca;</string>
     <string name="huella_subtitulo">Usa tu huella para entrar</string>
 
     <string name="ajustes_acerca_de">Acerca de</string>
@@ -1397,7 +1405,7 @@
 
     <!-- El aviso de privacidad de la primera entrada (ADR 047) -->
     <string name="privacidad_titulo">Tus datos</string>
-    <string name="privacidad_texto">%1$s es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. NX Time es la herramienta que usa, y los trata solo por encargo suyo.</string>
+    <string name="privacidad_texto">%1$s es la responsable de tus datos de jornada, ausencias y perfil: decide para qué se usan. &marca; es la herramienta que usa, y los trata solo por encargo suyo.</string>
     <string name="privacidad_contacto_correo">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, escribe a %1$s.</string>
     <string name="privacidad_contacto_enlace">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, sigue su política de privacidad: %1$s</string>
     <string name="privacidad_sin_contacto">Para pedir una copia de tus datos, corregirlos, oponerte o pedir que se borren, dirígete a tu empresa.</string>

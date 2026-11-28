@@ -151,7 +151,7 @@ class CuentasVinculadasViewModelTest {
     fun `si la cuenta ya es de otra persona se dice lo que responde el servidor y no se vincula`() = runTest {
         conProveedores()
         whenever(repositorio.confirmarVinculoSso(any(), any()))
-            .thenReturn(rechazo(409, "Esa cuenta ya está vinculada a otra persona de NX Time."))
+            .thenReturn(rechazo(409, "Esa cuenta ya está vinculada a otra persona."))
         viewModel
         advanceUntilIdle()
         viewModel.vincular(google)
@@ -160,7 +160,7 @@ class CuentasVinculadasViewModelTest {
         advanceUntilIdle()
 
         assertEquals(
-            MensajeUi.Texto("Esa cuenta ya está vinculada a otra persona de NX Time."),
+            MensajeUi.Texto("Esa cuenta ya está vinculada a otra persona."),
             viewModel.uiState.value.error
         )
         assertNull(viewModel.uiState.value.cuentas.first().vinculada)

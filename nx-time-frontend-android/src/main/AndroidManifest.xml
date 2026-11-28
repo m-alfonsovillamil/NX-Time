@@ -75,7 +75,7 @@
 
             <!--
                 App Links (1.19): los botones de los correos llevan a
-                https://nxtime-web.com/<destino>, y con el dominio verificado
+                https://<web>/<destino>, y con el dominio verificado
                 (/.well-known/assetlinks.json en la web) abren la app en esa
                 pantalla. Solo los destinos que la app sabe abrir: lo demas
                 sigue yendo al navegador. La lista es DESTINOS_CON_ENLACE, y
@@ -86,7 +86,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
-                <data android:host="nxtime-web.com" />
+                <!-- El dominio sale de build.gradle.kts (marcaHostWeb). -->
+                <data android:host="${hostWeb}" />
                 <data android:path="/fichar" />
                 <data android:path="/ausencias" />
                 <data android:path="/ausencias-equipo/pendientes" />
