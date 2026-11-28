@@ -19,6 +19,7 @@ Cambia los sitios de la marca (ver scripts/dev/comprobar-marca.py):
 - render.yaml: el dominio, en los valores y en los comentarios.
 - assetlinks.json: el paquete que abre los enlaces de la web.
 - SECURITY.md: el correo de seguridad y la web.
+- docs/openapi.json: el título de la API (sale del nombre).
 - comprobar-marca.py: el nombre y el dominio viejos pasan a RETIRADOS.
 
 Y después regenera lo de la web (`npm run titular`). Es todo o nada: si algún
@@ -49,6 +50,7 @@ RENDER = "render.yaml"
 ASSETLINKS = "nx-time-frontend-web/public/.well-known/assetlinks.json"
 SECURITY = "SECURITY.md"
 COMPROBAR = "scripts/dev/comprobar-marca.py"
+OPENAPI = "docs/openapi.json"
 
 PAQUETE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")
 DOMINIO = re.compile(r"^(?=.{4,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$")
@@ -130,6 +132,14 @@ def planear(args) -> tuple[dict[str, str], dict[str, str]]:
         raise Fallo(f"{SECURITY}: no sale el correo de seguridad viejo ({antes['seguridad']}).")
     nuevos[SECURITY] = seguridad.replace(antes["seguridad"], args.correo_seguridad).replace(
         f"https://{antes['dominio']}", f"https://{args.dominio}").replace(antes["nombre"], args.nombre)
+
+    # --- docs/openapi.json: el título de la API (lo que daría actualizarOpenApi,
+    # sin pasar la suite entera: es lo único del contrato que lleva el nombre) ---
+    contrato = leer(OPENAPI)
+    if contrato.count(antes["nombre"]) != 3:
+        raise Fallo(f"{OPENAPI}: se esperaba el nombre 3 veces (título, descripción y contacto) "
+                    f"y sale {contrato.count(antes['nombre'])}. Regenerarlo con actualizarOpenApi.")
+    nuevos[OPENAPI] = contrato.replace(antes["nombre"], args.nombre)
 
     # --- comprobar-marca.py: los viejos, retirados ---
     comprobar = leer(COMPROBAR)
