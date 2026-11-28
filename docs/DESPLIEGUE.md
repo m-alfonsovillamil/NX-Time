@@ -713,6 +713,22 @@ apuntar a la release nueva: un 404 justo después de publicar no es un fallo.
 > `git worktree add --detach ../nxtime-apk main`, copia `local.properties` y
 > compila allí.
 
+### Retirar una versión vieja de la app
+
+Desde la 1.27, la app dice su versión y su paquete en cada petición, y la API
+puede dejar de atender a las viejas ([ADR 064](adr/064-versiones-retiradas-de-la-app.md)).
+Dos variables del panel de Render, apagadas por defecto:
+
+| Variable | Qué hace |
+|---|---|
+| `APP_VERSION_MINIMA` | Un `versionCode`. Las versiones anteriores ven «Actualiza la app» con el enlace de `APP_DOWNLOAD_URL`. `0` o sin poner: ninguna |
+| `APP_IDS_RETIRADOS` | Paquetes separados por comas (el `.dev` de cada uno cuenta como él). Esa app ve «Esta app ya no se usa». Es para después de un cambio de nombre: `com.nxtime.app` |
+
+Entrar y mandar los fichajes hechos sin conexión siguen funcionando: la app vieja
+los manda antes de quedarse en esa pantalla. Subir la mínima solo cuando la
+versión nueva ya esté publicada **y** el enlace de descarga lleve a ella.
+Volver atrás es quitar la variable.
+
 ## 4. El arranque en frío
 
 - **Render duerme el servicio** tras 15 minutos sin tráfico. Medido el

@@ -8,6 +8,7 @@ import com.nxtime.nxtime.security.LoginRateLimitFilter;
 import com.nxtime.nxtime.security.RestAccessDeniedHandler;
 import com.nxtime.nxtime.security.RestAuthenticationEntryPoint;
 import com.nxtime.nxtime.security.SegundoFactorObligatorioFilter;
+import com.nxtime.nxtime.security.VersionDeLaAppFilter;
 import com.nxtime.nxtime.security.SesionWeb;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
@@ -47,6 +48,7 @@ public class SecurityConfig {
     private final LoginRateLimitFilter loginRateLimitFilter;
     private final LimiteDeLoCaro limiteDeLoCaro;
     private final SegundoFactorObligatorioFilter segundoFactorObligatorio;
+    private final VersionDeLaAppFilter versionDeLaApp;
     private final KioskAuthenticationFilter kioskAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
@@ -66,6 +68,7 @@ public class SecurityConfig {
             LoginRateLimitFilter loginRateLimitFilter,
             LimiteDeLoCaro limiteDeLoCaro,
             SegundoFactorObligatorioFilter segundoFactorObligatorio,
+            VersionDeLaAppFilter versionDeLaApp,
             KioskAuthenticationFilter kioskAuthenticationFilter,
             RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             RestAccessDeniedHandler restAccessDeniedHandler,
@@ -76,6 +79,7 @@ public class SecurityConfig {
         this.loginRateLimitFilter = loginRateLimitFilter;
         this.limiteDeLoCaro = limiteDeLoCaro;
         this.segundoFactorObligatorio = segundoFactorObligatorio;
+        this.versionDeLaApp = versionDeLaApp;
         this.kioskAuthenticationFilter = kioskAuthenticationFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
@@ -192,6 +196,9 @@ public class SecurityConfig {
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .authenticationProvider(authenticationProvider)
+                // Lo primero: una app retirada o demasiado vieja no llega a
+                // nada más que a lo que tiene abierto (ADR 064).
+                .addFilterBefore(versionDeLaApp, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(kioskAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

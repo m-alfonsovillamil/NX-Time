@@ -289,6 +289,18 @@
     <string name="correccion_motivo">Motivo de la corrección</string>
     <string name="correccion_modalidad">Presencial o a distancia</string>
     <string name="sin_conexion_titulo">Sin conexión</string>
+    <!-- La app ya no se puede usar (ADR 064). -->
+    <string name="app_no_valida_titulo">Actualiza la app</string>
+    <string name="app_no_valida_texto">Esta versión de la app ya no funciona. Instala la nueva para seguir fichando: lo tuyo está guardado en el servidor y no se pierde nada.</string>
+    <string name="app_no_valida_titulo_retirada">Esta app ya no se usa</string>
+    <string name="app_no_valida_texto_retirada">Hay una app nueva que sustituye a esta. Instálala y entra con tu cuenta de siempre; después, desinstala esta.</string>
+    <string name="app_no_valida_actualizar">Actualizar</string>
+    <string name="app_no_valida_instalar">Instalar la nueva</string>
+    <string name="app_no_valida_sin_enlace">Pide el enlace a tu empresa.</string>
+    <plurals name="app_no_valida_pendientes">
+        <item quantity="one">Queda %1$d fichaje guardado en este móvil. Se envía solo en cuanto haya conexión: no desinstales la app hasta que llegue.</item>
+        <item quantity="other">Quedan %1$d fichajes guardados en este móvil. Se envían solos en cuanto haya conexión: no desinstales la app hasta que lleguen.</item>
+    </plurals>
     <plurals name="sin_conexion_pendientes">
         <item quantity="one">%1$d fichaje guardado en el móvil. Se enviará solo al volver la red.</item>
         <item quantity="other">%1$d fichajes guardados en el móvil. Se enviarán solos al volver la red.</item>

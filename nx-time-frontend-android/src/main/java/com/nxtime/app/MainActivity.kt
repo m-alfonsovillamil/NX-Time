@@ -2,6 +2,7 @@ package com.nxtime.app
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.nxtime.app.push.NotificacionesPush
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Context
 import android.os.Bundle
@@ -30,7 +31,11 @@ import com.nxtime.app.ui.ajustes.EstadoDeLaHuella
 import com.nxtime.app.ui.ajustes.PantallaBloqueada
 import com.nxtime.app.ui.ajustes.estadoDeLaHuella
 import com.nxtime.app.ui.ajustes.pedirHuella
+import androidx.compose.runtime.LaunchedEffect
+import androidx.core.net.toUri
+import com.nxtime.app.data.network.VersionDeLaApp
 import com.nxtime.app.ui.components.AvisoServidorDespertando
+import com.nxtime.app.ui.components.PantallaAppNoValida
 import com.nxtime.app.ui.navegacion.NxTimeNavHost
 import com.nxtime.app.ui.navegacion.destinoDeEnlaceWeb
 import com.nxtime.app.data.session.Tema
@@ -92,6 +97,15 @@ class MainActivity : FragmentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(newBase.enEspanol())
+    }
+
+    /** Un enlace fuera de la app (Play o la descarga). Sin nada que lo abra, no pasa nada. */
+    private fun abrirEnlace(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+        } catch (e: ActivityNotFoundException) {
+            // Un móvil sin navegador ni Play: no hay a dónde mandar a nadie.
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -193,6 +207,26 @@ class MainActivity : FragmentActivity() {
                             recreate()
                         }
                     )
+                    return@NxTimeTheme
+                }
+
+                /*
+                 * Una app que la API ya no atiende (ADR 064) no enseña nada
+                 * más: detrás, todo respondería 426. Lo único que sigue
+                 * funcionando es mandar lo fichado sin conexión, y se intenta
+                 * en cuanto sale la pantalla, que cuenta lo que queda.
+                 */
+                val appNoValida by VersionDeLaApp.aviso.collectAsStateWithLifecycle()
+                appNoValida?.let { aviso ->
+                    val cambiosDeLaCola by aplicacion.colaDeFichajes.cambios.collectAsStateWithLifecycle()
+                    val pendientes = remember(cambiosDeLaCola) {
+                        sessionManager.correoDeLaSesion()
+                            ?.let { aplicacion.colaDeFichajes.pendientes(it).size } ?: 0
+                    }
+                    LaunchedEffect(aviso) {
+                        runCatching { aplicacion.envioDeFichajes.enviar() }
+                    }
+                    PantallaAppNoValida(aviso, pendientes, onAbrir = ::abrirEnlace)
                     return@NxTimeTheme
                 }
 

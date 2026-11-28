@@ -172,6 +172,14 @@ application:
     # enlace sigue valiendo cuando sale una versión nueva. Vacío = el correo
     # dice que la pida a quien le ha dado de alta.
     download-url: "${APP_DOWNLOAD_URL:https://github.com/m-alfonsovillamil/NX-Time/releases/latest/download/NX-Time.apk}"
+    # Las versiones de la app que ya no se pueden usar (ADR 064). La app manda
+    # su versionCode y su paquete en cada petición; con una versión menor que
+    # esta, o un paquete de esta lista (separados por comas: la app de antes de
+    # un cambio de nombre), la API responde 426 y la app pide actualizarla, con
+    # el enlace de download-url. Entrar y mandar los fichajes hechos sin
+    # conexión siguen abiertos. 0 y vacío = no se retira nada.
+    version-minima: ${APP_VERSION_MINIMA:0}
+    ids-retirados: "${APP_IDS_RETIRADOS:}"
   mail:
     # Remitente de las notificaciones (Fase 10). En desarrollo da igual
     # -- MailHog acepta cualquier cosa --; en producción tiene que ser

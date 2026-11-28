@@ -73,3 +73,4 @@ consecuencias que de verdad tuvieron, incluidas las incómodas.
 | [061](061-compensar-horas-extra-con-descanso.md) | Compensar las horas extra con descanso |
 | [062](062-justificante-en-las-ausencias.md) | El justificante en las ausencias |
 | [063](063-medios-dias.md) | Medios días en las ausencias |
+| [064](064-versiones-retiradas-de-la-app.md) | Versiones de la app que ya no se pueden usar |
